@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="transactions_header_name">MGA TRANSAKSYON</string>
+    <string name="loading_more">Naglo-load pa...</string>
+    <string name="failed_payment">Nabigo ang Pagbabayad</string>
+    <string name="failure_reason">Dahilan ng pagkabigo: %s</string>
+</resources>

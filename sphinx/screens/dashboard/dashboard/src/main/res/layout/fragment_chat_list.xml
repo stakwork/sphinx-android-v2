@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/layout_constraint_chat_fragment"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/body"
+    tools:context=".ui.ChatListFragment">
+
+    <include
+        android:id="@+id/layout_search_bar"
+        layout="@layout/layout_search_bar"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/dashboard_search_bar_height"
+        app:layout_constraintTop_toTopOf="parent"/>
+
+    <include
+        android:id="@+id/layout_chat_list_chats"
+        layout="@layout/layout_chat_list_chats"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/layout_search_bar" />
+
+    <ProgressBar
+        android:id="@+id/progress_bar_chat_list"
+        style="?android:attr/progressBarStyle"
+        android:layout_width="@dimen/default_large_layout_margin"
+        android:layout_height="@dimen/default_large_layout_margin"
+        android:indeterminate="true"
+        android:indeterminateTint="@android:color/white"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/welcome_to_sphinx"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/last_message_description_welcome_member"
+        android:textColor="@color/dashboardWashedOutText"
+        android:textSize="@dimen/add_tribe_button_icon_"
+        android:fontFamily="@font/roboto_regular"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

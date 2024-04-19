@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="add_icon"></string>
+    <string name="join_tribe_link">トライブリンクに参加</string>
+    <string name="add_friend">友達を追加</string>
+    <string name="add_tribe">トライブを追加</string>
+    <string name="discover_tags">タグ発見</string>
+    <string name="discover_open">開く</string>
+    <string name="create_tribe">トライブを作成</string>
+    <string name="contacts">コンタクト</string>
+    <string name="profile">プロフィール</string>
+    <string name="support">サポート</string>
+    <string name="add_sats">SATSを追加</string>
+    <string name="search">検索</string>
+
+    <string name="upgrade_app">アプリをアップグレード</string>
+
+    <string name="not_valid_tribe_link">QRコードはトライブリンクに参加のものではありません</string>
+    <string name="invite_name">招待: %s</string>
+    <string name="invite_qr_code_header_name">招待コード</string>
+
+    <string name="alert_confirm_pay_invite_title">招待料支払</string>
+    <string name="alert_confirm_pay_invite_message">この招待に%d sats 支払いますか？</string>
+    <string name="pay_invite_balance_too_low">招待料を支払えません。残高不足。</string>
+
+    <string name="alert_confirm_delete_invite_title">招待を削除</string>
+    <string name="alert_confirm_delete_invite_message">この招待を削除してもよろしいですか？</string>
+
+    <string name="paste_invoice_of_tribe_link">請求書またはトライブリンクに参加を貼り付け</string>
+    <string name="paste_invoice_or_public_key">請求書または公開鍵</string>
+    <string name="alert_confirm_pay_invoice_title">請求書の支払い</string>
+    <string name="alert_confirm_pay_invoice_message">スキャンした請求書を支払いますか？\n\n金額: %d sat\n\nメモ: %s</string>
+
+    <string name="payment_request_missing_amount">支払いのリクエストに金額が含まれていません</string>
+    <string name="not_valid_invoice_or_tribe_link">QRコードはライトニング請求書またはトライブリンクに参加のものではありません</string>
+
+    <string name="attempting_payment_request">支払いリクエストを試みています</string>
+    <string name="failed_to_pay_request">リクエストの支払いに失敗しました</string>
+    <string name="successfully_paid_invoice">請求書を支払いました</string>
+
+    <string name="last_message_description_message_deleted">メッセージの削除</string>
+    <string name="last_message_description_you">あなた</string>
+    <string name="last_message_description_gif_shared">%sがGIFを共有</string>
+    <string name="last_message_description_boost">%sがブースト %s</string>
+    <string name="last_message_description_call_invite">%sが電話に招待</string>
+    <string name="last_message_description_invoice_sent">請求書を送信: %s</string>
+    <string name="last_message_description_invoice_receive">請求書の受信: %s</string>
+    <string name="last_message_description_payment_sent">支払いの送信: %s</string>
+    <string name="last_message_description_tribe_payment_sent">%sから%sへ%sの支払い送信</string>
+    <string name="last_message_description_payment_received">支払いの受信: %s</string>
+    <string name="last_message_description_tribe_payment">%sが %s から %s への支払い送信</string>
+
+    <string name="last_message_description_sent">送信済</string>
+    <string name="last_message_description_an_audio_clip">音声クリップ</string>
+    <string name="last_message_description_a_gif">Gif</string>
+    <string name="last_message_description_an_image">画像</string>
+    <string name="last_message_description_a_pdf">PDF</string>
+    <string name="last_message_description_a_paid_message">有料メッセージ</string>
+    <string name="last_message_description_an_attachment">添付ファイル</string>
+    <string name="last_message_description_a_video">動画</string>
+
+    <string name="last_message_description_has_join_tribe">%sがトライブに参加しました</string>
+    <string name="last_message_description_just_left_tribe">%sがトライブから退会しました</string>
+    <string name="last_message_description_wants_to_join">%sがトライブに参加したいと思っています</string>
+    <string name="last_message_description_declined_request_from">%sからのリクエストを拒否しました</string>
+    <string name="last_message_description_approved_request_from">%sからのリクエストを承認しました</string>
+    <string name="last_message_description_admin_declined_request">管理者がリクエストを拒否しました</string>
+    <string name="last_message_description_welcome_member">ようこそ！メンバーになりました</string>
+    <string name="last_message_description_group_kick">管理者があなたをこのグループから削除しました</string>
+    <string name="last_message_description_tribe_deleted">管理者がこのトライブを削除しました</string>
+
+    <string name="last_message_description_invite">招待: %s</string>
+    <string name="last_message_description_looking_available_node">%sで使用可能なノードを探しています</string>
+    <string name="last_message_description_invite_ready">準備完了！タップして共有。24時間後に期限切れ</string>
+    <string name="last_message_description_invite_signing_on">%sはサインオンしています</string>
+    <string name="last_message_description_invite_tap_to_pay">タップして支払い、招待を有効化</string>
+    <string name="last_message_description_invite_payment_sent">支払い済み。確認待ち</string>
+    <string name="last_message_description_invite_signup_complete">サインアップ完了</string>
+    <string name="last_message_description_invite_expired">期限切れ</string>
+
+    <string name="dashboard_authorize_popup_title">次で認証しますか:</string>
+    <string name="dashboard_authorize_button">認証</string>
+    <string name="dashboard_authorize_generic_error">外部ソースの承認中にエラーが発生しました。後でもう一度お試しください</string>
+
+    <string name="dashboard_redeem_sats_popup_title">以下から %s sats の利用:</string>
+    <string name="dashboard_redeem_sats_button">確認</string>
+
+
+    <string name="dashboard_connect_button">接続</string>
+    <string name="dashboard_connect_price_to_meet">相談料金: %s</string>
+    <string name="dashboard_connect_description_missing">説明なし</string>
+    <string name="dashboard_connect_initial_message_hint">%s への最初のメッセージ</string>
+    <string name="dashboard_connect_retrieve_person_data_error">人物情報の取得に失敗しました</string>
+    <string name="dashboard_connect_message_empty">メッセージは空にできません</string>
+    <string name="dashboard_connect_generic_error">ユーザーへの接続中にエラーが発生しました。後でもう一度お試しください</string>
+
+    <string name="dashboard_network_disconnected_node_toast">ノードが切断されました</string>
+    <string name="dashboard_network_connected_node_toast">ノードが接続されました</string>
+
+    <string name="dashboard_save_profile_popup_title">次からプロフィールを保存:</string>
+    <string name="dashboard_delete_profile_popup_title">次からプロフィールを削除:</string>
+    <string name="dashboard_save_profile_button">保存</string>
+    <string name="dashboard_delete_profile_button">削除</string>
+    <string name="dashboard_save_profile_generic_error">リクエストの試行に失敗しました</string>
+    <string name="dashboard_save_profile_success">プロフィールを保存しました</string>
+    <string name="dashboard_delete_profile_generic_error">プロフィールを削除できませんでした</string>
+    <string name="dashboard_delete_profile_success">プロフィールを削除しました</string>
+
+    <string name="dashboard_redeem_badge_token_popup_title">次からバッジトークンを利用:</string>
+    <string name="dashboard_redeem_badge_token_generic_error">バッジトークンを利用できませんでした</string>
+    <string name="dashboard_redeem_badge_token_success">バッジトークンを利用しました</string>
+
+    <string name="dashboard_feed_tab_name">フィード</string>
+    <string name="dashboard_friends_tab_name">友達</string>
+    <string name="dashboard_tribes_tab_name">トライブ</string>
+
+    <string name="all">すべて</string>
+    <string name="listen">聞く</string>
+    <string name="watch">見る</string>
+    <string name="read">読む</string>
+    <string name="play">再生</string>
+    <string name="listen_now">今すぐ聞く</string>
+    <string name="following">フォロー中</string>
+    <string name="recently_released">最近リリース</string>
+    <string name="recently_published">最近公開</string>
+    <string name="recently_played">最近再生</string>
+    <string name="recently_read">最近読んだもの</string>
+    <string name="read_now">今すぐ読む</string>
+    <string name="watch_now">今すぐ見る</string>
+    <string name="downloaded">ダウンロード済みコンテンツ</string>
+
+    <string name="recommendations">おすすめ</string>
+
+    <string name="all_place_holder">「フィード」の結果が見つかりませんでした</string>
+    <string name="listen_place_holder">「聞く」の結果が見つかりませんでした</string>
+    <string name="watch_place_holder">「見る」の結果が見つかりませんでした</string>
+    <string name="read_place_holder">「読む」の結果が見つかりませんでした</string>
+    <string name="play_place_holder">「再生」の結果が見つかりませんでした</string>
+
+    <string name="feed_search_placeholder_1">検索する</string>
+    <string name="feed_search_placeholder_2">購読したフィード</string>
+
+    <string name="feed_search_result_load_error">フィードコンテンツの読み込み中にエラーが発生しました。後でもう一度お試しください</string>
+
+    <string name="video_search_placeholder_1">次を検索</string>
+    <string name="video_search_placeholder_2">何千もの動画</string>
+    <string name="video_search_placeholder_3">YouTube にて</string>
+
+    <string name="podcast_search_placeholder_1">次を検索</string>
+    <string name="podcast_search_placeholder_2">400万件のポッドキャスト</string>
+    <string name="podcast_search_placeholder_3">Podcast Index にて</string>
+
+    <string name="dashboard_restore_progress">復元中: %s</string>
+    <string name="dashboard_restore_progress_contacts">連絡先の復元中: %s</string>
+    <string name="dashboard_restore_progress_feeds">フィードの復元中: %s</string>
+    <string name="dashboard_restore_progress_messages">メッセージの復元中: %s</string>
+    <string name="dashboard_stop_restore">後ほど続行</string>
+
+    <string name="loading_recommendations">おすすめをロードしています...</string>
+    <string name="refresh_while_loading">再生中は新しいおすすめを取得できません。リフレッシュする前に再生を停止してください</string>
+
+    <string name="time_left">残り%s</string>
+    <string name="dashboard_invite_code_screen">INVITE CODE</string>
+</resources>
+
+
+

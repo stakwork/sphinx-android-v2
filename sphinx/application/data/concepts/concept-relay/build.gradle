@@ -1,0 +1,12 @@
+plugins {
+    id 'java-library'
+    id 'kotlin'
+}
+
+dependencies {
+    implementation project(path: ':kotlin:crypto:crypto-common')
+
+    api project(path: ':sphinx:application:common:wrappers:wrapper-relay')
+    api project(path: ':sphinx:application:common:wrappers:wrapper-rsa')
+    api project(path: ':sphinx:application:common:kotlin-response')
+}

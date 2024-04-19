@@ -1,0 +1,95 @@
+plugins {
+    id 'app.cash.exhaustive'
+    id 'com.android.library'
+    id 'androidx.navigation.safeargs'
+    id 'dagger.hilt.android.plugin'
+    id 'kotlin-android'
+    id 'kotlin-kapt'
+}
+
+android {
+    compileSdkVersion versions.compileSdk
+    buildToolsVersion versions.buildTools
+
+    buildFeatures.viewBinding = true
+    defaultConfig {
+        minSdkVersion versions.minSdk
+        targetSdkVersion versions.targetSdk
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunnerArguments disableAnalytics: 'true'
+        consumerProguardFiles "consumer-rules.pro"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+    namespace 'chat.sphinx.dashboard'
+}
+
+dependencies {
+    api project(path: ':kotlin:common:build-config')
+
+    implementation fileTree(dir: "libs", include: ["*.jar"])
+    // KotlinAndroid
+    implementation project(path: ':android:features:android-feature-screens')
+
+    // Sphinx
+    api project(path: ':sphinx:application:data:concepts:repositories:concept-repository-contact')
+    api project(path: ':sphinx:application:data:concepts:repositories:concept-repository-chat')
+    api project(path: ':sphinx:application:data:concepts:repositories:concept-repository-feed')
+    api project(path: ':sphinx:application:data:concepts:repositories:concept-repository-media')
+    api project(path: ':sphinx:application:common:menus:menu-bottom-scanner')
+    api project(path: ':sphinx:application:common:wrappers:wrapper-mqtt')
+
+    api project(path: ':sphinx:application:common:wrappers:wrapper-chat')
+
+    implementation project(path: ':sphinx:activity:insetter-activity')
+    implementation project(path: ':sphinx:application:common:resources')
+    implementation project(path: ':sphinx:application:common:swipe-reveal-layout')
+
+
+    implementation project(path: ':sphinx:application:data:concepts:repositories:concept-repository-actions')
+    implementation project(path: ':sphinx:application:data:concepts:repositories:concept-repository-chat')
+    implementation project(path: ':sphinx:application:data:concepts:concept-image-loader')
+    implementation project(path: ':sphinx:application:data:concepts:concept-background-login')
+    implementation project(path: ':sphinx:application:data:concepts:concept-wallet')
+    implementation project(path: ':sphinx:application:data:concepts:repositories:concept-repository-dashboard-android')
+    implementation project(path: ':sphinx:activity:concepts:concept-user-colors-helper')
+    implementation project(path: ':sphinx:application:network:concepts:queries:concept-network-query-lightning')
+    implementation project(path: ':sphinx:application:network:concepts:queries:concept-network-query-version')
+    implementation project(path: ':sphinx:application:network:concepts:queries:concept-network-query-authorize-external')
+    implementation project(path: ':sphinx:application:network:concepts:queries:concept-network-query-people')
+    implementation project(path: ':sphinx:application:network:concepts:queries:concept-network-query-redeem-badge-token')
+    implementation project(path: ':sphinx:application:network:concepts:queries:concept-network-query-crypter')
+    implementation project(path: ':sphinx:application:network:concepts:concept-socket-io')
+    implementation project(path: ':sphinx:screens-detail:scanner:scanner-view-model-coordinator')
+    implementation project(path: ':sphinx:screens-detail:tribes-discover:tribes-discover-view-model-coordinator')
+    implementation project(path: ':sphinx:service:concepts:concept-service-notification')
+    implementation project(path: ':sphinx:application:common:logger')
+    implementation project(path: ':sphinx:activity:concepts:concept-signer-manager')
+    implementation project(path: ':sphinx:application:data:concepts:repositories:concept-repository-lightning')
+    implementation project(path: ':sphinx:application:data:concepts:repositories:concept-repository-connect-manager')
+
+
+    api project(path: ':sphinx:service:concepts:concept-service-media-player')
+
+    implementation deps.androidx.swipeRefreshLayout
+    implementation deps.androidx.recyclerView
+    implementation deps.google.hilt
+    implementation deps.jna.sdk
+    implementation deps.lottie.sdk
+    implementation deps.square.moshi
+    implementation deps.msgpack.sdk
+    implementation deps.jitsi.sdk
+    kapt kaptDeps.google.hilt
+
+
+    testImplementation testDeps.junit
+
+    androidTestImplementation testDeps.androidx.core
+    androidTestImplementation testDeps.androidx.espresso
+    androidTestImplementation testDeps.androidx.junit
+}

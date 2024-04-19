@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="edit_text_message_hint">Mensaje…</string>
+    <string name="edit_text_optional_message_hint">Mensaje opcional…</string>
+    <string name="text_view_loading_attachment">Cargando/Desencriptando...</string>
+
+    <string name="chat_muted_message">La conversación está ahora silenciada. No recibirás notificaciones para las mensajes entrantes en esta conversación</string>
+    <string name="chat_muted_waiting_on_network">Esperando conexión…</string>
+    <string name="chat_tribe_contributed">Contribuídos:</string>
+    <string name="chat_tribe_earned">Recibidos:</string>
+
+    <string name="unsupported_message_type_placeholder_text">%1$s: No soportado aún</string>
+    <string name="deleted_message_label_text">Este mensaje ha sido eliminado</string>
+    <string name="flagged_message_label_text">Este mensaje ha sido reportado</string>
+    <string name="join_call_header_label_text">Unirse mediante…</string>
+
+    <string name="failed_message">Mensaje Fallido</string>
+
+    <string name="send_message_empty_destination_error">Contacto o Chat requeridos</string>
+    <string name="send_message_empty_content_error">Mensaje o Archivo adjunto requeridos</string>
+    <string name="send_message_empty_price_error">Precio requerido</string>
+
+    <!--  Separators  -->
+    <string name="unseen_messages">Nuevo Mensajes</string>
+    <string name="today">Hoy</string>
+
+    <!--  Message type invoices  -->
+    <string name="request_expired">Solicitud caducada</string>
+    <string name="request_expiration">Expira: %s</string>
+    <string name="invoice_paid_on">Invoice pagado en %s</string>
+    <string name="alert_confirm_pay_chat_invoice_title">Confirmar Pago</string>
+    <string name="alert_confirm_pay_chat_invoice_message">¿Estas seguro de que quieres pagar esta solicitud?</string>
+
+    <!--  Message type placeholder display names  -->
+    <string name="placeholder_display_name_message_type_attachment">Mensaje de Archivo</string>
+    <string name="placeholder_display_name_message_type_bot_response">Mensaje de Respuesta de Bot</string>
+    <string name="placeholder_display_name_message_type_invoice">Message de Invoice</string>
+    <string name="placeholder_display_name_message_type_payment">Message de Pago de Invoice</string>
+    <string name="placeholder_display_name_message_type_tribe_delete">Message de Tribu eliminada</string>
+    <string name="placeholder_unsupported_message_type_default">Tipo de mensaje no soportado</string>
+
+    <!-- Paid Message Details: Status Labels   -->
+    <string name="paid_message_details_status_label_pay">Pagar</string>
+    <string name="paid_message_details_status_label_payment_accepted">Compra exitosa</string>
+    <string name="paid_message_details_status_label_payment_denied">Compra denegada</string>
+    <string name="paid_message_details_status_label_processing_payment">Procesando pago…</string>
+
+    <!-- Paid Message Overlays -->
+    <string name="paywall_overlay_label_text_message_received">Paga para desbloquear</string>
+    <string name="paywall_overlay_content_description_image_message_received">Paga para desbloquear la Imagen</string>
+    <string name="paywall_overlay_content_description_video_message_received">Paga para desbloquear el Video</string>
+
+
+    <!-- Link Previews -->
+    <string name="link_preview_add_contact_banner_label">Agregar Contacto</string>
+    <string name="link_preview_see_tribe_banner_label">Ver Tribu</string>
+
+    <!-- Replies -->
+    <string name="reply_message_media_content_description">Contenido del mensaje original</string>
+    <string name="reply_message_close_button_content_description">Cerrar</string>
+    <string name="share_audio_clip">"Compartir clip de audio:"</string>
+
+
+    <!--  Purchase Status Labels: Paid Message Details  -->
+    <string name="purchase_status_label_paid_message_details_pending">Pendiente</string>
+    <string name="purchase_status_label_paid_message_details_accepted">Compra exitosa</string>
+    <string name="purchase_status_label_paid_message_details_denied">Compra denegada</string>
+    <string name="purchase_status_label_paid_message_details_processing">Procesando pago…</string>
+    <string name="purchase_status_label_paid_message_details_default">Pagar</string>
+
+    <!--  Purchase Status Labels: Paid Message Sent Status  -->
+    <string name="purchase_status_label_paid_message_sent_status_pending">Pendiente</string>
+    <string name="purchase_status_label_paid_message_sent_status_accepted">Exitosa</string>
+    <string name="purchase_status_label_paid_message_sent_status_denied">Denegada</string>
+    <string name="purchase_status_label_paid_message_sent_status_processing">Procesando</string>
+    <string name="purchase_status_label_paid_message_sent_status_default">Desconocido</string>
+
+
+    <!--  Group Action  -->
+    <string name="tribe_request_admin_side">%1$s desea\nunirse a la tribu</string>
+    <string name="tribe_request_approved_admin_side">Has aprobado la\nla solicitud de %1$s</string>
+    <string name="tribe_request_rejected_admin_side">Has denegado la\nla solicitud de %1$s</string>
+    <string name="tribe_request_rejected_member_side">El administrador\nha denegado tu solicitud</string>
+    <string name="tribe_join_announcement">%1$s se ha unido a la tribu</string>
+    <string name="group_join_announcement">%1$s se ha unido al grupo</string>
+    <string name="tribe_leave_announcement">%1$s ha abandonado la tribu</string>
+    <string name="group_leave_announcement">%1$s ha abandonado el grupo</string>
+    <string name="tribe_deleted_announcement">El administrador ha\neliminado esta tribu</string>
+    <string name="group_kick_announcement_member_side">El administrador te ha\neliminado de este grupo</string>
+    <string name="tribe_kick_announcement_member_side">El administrador te ha\neliminado de esta tribu</string>
+    <string name="tribe_welcome_announcement_member_side">¡Bienvenido! Ya eres miembro de la tribu</string>
+    <string name="tribe_deleted_announcement_button_delete">Eliminar Tribu</string>
+
+    <!-- Selected Item Menu Labels -->
+    <string name="selected_message_menu_item_boost">Boost</string>
+    <string name="selected_message_menu_item_copy_text">Copiar Texto</string>
+    <string name="selected_message_menu_item_copy_call_link">Copiar Enlace</string>
+    <string name="selected_message_menu_item_copy_link">Copiar Enlace</string>
+    <string name="selected_message_menu_item_delete">Eliminar Mensaje</string>
+    <string name="selected_message_menu_item_reply">Responder</string>
+    <string name="selected_message_menu_item_save_file">Descargar</string>
+    <string name="selected_message_menu_item_resend">Reenviar</string>
+    <string name="selected_message_menu_item_flag">Reportar</string>
+    <string name="selected_message_menu_item_pin">Fijar</string>
+    <string name="selected_message_menu_item_unpin">Desfijar</string>
+
+    <string name="alert_confirm_flag_message_title">Confirmar Mensaje reportado</string>
+    <string name="alert_confirm_flag_message_message">¿Estas seguro de que quieres reportar este mensaje? Esta acción no puede revertirse</string>
+
+    <string name="alert_confirm_delete_message_title">Confirmar Mensaje eliminado</string>
+    <string name="alert_confirm_delete_message_message">¿Estas seguro de que quieres eliminar este mensaje? Esta acción no puede revertirse</string>
+
+    <!-- Notify -->
+    <string name="notify_boost_failure">Pago de Boost falló</string>
+    <string name="side_effect_text_copied">Texto copiado al portapapeles</string>
+    <string name="side_effect_call_link_copied">Enlace de llamada copiado al portapapeles</string>
+    <string name="side_effect_link_copied">Copiado %s</string>
+    <string name="side_effect_no_link_to_copy">Sin enlace para copiar</string>
+    <string name="side_effect_insufficient_budget">El presupuesto no es suficiente para realizar la búsqueda</string>
+    <string name="side_effect_error_pay_lsat">Hubo un error al tratar de pagar Lsat</string>
+
+
+    <string name="file_name_loading">Cargando...</string>
+    <string name="pdf_page">página</string>
+    <string name="pdf_pages">páginas</string>
+    <string name="pdf_page_of">"Página %d de %d"</string>
+
+    <!-- Send Attachment -->
+    <string name="attachment_send_header_image">ENVIAR IMAGEN</string>
+    <string name="attachment_send_header_video">ENVIAR VIDEO</string>
+    <string name="attachment_send_header_pdf">ENVIAR PDF</string>
+    <string name="attachment_send_header_file">ENVIAR ARCHIVO</string>
+    <string name="attachment_send_header_giphy">ENVIAR GIPHY</string>
+    <string name="attachment_send_header_paid_message">ENVIAR MENSAJE PAGO</string>
+
+    <!-- Pay Attachment -->
+    <string name="paid_message_pay_to_unlock">PAGA PARA DESBLOQUEAR</string>
+    <string name="paid_file_pay_to_unlock">PAGA PARA DESBLOQUEAR</string>
+    <string name="paid_message_loading">CARGANDO MENSAJE...</string>
+    <string name="paid_message_unable_to_load">ERROR AL CARGAR EL MENSAJE</string>
+    <string name="attachment_price_label">Precio: </string>
+    <string name="alert_confirm_pay_attachment_title">Confirmar Compra</string>
+    <string name="alert_confirm_pay_attachment_message">¿Estas seguro de que quieres comprar este artículo?</string>
+
+    <!-- Save Attachment -->
+    <string name="saved_attachment_successfully">Archivo adjunto guardado correctamente</string>
+    <string name="failed_to_save_file">No se pudo guardar el archivo</string>
+
+    <!-- Exit Tribe -->
+    <string name="delete_own_tribe_not_supported">Eliminar la tribu no esta soportado aún</string>
+    <string name="alert_confirm_exit_tribe_title">Abandonar Tribu</string>
+    <string name="alert_confirm_exit_tribe_message">¿Estás seguro que deseas abandonar y eliminar la tribu?</string>
+
+    <!-- Menu -->
+    <string name="attachments_menu_cancel">CANCELAR</string>
+    <string name="camera_attachment_option" tools:ignore="Typos">Camara</string>
+    <string name="library_attachment_option">Librería de Fotos</string>
+    <string name="gif_attachment_option">Gif</string>
+    <string name="file_attachment_option">Archivo</string>
+    <string name="paid_message_attachment_option">Mensaje Pago</string>
+    <string name="request_attachment_option">Solicitar</string>
+    <string name="send_attachment_option">Enviar</string>
+    <string name="waiting_for_admin_approval">Esperando la aprobación del administrador</string>
+    <string name="failed_to_delete_tribe">No se ha podido eliminar la tribu</string>
+
+    <string name="podcast_boost_label">Boost!</string>
+
+    <string name="bottom_menu_call_header_text">Opciones de LLamada</string>
+    <string name="bottom_menu_call_option_audio">Audio</string>
+    <string name="bottom_menu_call_option_video_or_audio">Video o Audio</string>
+
+    <string name="bottom_menu_more_header_text">Opciones del Chat</string>
+    <string name="bottom_menu_more_option_call">Crear Llamada</string>
+    <string name="bottom_menu_more_option_share">Compartir Link de la Tribu</string>
+    <string name="bottom_menu_more_option_search">Buscar Mensajes</string>
+    <string name="bottom_menu_more_option_notification">Notificaciones</string>
+
+    <string name="searching_messages">Buscando...</string>
+    <string name="results_found">%d Resultados Encontrados</string>
+
+    <string name="slide_to_cancel">&lt;&lt; Desliza para cancelar</string>
+    <string name="recording_permission_granted">Permiso de grabación concedido</string>
+    <string name="recording_permission_required">Se requieren permisos de grabación</string>
+
+    <string name="send_sats">Enviar Sats</string>
+    <string name="option_block_user">Bloquear</string>
+    <string name="option_delete_user">Borrar</string>
+    <string name="alert_confirm_delete_contact">¿Estás seguro que deseas eliminar este contacto?</string>
+    <string name="alert_confirm_delete_contact_title">Eliminar Contact</string>
+    <string name="alert_confirm_block_contact_title">Bloquear Contacto</string>
+    <string name="alert_confirm_block_contact">¿Estás seguro que deseas bloquear este contacto?</string>
+    <string name="alert_confirm_unblock_contact_title">Desbloquear Contacto</string>
+    <string name="alert_confirm_unblock_contact">¿Estás seguro que deseas desbloquear este contacto?</string>
+    <string name="alert_not_encrypted_contact">No puedes mandar un mensaje a un contacto no encriptado</string>
+
+    <string name="unpin_message">Remover Mensaje Fijado</string>
+    <string name="pinned_message">Mensaje Fijado</string>
+    <string name="message_pinned">Mensaje Fijado</string>
+    <string name="message_unpinned">Mensaje removido</string>
+    <string name="pin_message_error">Ocurrió un error. Por favor inténtalo luego</string>
+
+    <string name="cancel_search">CANCELAR</string>
+</resources>

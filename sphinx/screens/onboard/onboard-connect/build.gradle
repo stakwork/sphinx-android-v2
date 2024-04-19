@@ -1,0 +1,59 @@
+plugins {
+    id 'com.android.library'
+    id 'dagger.hilt.android.plugin'
+    id 'androidx.navigation.safeargs'
+    id 'kotlin-android'
+    id 'kotlin-kapt'
+}
+
+android {
+    compileSdkVersion versions.compileSdk
+    buildToolsVersion versions.buildTools
+
+    buildFeatures.viewBinding = true
+    defaultConfig {
+        minSdkVersion versions.minSdk
+        targetSdkVersion versions.targetSdk
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunnerArguments disableAnalytics: 'true'
+        consumerProguardFiles "consumer-rules.pro"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+    namespace 'chat.sphinx.onboard_connect'
+}
+
+dependencies {
+    implementation fileTree(dir: "libs", include: ["*.jar"])
+    // KotlinAndroid
+    implementation project(path: ':android:features:android-feature-screens')
+
+    implementation deps.google.hilt
+    implementation deps.square.moshi
+
+    // Sphinx
+    implementation project(path: ':sphinx:activity:insetter-activity')
+    implementation project(path: ':sphinx:screens-detail:scanner:scanner-view-model-coordinator')
+    implementation project(path: ':sphinx:activity:concepts:concept-signer-manager')
+    implementation project(path: ':sphinx:application:data:concepts:concept-wallet')
+    implementation project(path: ':sphinx:application:network:concepts:queries:concept-network-query-crypter')
+    implementation project(path: ':kotlin:concepts:authentication:concept-authentication')
+    implementation project(path: ':sphinx:application:data:concepts:repositories:concept-repository-connect-manager')
+    api project(path: ':sphinx:screens:onboard:onboard-common')
+    api project(path: ':sphinx:screens:onboard:onboard-resources')
+    api project(path: ':sphinx:application:common:menus:menu-bottom-signer')
+    api project(path: ':sphinx:application:common:menus:menu-bottom-phone-signer-method')
+
+    kapt kaptDeps.google.hilt
+
+    testImplementation testDeps.junit
+
+    androidTestImplementation testDeps.androidx.core
+    androidTestImplementation testDeps.androidx.espresso
+    androidTestImplementation testDeps.androidx.junit
+}

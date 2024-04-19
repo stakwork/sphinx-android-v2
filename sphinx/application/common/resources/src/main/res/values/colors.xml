@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="lightPurple">#A986F9</color>
+    <color name="alert_dark_grey">#3d3d3d</color>
+
+    <color name="body">#151E27</color>
+    <color name="bodyTransparent">#40151E27</color>
+    <color name="bodyInverted">#ffffff</color>
+    <color name="headerBG">#1A242E</color>
+    <color name="headerBGSemiTransparent">#F51A242E</color>
+    <color name="listBG">#141E27</color>
+    <color name="lightBG">#1A242E</color>
+    <color name="profileBG">#1A242E</color>
+    <color name="inputBG1">#13181D</color>
+
+
+    <color name="mainBottomIcons">#909BAA</color>
+    <color name="chatListSelected">#151E27</color>
+
+    <color name="dashboardHeader">#1A242E</color>
+    <color name="dashboardSearch">#151E27</color>
+    <color name="dashboardWashedOutText">#6B7A8D</color>
+
+    <color name="primaryText">#FFFFFF</color>
+    <color name="text">#FFFFFF</color>
+    <color name="textInverted">#3C3F41</color>
+    <color name="secondaryText">#6B7A8D</color>
+    <color name="placeholderTextInverted">#8C6B7A8D</color>
+    <color name="secondaryTextInverted">#8E969C</color>
+    <color name="secondaryTextSent">#A1BACB</color>
+    <color name="textMessages">#FFFFFF</color>
+    <color name="placeholderText">#556171</color>
+
+    <color name="primaryBlue">#618AFF</color>
+    <color name="semiTransparentPrimaryBlue">#1A618AFF</color>
+    <color name="primaryBlueFocused">#B7C9FF</color>
+    <color name="primaryBlueBorder">#5078F2</color>
+    <color name="primaryBlueFontColor">#A3C1FF</color>
+    <color name="blueTextAccent">#5D8FDD</color>
+
+    <color name="black">#000000</color>
+    <color name="shadow">#000000</color>
+    <color name="bubbleShadow">#FFFFFF</color>
+    <color name="selectedMessageBackground">#8C000000</color>
+    <color name="divider">#151E27</color>
+    <color name="lightDivider">#3B4755</color>
+    <color name="lightEpisodeDivider">#47515E</color>
+    <color name="darkDivider">#101317</color>
+    <color name="blueDivider">#2B3C64</color>
+    <color name="expiredInvoice">#FFFFFF</color>
+    <color name="addressBookHeader">#222E3A</color>
+    <color name="messageOptionDivider">#CCFFFFFF</color>
+    <color name="replyDividerReceived">#556171</color>
+    <color name="replyDividerSent">#829CB9</color>
+    <color name="receivedIcon">#82B4FF</color>
+    <color name="receivedMsgBG">#222E3A</color>
+    <color name="sentMsgBG">#3E6189</color>
+    <color name="oldReceivedMsgBG">#222E3A</color>
+    <color name="oldSentMsgBG">#3E6189</color>
+    <color name="imagePreviewBackground">#B3000000</color>
+    <color name="sendAttachmentPreviewBackground">#D9000000</color>
+    <color name="threadSent">#2C3B49</color>
+
+    <color name="primaryGreen">#49C998</color>
+    <color name="primaryPurple">#A76CF3</color>
+    <color name="whiteSemiTransparent">#B3FFFFFF</color>
+    <color name="whiteTenPercentOpacity">#1AFFFFFF</color>
+    <color name="whiteFiftyPercentOpacity">#80FFFFFF</color>
+    <color name="whiteSeventyPercentOpacity">#B3FFFFFF</color>
+    <color name="blackSemiTransparent">#80000000</color>
+    <color name="blackSemiTransparent70">#B3000000</color>
+
+    <color name="greenBorder">#2EB379</color>
+
+    <color name="primaryRed">#ED7474</color>
+    <color name="secondaryRed">#FF8F80</color>
+
+    <color name="transactionBG">#1E2934</color>
+    <color name="transactionBGBorder">#151E27</color>
+
+    <color name="washedOutGreen">#2F7460</color>
+    <color name="washedOutReceivedText">#556171</color>
+    <color name="washedOutSentText">#829CB9</color>
+    <color name="semiTransparentWashedOutSentText">#4D829CB9</color>
+
+    <color name="sentBubbleBorder">#3E6189</color>
+    <color name="receivedBubbleBorder">#222E3A</color>
+
+    <color name="sphinxOrange">#FFBC58</color>
+    <color name="badgeRed">#FF5252</color>
+    <color name="pdfRed">#D84535</color>
+    <color name="authorizeModalBack">#FFFFFF</color>
+    <color name="semitransparentText">#ffffff</color>
+
+    <color name="linkSentColor">#3E6189</color>
+    <color name="linkReceivedColor">#6B7A8D</color>
+    <color name="linkSentButtonColor">#3E6189</color>
+    <color name="linkReceivedButtonColor">#618AFF</color>
+
+    <color name="lightPopupBackground">#33ffffff</color>
+    <color name="popupBackground">#80000000</color>
+
+    <color name="storageBarBlue">#618AFF</color>
+    <color name="storageBarPurple">#A76CF3</color>
+    <color name="storageBarYellow">#FAE676</color>
+    <color name="storageBarBackground">#222E3A</color>
+
+    <color name="highlightedTextBackground">#26FFFFFF</color>
+
+    <!-- Random users colors-->
+    <color name="randomColor1">#7077FF</color>
+    <color name="randomColor2">#DBD23C</color>
+    <color name="randomColor3">#F57D25</color>
+    <color name="randomColor4">#9F70FF</color>
+    <color name="randomColor5">#9BC351</color>
+    <color name="randomColor6">#FF3D3D</color>
+    <color name="randomColor7">#C770FF</color>
+    <color name="randomColor8">#62C784</color>
+    <color name="randomColor9">#C99966</color>
+    <color name="randomColor10">#FF70E9</color>
+    <color name="randomColor21">#76D6CA</color>
+    <color name="randomColor11">#ABDB50</color>
+    <color name="randomColor12">#FF708B</color>
+    <color name="randomColor13">#5AD7F7</color>
+    <color name="randomColor14">#5FC455</color>
+    <color name="randomColor15">#FF9270</color>
+    <color name="randomColor16">#3FABFF</color>
+    <color name="randomColor17">#56D978</color>
+    <color name="randomColor18">#FFBA70</color>
+    <color name="randomColor19">#5078F2</color>
+    <color name="randomColor20">#618AFF</color>
+</resources>

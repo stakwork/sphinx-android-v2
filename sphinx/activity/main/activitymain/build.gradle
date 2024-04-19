@@ -1,0 +1,114 @@
+plugins {
+    id 'app.cash.exhaustive'
+    id 'com.android.library'
+    id 'dagger.hilt.android.plugin'
+    id 'kotlin-android'
+    id 'kotlin-kapt'
+}
+
+android {
+    compileSdkVersion versions.compileSdk
+    buildToolsVersion versions.buildTools
+
+    buildFeatures.viewBinding = true
+    defaultConfig {
+        minSdkVersion versions.minSdk
+        targetSdkVersion versions.targetSdk
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunnerArguments disableAnalytics: 'true'
+        consumerProguardFiles "consumer-rules.pro"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+    namespace 'chat.sphinx.activitymain'
+}
+
+dependencies {
+    implementation fileTree(dir: "libs", include: ["*.jar"])
+    // KotlinAndroid
+    api project(path: ':android:features:android-feature-activity')
+
+    // Sphinx
+    implementation project(path: ':sphinx:activity:insetter-activity')
+    api project(path: ':sphinx:activity:features:user-colors-helper')
+    api project(path: ':sphinx:activity:features:signer-manager')
+    api project(path: ':sphinx:activity:features:connectivity-helper')
+    api project(path: ':sphinx:activity:hilt-qualifiers')
+
+    api project(path: ':sphinx:screens:add-sats:add-sats')
+    api project(path: ':sphinx:screens:address-book:address-book')
+    api project(path: ':sphinx:screens:authentication:authentication')
+    api project(path: ':sphinx:screens:chats:chat-contact:chat-contact')
+    api project(path: ':sphinx:screens:chats:chat-group:chat-group')
+    api project(path: ':sphinx:screens:chats:chat-tribe:chat-tribe')
+    api project(path: ':sphinx:screens:dashboard:dashboard')
+    api project(path: ':sphinx:screens:onboard:onboard-message')
+    api project(path: ':sphinx:screens:onboard:onboard-name')
+    api project(path: ':sphinx:screens:onboard:onboard-picture')
+    api project(path: ':sphinx:screens:onboard:onboard-ready')
+    api project(path: ':sphinx:screens:onboard:onboard-welcome')
+    api project(path: ':sphinx:screens:onboard:onboard-description')
+    api project(path: ':sphinx:screens:onboard:onboard-connect')
+    api project(path: ':sphinx:screens:onboard:onboard-connecting')
+    api project(path: ':sphinx:screens:onboard:onboard-connected')
+    api project(path: ':sphinx:screens:onboard:onboard-lightning')
+    api project(path: ':sphinx:screens:onboard:onboard-desktop')
+    api project(path: ':sphinx:screens:profile:profile')
+    api project(path: ':sphinx:screens:threads:threads')
+    api project(path: ':sphinx:screens:splash:splash')
+
+    implementation project(path: ':sphinx:screens-detail:common:detail-resources')
+    implementation project(path: ':sphinx:application:data:concepts:repositories:concept-repository-actions')
+    implementation project(path: ':sphinx:application:data:concepts:repositories:concept-repository-feed')
+
+    api project(path: ':sphinx:screens-detail:add-friend:add-friend')
+    api project(path: ':sphinx:screens-detail:camera:camera')
+    api project(path: ':sphinx:screens-detail:chat-detail:tribe-detail')
+    api project(path: ':sphinx:screens-detail:create-tribe:create-tribe')
+    api project(path: ':sphinx:screens-detail:tribes-discover:tribes-discover')
+    api project(path: ':sphinx:screens-detail:invite-friend:invite-friend')
+    api project(path: ':sphinx:screens-detail:join-tribe:join-tribe')
+    api project(path: ':sphinx:screens-detail:contact:edit-contact')
+    api project(path: ':sphinx:screens-detail:contact:new-contact')
+    api project(path: ':sphinx:screens-detail:payments:payment-receive:payment-receive')
+    api project(path: ':sphinx:screens-detail:payments:payment-send:payment-send')
+    api project(path: ':sphinx:screens-detail:payments:payment-template:payment-template')
+    api project(path: ':sphinx:screens-detail:podcast-player:podcast-player')
+    api project(path: ':sphinx:screens-detail:common-player')
+    api project(path: ':sphinx:screens-detail:qr-code:qr-code')
+    api project(path: ':sphinx:screens-detail:manage-storage:manage-storage')
+    api project(path: ':sphinx:screens-detail:delete-podcast:delete-podcast')
+    api project(path: ':sphinx:screens-detail:delete-podcast-detail:delete-podcast-detail')
+    api project(path: ':sphinx:screens-detail:delete-chat-media:delete-chat-media')
+    api project(path: ':sphinx:screens-detail:delete-chat-media-detail:delete-chat-media-detail')
+    api project(path: ':sphinx:screens-detail:scanner:scanner')
+    api project(path: ':sphinx:screens-detail:subscription:subscription')
+    api project(path: ':sphinx:screens-detail:support-ticket:support-ticket')
+    api project(path: ':sphinx:screens-detail:transactions:transactions')
+    api project(path: ':sphinx:screens-detail:episode-detail:episode-detail')
+    api project(path: ':sphinx:screens-detail:episode-description:episode-description')
+    api project(path: ':sphinx:screens-detail:tribe-members-list:tribe-members-list')
+    api project(path: ':sphinx:screens-detail:web-view:web-view')
+    api project(path: ':sphinx:screens-detail:newsletter-detail:newsletter-detail')
+    api project(path: ':sphinx:screens-detail:video-screen:video-screen')
+    api project(path: ':sphinx:screens-detail:notification-level:notification-level')
+    api project(path: ':sphinx:screens-detail:add-tribe-member:add-tribe-member')
+    api project(path: ':sphinx:screens-detail:tribe-badge')
+    api project(path: ':sphinx:screens-detail:known-badges:known-badges')
+
+    implementation deps.chrisbanes.insetter
+
+    implementation deps.google.hilt
+    kapt kaptDeps.google.hilt
+
+    testImplementation testDeps.junit
+
+    androidTestImplementation testDeps.androidx.core
+    androidTestImplementation testDeps.androidx.espresso
+    androidTestImplementation testDeps.androidx.junit
+}

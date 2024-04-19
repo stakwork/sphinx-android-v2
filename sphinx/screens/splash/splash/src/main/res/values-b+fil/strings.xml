@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="on_board_welcome">Maligayang Pagdating</string>
+    <string name="on_board_welcome_info_code">I-paste ang connection string\no i-scan ang QR code</string>
+    <string name="on_board_edit_text_hint_code">Ilagay ang Code…</string>
+    <string name="side_effect_generate_token_failed">Nabigong i-generate ang token</string>
+    <string name="on_board_welcome_info_decrypt">Ilagay ang PIN\npara i-decrypt</string>
+    <string name="on_board_edit_text_hint_decrypt">Ilagay ang PIN…</string>
+    <string name="side_effect_decryption_failure">Nabigong i-decrypt</string>
+    <string name="side_effect_empty_input">Hindi dapat walang laman ang input</string>
+    <string name="side_effect_pin_length">Hindi wastong haba ng PIN</string>
+    <string name="side_effect_invalid_code">Hindi wastong Code</string>
+    <string name="side_effect_invalid_pin">Hindi wastong PIN</string>
+    <string name="side_effect_feature_not_implemented">Hindi pa naipapatupad ang feature na iyon</string>
+</resources>

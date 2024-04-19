@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/podcast_player_nav_graph"
+    app:startDestination="@+id/navigation_podcast_player_fragment">
+
+    <fragment
+        android:id="@+id/navigation_podcast_player_fragment"
+        android:name="chat.sphinx.podcast_player.ui.PodcastPlayerFragment"
+        tools:layout="@layout/fragment_podcast_player">
+        <argument
+            android:name="argChatId"
+            app:argType="long" />
+        <argument
+            android:name="argFeedId"
+            app:argType="string" />
+        <argument
+            android:name="argFeedUrl"
+            app:argType="string" />
+        <argument
+            android:name="argFromFeed"
+            app:argType="boolean" />
+        <argument
+            android:name="argFromDownloaded"
+            app:argType="boolean" />
+    </fragment>
+
+</navigation>

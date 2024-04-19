@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.motion.widget.MotionLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/layout_motion_dashboard"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/body"
+    app:layoutDescription="@xml/motion_scene_dashboard"
+    tools:context=".ui.ChatListFragment">
+
+    <include
+        android:id="@+id/layout_dashboard_header"
+        layout="@layout/layout_dashboard_header"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/tab_layout_dashboard_tabs"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/default_header_height"
+        android:layout_gravity="top"
+        android:background="@color/headerBG"
+        app:tabBackground="@color/headerBG"
+        app:tabIndicatorColor="@color/primaryBlue"
+        app:tabTextColor="@color/secondaryText"
+        app:tabSelectedTextColor="@color/text"
+        app:tabRippleColor="@null"
+        app:tabTextAppearance="@style/DashboardTab"
+        app:layout_constraintTop_toBottomOf="@+id/layout_dashboard_header" />
+
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/swipe_refresh_layout_data_reload"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/tab_layout_dashboard_tabs">
+
+        <androidx.viewpager2.widget.ViewPager2
+            android:id="@+id/view_pager_dashboard_tabs"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+    <chat.sphinx.swipe_reveal_layout.SwipeRevealLayout
+        android:id="@+id/swipe_reveal_layout_player"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/player_bar_height_with_shadow"
+        app:layout_constraintBottom_toTopOf="@+id/layout_dashboard_nav_bar"
+        android:visibility="gone"
+        app:mode="same_level"
+        app:dragEdge="right">
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@android:color/transparent">
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+        </FrameLayout>
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <androidx.appcompat.widget.AppCompatImageView
+                    android:id="@+id/image_view_player_bar_shadow"
+                    android:layout_width="match_parent"
+                    android:layout_height="20dp"
+                    android:elevation="2dp"
+                    android:src="@drawable/bottom_bar_elevation_gradient"
+                    android:scaleType="centerInside"
+                    app:layout_constraintBottom_toTopOf="@+id/layout_podcast_player_footer" />
+
+                <include
+                    android:id="@+id/layout_podcast_player_footer"
+                    layout="@layout/layout_podcast_player_footer"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/player_bar_height"
+                    app:layout_constraintBottom_toBottomOf="parent"/>
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+        </FrameLayout>
+
+    </chat.sphinx.swipe_reveal_layout.SwipeRevealLayout>
+
+    <androidx.appcompat.widget.AppCompatImageView
+        android:id="@+id/image_view_bottom_bar_shadow"
+        android:layout_width="match_parent"
+        android:layout_height="20dp"
+        android:elevation="2dp"
+        android:src="@drawable/bottom_bar_elevation_gradient"
+        android:scaleType="centerInside"
+        app:layout_constraintBottom_toTopOf="@+id/layout_dashboard_nav_bar" />
+
+    <include
+        android:id="@+id/layout_dashboard_nav_bar"
+        layout="@layout/layout_dashboard_nav_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+    <View
+        android:id="@+id/dashboard_nav_drawer_input_lock"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@android:color/black"
+        android:elevation="@dimen/default_elevation" />
+
+    <include
+        android:id="@+id/layout_dashboard_nav_drawer"
+        layout="@layout/layout_dashboard_nav_drawer"
+        android:layout_width="@dimen/nav_drawer_width"
+        android:layout_height="match_parent"
+        app:layout_constraintEnd_toStartOf="parent" />
+
+    <include
+        android:id="@+id/layout_dashboard_popup"
+        layout="@layout/layout_dashboard_popup"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <include
+        android:id="@+id/layout_dashboard_restore"
+        layout="@layout/layout_dashboard_restore"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <include
+        android:id="@+id/include_layout_menu_bottom_scanner_choice"
+        layout="@layout/layout_menu_bottom"
+        tools:visibility="gone" />
+
+</androidx.constraintlayout.motion.widget.MotionLayout>

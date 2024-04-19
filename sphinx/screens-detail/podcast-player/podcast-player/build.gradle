@@ -1,0 +1,69 @@
+plugins {
+  id 'app.cash.exhaustive'
+  id 'com.android.library'
+  id 'dagger.hilt.android.plugin'
+  id 'androidx.navigation.safeargs'
+  id 'kotlin-android'
+  id 'kotlin-kapt'
+  id 'kotlin-parcelize'
+}
+
+android {
+  compileSdkVersion versions.compileSdk
+  buildToolsVersion versions.buildTools
+
+  buildFeatures.viewBinding = true
+  defaultConfig {
+    minSdkVersion versions.minSdk
+    targetSdkVersion versions.targetSdk
+
+      testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    testInstrumentationRunnerArguments disableAnalytics: 'true'
+    consumerProguardFiles "consumer-rules.pro"
+  }
+
+  buildTypes {
+    release {
+      minifyEnabled false
+    }
+  }
+    namespace 'chat.sphinx.podcast_player'
+}
+
+dependencies {
+  implementation fileTree(dir: "libs", include: ["*.jar"])
+  // KotlinAndroid
+  implementation project(path: ':android:features:android-feature-screens')
+  // Sphinx
+  implementation project(path: ':sphinx:activity:insetter-activity')
+  implementation project(path: ':sphinx:application:common:resources')
+  implementation project(path: ':sphinx:activity:concepts:concept-connectivity-helper')
+  implementation project(path: ':sphinx:screens-detail:common:detail-resources')
+  implementation project(path: ':sphinx:screens-detail:episode-description:episode-description')
+  implementation project(path: ':sphinx:application:common:logger')
+  implementation project(path: ':sphinx:application:common:swipe-reveal-layout')
+  implementation project(path: ':sphinx:application:common:resources')
+  implementation project(path: ':sphinx:application:data:concepts:concept-image-loader')
+  implementation project(path: ':sphinx:application:data:concepts:repositories:concept-repository-actions')
+  implementation project(path: ':sphinx:application:data:concepts:repositories:concept-repository-chat')
+  implementation project(path: ':sphinx:application:data:concepts:repositories:concept-repository-message')
+  implementation project(path: ':sphinx:application:data:concepts:repositories:concept-repository-contact')
+  implementation project(path: ':sphinx:application:data:concepts:repositories:concept-repository-feed')
+  implementation project(path: ':sphinx:application:data:concepts:repositories:concept-repository-media')
+  implementation project(path: ':sphinx:application:data:concepts:repositories:concept-repository-lightning')
+  implementation project(path: ':sphinx:application:network:concepts:queries:concept-network-query-chat')
+
+  api project(path: ':sphinx:service:concepts:concept-service-media-player')
+  api project(path: ':sphinx:application:common:wrappers:wrapper-common')
+  api project(path: ':sphinx:application:common:wrappers:wrapper-podcast')
+
+  implementation project(path: ':sphinx:activity:features:feature-view-model-coordinator')
+  api project(path: ':sphinx:screens-detail:podcast-player:podcast-player-view-model-coordinator')
+
+  implementation deps.androidx.recyclerView
+
+  implementation deps.google.hilt
+  implementation deps.square.moshi
+  implementation deps.lottie.sdk
+  kapt kaptDeps.google.hilt
+}

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/layout_constraint_chat_image_initial_holder"
+    android:layout_width="@dimen/default_chat_initial_image_xy"
+    android:layout_height="@dimen/default_chat_initial_image_xy">
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/text_view_initials"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_centerInParent="true"
+        android:background="@drawable/chat_initials_circle"
+        android:fontFamily="@font/montserrat_regular"
+        android:gravity="center"
+        android:singleLine="true"
+        android:textColor="@android:color/white"
+        android:textSize="17sp"
+        android:textAllCaps="true"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="TT" />
+
+    <androidx.cardview.widget.CardView
+        android:id="@+id/card_view_chat_picture"
+        android:layout_width="@dimen/default_chat_initial_image_xy"
+        android:layout_height="@dimen/default_chat_initial_image_xy"
+        app:cardBackgroundColor="@android:color/transparent"
+        app:cardElevation="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:cardCornerRadius="@dimen/default_chat_initial_image_radius">
+
+        <androidx.appcompat.widget.AppCompatImageView
+            android:id="@+id/image_view_chat_picture"
+            android:scaleType="centerCrop"
+            android:layout_width="@dimen/default_chat_initial_image_xy"
+            android:layout_height="@dimen/default_chat_initial_image_xy"
+            android:src="@drawable/ic_profile_avatar_circle" />
+
+    </androidx.cardview.widget.CardView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

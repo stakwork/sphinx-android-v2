@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="add_icon"></string>
+    <string name="join_tribe_link">Código QR de la tribu</string>
+    <string name="add_friend">Agregar Amigo</string>
+    <string name="add_tribe">Agregar Tribu</string>
+    <string name="discover_tags">Tags</string>
+    <string name="discover_open">Open</string>
+    <string name="create_tribe">Crear Tribu</string>
+    <string name="contacts">Contactos</string>
+    <string name="profile">Perfil</string>
+    <string name="support">Soporte</string>
+    <string name="add_sats">AGREGAR SATS</string>
+    <string name="search">Buscar</string>
+
+    <string name="upgrade_app">ACTUALIZAR</string>
+
+    <string name="not_valid_tribe_link">El código QR no es un código de tribu válido</string>
+    <string name="invite_name">Invitación: %s</string>
+    <string name="invite_qr_code_header_name">CÓDIGO DE INVITACIÓN</string>
+
+    <string name="alert_confirm_pay_invite_title">Pagar Invitación</string>
+    <string name="alert_confirm_pay_invite_message">¿Estás seguro que deseas pagar %d sats por esta invitación?</string>
+    <string name="pay_invite_balance_too_low">"No se puede pagar por la invitación. El balance demasiado bajo"</string>
+
+    <string name="alert_confirm_delete_invite_title">Borrar Invitación</string>
+    <string name="alert_confirm_delete_invite_message">¿Estás seguro que deseas eliminar esta invitación?</string>
+
+    <string name="paste_invoice_of_tribe_link">Pega la solicitud de pago o el enlace de la tribu</string>
+    <string name="paste_invoice_or_public_key">Solicitud de pago o Public Key</string>
+    <string name="alert_confirm_pay_invoice_title">Pagar solicitud</string>
+    <string name="alert_confirm_pay_invoice_message">¿Estás seguro que deseas pagar esta solicitud?\n\nMonto: %d sat\n\nMemo: %s</string>
+
+    <string name="payment_request_missing_amount">Payment request is missing amount</string>
+    <string name="not_valid_invoice_or_tribe_link">Código QR no soportado</string>
+
+    <string name="attempting_payment_request">Procesando el pago de la solicitud</string>
+    <string name="failed_to_pay_request">No se pudo pagar la solicitud</string>
+    <string name="successfully_paid_invoice">Solicitud pagada con éxito</string>
+
+    <string name="last_message_description_message_deleted">Mensaje eliminado</string>
+    <string name="last_message_description_you">Tú</string>
+    <string name="last_message_description_gif_shared">%sGIF compartido</string>
+    <string name="last_message_description_boost">%sBoost %s</string>
+    <string name="last_message_description_call_invite">%sUnirse a la Llamada</string>
+    <string name="last_message_description_invoice_sent">Solicitud enviada: %s</string>
+    <string name="last_message_description_invoice_receive">Solicitud recibida: %s</string>
+    <string name="last_message_description_payment_sent">Pago enviado: %s</string>
+    <string name="last_message_description_tribe_payment_sent">Pago de %s enviado a %s</string>
+    <string name="last_message_description_payment_received">Pago recibido: %s</string>
+    <string name="last_message_description_tribe_payment">%s ha enviado un pago de %s a %s</string>
+
+    <string name="last_message_description_sent">has enviado</string>
+    <string name="last_message_description_an_audio_clip">un Clip de Audio</string>
+    <string name="last_message_description_a_gif">un Gif</string>
+    <string name="last_message_description_an_image">una Imagen</string>
+    <string name="last_message_description_a_pdf">un PDF</string>
+    <string name="last_message_description_a_paid_message">un Mensaje Pago</string>
+    <string name="last_message_description_an_attachment">un Adjunto</string>
+    <string name="last_message_description_a_video">un Video</string>
+
+    <string name="last_message_description_has_join_tribe">%s se ha unido a la tribu</string>
+    <string name="last_message_description_just_left_tribe">%s ha abandonado la tribu</string>
+    <string name="last_message_description_wants_to_join">%s desea unirse a la tribu</string>
+    <string name="last_message_description_declined_request_from">Has denegado la solicitud de %s</string>
+    <string name="last_message_description_approved_request_from">Has aprobado la solicitud de %s</string>
+    <string name="last_message_description_admin_declined_request">El administrador ha denegado tu solicitud</string>
+    <string name="last_message_description_welcome_member">¡Bienvenido! Ya eres miembro de la tribu</string>
+    <string name="last_message_description_group_kick">El administrador te ha eliminado de esta tribu</string>
+    <string name="last_message_description_tribe_deleted">El administrador ha eliminado esta tribu</string>
+
+    <string name="last_message_description_invite">Invitación: %s</string>
+    <string name="last_message_description_looking_available_node">Buscando nodo disponible para %s</string>
+    <string name="last_message_description_invite_ready">¡Listo! Toca para compartir. Caduca en 24 horas</string>
+    <string name="last_message_description_invite_signing_on">%s se está registrando</string>
+    <string name="last_message_description_invite_tap_to_pay">Toca para pagar y actvar la invitación</string>
+    <string name="last_message_description_invite_payment_sent">Pago enviado, esperando confirmación</string>
+    <string name="last_message_description_invite_signup_complete">Registro completo</string>
+    <string name="last_message_description_invite_expired">Invitación caducada</string>
+
+    <!-- Deep link authorize popup -->
+    <string name="dashboard_authorize_popup_title">¿Quieres autorizar a:</string>
+    <string name="dashboard_authorize_button">AUTORIZAR</string>
+    <string name="dashboard_authorize_generic_error">Ocurrió un error al intentar autorizar a una fuente externa. Por favor volvé a intentarlo más tarde</string>
+
+    <string name="dashboard_redeem_sats_popup_title">Canjear %s sats de:</string>
+    <string name="dashboard_redeem_sats_button">Confirmar</string>
+
+    <string name="dashboard_connect_button">CONECTAR</string>
+    <string name="dashboard_connect_price_to_meet">Precio para conectar: %s</string>
+    <string name="dashboard_connect_description_missing">Sin descriptión</string>
+    <string name="dashboard_connect_initial_message_hint">Mensaje inicial a %s</string>
+    <string name="dashboard_connect_retrieve_person_data_error">No se ha podido obtener la información de la persona</string>
+    <string name="dashboard_connect_message_empty">El mensaje no puede ser vacío</string>
+    <string name="dashboard_connect_generic_error">Ocurrió un error al intentar conectar con el usuario. Por favor volvé a intentarlo más tarde</string>
+
+    <string name="dashboard_network_disconnected_node_toast">Nodo desconectado</string>
+    <string name="dashboard_network_connected_node_toast">Nodo conectado</string>
+    <string name="dashboard_network_disconnected_mqtt_toast">MQTT Desconectado</string>
+    <string name="dashboard_network_connected_mqtt_toast">MQTT Conectado</string>
+
+    <string name="dashboard_save_profile_popup_title">Guardar Perfil de:</string>
+    <string name="dashboard_delete_profile_popup_title">Eliminar Perfil de:</string>
+    <string name="dashboard_save_profile_button">GUARDAR</string>
+    <string name="dashboard_delete_profile_button">ELIMINAR</string>
+    <string name="dashboard_save_profile_generic_error">No se pudo salvar el Perfil</string>
+    <string name="dashboard_save_profile_success">Perfil salvado con éxito</string>
+    <string name="dashboard_delete_profile_generic_error">No se pudo eliminar el Perfil</string>
+    <string name="dashboard_delete_profile_success">Perfil eliminado con éxito</string>
+
+    <string name="dashboard_redeem_badge_token_popup_title">Redeem Badge Token from:</string>
+    <string name="dashboard_redeem_badge_token_generic_error">Could not Redeem Badge Token</string>
+    <string name="dashboard_redeem_badge_token_success">Redeemed Badge Token successfully</string>
+
+    <string name="dashboard_feed_tab_name">Feed</string>
+    <string name="dashboard_friends_tab_name">Amigos</string>
+    <string name="dashboard_tribes_tab_name">Tribus</string>
+
+    <string name="all">Todo</string>
+    <string name="listen">Escuchar</string>
+    <string name="watch">Mirar</string>
+    <string name="read">Leer</string>
+    <string name="play">Jugar</string>
+    <string name="listen_now">Escuchar ahora</string>
+    <string name="following">Siguiendo</string>
+    <string name="recently_played">Consumido recientemente</string>
+    <string name="recently_read">Leido recientemente</string>
+    <string name="recently_released">Lanzado recientemente</string>
+    <string name="recently_published">Publicado recientemente</string>
+
+    <string name="read_now">Read Now</string>
+    <string name="watch_now">Watch Now</string>
+
+    <string name="downloaded">Contenido Descargado</string>
+
+    <string name="recommendations">Recomendaciones</string>
+    <string name="refresh">Refresh</string>
+
+    <string name="all_place_holder">No se encontraron resultados</string>
+    <string name="listen_place_holder">No se encontraron resultados para \"Escuchar\"</string>
+    <string name="watch_place_holder">No se encontraron resultados para \"Mirar\"</string>
+    <string name="read_place_holder">No se encontraron resultados para \"Leer\"</string>
+    <string name="play_place_holder">No se encontraron resultados para \"Jugar\"</string>
+
+    <string name="feed_search_placeholder_1">Buscá entre</string>
+    <string name="feed_search_placeholder_2">los feeds a los que está suscripto</string>
+
+    <string name="feed_search_result_load_error">Ocurrió un error al intentar cargar el contentido del Feed. Por favor volvé a intentarlo más tarde</string>
+
+    <string name="video_search_placeholder_1">Buscá entre</string>
+    <string name="video_search_placeholder_2">miles de videos</string>
+    <string name="video_search_placeholder_3">en Youtube</string>
+
+    <string name="podcast_search_placeholder_1">Buscá entre</string>
+    <string name="podcast_search_placeholder_2">4 000 000 podcasts</string>
+    <string name="podcast_search_placeholder_3">en el Podcast Index</string>
+
+    <string name="dashboard_restore_progress">Restaurando: %s</string>
+    <string name="dashboard_restore_progress_contacts">Restaurando Contactos: %s</string>
+    <string name="dashboard_restore_progress_feeds">Restaurando Feeds: %s</string>
+    <string name="dashboard_restore_progress_messages">Restaurando Mensajes: %s</string>
+    <string name="dashboard_stop_restore">Continuar más tarde</string>
+
+    <string name="loading_recommendations">Cargando Recomendaciones...</string>
+    <string name="refresh_while_loading">No puedes obtener nuevas recomendaciones mientras las estás reproduciendo. Detén la reproducción antes de actualizar.</string>
+
+    <string name="time_left">Faltan %s</string>
+    <string name="dashboard_invite_code_screen">CODIGO DE INVITACIÓN</string>
+</resources>

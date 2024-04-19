@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="profile_header_name">プロフィール名</string>
+    <string name="profile_basic_tab">基本</string>
+    <string name="profile_advanced_tab">詳細設定</string>
+    <string name="profile_user_name">ユーザーネーム</string>
+    <string name="profile_address">アドレス</string>
+    <string name="profile_route_hint">ルートヒント</string>
+    <string name="profile_share_picture">コンタクトとプロフィール写真を共有</string>
+    <string name="profile_tip">デフォルトのチップ額</string>
+    <string name="profile_meeting_server">ミーティングサーバー</string>
+    <string name="profile_sync_devices">他のデバイスと同期</string>
+    <string name="profile_backup_keys">鍵をバックアップ</string>
+    <string name="profile_server_url">サーバーURL</string>
+    <string name="profile_pin_timeout">PINタイムアウト</string>
+    <string name="profile_pin_timeout_hours">12時間</string>
+    <string name="profile_change_pin">PINを変更</string>
+    <string name="profile_change_privacy_pin">プライバシーPINを変更</string>
+    <string name="profile_always_require_pin">常にPINを要求</string>
+    <string name="profile_set_github_pat">Github Personal Access Tokenを設定</string>
+    <string name="profile_export_keys_title_alert">鍵をエクスポート</string>
+    <string name="profile_export_keys_pin_message">"鍵を暗号化するためにPINを入力してください。他のデバイスでアカウントを復元するときに必要になります。"</string>
+    <string name="profile_keys_copied_clipboard">鍵はクリップボードにコピーされます。アプリを削除する前にこの文字列を保存し、PINを忘れないでください。データを紛失する恐れがあります。</string>
+    <string name="profile_link_previews">リンクプレビューを有効化</string>
+    <string name="profile_recommendations">フィードのレコメンデーション</string>
+    <string name="side_effect_backup_keys_exported">エクスポート鍵がクリップボードにコピーされました</string>
+    <string name="side_effect_wrong_pin">誤ったPINが入力されました</string>
+    <string name="side_effect_backup_keys_failed">鍵のバックアップに失敗しました。</string>
+    <string name="profile_qr_code_header_name">公開鍵</string>
+    <string name="bottom_menu_profile_pic_header_text">プロフィール写真</string>
+    <string name="failed_to_process_image">画像の処理に失敗しました</string>
+    <string name="image_uploaded_successfully">画像が正常にアップロードされました</string>
+    <string name="invalid_meeting_server_url">無効なミーティングサーバーURLです</string>
+    <string name="profile_delete_account">アカウントを削除</string>
+    <string name="profile_delete_account_description">アカウントとデータを削除しますか？このアクションは元に戻せません。</string>
+    <string name="profile_delete_account_error">アカウントの削除中にエラーが発生しました。後でもう一度お試しください</string>
+
+    <string name="empty_or_null_relay_url">新しいリレーURLは空またはnullにすることはできません</string>
+    <string name="invalid_relay_url">新しいリレーURLが無効です</string>
+    <string name="relay_url_update_from_http_to_tor_not_implemented">オニオンアドレスへの更新は現在サポートされていません。</string>
+    <string name="testing_new_relay_url">新しいリレーURLをテスト中...</string>
+    <string name="failed_updating_relay_url">新しいURLのテストに失敗しました。以前の設定に戻します...</string>
+    <string name="updating_relay_url_succeed">リレーURLが更新されました</string>
+
+    <string name="github_pat_title">GitHubパーソナルアクセストークン</string>
+    <string name="github_pat_message">リポジトリのスコープを持つGitHubでパーソナルアクセストークンを生成します。</string>
+    <string name="github_pat_succeed">GitHubパーソナルアクセストークンが正常に設定されました</string>
+    <string name="github_pat_failed">GitHubパーソナルアクセストークンを設定できませんでした</string>
+</resources>

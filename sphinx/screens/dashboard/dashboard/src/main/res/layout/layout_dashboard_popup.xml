@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:visibility="gone"
+    android:focusable="true"
+    android:clickable="true"
+    android:background="@color/popupBackground"
+    android:elevation="@dimen/default_elevation"
+    tools:visibility="visible">
+
+    <include
+        android:id="@+id/layout_dashboard_authorize_popup"
+        layout="@layout/layout_chat_list_authorize_popup"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <include
+        android:id="@+id/layout_dashboard_people_profile_popup"
+        layout="@layout/layout_dashboard_people_profile_popup"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <include
+        android:id="@+id/layout_dashboard_connect_popup"
+        layout="@layout/layout_chat_list_connect_popup"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <include
+        android:id="@+id/layout_dashboard_redeem_sats_popup"
+        layout="@layout/layout_chat_list_redeem_sats_popup"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

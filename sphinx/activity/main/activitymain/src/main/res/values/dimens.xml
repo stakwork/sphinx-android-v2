@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="primary_host_scale_x" format="float" type="dimen">.925</item>
+    <item name="primary_host_scale_y" format="float" type="dimen">.975</item>
+    <item name="view_main_input_lock_alpha" format="float" type="dimen">.3</item>
+</resources>

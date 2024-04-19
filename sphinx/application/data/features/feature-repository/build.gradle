@@ -1,0 +1,65 @@
+plugins {
+    id 'app.cash.exhaustive'
+    id 'java-library'
+    id 'kotlin'
+}
+
+dependencies {
+    implementation fileTree(dir: "libs", include: ["*.jar"])
+    // Kotlin Android
+    api project(path: ':kotlin:concepts:concept-coroutines')
+    api project(path: ':kotlin:features:authentication:feature-authentication-core')
+
+    // Sphinx
+    api project(path: ':sphinx:application:common:logger')
+
+    api project(path: ':sphinx:application:data:concepts:concept-coredb')
+    api project(path: ':sphinx:application:data:concepts:concept-relay')
+    api project(path: ':sphinx:application:data:concepts:crypto:concept-crypto-rsa')
+
+    api project(path: ':sphinx:application:data:concepts:concept-media-cache')
+    api project(path: ':sphinx:application:data:concepts:concept-meme-server')
+    api project(path: ':sphinx:application:data:concepts:concept-sphinx-notification-manager')
+    api project(path: ':sphinx:application:data:concepts:repositories:concept-repository-actions')
+    api project(path: ':sphinx:application:data:concepts:repositories:concept-repository-chat')
+    api project(path: ':sphinx:application:data:concepts:repositories:concept-repository-contact')
+    api project(path: ':sphinx:application:data:concepts:repositories:concept-repository-dashboard')
+    api project(path: ':sphinx:application:data:concepts:repositories:concept-repository-lightning')
+    api project(path: ':sphinx:application:data:concepts:repositories:concept-repository-media')
+    api project(path: ':sphinx:application:data:concepts:repositories:concept-repository-message')
+    api project(path: ':sphinx:application:data:concepts:repositories:concept-repository-subscription')
+    api project(path: ':sphinx:application:data:concepts:repositories:concept-repository-feed')
+    api project(path: ':sphinx:application:data:concepts:repositories:concept-repository-connect-manager')
+
+    api project(path: ':sphinx:application:network:concepts:concept-meme-input-stream')
+    api project(path: ':sphinx:application:network:concepts:queries:concept-network-query-meme-server')
+    api project(path: ':sphinx:application:network:concepts:queries:concept-network-query-action-track')
+    api project(path: ':sphinx:application:network:concepts:queries:concept-network-query-discover-tribes')
+    api project(path: ':sphinx:application:network:concepts:queries:concept-network-query-chat')
+    api project(path: ':sphinx:application:network:concepts:queries:concept-network-query-contact')
+    api project(path: ':sphinx:application:network:concepts:queries:concept-network-query-invite')
+    api project(path: ':sphinx:application:network:concepts:queries:concept-network-query-lightning')
+    api project(path: ':sphinx:application:network:concepts:queries:concept-network-query-message')
+    api project(path: ':sphinx:application:network:concepts:queries:concept-network-query-authorize-external')
+    api project(path: ':sphinx:application:network:concepts:queries:concept-network-query-feed-search')
+    api project(path: ':sphinx:application:network:concepts:queries:concept-network-query-people')
+    api project(path: ':sphinx:application:network:concepts:queries:concept-network-query-redeem-badge-token')
+    api project(path: ':sphinx:application:network:concepts:queries:concept-network-query-relay-keys')
+    api project(path: ':sphinx:application:network:concepts:queries:concept-network-query-feed-status')
+    api project(path: ':sphinx:application:data:concepts:concept-connect-manager')
+    api project(path: ':sphinx:application:data:concepts:concept-wallet')
+
+
+    api project(path: ':sphinx:application:network:concepts:concept-socket-io')
+
+    // needed to override moshi's use of 1.4.31
+    api deps.kotlin.reflect
+    api deps.square.moshi
+    api deps.square.sqlDelightCoroutines
+    implementation deps.msgpack.sdk
+
+    implementation project(path: ':sphinx:application:data:concepts:concept-sphinx-notification-manager')
+
+    testImplementation deps.square.sqlDelightJvm
+    testImplementation project(path: ':sphinx:test:test-network-query')
+}

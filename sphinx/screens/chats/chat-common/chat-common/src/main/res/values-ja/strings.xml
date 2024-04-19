@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="edit_text_message_hint">メッセージ</string>
+    <string name="edit_text_optional_message_hint">メッセージ（省略可）</string>
+    <string name="text_view_loading_attachment">データを読み込み復号しています</string>
+
+    <string name="chat_muted_message">チャットをミュートしました。このチャットの新着メッセージはプッシュ通知されません。</string>
+    <string name="chat_muted_waiting_on_network">ネットワーク待機中</string>
+    <string name="chat_tribe_contributed">投げ銭した総額: </string>
+    <string name="chat_tribe_earned">投げ銭された総額: </string>
+
+    <string name="unsupported_message_type_placeholder_text">%1$s: まだサポートされていません</string>
+    <string name="deleted_message_label_text">このメッセージは削除されました</string>
+    <string name="flagged_message_label_text">This message has been flagged</string>
+    <string name="join_call_header_label_text">...でコールに参加</string>
+
+    <string name="failed_message">送信に失敗したメッセージ</string>
+
+    <string name="send_message_empty_destination_error">宛先に友だちまたはチャットを指定してください</string>
+    <string name="send_message_empty_content_error">メッセージを入力するか、ファイルを添付してください</string>
+    <string name="send_message_empty_price_error">価格を設定してください</string>
+
+    <!--  Separators  -->
+    <string name="unseen_messages">Unseen Messages</string>
+    <string name="today">Today</string>
+
+    <!--  Message type invoices  -->
+    <string name="request_expired">リクエストの有効期限が切れています</string>
+    <string name="request_expiration">有効期限: %s</string>
+    <string name="invoice_paid_on">%sに支払ったインボイス</string>
+    <string name="alert_confirm_pay_chat_invoice_title">インボイスに支払いをする</string>
+    <string name="alert_confirm_pay_chat_invoice_message">インボイスに支払いをしてよいですか？</string>
+
+    <!--  Message type placeholder display names  -->
+    <string name="placeholder_display_name_message_type_attachment">添付メッセージ</string>
+    <string name="placeholder_display_name_message_type_bot_response">ボット返信メッセージ</string>
+    <string name="placeholder_display_name_message_type_invoice">インボイスメッセージ</string>
+    <string name="placeholder_display_name_message_type_payment">インボイス支払いメッセージ</string>
+    <string name="placeholder_display_name_message_type_tribe_delete">Tribe削除メッセージ</string>
+    <string name="placeholder_unsupported_message_type_default">サポートされていないメッセージタイプ</string>
+
+    <!-- Paid Message Details: Status Labels   -->
+    <string name="paid_message_details_status_label_pay">支払う</string>
+    <string name="paid_message_details_status_label_payment_accepted">支払いが完了しました</string>
+    <string name="paid_message_details_status_label_payment_denied">支払いできませんでした</string>
+    <string name="paid_message_details_status_label_processing_payment">支払い処理中</string>
+
+    <!-- Paid Message Overlays -->
+    <string name="paywall_overlay_label_text_message_received">satsを支払いメッセージを開封</string>
+    <string name="paywall_overlay_content_description_image_message_received">satsを支払い写真を見る</string>
+    <string name="paywall_overlay_content_description_video_message_received">satsを支払い動画を見る</string>
+
+
+    <!-- Link Previews -->
+    <string name="link_preview_add_contact_banner_label">友だちを追加</string>
+    <string name="link_preview_see_tribe_banner_label">Tribeを見る</string>
+
+    <!-- Replies -->
+    <string name="reply_message_media_content_description">元のメッセージのメディアコンテンツ</string>
+    <string name="reply_message_close_button_content_description">閉じる</string>
+    <string name="share_audio_clip">"Share audio clip:"</string>
+
+    <!--  Purchase Status Labels: Paid Message Details  -->
+    <string name="purchase_status_label_paid_message_details_pending">承認待ち</string>
+    <string name="purchase_status_label_paid_message_details_accepted">支払いが完了しました</string>
+    <string name="purchase_status_label_paid_message_details_denied">支払いできませんでした</string>
+    <string name="purchase_status_label_paid_message_details_processing">支払い処理中</string>
+    <string name="purchase_status_label_paid_message_details_default">支払う</string>
+
+    <!--  Purchase Status Labels: Paid Message Sent Status  -->
+    <string name="purchase_status_label_paid_message_sent_status_pending">承認待ち</string>
+    <string name="purchase_status_label_paid_message_sent_status_accepted">完了しました</string>
+    <string name="purchase_status_label_paid_message_sent_status_denied">失敗しました</string>
+    <string name="purchase_status_label_paid_message_sent_status_processing">支払い処理中</string>
+    <string name="purchase_status_label_paid_message_sent_status_default">ハンドル名のないユーザー</string>
+
+
+    <!--  Group Action  -->
+    <string name="tribe_request_admin_side">%1$sがTribeに\n参加申請しました</string>
+    <string name="tribe_request_approved_admin_side">%1$sからの申請を\n承認しました</string>
+    <string name="tribe_request_rejected_admin_side">%1$sからの申請を\n却下しました</string>
+    <string name="tribe_request_rejected_member_side">Tribe参加申請が管理人により\n却下されました</string>
+    <string name="tribe_join_announcement">%1$sがTribeに参加しました</string>
+    <string name="group_join_announcement">%1$sがグループに参加しました</string>
+    <string name="tribe_leave_announcement">%1$sがTribeから抜けました</string>
+    <string name="group_leave_announcement">%1$sがグループから抜けました</string>
+    <string name="tribe_deleted_announcement">Tribeは管理人により\n削除されました</string>
+    <string name="group_kick_announcement_member_side">管理人によりグループから削除されました</string>
+    <string name="tribe_kick_announcement_member_side">管理人によりTribeから削除されました</string>
+    <string name="tribe_welcome_announcement_member_side">Tribeにようこそ！</string>
+    <string name="tribe_deleted_announcement_button_delete">Tribeを削除</string>
+
+
+    <!-- Selected Item Menu Labels -->
+    <string name="selected_message_menu_item_boost">ブースト</string>
+    <string name="selected_message_menu_item_copy_text">テキストをコピー</string>
+    <string name="selected_message_menu_item_copy_call_link">通話リンクをコピー</string>
+    <string name="selected_message_menu_item_copy_link">リンクをコピー</string>
+    <string name="selected_message_menu_item_delete">メッセージを消去</string>
+    <string name="selected_message_menu_item_reply">返信</string>
+    <string name="selected_message_menu_item_save_file">ファイルを保存</string>
+    <string name="selected_message_menu_item_resend">再送</string>
+    <string name="selected_message_menu_item_flag">フラグ</string>
+    <string name="selected_message_menu_item_pin">ピン留め</string>
+    <string name="selected_message_menu_item_unpin">ピン留めを外す</string>
+
+    <string name="alert_confirm_flag_message_title">メッセージにフラグを付けることを確認</string>
+    <string name="alert_confirm_flag_message_message">このメッセージにフラグを付けますか？  この操作は取り消せません</string>
+
+    <string name="alert_confirm_delete_message_title">メッセージの削除を確認</string>
+    <string name="alert_confirm_delete_message_message">このメッセージを削除しますか？この操作は取り消せません</string>
+
+    <string name="notify_boost_failure">ブーストの支払い失敗</string>
+    <string name="side_effect_text_copied">テキストをクリップボードにコピーしました</string>
+    <string name="side_effect_call_link_copied">通話リンクをクリップボードにコピーしました</string>
+    <string name="side_effect_link_copied">%s をコピーしました</string>
+    <string name="side_effect_no_link_to_copy">コピーするリンクがありません</string>
+    <string name="side_effect_insufficient_budget">検索を実行するための予算が不足しています</string>
+    <string name="side_effect_error_pay_lsat">Lsatの決済中にエラーが発生しました</string>
+    <string name="side_effect_keysend_error">鍵送信エラー</string>
+    <string name="side_effect_challenge_error">認証エラー</string>
+
+    <string name="file_name_loading">読み込み中...</string>
+    <string name="pdf_page">ページ</string>
+    <string name="pdf_pages">ページ</string>
+    <string name="pdf_page_of">ページ %d/%d</string>
+
+    <string name="attachment_send_header_image">画像を送信</string>
+    <string name="attachment_send_header_video">動画を送信</string>
+    <string name="attachment_send_header_pdf">PDFを送信</string>
+    <string name="attachment_send_header_file">ファイルを送信</string>
+    <string name="attachment_send_header_giphy">GIFを送信</string>
+    <string name="attachment_send_header_paid_message">有料メッセージを送信</string>
+
+    <string name="paid_message_pay_to_unlock">メッセージを表示するには支払いが必要です</string>
+    <string name="paid_file_pay_to_unlock">ファイルを閲覧するには支払いが必要です</string>
+    <string name="paid_message_loading">メッセージを読み込み中...</string>
+    <string name="paid_message_unable_to_load">メッセージデータを読み込めません</string>
+    <string name="attachment_price_label">価格: </string>
+    <string name="alert_confirm_pay_attachment_title">購入の確認</string>
+    <string name="alert_confirm_pay_attachment_message">この商品の購入を確定しますか？</string>
+
+    <string name="saved_attachment_successfully">添付ファイルを保存しました</string>
+    <string name="failed_to_save_file">ファイルの保存に失敗しました</string>
+
+    <string name="delete_own_tribe_not_supported">自分のトライブの削除はまだサポートされていません</string>
+    <string name="alert_confirm_exit_tribe_title">トライブから退会</string>
+    <string name="alert_confirm_exit_tribe_message">このトライブを削除し、退会しますか？</string>
+
+    <string name="attachments_menu_cancel">キャンセル</string>
+    <string name="camera_attachment_option">カメラ</string>
+    <string name="library_attachment_option">ライブラリ</string>
+    <string name="gif_attachment_option">Gif</string>
+    <string name="file_attachment_option">ファイル</string>
+    <string name="paid_message_attachment_option">有料メッセージ</string>
+    <string name="request_attachment_option">リクエスト</string>
+    <string name="send_attachment_option">送信</string>
+    <string name="waiting_for_admin_approval">管理者の承認待ち</string>
+    <string name="failed_to_delete_tribe">トライブの削除に失敗しました</string>
+
+    <string name="podcast_boost_label">ブースト！</string>
+    <string name="bottom_menu_call_header_text">通話オプション</string>
+    <string name="bottom_menu_call_option_audio">オーディオ</string>
+    <string name="bottom_menu_call_option_video_or_audio">ビデオまたはオーディオ</string>
+
+    <string name="bottom_menu_more_header_text">チャットオプション</string>
+    <string name="bottom_menu_more_option_call">通話を作成</string>
+    <string name="bottom_menu_more_option_share">トライブリンクを共有</string>
+    <string name="bottom_menu_more_option_search">メッセージを検索</string>
+    <string name="bottom_menu_more_option_notification">通知</string>
+
+    <string name="searching_messages">検索中...</string>
+    <string name="results_found">%d 件の結果が見つかりました</string>
+
+    <string name="slide_to_cancel">&lt;&lt; キャンセルする為スワイプ</string>
+    <string name="recording_permission_granted">録音許可が付与されました</string>
+    <string name="recording_permission_required">録音許可が必要です</string>
+
+    <string name="send_sats">Satsを送る</string>
+
+    <string name="unpin_message">メッセージのピン留めを外す</string>
+    <string name="pinned_message">ピン留めしたメッセージ</string>
+    <string name="message_pinned">メッセージをピン留めしました</string>
+    <string name="message_unpinned">メッセージのピン留めを外しました</string>
+    <string name="pin_message_error">エラーが発生しました。後でもう一度お試しください</string>
+
+    <string name="cancel_search">キャンセル</string>
+</resources>

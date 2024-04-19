@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="share">シェア</string>
+    <string name="copy">コピー</string>
+    <string name="paid">支払いました</string>
+    <string name="qr_code_notify_copied">%sをクリップボードにコピーしました</string>
+    <string name="share_qr_code_as_image_plus_text">画像＋テキストとしてQRコードを共有</string>
+    <string name="share_qr_code_as_text">テキスト形式でQRコードを共有</string>
+</resources>

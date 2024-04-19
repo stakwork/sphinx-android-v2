@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="player_details_episode_title_section_height">52dp</dimen>
+    <dimen name="player_details_episode_title_margin">32dp</dimen>
+    <dimen name="player_slider_control_margin">14dp</dimen>
+
+    <dimen name="player_details_small_control_button_xy">32dp</dimen>
+    <dimen name="player_details_large_control_button_xy">58dp</dimen>
+    <dimen name="player_time_labels_horizontal_margin">18dp</dimen>
+
+    <dimen name="episode_list_item_holder_height">64dp</dimen>
+    <dimen name="episode_list_item_divider_margin_x">30dp</dimen>
+    <dimen name="episode_list_item_cover_image_xy">40dp</dimen>
+    <dimen name="episode_list_item_download_button_container_xy">40dp</dimen>
+    <dimen name="episode_list_item_download_button_xy">25dp</dimen>
+    <dimen name="episode_list_item_delete_download_icon_xy">20dp</dimen>
+
+    <dimen name="seek_bar_sats_container_margin_bottom">16dp</dimen>
+    <dimen name="seek_bar_sats_per_minute_margin_vertical">6dp</dimen>
+    <dimen name="seek_bar_sats_per_minute_margin_horizontal">12dp</dimen>
+    <dimen name="seek_bar_sats_per_minute_padding">8dp</dimen>
+
+    <dimen name="header_buttons_margin">22dp</dimen>
+
+</resources>

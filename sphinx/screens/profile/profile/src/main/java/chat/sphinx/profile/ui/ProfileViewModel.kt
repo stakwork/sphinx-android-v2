@@ -23,6 +23,7 @@ import chat.sphinx.concept_repository_feed.FeedRepository
 import chat.sphinx.concept_repository_lightning.LightningRepository
 import chat.sphinx.concept_repository_media.RepositoryMedia
 import chat.sphinx.concept_view_model_coordinator.ViewModelCoordinator
+import chat.sphinx.concept_wallet.WalletDataHandler
 import chat.sphinx.key_restore.KeyRestore
 import chat.sphinx.kotlin_response.LoadResponse
 import chat.sphinx.kotlin_response.Response
@@ -112,6 +113,7 @@ internal class ProfileViewModel @Inject constructor(
     private val networkQueryRelayKeys: NetworkQueryRelayKeys,
     private val networkQueryContact: NetworkQueryContact,
     private val relayDataHandler: RelayDataHandler,
+    private val walletDataHandler: WalletDataHandler,
     private val torManager: TorManager,
     private val keyRestore: KeyRestore,
     private val navigator: ProfileNavigator,
@@ -526,8 +528,8 @@ internal class ProfileViewModel @Inject constructor(
 
                                 }
                                 is AuthenticationResponse.Success.Key -> {
-                                    passwordPin?.let {
-                                        encryptKeysAndExport(keyResponse.encryptionKey, it)
+                                    walletDataHandler.retrieveWalletMnemonic()?.let { mnemonic ->
+                                        submitSideEffect(ProfileSideEffect.CopyBackupToClipboard(mnemonic.value))
                                     }
                                 }
                             }

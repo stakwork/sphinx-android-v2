@@ -5,6 +5,7 @@ import android.util.Log
 import chat.sphinx.example.concept_connect_manager.ConnectManager
 import chat.sphinx.example.concept_connect_manager.ConnectManagerListener
 import chat.sphinx.example.concept_connect_manager.model.OwnerInfo
+import chat.sphinx.example.wrapper_mqtt.NewInvite
 import chat.sphinx.wrapper_common.lightning.toLightningNodePubKey
 import chat.sphinx.wrapper_common.lightning.toLightningRouteHint
 import chat.sphinx.wrapper_contact.NewContact
@@ -69,6 +70,7 @@ class ConnectManagerImpl: ConnectManager()
     private var ownerSeed: String? = null
     private var inviteCode: String? = null
     private var inviteInitialTribe: String? = null
+    private var currentInvite: NewInvite? = null
     private var restoreMnemonicWords: List<String>? = emptyList()
     private var inviterContact: NewContact? = null
     private var hasAttemptedReconnect = false
@@ -554,7 +556,7 @@ class ConnectManagerImpl: ConnectManager()
         welcomeMessage: String,
         sats: Long,
         tribeServerPubKey: String?
-    ): Pair<String, String>? {
+    ) {
         val now = getTimestampInMilliseconds()
 
         try {
@@ -570,18 +572,26 @@ class ConnectManagerImpl: ConnectManager()
             )
 
             if (createInvite.newInvite != null) {
-                handleRunReturn(createInvite, mqttClient)
-
-                val invite = createInvite.newInvite ?: return null
+                val invite = createInvite.newInvite ?: return
                 val code = codeFromInvite(invite)
+                val tag = createInvite.msgs.getOrNull(0)?.tag
 
-                return Pair(invite, code)
+                currentInvite = NewInvite(
+                    nickname,
+                    sats,
+                    welcomeMessage,
+                    tribeServerPubKey,
+                    invite,
+                    code,
+                    tag
+                )
+
+                handleRunReturn(createInvite, mqttClient)
             }
 
         } catch (e: Exception) {
             Log.e("MQTT_MESSAGES", "createInvite ${e.message}")
         }
-        return null
     }
 
     override fun createInvoice(amount: Long, memo: String): Pair<String, String>? {
@@ -967,9 +977,6 @@ class ConnectManagerImpl: ConnectManager()
 
             // Handling new invite created
             rr.newInvite?.let { invite ->
-                notifyListeners {
-                    onNewInviteCreated(invite)
-                }
                 Log.d("MQTT_MESSAGES", "=> new_invite $invite")
             }
 
@@ -988,7 +995,8 @@ class ConnectManagerImpl: ConnectManager()
                     false,
                     null,
                     code,
-                    null
+                    null,
+                    null,
                 )
 
                 subscribeOwnerMQTT()
@@ -1035,6 +1043,25 @@ class ConnectManagerImpl: ConnectManager()
 
             // Sent
             rr.sentStatus?.let { sentStatus ->
+                val tagAndStatus = extractTagAndStatus(sentStatus)
+
+                if (tagAndStatus?.first == currentInvite?.tag) {
+                    if (tagAndStatus?.second == true) {
+                        notifyListeners {
+                            onNewInviteCreated(
+                                currentInvite?.nickname.orEmpty(),
+                                currentInvite?.inviteString ?: "",
+                                currentInvite?.inviteCode ?: "",
+                                currentInvite?.invitePrice ?: 0L,
+                            )
+                        }
+                    }
+                    else {
+                        // Handle invite error
+                    }
+                    currentInvite = null
+                }
+
                 Log.d("MQTT_MESSAGES", "=> sent_status $sentStatus")
             }
 
@@ -1071,14 +1098,14 @@ class ConnectManagerImpl: ConnectManager()
 
         if (signedChallenge != null) {
 
-           val sign = ByteArray(signedChallenge.length / 2) { index ->
-               val start = index * 2
-               val end = start + 2
-               val byteValue = signedChallenge.substring(start, end).toInt(16)
-               byteValue.toByte()
-           }.encodeBase64()
-               .replace("/", "_")
-               .replace("+", "-")
+            val sign = ByteArray(signedChallenge.length / 2) { index ->
+                val start = index * 2
+                val end = start + 2
+                val byteValue = signedChallenge.substring(start, end).toInt(16)
+                byteValue.toByte()
+            }.encodeBase64()
+                .replace("/", "_")
+                .replace("+", "-")
 
             notifyListeners {
                 onSignedChallenge(sign)
@@ -1206,6 +1233,21 @@ class ConnectManagerImpl: ConnectManager()
 
 
         return result
+    }
+
+    private fun extractTagAndStatus(sentStatusJson: String?): Pair<String, Boolean>? {
+        if (sentStatusJson == null) return null
+
+        try {
+            val jsonObject = JSONObject(sentStatusJson)
+            val tag = jsonObject.getString("tag")
+            val status = jsonObject.getString("status") == "COMPLETE"
+
+            return Pair(tag, status)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return null
     }
 
     private fun decodeBase64ToMap(encodedString: String): MutableMap<String, ByteArray> {

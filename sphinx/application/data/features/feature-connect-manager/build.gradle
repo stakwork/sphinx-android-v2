@@ -41,6 +41,7 @@ dependencies {
     implementation project(path: ':sphinx:application:data:concepts:concept-wallet')
     implementation project(path: ':sphinx:application:data:concepts:concept-background-login')
     implementation project(path: ':sphinx:application:common:resources')
+    implementation project(path: ':sphinx:application:common:wrappers:wrapper-mqtt')
 
     implementation deps.jna.sdk
     implementation deps.paho.sdk

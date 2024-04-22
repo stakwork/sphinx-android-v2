@@ -1,6 +1,7 @@
 package chat.sphinx.wrapper_contact
 
 import chat.sphinx.wrapper_common.PhotoUrl
+import chat.sphinx.wrapper_common.invite.InviteStatus
 import chat.sphinx.wrapper_common.lightning.LightningNodePubKey
 import chat.sphinx.wrapper_common.lightning.LightningRouteHint
 import chat.sphinx.wrapper_common.lightning.Sat
@@ -13,5 +14,6 @@ data class NewContact(
     val confirmed: Boolean,
     val inviteString: String?,
     val inviteCode: String?,
-    val invitePrice: Sat?
-    )
+    val invitePrice: Sat?,
+    val inviteStatus: InviteStatus?
+)

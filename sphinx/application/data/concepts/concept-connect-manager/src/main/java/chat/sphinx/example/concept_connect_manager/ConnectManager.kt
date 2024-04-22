@@ -51,7 +51,7 @@ abstract class ConnectManager {
         welcomeMessage: String,
         sats: Long,
         tribeServerPubKey: String?
-    ): Pair<String, String>? // inviteString, inviteCode
+    )
 
     abstract fun createInvoice(
         amount: Long,
@@ -124,7 +124,13 @@ interface ConnectManagerListener {
     fun onNewBalance(balance: Long)
     fun onNetworkStatusChange(isConnected: Boolean)
     fun listenToOwnerCreation(callback: () -> Unit)
-    fun onNewInviteCreated(inviteString: String)
+    fun onNewInviteCreated(
+        nickname: String,
+        inviteString: String,
+        inviteCode: String,
+        sats: Long
+    )
+
     fun onLastReadMessages(lastReadMessages: String)
     fun onMessagesCounts(msgsCounts: String)
     fun onInitialTribe(tribe: String)

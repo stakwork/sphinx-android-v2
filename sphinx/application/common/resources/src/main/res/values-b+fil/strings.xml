@@ -230,6 +230,32 @@
     <string name="signer_phone_error_mqtt">Error sa pagkonekta sa MQTT</string>
     <string name="signer_phone_connected_to_mqtt">Nakakonekta ang telepono sa MQTT</string>
 
+    <!--    ConnectManager-->
 
+    <string name="connect_manager_generate_xpub_error">Error generating extended public key.</string>
+    <string name="connect_manager_generate_mnemonic_error">Error trying to generate mnemonic.</string>
+    <string name="connect_manager_process_invite_error">Error processing invite.</string>
+    <string name="connect_manager_mqtt_connect_error">Error connecting to MQTT server.</string>
+    <string name="connect_manager_subscribe_owner_error">Error subscribing to owner topic.</string>
+    <string name="connect_manager_mqtt_client_error">Error with MQTT client.</string>
+    <string name="connect_manager_mqtt_init_error">Error during MQTT initialization.</string>
+    <string name="connect_manager_send_message_error">Error sending message.</string>
+    <string name="connect_manager_delete_message_error">Error deleting message.</string>
+    <string name="connect_manager_join_tribe_error">Error joining tribe.</string>
+    <string name="connect_manager_create_tribe_error">Error creating tribe.</string>
+    <string name="connect_manager_create_invite_error">Error creating invite.</string>
+    <string name="connect_manager_create_invoice_error">Error creating invoice.</string>
+    <string name="connect_manager_server_pubkey_error">Error fetching server public key.</string>
+    <string name="connect_manager_pay_contact_invoice_error">Error paying contact invoice.</string>
+    <string name="connect_manager_payment_hash_error">Error generating payment hash.</string>
+    <string name="connect_manager_list_tribe_members_error">Error listing tribe members.</string>
+    <string name="connect_manager_fetch_message_error">Error fetching message.</string>
+    <string name="connect_manager_fetch_first_message_error">Error fetching the first message.</string>
+    <string name="connect_manager_message_count_error">Error message count.</string>
+    <string name="connect_manager_set_device_id_error">Error setting device ID.</string>
+    <string name="connect_manager_media_token_error">Error obtaining media token.</string>
+    <string name="connect_manager_read_message_error">Error reading message.</string>
+    <string name="connect_manager_get_read_messages_error">Error retrieving read messages.</string>
+    <string name="connect_manager_sign_bytes_error">Error signing bytes.</string>
 
 </resources>

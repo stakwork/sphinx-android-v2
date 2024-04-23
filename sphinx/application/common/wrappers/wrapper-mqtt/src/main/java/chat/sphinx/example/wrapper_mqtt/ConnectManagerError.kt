@@ -21,7 +21,7 @@ sealed class ConnectManagerError {
     object ListTribeMembersError: ConnectManagerError()
     object FetchMessageError: ConnectManagerError()
     object FetchFirstMessageError: ConnectManagerError()
-    object MessageContentError: ConnectManagerError()
+    object MessageCountError: ConnectManagerError()
     object SetDeviceIdError: ConnectManagerError()
     object MediaTokenError: ConnectManagerError()
     object ReadMessageError: ConnectManagerError()

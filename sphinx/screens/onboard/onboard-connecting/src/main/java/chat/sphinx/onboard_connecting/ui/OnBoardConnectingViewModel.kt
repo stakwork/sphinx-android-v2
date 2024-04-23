@@ -19,6 +19,7 @@ import chat.sphinx.concept_repository_connect_manager.model.ConnectionManagerSta
 import chat.sphinx.concept_signer_manager.CheckAdminCallback
 import chat.sphinx.concept_signer_manager.SignerManager
 import chat.sphinx.concept_wallet.WalletDataHandler
+import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
 import chat.sphinx.key_restore.KeyRestore
 import chat.sphinx.key_restore.KeyRestoreResponse
 import chat.sphinx.kotlin_response.LoadResponse
@@ -28,6 +29,7 @@ import chat.sphinx.onboard_common.OnBoardStepHandler
 import chat.sphinx.onboard_common.model.OnBoardInviterData
 import chat.sphinx.onboard_common.model.OnBoardStep
 import chat.sphinx.onboard_common.model.RedemptionCode
+import chat.sphinx.onboard_connecting.R
 import chat.sphinx.onboard_connecting.navigation.OnBoardConnectingNavigator
 import chat.sphinx.wrapper_common.lightning.toLightningNodePubKey
 import chat.sphinx.wrapper_invite.InviteString
@@ -694,6 +696,13 @@ internal class OnBoardConnectingViewModel @Inject constructor(
                         storeUserState(connectionState.userState)
                     }
                     else -> {}
+                }
+            }
+        }
+        viewModelScope.launch(mainImmediate) {
+            connectManagerRepository.connectManagerErrorState.collect { connectManagerError ->
+                when (connectManagerError) {
+                    is ConnectManagerError.GenerateXPubError -> {}
                 }
             }
         }

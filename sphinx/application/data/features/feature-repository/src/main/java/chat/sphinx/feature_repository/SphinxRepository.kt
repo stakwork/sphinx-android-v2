@@ -1071,7 +1071,6 @@ abstract class SphinxRepository(
         connectManagerErrorState.value = error
     }
 
-
     override fun startRestoreProcess() {
         applicationScope.launch(mainImmediate) {
             var msgCounts: MsgsCounts? = null

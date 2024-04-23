@@ -162,4 +162,31 @@
     <string name="signer_phone_error_mqtt">Error al concterse con MQTT</string>
     <string name="signer_phone_connected_to_mqtt">El dispositivo está conectado a MQTT</string>
 
+<!--    Connect Manager-->
+    <string name="connect_manager_generate_xpub_error">Error al generar clave pública extendida.</string>
+    <string name="connect_manager_generate_mnemonic_error">Error al intentar generar mnemonics.</string>
+    <string name="connect_manager_process_invite_error">Error al procesar invitación.</string>
+    <string name="connect_manager_mqtt_connect_error">Error al conectar con el servidor MQTT.</string>
+    <string name="connect_manager_subscribe_owner_error">Error al suscribirse al owner topic.</string>
+    <string name="connect_manager_mqtt_client_error">Error con el cliente MQTT.</string>
+    <string name="connect_manager_mqtt_init_error">Error durante la inicialización de MQTT.</string>
+    <string name="connect_manager_send_message_error">Error al enviar mensaje.</string>
+    <string name="connect_manager_delete_message_error">Error al eliminar mensaje.</string>
+    <string name="connect_manager_join_tribe_error">Error al unirse a la tribu.</string>
+    <string name="connect_manager_create_tribe_error">Error al crear tribu.</string>
+    <string name="connect_manager_create_invite_error">Error al crear invitación.</string>
+    <string name="connect_manager_create_invoice_error">Error al crear factura.</string>
+    <string name="connect_manager_server_pubkey_error">Error al obtener la clave pública del servidor.</string>
+    <string name="connect_manager_pay_contact_invoice_error">Error al pagar factura de contacto.</string>
+    <string name="connect_manager_payment_hash_error">Error al generar hash de pago.</string>
+    <string name="connect_manager_list_tribe_members_error">Error al listar miembros de la tribu.</string>
+    <string name="connect_manager_fetch_message_error">Error al recuperar mensaje.</string>
+    <string name="connect_manager_fetch_first_message_error">Error al recuperar el primer mensaje.</string>
+    <string name="connect_manager_message_count_error">Error en el conteo de mensajes.</string>
+    <string name="connect_manager_set_device_id_error">Error al establecer ID de dispositivo.</string>
+    <string name="connect_manager_media_token_error">Error al obtener media token.</string>
+    <string name="connect_manager_read_message_error">Error al leer mensaje.</string>
+    <string name="connect_manager_get_read_messages_error">Error al recuperar mensajes leídos.</string>
+    <string name="connect_manager_sign_bytes_error">Error al firmar bytes.</string>
+
 </resources>

@@ -791,7 +791,7 @@ class ConnectManagerImpl: ConnectManager()
             handleRunReturn(messageAmount, mqttClient)
         } catch (e: Exception) {
             notifyListeners {
-                onConnectManagerError(ConnectManagerError.MessageContentError)
+                onConnectManagerError(ConnectManagerError.MessageCountError)
             }
             Log.e("MQTT_MESSAGES", "getAllMessagesCount ${e.message}")
         }

@@ -5,6 +5,7 @@ import android.util.Log
 import chat.sphinx.example.concept_connect_manager.ConnectManager
 import chat.sphinx.example.concept_connect_manager.ConnectManagerListener
 import chat.sphinx.example.concept_connect_manager.model.OwnerInfo
+import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
 import chat.sphinx.example.wrapper_mqtt.NewInvite
 import chat.sphinx.wrapper_common.lightning.toLightningNodePubKey
 import chat.sphinx.wrapper_common.lightning.toLightningRouteHint
@@ -60,7 +61,6 @@ import uniffi.sphinxrs.signBytes
 import uniffi.sphinxrs.xpubFromSeed
 import java.security.SecureRandom
 import java.util.Calendar
-
 class ConnectManagerImpl: ConnectManager()
 {
     private var _mixerIp: String? = null
@@ -74,7 +74,6 @@ class ConnectManagerImpl: ConnectManager()
     private var restoreMnemonicWords: List<String>? = emptyList()
     private var inviterContact: NewContact? = null
     private var hasAttemptedReconnect = false
-    private var restoreLastOwnerIndex = 0
 
     private val _ownerInfoStateFlow: MutableStateFlow<OwnerInfo?> by lazy {
         MutableStateFlow(null)
@@ -99,18 +98,22 @@ class ConnectManagerImpl: ConnectManager()
 
         seed.first?.let { firstSeed ->
             val xPub = generateXPub(firstSeed, now, network)
-            val sig = rootSignMs(firstSeed, now, network)
+            val sig = signMs(firstSeed, now, network)
             ownerSeed = firstSeed
 
             if (xPub != null) {
                 var invite: RunReturn? = null
 
                 if (inviteCode != null) {
-                    invite = processInvite(ownerSeed!!, now, getCurrentUserState(), inviteCode!!)
-                    _mixerIp = invite.lspHost
+                    invite = processNewInvite(ownerSeed!!, now, getCurrentUserState(), inviteCode!!)
+                    _mixerIp = invite?.lspHost
                 }
 
                 connectToMQTT(mixerIp!!, xPub, now, sig, invite)
+            } else {
+                notifyListeners {
+                    onConnectManagerError(ConnectManagerError.GenerateXPubError)
+                }
             }
         }
     }
@@ -139,6 +142,9 @@ class ConnectManagerImpl: ConnectManager()
 
                 words.toWalletMnemonic()
             } catch (e: Exception) {
+                notifyListeners {
+                    onConnectManagerError(ConnectManagerError.GenerateMnemonicError)
+                }
                 null
             }
         }
@@ -150,7 +156,6 @@ class ConnectManagerImpl: ConnectManager()
                 notifyListeners {
                     onMnemonicWords(words)
                 }
-
             } catch (e: Exception) {}
         }
 
@@ -161,6 +166,30 @@ class ConnectManagerImpl: ConnectManager()
         return try {
             xpubFromSeed(seed, time, network)
         } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun signMs(seed: String, time: String, network: String): String {
+        return try {
+            rootSignMs(seed, time, network)
+        } catch (e: Exception) {
+            ""
+        }
+    }
+
+    private fun processNewInvite(
+        seed: String,
+        uniqueTime: String,
+        state: ByteArray,
+        inviteQr: String
+    ): RunReturn? {
+        return try {
+            processInvite(seed, uniqueTime, state, inviteQr)
+        } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.ProcessInviteError)
+            }
             null
         }
     }
@@ -264,19 +293,14 @@ class ConnectManagerImpl: ConnectManager()
         password: String,
         invite: RunReturn? = null
     ) {
-        mqttClient = try {
-            MqttAsyncClient(serverURI, clientId, null)
-        } catch (e: MqttException) {
-            e.printStackTrace()
-            return
-        }
-
-        val options = MqttConnectOptions().apply {
-            this.userName = key
-            this.password = password.toCharArray()
-        }
-
         try {
+            mqttClient = MqttAsyncClient(serverURI, clientId, null)
+
+            val options = MqttConnectOptions().apply {
+                this.userName = key
+                this.password = password.toCharArray()
+            }
+
             mqttClient?.connect(options, null, object : IMqttActionListener {
                 override fun onSuccess(asyncActionToken: IMqttToken?) {
                     Log.d("MQTT_MESSAGES", "MQTT CONNECTED!")
@@ -296,6 +320,8 @@ class ConnectManagerImpl: ConnectManager()
                 override fun onFailure(asyncActionToken: IMqttToken?, exception: Throwable?) {
                     Log.d("MQTT_MESSAGES", "Failed to connect to MQTT: ${exception?.message}")
 
+                    // If it's the first time trying to connect, try to reconnect otherwise
+                    // prevent infinite loop
                     if (!hasAttemptedReconnect) {
                         hasAttemptedReconnect = true
                         reconnectWithBackoff()
@@ -334,12 +360,16 @@ class ConnectManagerImpl: ConnectManager()
                 }
             })
         } catch (e: MqttException) {
-            Log.d("MQTT_MESSAGES", "MQTT DISCONNECTED! exception")
-            e.printStackTrace()
+            Log.d("MQTT_MESSAGES", "MQTT DISCONNECTED! exception ${e.printStackTrace()}")
+
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.MqttConnectError)
+            }
 
             reconnectWithBackoff()
         }
     }
+
 
     private fun handleMessageArrived(topic: String?, message: MqttMessage?) {
         if (topic != null && message?.payload != null) {
@@ -419,10 +449,12 @@ class ConnectManagerImpl: ConnectManager()
                     handleRunReturn(fetchMessages, mqttClient)
 
                     getReadMessages()
-                    Log.d("SELLAMO", "fetchMessages")
                 }
             }
         } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.SubscribeOwnerError)
+            }
             Log.e("MQTT_MESSAGES", "${e.message}")
         }
     }
@@ -465,6 +497,9 @@ class ConnectManagerImpl: ConnectManager()
             }
 
         } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.SendMessageError)
+            }
             Log.e("MQTT_MESSAGES", "send ${e.message}")
         }
     }
@@ -495,6 +530,9 @@ class ConnectManagerImpl: ConnectManager()
             handleRunReturn(message, mqttClient)
 
         } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.DeleteMessageError)
+            }
             Log.e("MQTT_MESSAGES", "send ${e.message}")
         }
     }
@@ -524,6 +562,9 @@ class ConnectManagerImpl: ConnectManager()
             handleRunReturn(joinTribeMessage, mqttClient)
 
         } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.JoinTribeError)
+            }
             Log.e("MQTT_MESSAGES", "joinTribe ${e.message}")
         }
     }
@@ -547,6 +588,9 @@ class ConnectManagerImpl: ConnectManager()
             }
         }
         catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.CreateTribeError)
+            }
             Log.e("MQTT_MESSAGES", "createTribe ${e.message}")
         }
     }
@@ -588,8 +632,10 @@ class ConnectManagerImpl: ConnectManager()
 
                 handleRunReturn(createInvite, mqttClient)
             }
-
         } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.CreateInviteError)
+            }
             Log.e("MQTT_MESSAGES", "createInvite ${e.message}")
         }
     }
@@ -615,6 +661,9 @@ class ConnectManagerImpl: ConnectManager()
             }
 
         } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.CreateInvoiceError)
+            }
             Log.e("MQTT_MESSAGES", "makeInvoice ${e.message}")
         }
         return null
@@ -628,6 +677,9 @@ class ConnectManagerImpl: ConnectManager()
             Log.d("MQTT_MESSAGES", "getDefaultTribeServer $defaultTribe")
             defaultTribe
         } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.ServerPubKeyError)
+            }
             null
         }
     }
@@ -647,6 +699,9 @@ class ConnectManagerImpl: ConnectManager()
             )
             handleRunReturn(processInvoice, mqttClient)
         } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.PayContactInvoiceError)
+            }
             Log.e("MQTT_MESSAGES", "processInvoicePayment ${e.message}")
         }
     }
@@ -655,6 +710,9 @@ class ConnectManagerImpl: ConnectManager()
         return try {
             paymentHashFromInvoice(paymentRequest)
         } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.PaymentHashError)
+            }
             null
         }
     }
@@ -673,6 +731,9 @@ class ConnectManagerImpl: ConnectManager()
             handleRunReturn(tribeMembers, mqttClient)
         }
         catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.ListTribeMembersError)
+            }
             Log.e("MQTT_MESSAGES", "tribeMembers ${e.message}")
         }
     }
@@ -694,6 +755,9 @@ class ConnectManagerImpl: ConnectManager()
                 onRestoreNextPageMessages(totalHighestIndex ?: 0, limit)
             }
         } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.FetchMessageError)
+            }
             Log.e("MQTT_MESSAGES", "fetchMessagesOnRestoreAccount ${e.message}")
         }
     }
@@ -710,6 +774,9 @@ class ConnectManagerImpl: ConnectManager()
             )
             handleRunReturn(fetchFirstMsg, mqttClient)
         } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.FetchFirstMessageError)
+            }
             Log.e("MQTT_MESSAGES", "fetchFirstMessagesPerKey ${e.message}")
         }
     }
@@ -723,6 +790,9 @@ class ConnectManagerImpl: ConnectManager()
             )
             handleRunReturn(messageAmount, mqttClient)
         } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.MessageContentError)
+            }
             Log.e("MQTT_MESSAGES", "getAllMessagesCount ${e.message}")
         }
     }
@@ -755,6 +825,9 @@ class ConnectManagerImpl: ConnectManager()
             )
             handleRunReturn(token, mqttClient)
         } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.SetDeviceIdError)
+            }
             Log.e("MQTT_MESSAGES", "setOwnerDeviceId ${e.message}")
         }
     }
@@ -815,6 +888,9 @@ class ConnectManagerImpl: ConnectManager()
                 }
             }
         } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.MediaTokenError)
+            }
             Log.d("MQTT_MESSAGES", "Error to generate media token $e")
             null
         }
@@ -834,6 +910,9 @@ class ConnectManagerImpl: ConnectManager()
             )
             handleRunReturn(readMessage, mqttClient)
         } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.ReadMessageError)
+            }
             Log.e("MQTT_MESSAGES", "readMessage ${e.message}")
         }
     }
@@ -847,6 +926,9 @@ class ConnectManagerImpl: ConnectManager()
             )
             handleRunReturn(readMessages, mqttClient)
         } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.GetReadMessagesError)
+            }
             Log.e("MQTT_MESSAGES", "getReadMessages ${e.message}")
         }
     }
@@ -1074,10 +1156,12 @@ class ConnectManagerImpl: ConnectManager()
                 mixerIp = lspHost
             }
         } else {
-            // MQTT ERROR
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.MqttClientError)
+            }
         }
-
     }
+
     override fun retrieveLspIp(): String? {
         return mixerIp
     }
@@ -1093,6 +1177,9 @@ class ConnectManagerImpl: ConnectManager()
                 challenge.toByteArray()
             )
         } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.SignBytesError)
+            }
             null
         }
 

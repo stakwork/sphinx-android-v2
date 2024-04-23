@@ -1,6 +1,7 @@
 package chat.sphinx.example.concept_connect_manager
 
 import chat.sphinx.example.concept_connect_manager.model.OwnerInfo
+import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
 import chat.sphinx.wrapper_contact.NewContact
 import chat.sphinx.wrapper_lightning.WalletMnemonic
 import kotlinx.coroutines.flow.StateFlow
@@ -114,7 +115,6 @@ interface ConnectManagerListener {
     fun onRestoreContacts(contacts: List<String?>)
     fun onRestoreTribes(tribes: List<Pair<String?, Boolean?>>) // Sender, FromMe
     fun onRestoreNextPageMessages(highestIndex: Long, limit: Int)
-
     fun onNewTribeCreated(newTribe: String)
     fun onTribeMembersList(tribeMembers: String)
     fun onMessageUUID(msgUUID: String, provisionalId: Long)
@@ -134,6 +134,7 @@ interface ConnectManagerListener {
     fun onLastReadMessages(lastReadMessages: String)
     fun onMessagesCounts(msgsCounts: String)
     fun onInitialTribe(tribe: String)
+    fun onConnectManagerError(error: ConnectManagerError)
 
 }
 

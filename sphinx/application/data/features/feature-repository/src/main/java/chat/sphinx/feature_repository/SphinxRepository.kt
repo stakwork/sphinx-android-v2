@@ -70,6 +70,7 @@ import chat.sphinx.conceptcoredb.*
 import chat.sphinx.example.concept_connect_manager.ConnectManager
 import chat.sphinx.example.concept_connect_manager.ConnectManagerListener
 import chat.sphinx.example.concept_connect_manager.model.OwnerInfo
+import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
 import chat.sphinx.example.wrapper_mqtt.LastReadMessages.Companion.toLastReadMap
 import chat.sphinx.example.wrapper_mqtt.MsgsCounts
 import chat.sphinx.example.wrapper_mqtt.MsgsCounts.Companion.toMsgsCounts
@@ -268,6 +269,10 @@ abstract class SphinxRepository(
         MutableStateFlow(null)
     }
 
+    override val connectManagerErrorState: MutableStateFlow<ConnectManagerError?> by lazy {
+        MutableStateFlow(null)
+    }
+
     init {
         connectManager.addListener(this)
         memeServerTokenHandler.addListener(this)
@@ -319,6 +324,8 @@ abstract class SphinxRepository(
                     mnemonic,
                     ownerInfo
                 )
+            } else {
+                connectManagerErrorState.value = ConnectManagerError.MqttInitError
             }
         }
     }
@@ -1059,6 +1066,11 @@ abstract class SphinxRepository(
                 }
         }
     }
+
+    override fun onConnectManagerError(error: ConnectManagerError) {
+        connectManagerErrorState.value = error
+    }
+
 
     override fun startRestoreProcess() {
         applicationScope.launch(mainImmediate) {

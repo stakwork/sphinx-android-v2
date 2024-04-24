@@ -93,6 +93,7 @@ abstract class ConnectManager {
     abstract fun getAllMessagesCount()
     abstract fun reconnectWithBackoff()
     abstract fun setOwnerDeviceId(deviceId: String)
+    abstract fun setMute(muteLevel: Int, contactPubKey: String)
 }
 
 interface ConnectManagerListener {

@@ -1026,6 +1026,11 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                             app.getString(R.string.connect_manager_media_token_error))
                         )
                     }
+                    is ConnectManagerError.SetMuteError -> {
+                        submitSideEffect(ChatSideEffect.Notify(
+                            app.getString(R.string.connect_manager_set_mute_error))
+                        )
+                    }
                 }
             }
         }

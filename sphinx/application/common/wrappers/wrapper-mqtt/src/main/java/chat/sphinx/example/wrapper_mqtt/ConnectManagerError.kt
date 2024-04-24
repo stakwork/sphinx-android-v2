@@ -27,4 +27,6 @@ sealed class ConnectManagerError {
     object ReadMessageError: ConnectManagerError()
     object GetReadMessagesError: ConnectManagerError()
     object SignBytesError: ConnectManagerError()
+
+    object SetMuteError: ConnectManagerError()
 }

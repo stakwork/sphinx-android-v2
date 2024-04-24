@@ -186,6 +186,6 @@
     <string name="connect_manager_read_message_error">Error reading message.</string>
     <string name="connect_manager_get_read_messages_error">Error retrieving read messages.</string>
     <string name="connect_manager_sign_bytes_error">Error signing bytes.</string>
-
+    <string name="connect_manager_set_mute_error">Error setting mute status.</string>
 
 </resources>

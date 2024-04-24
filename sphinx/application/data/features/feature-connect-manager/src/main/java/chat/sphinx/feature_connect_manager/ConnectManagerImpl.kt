@@ -49,6 +49,7 @@ import uniffi.sphinxrs.makeMediaTokenWithMeta
 import uniffi.sphinxrs.makeMediaTokenWithPrice
 import uniffi.sphinxrs.mnemonicFromEntropy
 import uniffi.sphinxrs.mnemonicToSeed
+import uniffi.sphinxrs.mute
 import uniffi.sphinxrs.paymentHashFromInvoice
 import uniffi.sphinxrs.processInvite
 import uniffi.sphinxrs.read
@@ -829,6 +830,23 @@ class ConnectManagerImpl: ConnectManager()
                 onConnectManagerError(ConnectManagerError.SetDeviceIdError)
             }
             Log.e("MQTT_MESSAGES", "setOwnerDeviceId ${e.message}")
+        }
+    }
+
+    override fun setMute(muteLevel: Int, contactPubKey: String) {
+        try {
+            val mute = mute(
+                ownerSeed!!,
+                getTimestampInMilliseconds(),
+                getCurrentUserState(),
+                contactPubKey,
+                muteLevel.toUByte()
+            )
+            handleRunReturn(mute, mqttClient)
+        } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.SetMuteError)
+            }
         }
     }
 

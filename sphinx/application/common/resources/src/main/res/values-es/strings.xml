@@ -188,5 +188,6 @@
     <string name="connect_manager_read_message_error">Error al leer mensaje.</string>
     <string name="connect_manager_get_read_messages_error">Error al recuperar mensajes leídos.</string>
     <string name="connect_manager_sign_bytes_error">Error al firmar bytes.</string>
+    <string name="connect_manager_set_mute_error">>Error al configurar el estado de silencio</string>
 
 </resources>

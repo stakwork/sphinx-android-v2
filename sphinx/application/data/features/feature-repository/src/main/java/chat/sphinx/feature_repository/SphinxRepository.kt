@@ -5400,7 +5400,16 @@ abstract class SphinxRepository(
 
         applicationScope.launch(mainImmediate) {
             val queries = coreDB.getSphinxDatabaseQueries()
+            val contact = queries.contactGetById(ContactId(chat.id.value)).executeAsOneOrNull()
             val currentNotificationLevel = chat.notify
+
+            if (contact != null) {
+                contact.node_pub_key?.value?.let { pubKey ->
+                    connectManager.setMute(level.value, pubKey)
+                }
+            } else {
+                connectManager.setMute(level.value, chat.uuid.value)
+            }
 
             chatLock.withLock {
                 withContext(io) {
@@ -5410,28 +5419,6 @@ abstract class SphinxRepository(
                             level,
                             queries
                         )
-                    }
-                }
-            }
-
-            networkQueryChat.setNotificationLevel(chat.id, level).collect { loadResponse ->
-                when (loadResponse) {
-                    is LoadResponse.Loading -> {}
-                    is Response.Success -> {}
-                    is Response.Error -> {
-                        response = loadResponse
-
-                        chatLock.withLock {
-                            withContext(io) {
-                                queries.transaction {
-                                    updateChatNotificationLevel(
-                                        chat.id,
-                                        currentNotificationLevel,
-                                        queries
-                                    )
-                                }
-                            }
-                        }
                     }
                 }
             }

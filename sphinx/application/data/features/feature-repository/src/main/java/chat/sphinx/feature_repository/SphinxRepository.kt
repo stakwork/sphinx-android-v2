@@ -3860,9 +3860,13 @@ abstract class SphinxRepository(
 
         if (message != null) {
             if (contact != null) {
-                connectManager.readMessage(contact.node_pub_key?.value!!, message.id.value)
+                contact.node_pub_key?.value?.let { pubKey ->
+                    connectManager.readMessage(pubKey, message.id.value)
+                }
             } else {
-                connectManager.readMessage(chat?.uuid?.value!!, message.id.value)
+                chat?.uuid?.value?.let { pubKey ->
+                    connectManager.readMessage(pubKey, message.id.value)
+                }
             }
         }
 

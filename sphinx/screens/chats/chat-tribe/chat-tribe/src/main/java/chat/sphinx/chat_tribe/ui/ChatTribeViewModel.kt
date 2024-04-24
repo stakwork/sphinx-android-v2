@@ -22,6 +22,7 @@ import chat.sphinx.concept_network_query_people.NetworkQueryPeople
 import chat.sphinx.concept_network_query_people.model.ChatLeaderboardDto
 import chat.sphinx.concept_repository_actions.ActionsRepository
 import chat.sphinx.concept_repository_chat.ChatRepository
+import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
 import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.concept_repository_dashboard_android.RepositoryDashboardAndroid
 import chat.sphinx.concept_repository_feed.FeedRepository
@@ -83,6 +84,7 @@ class ChatTribeViewModel @Inject constructor(
     cameraViewModelCoordinator: ViewModelCoordinator<CameraRequest, CameraResponse>,
     linkPreviewHandler: LinkPreviewHandler,
     memeInputStreamHandler: MemeInputStreamHandler,
+    connectManagerRepository: ConnectManagerRepository,
     moshi: Moshi,
     LOG: SphinxLogger,
 ): ChatViewModel<ChatTribeFragmentArgs>(
@@ -104,6 +106,7 @@ class ChatTribeViewModel @Inject constructor(
     cameraViewModelCoordinator,
     linkPreviewHandler,
     memeInputStreamHandler,
+    connectManagerRepository,
     moshi,
     LOG,
 ) {

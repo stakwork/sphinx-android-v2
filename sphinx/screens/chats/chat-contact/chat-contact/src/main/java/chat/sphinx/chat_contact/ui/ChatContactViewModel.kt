@@ -5,7 +5,6 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import chat.sphinx.camera_view_model_coordinator.request.CameraRequest
 import chat.sphinx.camera_view_model_coordinator.response.CameraResponse
-import chat.sphinx.chat_common.ui.ChatSideEffect
 import chat.sphinx.chat_common.ui.ChatViewModel
 import chat.sphinx.chat_common.ui.viewstate.InitialHolderViewState
 import chat.sphinx.chat_contact.navigation.ContactChatNavigator
@@ -18,6 +17,7 @@ import chat.sphinx.concept_network_query_lightning.model.route.isRouteAvailable
 import chat.sphinx.concept_network_query_people.NetworkQueryPeople
 import chat.sphinx.concept_repository_actions.ActionsRepository
 import chat.sphinx.concept_repository_chat.ChatRepository
+import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
 import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.concept_repository_dashboard_android.RepositoryDashboardAndroid
 import chat.sphinx.concept_repository_feed.FeedRepository
@@ -47,7 +47,6 @@ import chat.sphinx.wrapper_message.ThreadUUID
 import com.squareup.moshi.Moshi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.matthewnelson.android_feature_navigation.util.navArgs
-import io.matthewnelson.android_feature_viewmodel.submitSideEffect
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
 import io.matthewnelson.concept_media_cache.MediaCacheHandler
 import kotlinx.coroutines.delay
@@ -86,6 +85,7 @@ internal class ChatContactViewModel @Inject constructor(
     cameraViewModelCoordinator: ViewModelCoordinator<CameraRequest, CameraResponse>,
     linkPreviewHandler: LinkPreviewHandler,
     memeInputStreamHandler: MemeInputStreamHandler,
+    connectManagerRepository: ConnectManagerRepository,
     moshi: Moshi,
     LOG: SphinxLogger,
 ): ChatViewModel<ChatContactFragmentArgs>(
@@ -107,6 +107,7 @@ internal class ChatContactViewModel @Inject constructor(
     cameraViewModelCoordinator,
     linkPreviewHandler,
     memeInputStreamHandler,
+    connectManagerRepository,
     moshi,
     LOG,
 ) {

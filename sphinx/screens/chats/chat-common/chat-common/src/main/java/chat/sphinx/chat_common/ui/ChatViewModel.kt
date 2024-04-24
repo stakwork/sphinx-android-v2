@@ -58,6 +58,7 @@ import chat.sphinx.concept_network_query_lightning.NetworkQueryLightning
 import chat.sphinx.concept_network_query_people.NetworkQueryPeople
 import chat.sphinx.concept_repository_actions.ActionsRepository
 import chat.sphinx.concept_repository_chat.ChatRepository
+import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
 import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.concept_repository_dashboard_android.RepositoryDashboardAndroid
 import chat.sphinx.concept_repository_feed.FeedRepository
@@ -65,6 +66,7 @@ import chat.sphinx.concept_repository_media.RepositoryMedia
 import chat.sphinx.concept_repository_message.MessageRepository
 import chat.sphinx.concept_repository_message.model.SendMessage
 import chat.sphinx.concept_view_model_coordinator.ViewModelCoordinator
+import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
 import chat.sphinx.kotlin_response.*
 import chat.sphinx.logger.SphinxLogger
 import chat.sphinx.logger.e
@@ -136,9 +138,10 @@ abstract class ChatViewModel<ARGS : NavArgs>(
     protected val cameraCoordinator: ViewModelCoordinator<CameraRequest, CameraResponse>,
     protected val linkPreviewHandler: LinkPreviewHandler,
     private val memeInputStreamHandler: MemeInputStreamHandler,
+    private val connectManagerRepository: ConnectManagerRepository,
     val moshi: Moshi,
     protected val LOG: SphinxLogger,
-) : MotionLayoutViewModel<
+    ) : MotionLayoutViewModel<
         Nothing,
         ChatSideEffectFragment,
         ChatSideEffect,
@@ -985,7 +988,49 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                 }
             }
         }
+
+        collectConnectManagerErrorState()
     }
+
+    private fun collectConnectManagerErrorState(){
+        viewModelScope.launch(mainImmediate) {
+            connectManagerRepository.connectManagerErrorState.collect { connectManagerError ->
+                when (connectManagerError) {
+                    is ConnectManagerError.SendMessageError -> {
+                        submitSideEffect(ChatSideEffect.Notify(
+                            app.getString(R.string.connect_manager_send_message_error))
+                        )
+                    }
+                    is ConnectManagerError.PayContactInvoiceError -> {
+                        submitSideEffect(ChatSideEffect.Notify(
+                            app.getString(R.string.connect_manager_pay_contact_invoice_error))
+                        )
+                    }
+                    is ConnectManagerError.PaymentHashError -> {
+                        submitSideEffect(ChatSideEffect.Notify(
+                            app.getString(R.string.connect_manager_payment_hash_error))
+                        )
+                    }
+                    is ConnectManagerError.ReadMessageError -> {
+                        submitSideEffect(ChatSideEffect.Notify(
+                            app.getString(R.string.connect_manager_read_message_error))
+                        )
+                    }
+                    is ConnectManagerError.SignBytesError -> {
+                        submitSideEffect(ChatSideEffect.Notify(
+                            app.getString(R.string.connect_manager_sign_bytes_error))
+                        )
+                    }
+                    is ConnectManagerError.MediaTokenError -> {
+                        submitSideEffect(ChatSideEffect.Notify(
+                            app.getString(R.string.connect_manager_media_token_error))
+                        )
+                    }
+                }
+            }
+        }
+    }
+
 
     protected abstract fun forceKeyExchange()
 

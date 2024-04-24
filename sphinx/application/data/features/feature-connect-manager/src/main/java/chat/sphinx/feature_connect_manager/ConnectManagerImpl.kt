@@ -35,6 +35,7 @@ import uniffi.sphinxrs.codeFromInvite
 import uniffi.sphinxrs.fetchMsgs
 import uniffi.sphinxrs.getDefaultTribeServer
 import uniffi.sphinxrs.getMsgsCounts
+import uniffi.sphinxrs.getMutes
 import uniffi.sphinxrs.getReads
 import uniffi.sphinxrs.getSubscriptionTopic
 import uniffi.sphinxrs.getTribeManagementTopic
@@ -450,6 +451,7 @@ class ConnectManagerImpl: ConnectManager()
                     handleRunReturn(fetchMessages, mqttClient)
 
                     getReadMessages()
+                    getMutedChats()
                 }
             }
         } catch (e: Exception) {
@@ -951,6 +953,19 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
+    override fun getMutedChats() {
+        try {
+            val mutedChats = getMutes(
+                ownerSeed!!,
+                getTimestampInMilliseconds(),
+                getCurrentUserState()
+            )
+            handleRunReturn(mutedChats, mqttClient)
+        } catch (e: Exception) {
+            Log.e("MQTT_MESSAGES", "getMutedChats ${e.message}")
+        }
+    }
+
     private fun publishTopicsSequentially(topics: Array<String>, messages: Array<String>?, index: Int) {
         if (index < topics.size) {
             val topic = topics[index]
@@ -1172,6 +1187,13 @@ class ConnectManagerImpl: ConnectManager()
 
             rr.lspHost?.let { lspHost ->
                 mixerIp = lspHost
+            }
+
+            rr.muteLevels?.let { muteLevels ->
+                notifyListeners {
+                    onUpdateMutes(muteLevels)
+                }
+                Log.d("MQTT_MESSAGES", "=> muteLevels $muteLevels")
             }
         } else {
             notifyListeners {

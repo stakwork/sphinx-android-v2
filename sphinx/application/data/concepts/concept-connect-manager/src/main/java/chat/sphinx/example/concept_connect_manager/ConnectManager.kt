@@ -84,6 +84,7 @@ abstract class ConnectManager {
     )
 
     abstract fun getReadMessages()
+    abstract fun getMutedChats()
     abstract fun retrieveLspIp(): String?
     abstract fun addListener(listener: ConnectManagerListener): Boolean
     abstract fun removeListener(listener: ConnectManagerListener): Boolean
@@ -133,6 +134,8 @@ interface ConnectManagerListener {
     )
 
     fun onLastReadMessages(lastReadMessages: String)
+
+    fun onUpdateMutes(mutes: String)
     fun onMessagesCounts(msgsCounts: String)
     fun onInitialTribe(tribe: String)
     fun onConnectManagerError(error: ConnectManagerError)

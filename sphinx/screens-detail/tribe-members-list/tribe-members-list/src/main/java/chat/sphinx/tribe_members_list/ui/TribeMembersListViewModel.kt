@@ -116,44 +116,14 @@ internal class TribeMembersListViewModel @Inject constructor(
                     tribeServerPubKey,
                     tribePubKey
                 )
+            } else {
+                submitSideEffect(
+                    TribeMembersListSideEffect.Notify(
+                        app.getString(R.string.connect_manager_server_pubkey_error)
+                    )
+                )
             }
         }
-
-//        networkQueryContact.getTribeMembers(
-//            chatId = ChatId(args.argChatId),
-//            offset = page * itemsPerPage,
-//            limit = itemsPerPage
-//        ).collect{ loadResponse ->
-//            val firstPage = (page == 0)
-//
-//            @Exhaustive
-//            when (loadResponse) {
-//                is LoadResponse.Loading -> {
-//                    updateViewState(
-//                        TribeMembersListViewState.ListMode(listOf(), true, firstPage)
-//                    )
-//                }
-//                is Response.Error -> {
-//                    updateViewState(
-//                        TribeMembersListViewState.ListMode(listOf(), false, firstPage)
-//                    )
-//                }
-//                is Response.Success -> {
-//                    if (loadResponse.value.contacts.isNotEmpty()) {
-//                        updateViewState(
-//                            TribeMembersListViewState.ListMode(
-//                                processMembers(
-//                                    loadResponse.value.contacts,
-//                                    getOwner()
-//                                ),
-//                                false,
-//                                firstPage
-//                            )
-//                        )
-//                    }
-//                }
-//            }
-//        }
     }
 
     private suspend fun fetchTribeMembers(){

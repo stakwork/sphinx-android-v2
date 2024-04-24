@@ -151,8 +151,8 @@ internal class OnBoardConnectingViewModel @Inject constructor(
             delay(500L)
             processCode()
         }
-        collectConnectionStateStateFlow()
-
+        collectConnectionState()
+        collectConnectManagerErrorState()
     }
 
     fun setSignerManager(signerManager: SignerManager) {
@@ -678,7 +678,7 @@ internal class OnBoardConnectingViewModel @Inject constructor(
         }
     }
 
-    private fun collectConnectionStateStateFlow() {
+    private fun collectConnectionState() {
         viewModelScope.launch(mainImmediate) {
             connectManagerRepository.connectionManagerState.collect { connectionState ->
                 when (connectionState) {
@@ -699,6 +699,9 @@ internal class OnBoardConnectingViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    private fun collectConnectManagerErrorState(){
         viewModelScope.launch(mainImmediate) {
             connectManagerRepository.connectManagerErrorState.collect { connectManagerError ->
                 when (connectManagerError) {
@@ -735,6 +738,16 @@ internal class OnBoardConnectingViewModel @Inject constructor(
                     is ConnectManagerError.MqttInitError -> {
                         submitSideEffect(OnBoardConnectingSideEffect.Notify(
                             app.getString(R.string.connect_manager_mqtt_init_error))
+                        )
+                    }
+                    is ConnectManagerError.FetchMessageError -> {
+                        submitSideEffect(OnBoardConnectingSideEffect.Notify(
+                            app.getString(R.string.connect_manager_fetch_message_error))
+                        )
+                    }
+                    is ConnectManagerError.FetchFirstMessageError -> {
+                        submitSideEffect(OnBoardConnectingSideEffect.Notify(
+                            app.getString(R.string.connect_manager_fetch_first_message_error))
                         )
                     }
                 }

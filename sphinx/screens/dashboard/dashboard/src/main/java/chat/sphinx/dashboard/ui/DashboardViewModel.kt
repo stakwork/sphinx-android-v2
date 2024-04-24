@@ -46,9 +46,9 @@ import chat.sphinx.dashboard.ui.viewstates.ChatListFooterButtonsViewState
 import chat.sphinx.dashboard.ui.viewstates.DashboardMotionViewState
 import chat.sphinx.dashboard.ui.viewstates.DashboardTabsViewState
 import chat.sphinx.dashboard.ui.viewstates.DeepLinkPopupViewState
+import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
 import chat.sphinx.kotlin_response.LoadResponse
 import chat.sphinx.kotlin_response.Response
-import chat.sphinx.kotlin_response.ResponseError
 import chat.sphinx.kotlin_response.exception
 import chat.sphinx.logger.SphinxLogger
 import chat.sphinx.menu_bottom.ui.MenuBottomViewState
@@ -83,8 +83,6 @@ import chat.sphinx.wrapper_common.lightning.LightningNodePubKey
 import chat.sphinx.wrapper_common.lightning.LightningPaymentRequest
 import chat.sphinx.wrapper_common.lightning.LightningRouteHint
 import chat.sphinx.wrapper_common.lightning.Sat
-import chat.sphinx.wrapper_common.lightning.getPubKey
-import chat.sphinx.wrapper_common.lightning.getRouteHint
 import chat.sphinx.wrapper_common.lightning.isValidLightningNodeLink
 import chat.sphinx.wrapper_common.lightning.isValidLightningNodePubKey
 import chat.sphinx.wrapper_common.lightning.isValidLightningPaymentRequest
@@ -93,7 +91,6 @@ import chat.sphinx.wrapper_common.lightning.toLightningNodePubKey
 import chat.sphinx.wrapper_common.lightning.toLightningPaymentRequestOrNull
 import chat.sphinx.wrapper_common.lightning.toLightningRouteHint
 import chat.sphinx.wrapper_common.lightning.toSat
-import chat.sphinx.wrapper_common.lightning.toVirtualLightningNodeAddress
 import chat.sphinx.wrapper_common.message.SphinxCallLink
 import chat.sphinx.wrapper_common.message.toSphinxCallLink
 import chat.sphinx.wrapper_common.toCreateInvoiceLink
@@ -230,7 +227,8 @@ internal class DashboardViewModel @Inject constructor(
         }
         connectManagerRepository.connectAndSubscribeToMqtt(getUserState())
         setDeviceId()
-        collectConnectionStateStateFlow()
+        collectConnectionState()
+        collectConnectManagerErrorState()
 
         getHideBalanceState()
 
@@ -264,7 +262,7 @@ internal class DashboardViewModel @Inject constructor(
         }
     }
 
-    private fun collectConnectionStateStateFlow() {
+    private fun collectConnectionState() {
         viewModelScope.launch(mainImmediate) {
             connectManagerRepository.connectionManagerState.collect { connectionState ->
                 when (connectionState) {
@@ -286,6 +284,66 @@ internal class DashboardViewModel @Inject constructor(
             }
         }
     }
+
+    private fun collectConnectManagerErrorState() {
+        viewModelScope.launch(mainImmediate) {
+            connectManagerRepository.connectManagerErrorState.collect { connectManagerError ->
+                when (connectManagerError) {
+                    is ConnectManagerError.GenerateXPubError -> {
+                        submitSideEffect(ChatListSideEffect.Notify(
+                            app.getString(R.string.connect_manager_generate_xpub_error))
+                        )
+                    }
+                    is ConnectManagerError.MqttConnectError -> {
+                        submitSideEffect(ChatListSideEffect.Notify(
+                            app.getString(R.string.connect_manager_mqtt_connect_error))
+                        )
+                    }
+                    is ConnectManagerError.MqttClientError -> {
+                        submitSideEffect(ChatListSideEffect.Notify(
+                            app.getString(R.string.connect_manager_mqtt_client_error))
+                        )
+                    }
+                    is ConnectManagerError.MqttInitError -> {
+                        submitSideEffect(ChatListSideEffect.Notify(
+                            app.getString(R.string.connect_manager_mqtt_init_error))
+                        )
+                    }
+                    is ConnectManagerError.JoinTribeError -> {
+                        submitSideEffect(ChatListSideEffect.Notify(
+                            app.getString(R.string.connect_manager_join_tribe_error))
+                        )
+                    }
+                    is ConnectManagerError.CreateTribeError -> {
+                        submitSideEffect(ChatListSideEffect.Notify(
+                            app.getString(R.string.connect_manager_create_tribe_error))
+                        )
+                    }
+                    is ConnectManagerError.CreateInviteError -> {
+                        submitSideEffect(ChatListSideEffect.Notify(
+                            app.getString(R.string.connect_manager_create_invite_error))
+                        )
+                    }
+                    is ConnectManagerError.CreateInvoiceError -> {
+                        submitSideEffect(ChatListSideEffect.Notify(
+                            app.getString(R.string.connect_manager_create_invoice_error))
+                        )
+                    }
+                    is ConnectManagerError.GetReadMessagesError -> {
+                        submitSideEffect(ChatListSideEffect.Notify(
+                            app.getString(R.string.connect_manager_get_read_messages_error))
+                        )
+                    }
+                    is ConnectManagerError.SignBytesError -> {
+                        submitSideEffect(ChatListSideEffect.Notify(
+                            app.getString(R.string.connect_manager_sign_bytes_error))
+                        )
+                    }
+                }
+            }
+        }
+    }
+
 
     private fun storeUserState(state: String) {
         val editor = userStateSharedPreferences.edit()

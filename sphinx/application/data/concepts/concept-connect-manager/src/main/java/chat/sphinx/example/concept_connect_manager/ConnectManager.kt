@@ -65,6 +65,17 @@ abstract class ConnectManager {
 
     abstract fun retrievePaymentHash(paymentRequest: String): String?
 
+    abstract fun getPayments(
+        lastMsgIdx: Long,
+        limit: Int,
+        scid: Long?, // fetch payments for a single child key
+        remoteOnly: Boolean?, // only payments routed through other LSPs
+        minMsat: Long?, // include only payments above this amount
+        reverse: Boolean?
+    )
+
+    abstract fun getPubKeyFromChildIndex(childIndex: Long): String?
+
     abstract fun retrieveTribeMembersList(
         tribeServerPubKey: String,
         tribePubKey: String
@@ -124,8 +135,10 @@ interface ConnectManagerListener {
     fun onDeleteUserState(userState: List<String>)
     fun onSignedChallenge(sign: String)
     fun onNewBalance(balance: Long)
+    fun onPayments(payments: String)
     fun onNetworkStatusChange(isConnected: Boolean)
     fun listenToOwnerCreation(callback: () -> Unit)
+
     fun onNewInviteCreated(
         nickname: String,
         inviteString: String,
@@ -134,10 +147,10 @@ interface ConnectManagerListener {
     )
 
     fun onLastReadMessages(lastReadMessages: String)
-
     fun onUpdateMutes(mutes: String)
     fun onMessagesCounts(msgsCounts: String)
     fun onInitialTribe(tribe: String)
+
     fun onConnectManagerError(error: ConnectManagerError)
 
 }

@@ -76,6 +76,7 @@ import chat.sphinx.example.wrapper_mqtt.MsgsCounts
 import chat.sphinx.example.wrapper_mqtt.MsgsCounts.Companion.toMsgsCounts
 import chat.sphinx.example.wrapper_mqtt.MuteLevels.Companion.toMuteLevelsMap
 import chat.sphinx.example.wrapper_mqtt.NewCreateTribe.Companion.toNewCreateTribe
+import chat.sphinx.example.wrapper_mqtt.Payment.Companion.toPaymentsList
 import chat.sphinx.example.wrapper_mqtt.TribeMembersResponse.Companion.toTribeMembersList
 import chat.sphinx.example.wrapper_mqtt.toLspChannelInfo
 import chat.sphinx.feature_repository.mappers.action_track.*
@@ -452,6 +453,17 @@ abstract class SphinxRepository(
 
     override fun getTribeServerPubKey(): String? {
         return connectManager.getTribeServerPubKey()
+    }
+
+    override fun getPayments(lastMessageIndex: Long, limit: Int) {
+        connectManager.getPayments(
+            lastMessageIndex,
+            limit,
+            null,
+            null,
+            null,
+            true
+        )
     }
 
     override suspend fun exitAndDeleteTribe(tribe: Chat) {
@@ -852,6 +864,11 @@ abstract class SphinxRepository(
                 )
             }
         }
+    }
+
+    override fun onPayments(payments: String) {
+        val paymentsMap = payments.toPaymentsList(moshi)
+        // Fill a transaction state flow with a list of TransactionDto
     }
 
     override fun onNetworkStatusChange(isConnected: Boolean) {
@@ -3716,6 +3733,16 @@ abstract class SphinxRepository(
                     }
                 }
                 .distinctUntilChanged()
+        )
+    }
+
+    override fun getMaxIdMessage(): Flow<Long?> = flow {
+        emitAll(
+            coreDB.getSphinxDatabaseQueries()
+                .messageGetMaxId()
+                .asFlow()
+                .mapToOneOrNull(io)
+                .map { it?.MAX }
         )
     }
 

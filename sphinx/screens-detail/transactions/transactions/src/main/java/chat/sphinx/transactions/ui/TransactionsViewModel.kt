@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import chat.sphinx.concept_network_query_message.NetworkQueryMessage
 import chat.sphinx.concept_network_query_message.model.TransactionDto
 import chat.sphinx.concept_repository_chat.ChatRepository
+import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
 import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.concept_repository_message.MessageRepository
 import chat.sphinx.kotlin_response.LoadResponse
@@ -39,6 +40,7 @@ internal class TransactionsViewModel @Inject constructor(
     private val chatRepository: ChatRepository,
     private val messageRepository: MessageRepository,
     private val networkQueryMessage: NetworkQueryMessage,
+    private val connectManagerRepository: ConnectManagerRepository,
 ): BaseViewModel<TransactionsViewState>(
     dispatchers,
     TransactionsViewState.ListMode(
@@ -51,6 +53,7 @@ internal class TransactionsViewModel @Inject constructor(
     private var page: Int = 0
     private var loading: Boolean = false
     private val itemsPerPage: Int = 50
+    private var lastMessageIndex: Long = 0L
 
     private suspend fun getOwnerContact(): Contact {
         return contactRepository.accountOwner.value.let { contact ->
@@ -74,10 +77,17 @@ internal class TransactionsViewModel @Inject constructor(
         }
     }
 
+    private suspend fun getLastMessageIndex(): Long? {
+        val lastMsgIndex = messageRepository.getMaxIdMessage().firstOrNull()
+        lastMessageIndex = lastMsgIndex ?: 0L
+        return lastMsgIndex
+    }
+
     init {
         viewModelScope.launch(mainImmediate) {
             loadTransactions(
-                getOwnerContact()
+                getOwnerContact(),
+                getLastMessageIndex() ?: lastMessageIndex
             )
         }
     }
@@ -91,44 +101,49 @@ internal class TransactionsViewModel @Inject constructor(
         page += 1
 
         loadTransactions(
-            getOwnerContact()
+            getOwnerContact(),
+            lastMessageIndex
         )
 
         loading = false
     }
 
     private suspend fun loadTransactions(
-        owner: Contact
+        owner: Contact,
+        lastMessageIndex: Long
     ) {
-        networkQueryMessage.getPayments(
-            offset = page * itemsPerPage,
-            limit = itemsPerPage
-        ).collect { loadResponse ->
-            val firstPage = (page == 0)
-
-            @Exhaustive
-            when (loadResponse) {
-                is LoadResponse.Loading -> {
-                    updateViewState(
-                        TransactionsViewState.ListMode(currentViewState.list, true, firstPage)
-                    )
-                }
-                is Response.Error -> {
-                    updateViewState(
-                        TransactionsViewState.ListMode(listOf(), false, firstPage)
-                    )
-                }
-                is Response.Success -> {
-                    updateViewState(
-                        TransactionsViewState.ListMode(
-                            processTransactions(loadResponse.value, owner),
-                            false,
-                            firstPage
-                        )
-                    )
-                }
-            }
-        }
+        // call connect manager repo to call fetch transactions
+        connectManagerRepository.getPayments(lastMessageIndex, itemsPerPage)
+        // collect connect manager transactions with transactions DTO
+//        networkQueryMessage.getPayments(
+//            offset = page * itemsPerPage,
+//            limit = itemsPerPage
+//        ).collect { loadResponse ->
+//            val firstPage = (page == 0)
+//
+//            @Exhaustive
+//            when (loadResponse) {
+//                is LoadResponse.Loading -> {
+//                    updateViewState(
+//                        TransactionsViewState.ListMode(currentViewState.list, true, firstPage)
+//                    )
+//                }
+//                is Response.Error -> {
+//                    updateViewState(
+//                        TransactionsViewState.ListMode(listOf(), false, firstPage)
+//                    )
+//                }
+//                is Response.Success -> {
+//                    updateViewState(
+//                        TransactionsViewState.ListMode(
+//                            processTransactions(loadResponse.value, owner),
+//                            false,
+//                            firstPage
+//                        )
+//                    )
+//                }
+//            }
+//        }
     }
 
     private suspend fun processTransactions(

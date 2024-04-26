@@ -720,6 +720,51 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
+    override fun getPayments(
+        lastMsgIdx: Long,
+        limit: Int,
+        scid: Long?,
+        remoteOnly: Boolean?,
+        minMsat: Long?,
+        reverse: Boolean?
+    ) {
+        val now = getTimestampInMilliseconds()
+
+        try {
+            val payments = uniffi.sphinxrs.fetchPayments(
+                ownerSeed!!,
+                now,
+                getCurrentUserState(),
+                lastMsgIdx.toULong(),
+                limit.toUInt(),
+                scid?.toULong(),
+                remoteOnly ?: false,
+                minMsat?.toULong(),
+                reverse ?: true
+            )
+            handleRunReturn(payments, mqttClient)
+        } catch (e: Exception) {
+//            notifyListeners {
+//                onConnectManagerError(ConnectManagerError.FetchPaymentsError)
+//            }
+            Log.e("MQTT_MESSAGES", "getPayments ${e.message}")
+        }
+    }
+
+    override fun getPubKeyFromChildIndex(childIndex: Long): String? {
+        return try {
+            uniffi.sphinxrs.contactPubkeyByChildIndex(
+                getCurrentUserState(),
+                childIndex.toULong()
+            )
+        } catch (e: Exception) {
+//            notifyListeners {
+//                onConnectManagerError(ConnectManagerError.PubKeyFromChildIndexError)
+//            }
+            null
+        }
+    }
+
     override fun retrieveTribeMembersList(tribeServerPubKey: String, tribePubKey: String) {
         val now = getTimestampInMilliseconds()
 
@@ -1194,6 +1239,15 @@ class ConnectManagerImpl: ConnectManager()
                     onUpdateMutes(muteLevels)
                 }
                 Log.d("MQTT_MESSAGES", "=> muteLevels $muteLevels")
+            }
+            rr.payments?.let { payments ->
+                notifyListeners {
+                    onPayments(payments)
+                }
+                Log.d("MQTT_MESSAGES", "=> payments $payments")
+            }
+            rr.paymentsTotal?.let { paymentsTotal ->
+                Log.d("MQTT_MESSAGES", "=> paymentsTotal $paymentsTotal")
             }
         } else {
             notifyListeners {

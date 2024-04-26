@@ -430,6 +430,8 @@ internal interface _UniFFILib : Library {
     ): RustBuffer.ByValue
     fun uniffi_sphinxrs_fn_func_contact_pubkey_by_child_index(`state`: RustBuffer.ByValue,`childIdx`: Long,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
+    fun uniffi_sphinxrs_fn_func_contact_pubkey_by_encrypted_child(`seed`: RustBuffer.ByValue,`state`: RustBuffer.ByValue,`child`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
+    ): RustBuffer.ByValue
     fun uniffi_sphinxrs_fn_func_get_subscription_topic(`seed`: RustBuffer.ByValue,`uniqueTime`: RustBuffer.ByValue,`state`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_sphinxrs_fn_func_get_tribe_management_topic(`seed`: RustBuffer.ByValue,`uniqueTime`: RustBuffer.ByValue,`state`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
@@ -565,6 +567,8 @@ internal interface _UniFFILib : Library {
     fun uniffi_sphinxrs_checksum_func_list_contacts(
     ): Short
     fun uniffi_sphinxrs_checksum_func_contact_pubkey_by_child_index(
+    ): Short
+    fun uniffi_sphinxrs_checksum_func_contact_pubkey_by_encrypted_child(
     ): Short
     fun uniffi_sphinxrs_checksum_func_get_subscription_topic(
     ): Short
@@ -742,6 +746,9 @@ private fun uniffiCheckApiChecksums(lib: _UniFFILib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_sphinxrs_checksum_func_contact_pubkey_by_child_index() != 7496.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sphinxrs_checksum_func_contact_pubkey_by_encrypted_child() != 6829.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_sphinxrs_checksum_func_get_subscription_topic() != 12763.toShort()) {
@@ -2426,6 +2433,15 @@ fun `contactPubkeyByChildIndex`(`state`: ByteArray, `childIdx`: ULong): String {
     return FfiConverterString.lift(
     rustCallWithError(SphinxException) { _status ->
     _UniFFILib.INSTANCE.uniffi_sphinxrs_fn_func_contact_pubkey_by_child_index(FfiConverterByteArray.lower(`state`),FfiConverterULong.lower(`childIdx`),_status)
+})
+}
+
+@Throws(SphinxException::class)
+
+fun `contactPubkeyByEncryptedChild`(`seed`: String, `state`: ByteArray, `child`: String): String {
+    return FfiConverterString.lift(
+    rustCallWithError(SphinxException) { _status ->
+    _UniFFILib.INSTANCE.uniffi_sphinxrs_fn_func_contact_pubkey_by_encrypted_child(FfiConverterString.lower(`seed`),FfiConverterByteArray.lower(`state`),FfiConverterString.lower(`child`),_status)
 })
 }
 

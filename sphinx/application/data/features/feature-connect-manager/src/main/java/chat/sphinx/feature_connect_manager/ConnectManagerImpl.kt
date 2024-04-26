@@ -63,6 +63,8 @@ import uniffi.sphinxrs.signBytes
 import uniffi.sphinxrs.xpubFromSeed
 import java.security.SecureRandom
 import java.util.Calendar
+import kotlin.math.min
+
 class ConnectManagerImpl: ConnectManager()
 {
     private var _mixerIp: String? = null
@@ -1244,7 +1246,7 @@ class ConnectManagerImpl: ConnectManager()
                 notifyListeners {
                     onPayments(payments)
                 }
-                Log.d("MQTT_MESSAGES", "=> payments $payments")
+                logLongString("PAYMENTS_MESSAGES", payments)
             }
             rr.paymentsTotal?.let { paymentsTotal ->
                 Log.d("MQTT_MESSAGES", "=> paymentsTotal $paymentsTotal")
@@ -1253,6 +1255,15 @@ class ConnectManagerImpl: ConnectManager()
             notifyListeners {
                 onConnectManagerError(ConnectManagerError.MqttClientError)
             }
+        }
+    }
+
+     private fun logLongString(tag: String, str: String) {
+        val maxLogSize = 4000 // You can set it to 4000 or any suitable chunk size
+        for (i in 0..str.length / maxLogSize) {
+            val start = i * maxLogSize
+            val end = (i + 1) * maxLogSize
+            Log.d(tag, str.substring(start, min(end, str.length)))
         }
     }
 

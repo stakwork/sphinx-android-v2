@@ -868,6 +868,12 @@ abstract class SphinxRepository(
 
     override fun onPayments(payments: String) {
         val paymentsMap = payments.toPaymentsList(moshi)
+
+        // TransactionDto from paymentsMap
+        // id It's the contactId or chatId (if tribe) of the sender
+        // chat_id It's the same than id
+
+
         // Fill a transaction state flow with a list of TransactionDto
     }
 

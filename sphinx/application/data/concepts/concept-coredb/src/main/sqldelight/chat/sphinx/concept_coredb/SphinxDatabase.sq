@@ -938,6 +938,11 @@ SELECT *
 FROM messageDbo
 WHERE id IN ?;
 
+messageGetByPaymentHashes:
+SELECT *
+FROM messageDbo
+WHERE payment_hash IN :payment_hashes;
+
 messagesSearchByTerm:
 SELECT *
 FROM messageDbo

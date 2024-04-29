@@ -1,5 +1,6 @@
 package chat.sphinx.concept_repository_connect_manager
 
+import chat.sphinx.concept_network_query_message.model.TransactionDto
 import chat.sphinx.concept_repository_connect_manager.model.ConnectionManagerState
 import chat.sphinx.concept_repository_connect_manager.model.NetworkStatus
 import chat.sphinx.concept_repository_connect_manager.model.RestoreProcessState
@@ -13,6 +14,7 @@ interface ConnectManagerRepository {
     val networkStatus: MutableStateFlow<NetworkStatus>
     val restoreProcessState: MutableStateFlow<RestoreProcessState?>
     val connectManagerErrorState: MutableStateFlow<ConnectManagerError?>
+    val transactionDtoState: MutableStateFlow<List<TransactionDto>?>
 
     fun createOwnerAccount(lspIp: String)
     fun createContact(contact: NewContact)

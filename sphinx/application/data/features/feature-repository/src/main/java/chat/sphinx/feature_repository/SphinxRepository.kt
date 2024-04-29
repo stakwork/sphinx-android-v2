@@ -275,6 +275,10 @@ abstract class SphinxRepository(
         MutableStateFlow(null)
     }
 
+    override val transactionDtoState: MutableStateFlow<List<TransactionDto>?> by lazy {
+        MutableStateFlow(null)
+    }
+
     init {
         connectManager.addListener(this)
         memeServerTokenHandler.addListener(this)
@@ -867,14 +871,49 @@ abstract class SphinxRepository(
     }
 
     override fun onPayments(payments: String) {
-        val paymentsMap = payments.toPaymentsList(moshi)
+        applicationScope.launch(io) {
+            val paymentsJson = payments.toPaymentsList(moshi)
+            val paymentsReceived = paymentsJson?.mapNotNull {
+                it.msg_idx?.let { msgId ->
+                    MessageId(msgId)
+                }
+            }
 
-        // TransactionDto from paymentsMap
-        // id It's the contactId or chatId (if tribe) of the sender
-        // chat_id It's the same than id
+            val paymentsSent = paymentsJson?.mapNotNull {
+                it.rhash?.let { hash ->
+                    LightningPaymentHash(hash)
+                }
+            }
 
+            val paymentsReceivedMsgs = paymentsReceived?.let {
+                getMessagesByIds(it).firstOrNull()
+            }
 
-        // Fill a transaction state flow with a list of TransactionDto
+            val paymentsSentMsgs = paymentsSent?.let {
+                getMessagesByPaymentHashes(it).firstOrNull()
+            }
+
+            val combinedMessages: List<Message?> = paymentsReceivedMsgs.orEmpty() + paymentsSentMsgs.orEmpty()
+            val transactionDtoList = combinedMessages.mapNotNull { message ->
+                message?.let {
+                    TransactionDto(
+                        it.id.value,
+                        it.chatId.value,
+                        it.type.value,
+                        it.sender.value,
+                        it.senderAlias?.value,
+                        it.receiver?.value,
+                        it.amount.value,
+                        it.paymentHash?.value,
+                        it.paymentRequest?.value,
+                        it.date.chatTimeFormat(),
+                        it.replyUUID?.value,
+                        it.errorMessage?.value
+                    )
+                }
+            }
+            transactionDtoState.value = transactionDtoList
+        }
     }
 
     override fun onNetworkStatusChange(isConnected: Boolean) {
@@ -3731,6 +3770,21 @@ abstract class SphinxRepository(
         emitAll(
             coreDB.getSphinxDatabaseQueries()
                 .messageGetMessagesByIds(messagesIds)
+                .asFlow()
+                .mapToList(io)
+                .map { listMessageDbo ->
+                    listMessageDbo.map {
+                        messageDboPresenterMapper.mapFrom(it)
+                    }
+                }
+                .distinctUntilChanged()
+        )
+    }
+
+    override fun getMessagesByPaymentHashes(paymentHashes: List<LightningPaymentHash>): Flow<List<Message?>> = flow {
+        emitAll(
+            coreDB.getSphinxDatabaseQueries()
+                .messageGetByPaymentHashes(paymentHashes)
                 .asFlow()
                 .mapToList(io)
                 .map { listMessageDbo ->

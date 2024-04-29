@@ -9,10 +9,10 @@ import com.squareup.moshi.Types
 data class Payment(
     val scid: Long?,
     val amt_msat: Long?,
-    val rhash: List<Int>?,
+    val rhash: String?,
     val ts: Long?,
     val remote: Boolean?,
-    val msg_idx: Int?
+    val msg_idx: Long?
 ) {
     companion object {
         fun String.toPaymentsList(moshi: Moshi): List<Payment>? {

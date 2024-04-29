@@ -39,6 +39,8 @@ interface MessageRepository {
     fun getMessageById(messageId: MessageId): Flow<Message?>
     fun getMessagesByIds(messagesIds: List<MessageId>): Flow<List<Message?>>
 
+    fun getMessagesByPaymentHashes(paymentHashes: List<LightningPaymentHash>): Flow<List<Message?>>
+
     fun getMaxIdMessage(): Flow<Long?>
 
     fun getTribeLastMemberRequestBySenderAlias(alias: SenderAlias, chatId: ChatId): Flow<Message?>

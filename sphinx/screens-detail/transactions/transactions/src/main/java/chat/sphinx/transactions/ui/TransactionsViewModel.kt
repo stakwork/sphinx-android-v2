@@ -90,6 +90,7 @@ internal class TransactionsViewModel @Inject constructor(
                 getLastMessageIndex() ?: lastMessageIndex
             )
         }
+        collectTransactions()
     }
 
     suspend fun loadMoreTransactions() {
@@ -112,9 +113,8 @@ internal class TransactionsViewModel @Inject constructor(
         owner: Contact,
         lastMessageIndex: Long
     ) {
-        // call connect manager repo to call fetch transactions
         connectManagerRepository.getPayments(lastMessageIndex, itemsPerPage)
-        // collect connect manager transactions with transactions DTO
+
 //        networkQueryMessage.getPayments(
 //            offset = page * itemsPerPage,
 //            limit = itemsPerPage
@@ -144,6 +144,24 @@ internal class TransactionsViewModel @Inject constructor(
 //                }
 //            }
 //        }
+    }
+
+    private fun collectTransactions(){
+        viewModelScope.launch(mainImmediate) {
+            connectManagerRepository.transactionDtoState.collect { transactionsDto ->
+                if (!transactionsDto.isNullOrEmpty()) {
+                    val firstPage = (page == 0)
+
+                    updateViewState(
+                        TransactionsViewState.ListMode(
+                            processTransactions(transactionsDto, getOwnerContact()),
+                            false,
+                            firstPage
+                        )
+                    )
+                }
+            }
+        }
     }
 
     private suspend fun processTransactions(

@@ -742,7 +742,7 @@ class ConnectManagerImpl: ConnectManager()
                 scid?.toULong(),
                 remoteOnly ?: false,
                 minMsat?.toULong(),
-                reverse ?: true
+                false
             )
             handleRunReturn(payments, mqttClient)
         } catch (e: Exception) {

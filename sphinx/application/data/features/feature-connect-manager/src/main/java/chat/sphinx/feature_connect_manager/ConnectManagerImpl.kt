@@ -1220,11 +1220,12 @@ class ConnectManagerImpl: ConnectManager()
                                 currentInvite?.invitePrice ?: 0L,
                             )
                         }
+                        currentInvite = null
                     }
-                    else {
-                        // Handle invite error
+                } else {
+                    notifyListeners {
+                        onSentStatus(sentStatus)
                     }
-                    currentInvite = null
                 }
 
                 Log.d("MQTT_MESSAGES", "=> sent_status $sentStatus")

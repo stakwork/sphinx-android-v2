@@ -968,6 +968,13 @@ UPDATE messageDbo
 SET status = :status
 WHERE id = ?;
 
+messageUpdateStatusByTag:
+UPDATE messageDbo
+SET status = :status,
+    payment_hash = :payment_hash,
+    error_message = :error_message
+WHERE tag_message = ?;
+
 messageUpdateType:
 UPDATE messageDbo
 SET type = :type
@@ -991,7 +998,8 @@ WHERE id = ?;
 messageUpdateTagAndUUID:
 UPDATE messageDbo
 SET tag_message = :tag_message,
-    uuid = :uuid
+    uuid = :uuid,
+    status = 1
 WHERE id = ?;
 
 messageUpdateUUIDByUUID:

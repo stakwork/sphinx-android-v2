@@ -76,6 +76,7 @@ import chat.sphinx.example.wrapper_mqtt.MsgsCounts
 import chat.sphinx.example.wrapper_mqtt.MsgsCounts.Companion.toMsgsCounts
 import chat.sphinx.example.wrapper_mqtt.MuteLevels.Companion.toMuteLevelsMap
 import chat.sphinx.example.wrapper_mqtt.NewCreateTribe.Companion.toNewCreateTribe
+import chat.sphinx.example.wrapper_mqtt.NewSentStatus.Companion.toNewSentStatus
 import chat.sphinx.example.wrapper_mqtt.Payment.Companion.toPaymentsList
 import chat.sphinx.example.wrapper_mqtt.TribeMembersResponse.Companion.toTribeMembersList
 import chat.sphinx.example.wrapper_mqtt.toLspChannelInfo
@@ -839,6 +840,7 @@ abstract class SphinxRepository(
             val queries = coreDB.getSphinxDatabaseQueries()
             val tagMessage = tag?.let { TagMessage(it) }
 
+            // messageUpdateTagAndUUID also updates the Status to CONFIRMED
             messageLock.withLock {
                 queries.messageUpdateTagAndUUID(tagMessage, MessageUUID(msgUUID), MessageId(provisionalId))
             }
@@ -971,6 +973,29 @@ abstract class SphinxRepository(
                 inviteStatus = InviteStatus.Pending,
             )
             createNewContact(newInvitee)
+        }
+    }
+
+    override fun onSentStatus(sentStatus: String) {
+        applicationScope.launch(io) {
+            val newSentStatus = sentStatus.toNewSentStatus(moshi)
+            val queries = coreDB.getSphinxDatabaseQueries()
+
+            if (newSentStatus.isFailedMessage()) {
+                queries.messageUpdateStatusByTag(
+                    MessageStatus.Failed,
+                    newSentStatus.payment_hash?.toLightningPaymentHash(),
+                    newSentStatus.message?.toErrorMessage(),
+                    newSentStatus.tag?.toTagMessage()
+                )
+            } else {
+                queries.messageUpdateStatusByTag(
+                    MessageStatus.Received,
+                    newSentStatus.payment_hash?.toLightningPaymentHash(),
+                    newSentStatus.message?.toErrorMessage(),
+                    newSentStatus.tag?.toTagMessage()
+                )
+            }
         }
     }
 

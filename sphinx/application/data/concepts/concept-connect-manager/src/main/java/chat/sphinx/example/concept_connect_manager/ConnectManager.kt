@@ -146,11 +146,12 @@ interface ConnectManagerListener {
         sats: Long
     )
 
+    fun onSentStatus(sentStatus: String)
+
     fun onLastReadMessages(lastReadMessages: String)
     fun onUpdateMutes(mutes: String)
     fun onMessagesCounts(msgsCounts: String)
     fun onInitialTribe(tribe: String)
-
     fun onConnectManagerError(error: ConnectManagerError)
 
 }

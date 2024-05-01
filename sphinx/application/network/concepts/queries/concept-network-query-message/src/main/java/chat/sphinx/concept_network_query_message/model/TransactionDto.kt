@@ -1,5 +1,6 @@
 package chat.sphinx.concept_network_query_message.model
 
+import chat.sphinx.wrapper_common.DateTime
 import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_common.dashboard.ContactId
 import chat.sphinx.wrapper_common.dashboard.toChatId
@@ -20,7 +21,7 @@ data class TransactionDto(
     val amount: Long,
     val payment_hash: String?,
     val payment_request: String?,
-    val date: String,
+    val date: DateTime?,
     val reply_uuid: String?,
     val error_message: String?
 ) {

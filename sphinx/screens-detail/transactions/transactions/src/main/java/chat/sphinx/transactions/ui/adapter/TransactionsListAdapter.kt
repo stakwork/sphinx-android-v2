@@ -165,7 +165,7 @@ internal class TransactionsListAdapter(
                 disposable?.dispose()
 
                 val amount = t.transaction?.amount?.toSat()?.asFormattedString() ?: "0"
-                val date = t.transaction?.date?.toDateTime()?.value ?: Date(System.currentTimeMillis())
+                val date = t.transaction?.date?.value ?: Date(System.currentTimeMillis())
 
                 val hourString = DateTime.getFormathmma().format(date)
                 val dayOfMonthString = DateTime.getFormatEEEdd().format(date)

@@ -737,12 +737,12 @@ class ConnectManagerImpl: ConnectManager()
                 ownerSeed!!,
                 now,
                 getCurrentUserState(),
-                lastMsgIdx.toULong(),
+                System.currentTimeMillis().toULong(),
                 limit.toUInt(),
                 scid?.toULong(),
                 remoteOnly ?: false,
                 minMsat?.toULong(),
-                false
+                true
             )
             handleRunReturn(payments, mqttClient)
         } catch (e: Exception) {
@@ -1209,6 +1209,7 @@ class ConnectManagerImpl: ConnectManager()
 
                 if (tagAndStatus?.first == currentInvite?.tag) {
                     if (tagAndStatus?.second == true) {
+
                         notifyListeners {
                             onNewInviteCreated(
                                 currentInvite?.nickname.orEmpty(),

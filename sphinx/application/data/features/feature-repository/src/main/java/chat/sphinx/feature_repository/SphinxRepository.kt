@@ -906,7 +906,7 @@ abstract class SphinxRepository(
                         it.amount.value,
                         it.paymentHash?.value,
                         it.paymentRequest?.value,
-                        it.date.toString(),
+                        it.date,
                         it.replyUUID?.value,
                         it.errorMessage?.value
                     )

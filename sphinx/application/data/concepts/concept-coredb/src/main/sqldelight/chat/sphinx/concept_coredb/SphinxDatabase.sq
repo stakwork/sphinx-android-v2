@@ -988,9 +988,10 @@ UPDATE messageDbo
 SET flagged = :flagged
 WHERE id = ?;
 
-messageUpdateUUID:
+messageUpdateTagAndUUID:
 UPDATE messageDbo
-SET uuid = :uuid
+SET tag_message = :tag_message,
+    uuid = :uuid
 WHERE id = ?;
 
 messageUpdateUUIDByUUID:

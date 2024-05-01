@@ -495,9 +495,11 @@ class ConnectManagerImpl: ConnectManager()
             )
             handleRunReturn(message, mqttClient)
 
-            message.msgs.firstOrNull()?.uuid?.let { msgUUID ->
-                notifyListeners {
-                    onMessageUUID(msgUUID, provisionalId)
+            message.msgs.firstOrNull()?.let { sentMessage ->
+                sentMessage.uuid?.let { msgUuid ->
+                    notifyListeners {
+                        onMessageTagAndUuid(sentMessage.tag, msgUuid, provisionalId)
+                    }
                 }
             }
 

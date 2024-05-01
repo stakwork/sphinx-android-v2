@@ -834,11 +834,13 @@ abstract class SphinxRepository(
         }
     }
 
-    override fun onMessageUUID(msgUUID: String, provisionalId: Long) {
+    override fun onMessageTagAndUuid(tag: String?, msgUUID: String, provisionalId: Long) {
         applicationScope.launch(io) {
             val queries = coreDB.getSphinxDatabaseQueries()
+            val tagMessage = tag?.let { TagMessage(it) }
+
             messageLock.withLock {
-                queries.messageUpdateUUID(MessageUUID(msgUUID), MessageId(provisionalId))
+                queries.messageUpdateTagAndUUID(tagMessage, MessageUUID(msgUUID), MessageId(provisionalId))
             }
         }
     }
@@ -1311,6 +1313,7 @@ abstract class SphinxRepository(
                 person = null,
                 threadUUID = existingMessage?.thread_uuid ?: msg.threadUuid?.toThreadUUID(),
                 errorMessage = null,
+                tagMessage = existingMessage?.tag_message,
                 isPinned = false,
                 messageContentDecrypted = if (msg.content?.isNotEmpty() == true) MessageContentDecrypted(msg.content!!) else null,
                 messageDecryptionError = false,

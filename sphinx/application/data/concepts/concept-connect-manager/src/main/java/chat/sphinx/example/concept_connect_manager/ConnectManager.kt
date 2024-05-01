@@ -130,7 +130,7 @@ interface ConnectManagerListener {
     fun onRestoreNextPageMessages(highestIndex: Long, limit: Int)
     fun onNewTribeCreated(newTribe: String)
     fun onTribeMembersList(tribeMembers: String)
-    fun onMessageUUID(msgUUID: String, provisionalId: Long)
+    fun onMessageTagAndUuid(tag: String?, msgUUID: String, provisionalId: Long)
     fun onUpdateUserState(userState: String)
     fun onDeleteUserState(userState: List<String>)
     fun onSignedChallenge(sign: String)

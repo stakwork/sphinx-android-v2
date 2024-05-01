@@ -78,6 +78,7 @@ import chat.sphinx.wrapper_message.MessageType;
 import chat.sphinx.wrapper_message.RecipientAlias;
 import chat.sphinx.wrapper_message.ReplyUUID;
 import chat.sphinx.wrapper_message.SenderAlias;
+import chat.sphinx.wrapper_message.TagMessage;
 import chat.sphinx.wrapper_message.ThreadUUID;
 import chat.sphinx.wrapper_message_media.FileName;
 import chat.sphinx.wrapper_message_media.MediaKey;
@@ -749,7 +750,8 @@ CREATE TABLE messageDbo(
     push                        INTEGER         AS Push DEFAULT 0,
     person                      TEXT            AS MessagePerson,
     thread_uuid                 TEXT            AS ThreadUUID,
-    error_message               TEXT            AS ErrorMessage
+    error_message               TEXT            AS ErrorMessage,
+    tag_message                 TEXT            AS TagMessage
 );
 
 messageGetAllReactionsByUUID:
@@ -1016,7 +1018,8 @@ messageUpsert {
         push = :push,
         person = :person,
         thread_uuid = :thread_uuid,
-        error_message = :error_message
+        error_message = :error_message,
+        tag_message = :tag_message
     WHERE id = :id;
 
     INSERT OR IGNORE INTO messageDbo(
@@ -1046,7 +1049,8 @@ messageUpsert {
         push,
         person,
         thread_uuid,
-        error_message
+        error_message,
+        tag_message
     )
     VALUES (
         :id,
@@ -1075,7 +1079,8 @@ messageUpsert {
         :push,
         :person,
         :thread_uuid,
-        :error_message
+        :error_message,
+        :tag_message
     );
 }
 

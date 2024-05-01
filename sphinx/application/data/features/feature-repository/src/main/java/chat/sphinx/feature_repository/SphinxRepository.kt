@@ -4179,6 +4179,7 @@ abstract class SphinxRepository(
                                 null,
                                 threadUUID,
                                 null,
+                                null,
                                 provisionalId,
                                 null,
                                 chatDbo.id,
@@ -4192,7 +4193,7 @@ abstract class SphinxRepository(
                                 null,
                                 message?.toMessageContentDecrypted() ?: sendMessage.text?.toMessageContentDecrypted(),
                                 null,
-                                false.toFlagged()
+                                false.toFlagged(),
                             )
                         }
                         provisionalId

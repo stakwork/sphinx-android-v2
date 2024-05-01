@@ -362,6 +362,7 @@ abstract class Message {
     abstract val person: MessagePerson?
     abstract val threadUUID: ThreadUUID?
     abstract val errorMessage: ErrorMessage?
+    abstract val tagMessage: TagMessage?
     abstract val isPinned: Boolean
 
     abstract val messageContentDecrypted: MessageContentDecrypted?
@@ -489,8 +490,9 @@ abstract class Message {
                 "giphyData=$giphyData,reactions=$reactions,purchaseItems=$purchaseItems,"       +
                 "replyMessage=$replyMessage),recipientAlias=$recipientAlias,"                   +
                 "recipientPic=$recipientPic,person=$person,threadUUID=$threadUUID,"             +
-                "errorMessage=$errorMessage,"                                                    +
-                "callLink=$callLinkMessage,"                                                     +
+                "errorMessage=$errorMessage,"                                                   +
+                "tagMessage=${tagMessage}Message,"                                              +
+                "callLink=$callLinkMessage,"                                                    +
                 "isPinned=$isPinned"
     }
 }

@@ -43,7 +43,8 @@ data class MessageDto(
     val push: Any?,
     val person: String?,
     val thread_uuid: String?,
-    val error_message: String?
+    val error_message: String?,
+    val tag_message: String?
 ) {
     @Transient
     val seenActual: Boolean =

@@ -47,7 +47,7 @@ internal class TransactionsViewModel @Inject constructor(
 {
     private var page: Int = 0
     private var loading: Boolean = false
-    private val itemsPerPage: Int = 10
+    private val itemsPerPage: Int = 50
     private var loadedItems: Int = 0
     private var lastMessageDate: Long = System.currentTimeMillis()
 
@@ -123,7 +123,7 @@ internal class TransactionsViewModel @Inject constructor(
 
                     updateViewState(
                         TransactionsViewState.ListMode(
-                            processTransactions(transactionsDto, getOwnerContact()),
+                            processTransactions(transactionsDto.distinct(), getOwnerContact()),
                             false,
                             firstPage
                         )

@@ -899,7 +899,7 @@ abstract class SphinxRepository(
 
             val combinedMessages: List<Message?> = paymentsReceivedMsgs.orEmpty() + paymentsSentMsgs.orEmpty()
             val transactionDtoList = combinedMessages.mapNotNull { message ->
-                message?.let {
+                message?.takeIf { it.type !is MessageType.Invoice }?.let {
                     TransactionDto(
                         it.id.value,
                         it.chatId.value,

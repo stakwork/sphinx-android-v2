@@ -48,6 +48,7 @@ internal class TransactionsViewModel @Inject constructor(
     private var page: Int = 0
     private var loading: Boolean = false
     private val itemsPerPage: Int = 10
+    private var loadedItems: Int = 0
     private var lastMessageDate: Long = System.currentTimeMillis()
 
     private suspend fun getOwnerContact(): Contact {
@@ -91,7 +92,6 @@ internal class TransactionsViewModel @Inject constructor(
             return
         }
         loading = true
-
         page += 1
 
         loadTransactions(
@@ -102,10 +102,7 @@ internal class TransactionsViewModel @Inject constructor(
     private fun loadTransactions(
         lastMessageDate: Long
     ) {
-        val firstPage = (page == 0)
-
         connectManagerRepository.getPayments(lastMessageDate, itemsPerPage)
-
     }
 
     private fun collectTransactions(){
@@ -113,8 +110,16 @@ internal class TransactionsViewModel @Inject constructor(
             connectManagerRepository.transactionDtoState.collect { transactionsDto ->
                 if (!transactionsDto.isNullOrEmpty()) {
                     val firstPage = (page == 0)
+                    val lastItemDate =  transactionsDto.lastOrNull()?.date?.value?.time ?: lastMessageDate
 
-                    lastMessageDate = transactionsDto.lastOrNull()?.date?.value?.time ?: lastMessageDate
+                    if (lastMessageDate == lastItemDate) {
+                        loading = false
+                        updateViewState(TransactionsViewState.LastItem)
+                        return@collect
+                    }
+
+                    lastMessageDate = lastItemDate
+                    loadedItems = loadedItems.plus(transactionsDto.size)
 
                     updateViewState(
                         TransactionsViewState.ListMode(
@@ -123,6 +128,7 @@ internal class TransactionsViewModel @Inject constructor(
                             firstPage
                         )
                     )
+                    loading = false
                 }
             }
         }
@@ -247,10 +253,11 @@ internal class TransactionsViewModel @Inject constructor(
             }
         }
 
-        if (transactions.size == itemsPerPage) {
+        if (loadedItems >= itemsPerPage) {
             transactionsHVSs.add(
                 TransactionHolderViewState.Loader()
             )
+            loadedItems = 0
         }
 
         return transactionsHVSs

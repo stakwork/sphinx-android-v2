@@ -739,7 +739,7 @@ class ConnectManagerImpl: ConnectManager()
                 ownerSeed!!,
                 now,
                 getCurrentUserState(),
-                lastMsgDate.toULong(),
+                lastMsgDate.plus(1000).toULong(),
                 limit.toUInt(),
                 scid?.toULong(),
                 remoteOnly ?: false,

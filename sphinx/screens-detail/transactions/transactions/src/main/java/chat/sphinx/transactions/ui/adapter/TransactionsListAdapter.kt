@@ -116,6 +116,21 @@ internal class TransactionsListAdapter(
                         this@TransactionsListAdapter.notifyDataSetChanged()
                     }
                 }
+                else if (viewState is TransactionsViewState.LastItem) {
+                    val noLoader = transactions.filterNot { it is TransactionHolderViewState.Loader }
+
+                    val diff = Diff(transactions, noLoader)
+
+                    withContext(viewModel.dispatchers.default) {
+                        DiffUtil.calculateDiff(diff)
+                    }.let {
+                        if (!diff.sameList) {
+                            transactions.clear()
+                            transactions.addAll(noLoader)
+                        }
+                    }
+                    this@TransactionsListAdapter.notifyDataSetChanged()
+                }
             }
         }
     }

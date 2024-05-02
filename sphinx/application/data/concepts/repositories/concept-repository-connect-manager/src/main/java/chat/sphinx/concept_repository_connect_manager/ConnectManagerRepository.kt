@@ -44,7 +44,7 @@ interface ConnectManagerRepository {
     )
     fun getTribeServerPubKey(): String?
 
-    fun getPayments(lastMessageIndex: Long, limit: Int)
+    fun getPayments(lastMessageDate: Long, limit: Int)
     suspend fun updateLspAndOwner(data: String) {}
     fun startRestoreProcess()
 

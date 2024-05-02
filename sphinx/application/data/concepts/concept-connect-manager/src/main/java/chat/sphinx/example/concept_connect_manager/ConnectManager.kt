@@ -66,7 +66,7 @@ abstract class ConnectManager {
     abstract fun retrievePaymentHash(paymentRequest: String): String?
 
     abstract fun getPayments(
-        lastMsgIdx: Long,
+        lastMsgDate: Long,
         limit: Int,
         scid: Long?, // fetch payments for a single child key
         remoteOnly: Boolean?, // only payments routed through other LSPs

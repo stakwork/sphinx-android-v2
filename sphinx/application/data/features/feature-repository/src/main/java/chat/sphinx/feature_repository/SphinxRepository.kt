@@ -460,9 +460,9 @@ abstract class SphinxRepository(
         return connectManager.getTribeServerPubKey()
     }
 
-    override fun getPayments(lastMessageIndex: Long, limit: Int) {
+    override fun getPayments(lastMessageDate: Long, limit: Int) {
         connectManager.getPayments(
-            lastMessageIndex,
+            lastMessageDate,
             limit,
             null,
             null,
@@ -916,7 +916,7 @@ abstract class SphinxRepository(
                     )
                 }
             }
-            transactionDtoState.value = transactionDtoList
+            transactionDtoState.value = transactionDtoList.sortedByDescending { it.date?.value }
         }
     }
 
@@ -3831,6 +3831,21 @@ abstract class SphinxRepository(
                 .asFlow()
                 .mapToOneOrNull(io)
                 .map { it?.MAX }
+        )
+    }
+
+    override fun getLastMessage(): Flow<Message?> = flow {
+        val queries = coreDB.getSphinxDatabaseQueries()
+        emitAll(
+            queries.messageGetLastMessage()
+                .asFlow()
+                .mapToOneOrNull(io)
+                .map {
+                    it?.let { messageDbo ->
+                        mapMessageDboAndDecryptContentIfNeeded(queries, messageDbo)
+                    }
+                }
+                .distinctUntilChanged()
         )
     }
 

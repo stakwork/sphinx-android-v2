@@ -1,6 +1,5 @@
 package chat.sphinx.transactions.ui
 
-import android.util.Log
 import androidx.lifecycle.viewModelScope
 import chat.sphinx.concept_network_query_message.NetworkQueryMessage
 import chat.sphinx.concept_network_query_message.model.TransactionDto
@@ -8,8 +7,6 @@ import chat.sphinx.concept_repository_chat.ChatRepository
 import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
 import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.concept_repository_message.MessageRepository
-import chat.sphinx.kotlin_response.LoadResponse
-import chat.sphinx.kotlin_response.Response
 import chat.sphinx.transactions.navigation.TransactionsNavigator
 import chat.sphinx.transactions.ui.viewstate.TransactionHolderViewState
 import chat.sphinx.wrapper_chat.isConversation
@@ -26,10 +23,8 @@ import io.matthewnelson.android_feature_viewmodel.currentViewState
 import io.matthewnelson.android_feature_viewmodel.updateViewState
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
-import javax.annotation.meta.Exhaustive
 import javax.inject.Inject
 
 @HiltViewModel
@@ -52,8 +47,8 @@ internal class TransactionsViewModel @Inject constructor(
 {
     private var page: Int = 0
     private var loading: Boolean = false
-    private val itemsPerPage: Int = 50
-    private var lastMessageIndex: Long = 0L
+    private val itemsPerPage: Int = 10
+    private var lastMessageDate: Long = System.currentTimeMillis()
 
     private suspend fun getOwnerContact(): Contact {
         return contactRepository.accountOwner.value.let { contact ->
@@ -77,17 +72,15 @@ internal class TransactionsViewModel @Inject constructor(
         }
     }
 
-    private suspend fun getLastMessageIndex(): Long? {
-        val lastMsgIndex = messageRepository.getMaxIdMessage().firstOrNull()
-        lastMessageIndex = lastMsgIndex ?: 0L
-        return lastMsgIndex
+    private suspend fun getLastMessageDate(): Long? {
+        val lastMsgDate = messageRepository.getLastMessage().firstOrNull()?.date?.value?.time
+        lastMessageDate = lastMsgDate ?: 0L
+        return lastMsgDate
     }
-
     init {
         viewModelScope.launch(mainImmediate) {
             loadTransactions(
-                getOwnerContact(),
-                getLastMessageIndex() ?: lastMessageIndex
+                getLastMessageDate() ?: lastMessageDate
             )
         }
         collectTransactions()
@@ -97,53 +90,22 @@ internal class TransactionsViewModel @Inject constructor(
         if (loading) {
             return
         }
-
         loading = true
+
         page += 1
 
         loadTransactions(
-            getOwnerContact(),
-            lastMessageIndex
+            lastMessageDate
         )
-
-        loading = false
     }
 
-    private suspend fun loadTransactions(
-        owner: Contact,
-        lastMessageIndex: Long
+    private fun loadTransactions(
+        lastMessageDate: Long
     ) {
-        connectManagerRepository.getPayments(lastMessageIndex, itemsPerPage)
+        val firstPage = (page == 0)
 
-//        networkQueryMessage.getPayments(
-//            offset = page * itemsPerPage,
-//            limit = itemsPerPage
-//        ).collect { loadResponse ->
-//            val firstPage = (page == 0)
-//
-//            @Exhaustive
-//            when (loadResponse) {
-//                is LoadResponse.Loading -> {
-//                    updateViewState(
-//                        TransactionsViewState.ListMode(currentViewState.list, true, firstPage)
-//                    )
-//                }
-//                is Response.Error -> {
-//                    updateViewState(
-//                        TransactionsViewState.ListMode(listOf(), false, firstPage)
-//                    )
-//                }
-//                is Response.Success -> {
-//                    updateViewState(
-//                        TransactionsViewState.ListMode(
-//                            processTransactions(loadResponse.value, owner),
-//                            false,
-//                            firstPage
-//                        )
-//                    )
-//                }
-//            }
-//        }
+        connectManagerRepository.getPayments(lastMessageDate, itemsPerPage)
+
     }
 
     private fun collectTransactions(){
@@ -151,6 +113,8 @@ internal class TransactionsViewModel @Inject constructor(
             connectManagerRepository.transactionDtoState.collect { transactionsDto ->
                 if (!transactionsDto.isNullOrEmpty()) {
                     val firstPage = (page == 0)
+
+                    lastMessageDate = transactionsDto.lastOrNull()?.date?.value?.time ?: lastMessageDate
 
                     updateViewState(
                         TransactionsViewState.ListMode(

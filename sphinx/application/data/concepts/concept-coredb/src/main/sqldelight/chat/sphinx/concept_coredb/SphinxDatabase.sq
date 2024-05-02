@@ -834,6 +834,10 @@ LIMIT 1;
 messageGetMaxId:
 SELECT MAX(id) FROM messageDbo;
 
+messageGetLastMessage:
+SELECT * FROM messageDbo
+WHERE id = (SELECT MAX(id) FROM messageDbo);
+
 messageGetMaxIdByChatId:
 SELECT *
 FROM messageDbo

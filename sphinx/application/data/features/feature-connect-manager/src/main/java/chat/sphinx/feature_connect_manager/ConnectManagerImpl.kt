@@ -725,7 +725,7 @@ class ConnectManagerImpl: ConnectManager()
     }
 
     override fun getPayments(
-        lastMsgIdx: Long,
+        lastMsgDate: Long,
         limit: Int,
         scid: Long?,
         remoteOnly: Boolean?,
@@ -739,7 +739,7 @@ class ConnectManagerImpl: ConnectManager()
                 ownerSeed!!,
                 now,
                 getCurrentUserState(),
-                System.currentTimeMillis().toULong(),
+                lastMsgDate.toULong(),
                 limit.toUInt(),
                 scid?.toULong(),
                 remoteOnly ?: false,

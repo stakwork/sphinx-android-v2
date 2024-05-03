@@ -76,6 +76,8 @@ abstract class ConnectManager {
 
     abstract fun getPubKeyFromChildIndex(childIndex: Long): String?
 
+    abstract fun getPubKeyByEncryptedChild(child: String): String?
+
     abstract fun retrieveTribeMembersList(
         tribeServerPubKey: String,
         tribePubKey: String

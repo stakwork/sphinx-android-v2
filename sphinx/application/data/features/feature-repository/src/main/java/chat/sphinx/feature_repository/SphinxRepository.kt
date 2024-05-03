@@ -471,6 +471,23 @@ abstract class SphinxRepository(
         )
     }
 
+    override suspend fun getPubKeyByEncryptedChild(child: String) = flow {
+        val queries = coreDB.getSphinxDatabaseQueries()
+        val pubkey = connectManager.getPubKeyByEncryptedChild(child)
+        if (pubkey != null) {
+            val contact = withContext(io) {
+                queries.contactGetByPubKey(pubkey.toLightningNodePubKey()).executeAsOneOrNull()
+            }
+            val tribe = withContext(io) {
+                queries.chatGetByUUID(ChatUUID(pubkey)).executeAsOneOrNull()
+            }
+            emit(contact?.id?.value?.toChatId() ?: tribe?.id)
+        } else {
+            emit(null)
+        }
+    }.flowOn(io)
+
+
     override suspend fun exitAndDeleteTribe(tribe: Chat) {
         val queries = coreDB.getSphinxDatabaseQueries()
         applicationScope.launch(io) {

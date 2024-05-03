@@ -769,6 +769,18 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
+    override fun getPubKeyByEncryptedChild(child: String): String? {
+        return try {
+            uniffi.sphinxrs.contactPubkeyByEncryptedChild(
+                ownerSeed!!,
+                getCurrentUserState(),
+                child
+            )
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     override fun retrieveTribeMembersList(tribeServerPubKey: String, tribePubKey: String) {
         val now = getTimestampInMilliseconds()
 

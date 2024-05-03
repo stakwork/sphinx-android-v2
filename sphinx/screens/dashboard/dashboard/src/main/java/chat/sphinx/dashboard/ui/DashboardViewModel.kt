@@ -479,6 +479,10 @@ internal class DashboardViewModel @Inject constructor(
         }
     }
 
+    suspend fun getPubKeyByEncryptedChild(child: String): ChatId? {
+        return connectManagerRepository.getPubKeyByEncryptedChild(child).firstOrNull()
+    }
+
     private fun syncFeedRecommendationsState() {
         val appContext: Context = app.applicationContext
         val sharedPreferences = appContext.getSharedPreferences(FeedRecommendationsToggle.FEED_RECOMMENDATIONS_SHARED_PREFERENCES, Context.MODE_PRIVATE)

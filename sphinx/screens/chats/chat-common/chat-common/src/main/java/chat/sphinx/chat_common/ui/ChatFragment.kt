@@ -220,10 +220,10 @@ abstract class ChatFragment<
     }
 
     private fun handlePushNotification() {
-        val chatId = activity?.intent?.extras?.getString("chat_id")?.toLongOrNull() ?: activity?.intent?.extras?.getLong("chat_id")
-
+        lifecycleScope.launch(viewModel.mainImmediate) {
+        val pubKey = activity?.intent?.extras?.getString("child") ?: activity?.intent?.extras?.getString("child")
+        val chatId = pubKey?.let { viewModel.getPubKeyByEncryptedChild(it) }
         chatId?.let { _ ->
-            lifecycleScope.launch(viewModel.mainImmediate) {
                 viewModel.chatNavigator.popBackStack()
             }
         }

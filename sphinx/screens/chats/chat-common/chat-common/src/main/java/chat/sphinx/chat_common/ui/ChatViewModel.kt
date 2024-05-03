@@ -1276,6 +1276,10 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         }
     }
 
+    suspend fun getPubKeyByEncryptedChild(child: String): ChatId? {
+        return connectManagerRepository.getPubKeyByEncryptedChild(child).firstOrNull()
+    }
+
     abstract fun navigateToNotificationLevel()
 
     var messagesSearchJob: Job? = null

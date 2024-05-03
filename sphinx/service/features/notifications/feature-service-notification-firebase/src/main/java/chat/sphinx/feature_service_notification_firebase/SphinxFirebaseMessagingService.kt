@@ -57,11 +57,9 @@ internal class SphinxFirebaseMessagingService: FirebaseMessagingService() {
             return
         }
 
-        // Extract data from the message
-        // Extract data from the message
         val title: String = p0.data["title"] ?: ""
         val messageBody: String = p0.data["body"] ?: ""
-        val chatId: Long? = (p0.data["chat_id"] ?: "").toLongOrNull()
+        val child: String? = p0.data["child"]
 
         // Create an intent to open MainActivity when the notification is clicked
         val intent = Intent(
@@ -70,7 +68,7 @@ internal class SphinxFirebaseMessagingService: FirebaseMessagingService() {
         )
 
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-        intent.putExtra("chat_id", chatId)
+        intent.putExtra("child", child)
 
         val pendingIntent = PendingIntent.getActivity(
             this,
@@ -114,6 +112,7 @@ internal class SphinxFirebaseMessagingService: FirebaseMessagingService() {
         super.onCreate()
         LOG.d(TAG, "onCreate")
     }
+
     override fun onDestroy() {
         super.onDestroy()
         supervisor.cancel()

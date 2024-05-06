@@ -777,6 +777,7 @@ class ConnectManagerImpl: ConnectManager()
                 child
             )
         } catch (e: Exception) {
+            val pim = e
             null
         }
     }

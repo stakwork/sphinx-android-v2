@@ -76,18 +76,16 @@ internal class SphinxFirebaseMessagingService: FirebaseMessagingService() {
         val message = "You have new messages %s"
 
         // Get Contact/Tribe name from the child
-
-        serviceScope.launch {
+        runBlocking {
             child?.let { nnChild ->
-                val chatId =
-                    connectManagerRepository.getPubKeyByEncryptedChild(nnChild).firstOrNull()
+                val chatId = connectManagerRepository.getPubKeyByEncryptedChild(nnChild).firstOrNull()
                 val chat = chatId?.let { chatRepository.getChatById(it).firstOrNull() }
                 val name = chat?.name?.value
 
-                messageBody = if (chat?.isTribe() == true) {
-                    message.format(messageBody, "in $name tribe")
+                messageBody = if (chat?.isTribe() == true && !name.isNullOrEmpty()) {
+                    String.format(message, "in $name Tribe")
                 } else {
-                    message.format(messageBody, "from $name")
+                    String.format(message, "from $name")
                 }
             }
         }

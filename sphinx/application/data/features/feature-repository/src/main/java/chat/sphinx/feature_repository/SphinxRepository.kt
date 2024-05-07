@@ -1990,27 +1990,6 @@ abstract class SphinxRepository(
         )
     }
 
-    override val networkRefreshChats: Flow<LoadResponse<Boolean, ResponseError>> by lazy {
-        flow {
-            networkQueryChat.getChats().collect { loadResponse ->
-
-                @Exhaustive
-                when (loadResponse) {
-                    is Response.Error -> {
-                        emit(loadResponse)
-                    }
-                    is Response.Success -> {
-//                        emit(processChatDtos(loadResponse.value))
-                    }
-                    is LoadResponse.Loading -> {
-                        emit(loadResponse)
-                    }
-                }
-
-            }
-        }
-    }
-
     private suspend fun processChatDtos(
         chats: List<ChatDto>,
         contacts: Map<ContactId, ContactDto>? = null
@@ -2128,13 +2107,8 @@ abstract class SphinxRepository(
                 destinationsArray
             )
 
-            try {
-                networkQueryChat.streamSats(
-                    postStreamSatsDto
-                ).collect {}
-            } catch (e: AssertionError) {
-            }
         }
+        // TODO V2 implement streamSats
     }
 
 
@@ -3182,162 +3156,6 @@ abstract class SphinxRepository(
         )
     }
 
-    override suspend fun updateChatProfileInfo(
-        chatId: ChatId,
-        alias: ChatAlias?,
-        profilePic: PublicAttachmentInfo?
-    ): Response<ChatDto, ResponseError> {
-        var response: Response<ChatDto, ResponseError> = Response.Error(
-            ResponseError("updateChatProfileInfo failed to execute")
-        )
-
-        if (alias != null) {
-            response = updateChatProfileAlias(chatId, alias)
-        } else if (profilePic != null) {
-            response = updateChatProfilePic(
-                chatId,
-                profilePic.stream,
-                profilePic.mediaType,
-                profilePic.fileName,
-                profilePic.contentLength
-            )
-        }
-
-        return response
-    }
-
-    private suspend fun updateChatProfilePic(
-        chatId: ChatId,
-        stream: InputStreamProvider,
-        mediaType: MediaType,
-        fileName: String,
-        contentLength: Long?
-    ): Response<ChatDto, ResponseError> {
-        var response: Response<ChatDto, ResponseError> = Response.Error(
-            ResponseError("updateChatProfilePic failed to execute")
-        )
-        val memeServerHost = MediaHost.DEFAULT
-
-        applicationScope.launch(mainImmediate) {
-            try {
-                val token = memeServerTokenHandler.retrieveAuthenticationToken(memeServerHost)
-                    ?: throw RuntimeException("MemeServerAuthenticationToken retrieval failure")
-
-                val networkResponse = networkQueryMemeServer.uploadAttachment(
-                    authenticationToken = token,
-                    mediaType = mediaType,
-                    stream = stream,
-                    fileName = fileName,
-                    contentLength = contentLength,
-                    memeServerHost = memeServerHost,
-                )
-
-                @Exhaustive
-                when (networkResponse) {
-                    is Response.Error -> {
-                        response = networkResponse
-                    }
-                    is Response.Success -> {
-                        val newUrl = PhotoUrl(
-                            "https://${memeServerHost.value}/public/${networkResponse.value.muid}"
-                        )
-
-                        networkQueryChat.updateChat(
-                            chatId,
-                            PutChatDto(
-                                my_photo_url = newUrl.value,
-                            )
-                        ).collect { loadResponse ->
-
-                            @Exhaustive
-                            when (loadResponse) {
-                                is LoadResponse.Loading -> {
-                                }
-                                is Response.Error -> {
-                                    response = loadResponse
-                                }
-                                is Response.Success -> {
-                                    response = loadResponse
-                                    val queries = coreDB.getSphinxDatabaseQueries()
-
-                                    chatLock.withLock {
-                                        withContext(io) {
-                                            queries.transaction {
-                                                upsertChat(
-                                                    loadResponse.value,
-                                                    moshi,
-                                                    chatSeenMap,
-                                                    queries,
-                                                    null,
-                                                    accountOwner.value?.nodePubKey
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                response = Response.Error(
-                    ResponseError("Failed to update Chat Profile", e)
-                )
-            }
-        }.join()
-
-        LOG.d(TAG, "Completed Upload Returning: $response")
-        return response
-    }
-
-    private suspend fun updateChatProfileAlias(
-        chatId: ChatId,
-        alias: ChatAlias?
-    ): Response<ChatDto, ResponseError> {
-        var response: Response<ChatDto, ResponseError> = Response.Error(
-            ResponseError("updateChatProfilePic failed to execute")
-        )
-
-        applicationScope.launch(mainImmediate) {
-            networkQueryChat.updateChat(
-                chatId,
-                PutChatDto(
-                    my_alias = alias?.value
-                )
-            ).collect { loadResponse ->
-                @Exhaustive
-                when (loadResponse) {
-                    is LoadResponse.Loading -> {
-                    }
-                    is Response.Error -> {
-                        response = loadResponse
-                    }
-                    is Response.Success -> {
-                        response = loadResponse
-                        val queries = coreDB.getSphinxDatabaseQueries()
-
-                        chatLock.withLock {
-                            withContext(io) {
-                                queries.transaction {
-                                    upsertChat(
-                                        loadResponse.value,
-                                        moshi,
-                                        chatSeenMap,
-                                        queries,
-                                        null,
-                                        accountOwner.value?.nodePubKey
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }.join()
-
-        LOG.d(TAG, "Completed Upload Returning: $response")
-        return response
-    }
 
     /////////////////
     /// Lightning ///
@@ -7537,41 +7355,43 @@ abstract class SphinxRepository(
                     }
                 }) ?: createTribe.imgUrl
 
-                networkQueryChat.updateTribe(
-                    chatId,
-                    createTribe.toPostGroupDto(imgUrl)
-                ).collect { loadResponse ->
-                    when (loadResponse) {
-                        is LoadResponse.Loading -> {
-                        }
+                // TODO V2 implement updateTribe
 
-                        is Response.Error -> {
-                            response = loadResponse
-                            LOG.e(TAG, "Failed to create tribe: ", loadResponse.exception)
-                        }
-                        is Response.Success -> {
-                            response = Response.Success(loadResponse.value)
-                            val queries = coreDB.getSphinxDatabaseQueries()
-
-                            chatLock.withLock {
-                                messageLock.withLock {
-                                    withContext(io) {
-                                        queries.transaction {
-                                            upsertChat(
-                                                loadResponse.value,
-                                                moshi,
-                                                chatSeenMap,
-                                                queries,
-                                                null,
-                                                accountOwner.value?.nodePubKey
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+//                networkQueryChat.updateTribe(
+//                    chatId,
+//                    createTribe.toPostGroupDto(imgUrl)
+//                ).collect { loadResponse ->
+//                    when (loadResponse) {
+//                        is LoadResponse.Loading -> {
+//                        }
+//
+//                        is Response.Error -> {
+//                            response = loadResponse
+//                            LOG.e(TAG, "Failed to create tribe: ", loadResponse.exception)
+//                        }
+//                        is Response.Success -> {
+//                            response = Response.Success(loadResponse.value)
+//                            val queries = coreDB.getSphinxDatabaseQueries()
+//
+//                            chatLock.withLock {
+//                                messageLock.withLock {
+//                                    withContext(io) {
+//                                        queries.transaction {
+//                                            upsertChat(
+//                                                loadResponse.value,
+//                                                moshi,
+//                                                chatSeenMap,
+//                                                queries,
+//                                                null,
+//                                                accountOwner.value?.nodePubKey
+//                                            )
+//                                        }
+//                                    }
+//                                }
+//                            }
+//                        }
+//                    }
+//                }
             } catch (e: Exception) {
                 response = Response.Error(
                     ResponseError("Failed to update Chat Profile", e)
@@ -7590,40 +7410,40 @@ abstract class SphinxRepository(
     ): Response<Any, ResponseError> {
         var response: Response<Any, ResponseError> = Response.Error(ResponseError(errorMessage))
 
-        applicationScope.launch(mainImmediate) {
-            val queries = coreDB.getSphinxDatabaseQueries()
+//        applicationScope.launch(mainImmediate) {
+//            val queries = coreDB.getSphinxDatabaseQueries()
 
-            networkQueryChat.pinMessage(
-                chatId,
-                pinMessageDto
-            ).collect { loadResponse ->
-                @Exhaustive
-                when(loadResponse) {
-                    is LoadResponse.Loading -> {}
-                    is Response.Error -> {
-                        response = loadResponse
-                    }
-                    is Response.Success -> {
-                        response = Response.Success(loadResponse)
-
-                        chatLock.withLock {
-                            messageLock.withLock {
-                                withContext(io) {
-                                    loadResponse.value?.pin?.toMessageUUID()?.let { messageUUID ->
-                                        queries.chatUpdatePinMessage(messageUUID, chatId)
-                                    } ?: run {
-                                        queries.chatUpdatePinMessage(null, chatId)
-                                    }
-
-                                    //Force Message list update
-                                    queries.messageUpdateStatus(message.status, message.id)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }.join()
+//            networkQueryChat.pinMessage(
+//                chatId,
+//                pinMessageDto
+//            ).collect { loadResponse ->
+//                @Exhaustive
+//                when(loadResponse) {
+//                    is LoadResponse.Loading -> {}
+//                    is Response.Error -> {
+//                        response = loadResponse
+//                    }
+//                    is Response.Success -> {
+//                        response = Response.Success(loadResponse)
+//
+//                        chatLock.withLock {
+//                            messageLock.withLock {
+//                                withContext(io) {
+//                                    loadResponse.value?.pin?.toMessageUUID()?.let { messageUUID ->
+//                                        queries.chatUpdatePinMessage(messageUUID, chatId)
+//                                    } ?: run {
+//                                        queries.chatUpdatePinMessage(null, chatId)
+//                                    }
+//
+//                                    //Force Message list update
+//                                    queries.messageUpdateStatus(message.status, message.id)
+//                                }
+//                            }
+//                        }
+//                    }
+//                }
+//            }
+//        }.join()
 
         return response
     }
@@ -7704,23 +7524,23 @@ abstract class SphinxRepository(
                         }
                     }
                 }
-
-                networkQueryChat.addTribeMember(
-                    addMember.toTribeMemberDto(imgUrl)
-                ).collect { loadResponse ->
-                    when (loadResponse) {
-                        is LoadResponse.Loading -> {
-                        }
-
-                        is Response.Error -> {
-                            response = loadResponse
-                            LOG.e(TAG, "Failed to create tribe: ", loadResponse.exception)
-                        }
-                        is Response.Success -> {
-                            response = Response.Success(true)
-                        }
-                    }
-                }
+                // TODO V2 addTribeMember
+//                networkQueryChat.addTribeMember(
+//                    addMember.toTribeMemberDto(imgUrl)
+//                ).collect { loadResponse ->
+//                    when (loadResponse) {
+//                        is LoadResponse.Loading -> {
+//                        }
+//
+//                        is Response.Error -> {
+//                            response = loadResponse
+//                            LOG.e(TAG, "Failed to create tribe: ", loadResponse.exception)
+//                        }
+//                        is Response.Success -> {
+//                            response = Response.Success(true)
+//                        }
+//                    }
+//                }
             } catch (e: Exception) {
                 response = Response.Error(
                     ResponseError("Failed to add Tribe Member", e)

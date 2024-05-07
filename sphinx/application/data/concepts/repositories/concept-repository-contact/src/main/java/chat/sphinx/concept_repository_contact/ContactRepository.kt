@@ -35,7 +35,6 @@ interface ContactRepository {
     fun getInviteById(inviteId: InviteId): Flow<Invite?>
     fun createNewInvite(nickname: String, welcomeMessage: String): Flow<LoadResponse<Any, ResponseError>>
 
-    val networkRefreshContacts: Flow<LoadResponse<Boolean, ResponseError>>
     var updatedContactIds: MutableList<ContactId>
 
     suspend fun deleteContactById(contactId: ContactId): Response<Any, ResponseError>
@@ -43,10 +42,6 @@ interface ContactRepository {
     suspend fun updateOwnerNameAndKey(name: String, contactKey: Password): Response<Any, ResponseError>
     suspend fun updateOwner(alias: String?, privatePhoto: PrivatePhoto?, tipAmount: Sat?): Response<Any, ResponseError>
 
-
-    suspend fun forceKeyExchange(
-        contactId: ContactId,
-    )
 
     // TODO: add chatId to argument to update alias photo
     suspend fun updateProfilePic(

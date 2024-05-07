@@ -4,7 +4,6 @@ import chat.sphinx.concept_network_query_chat.NetworkQueryChat
 import chat.sphinx.concept_network_query_chat.model.*
 import chat.sphinx.concept_network_query_chat.model.feed.FeedDto
 import chat.sphinx.concept_network_relay_call.NetworkRelayCall
-import chat.sphinx.feature_network_query_chat.model.*
 import chat.sphinx.kotlin_response.LoadResponse
 import chat.sphinx.kotlin_response.ResponseError
 import chat.sphinx.wrapper_chat.ChatHost

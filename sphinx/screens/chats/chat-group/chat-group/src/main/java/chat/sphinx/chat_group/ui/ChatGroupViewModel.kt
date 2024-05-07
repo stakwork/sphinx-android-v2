@@ -141,8 +141,6 @@ class ChatGroupViewModel @Inject constructor(
     override val threadSharedFlow: SharedFlow<List<Message>>?
         get() = null
 
-    override fun forceKeyExchange() { }
-
     override suspend fun shouldStreamSatsFor(podcastClip: PodcastClip, messageUUID: MessageUUID?) {
         TODO("Not yet implemented")
     }

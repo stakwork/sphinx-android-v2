@@ -50,23 +50,23 @@ internal class OnBoardPictureViewModel @Inject constructor(
             initViewModel = true
         }
 
-        refreshJob = if (refreshContacts) {
-            viewModelScope.launch(mainImmediate) {
-                contactRepository.networkRefreshContacts.collect { response ->
-                    @Exhaustive
-                    when (response) {
-                        is LoadResponse.Loading -> {
-                        }
-                        is Response.Error -> {
-                        }
-                        is Response.Success -> {
-                        }
-                    }
-                }
-            }
-        } else {
-            null
-        }
+//        refreshJob = if (refreshContacts) {
+//            viewModelScope.launch(mainImmediate) {
+//                contactRepository.networkRefreshContacts.collect { response ->
+//                    @Exhaustive
+//                    when (response) {
+//                        is LoadResponse.Loading -> {
+//                        }
+//                        is Response.Error -> {
+//                        }
+//                        is Response.Success -> {
+//                        }
+//                    }
+//                }
+//            }
+//        } else {
+//            null
+//        }
     }
 
     private var nextScreenJob: Job? = null

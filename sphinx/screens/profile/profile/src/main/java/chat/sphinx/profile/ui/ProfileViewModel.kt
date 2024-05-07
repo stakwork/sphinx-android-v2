@@ -249,29 +249,29 @@ internal class ProfileViewModel @Inject constructor(
     fun deleteAccount() {
         if (deleteAccountJob?.isActive == true) return
 
-        deleteAccountJob = viewModelScope.launch(mainImmediate) {
-            submitSideEffect(ProfileSideEffect.DeleteAccountConfirmation {
-                deleteRelayAccount()
-            })
-        }
+//        deleteAccountJob = viewModelScope.launch(mainImmediate) {
+//            submitSideEffect(ProfileSideEffect.DeleteAccountConfirmation {
+//                deleteRelayAccount()
+//            })
+//        }
     }
 
-    private fun deleteRelayAccount() {
-        viewModelScope.launch(mainImmediate) {
-            networkQueryContact.deleteAccount().collect{ loadResponse ->
-                @javax.annotation.meta.Exhaustive
-                when (loadResponse) {
-                    is LoadResponse.Loading -> {}
-                    is Response.Error -> {
-                        submitSideEffect(ProfileSideEffect.DeleteAccountError)
-                    }
-                    is Response.Success -> {
-                        deleteData()
-                    }
-                }
-            }
-        }
-    }
+//    private fun deleteRelayAccount() {
+//        viewModelScope.launch(mainImmediate) {
+//            networkQueryContact.deleteAccount().collect{ loadResponse ->
+//                @javax.annotation.meta.Exhaustive
+//                when (loadResponse) {
+//                    is LoadResponse.Loading -> {}
+//                    is Response.Error -> {
+//                        submitSideEffect(ProfileSideEffect.DeleteAccountError)
+//                    }
+//                    is Response.Success -> {
+//                        deleteData()
+//                    }
+//                }
+//            }
+//        }
+//    }
 
     private fun deleteData() {
         val appContext: Context = app.applicationContext

@@ -118,7 +118,6 @@ internal class OnBoardConnectingViewModel @Inject constructor(
     private val walletDataHandler: WalletDataHandler,
     private val relayDataHandler: RelayDataHandler,
     private val torManager: TorManager,
-    private val networkQueryContact: NetworkQueryContact,
     private val networkQueryInvite: NetworkQueryInvite,
     private val networkQueryRelayKeys: NetworkQueryRelayKeys,
     private val onBoardStepHandler: OnBoardStepHandler,
@@ -158,7 +157,7 @@ internal class OnBoardConnectingViewModel @Inject constructor(
     fun setSignerManager(signerManager: SignerManager) {
         signerManager.setWalletDataHandler(walletDataHandler)
         signerManager.setMoshi(moshi)
-        signerManager.setNetworkQueryContact(networkQueryContact)
+//        signerManager.setNetworkQueryContact(networkQueryContact)
 
         this.signerManager = signerManager
     }

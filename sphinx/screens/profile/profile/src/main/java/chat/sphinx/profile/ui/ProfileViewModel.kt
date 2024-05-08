@@ -1,10 +1,7 @@
 package chat.sphinx.profile.ui
 
-import android.app.Activity
-import android.app.AlarmManager
 import android.app.Application
 import android.content.Context
-import android.content.Intent
 import android.os.Environment
 import android.os.StatFs
 import android.webkit.URLUtil
@@ -13,7 +10,6 @@ import app.cash.exhaustive.Exhaustive
 import chat.sphinx.camera_view_model_coordinator.request.CameraRequest
 import chat.sphinx.camera_view_model_coordinator.response.CameraResponse
 import chat.sphinx.concept_background_login.BackgroundLoginHandler
-import chat.sphinx.concept_network_query_contact.NetworkQueryContact
 import chat.sphinx.concept_network_query_relay_keys.NetworkQueryRelayKeys
 import chat.sphinx.concept_network_tor.TorManager
 import chat.sphinx.concept_relay.RelayDataHandler
@@ -71,7 +67,6 @@ import okio.base64.encodeBase64
 import org.cryptonode.jncryptor.AES256JNCryptor
 import org.cryptonode.jncryptor.CryptorException
 import javax.inject.Inject
-import kotlin.system.exitProcess
 
 
 @Serializable
@@ -111,7 +106,6 @@ internal class ProfileViewModel @Inject constructor(
     private val feedRepository: FeedRepository,
     private val repositoryMedia: RepositoryMedia,
     private val networkQueryRelayKeys: NetworkQueryRelayKeys,
-    private val networkQueryContact: NetworkQueryContact,
     private val relayDataHandler: RelayDataHandler,
     private val walletDataHandler: WalletDataHandler,
     private val torManager: TorManager,

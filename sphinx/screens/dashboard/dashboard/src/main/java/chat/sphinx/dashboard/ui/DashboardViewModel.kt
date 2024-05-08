@@ -10,9 +10,6 @@ import androidx.lifecycle.viewModelScope
 import app.cash.exhaustive.Exhaustive
 import chat.sphinx.concept_background_login.BackgroundLoginHandler
 import chat.sphinx.concept_network_query_crypter.NetworkQueryCrypter
-import chat.sphinx.concept_network_query_lightning.NetworkQueryLightning
-import chat.sphinx.concept_network_query_lightning.model.invoice.PayRequestDto
-import chat.sphinx.concept_network_query_lightning.model.invoice.PostRequestPaymentDto
 import chat.sphinx.concept_network_query_people.NetworkQueryPeople
 import chat.sphinx.concept_network_query_people.model.isClaimOnLiquidPath
 import chat.sphinx.concept_network_query_people.model.isDeleteMethod
@@ -35,7 +32,6 @@ import chat.sphinx.concept_service_notification.PushNotificationRegistrar
 import chat.sphinx.concept_signer_manager.SignerManager
 import chat.sphinx.concept_signer_manager.SignerPhoneCallback
 import chat.sphinx.concept_socket_io.SocketIOManager
-import chat.sphinx.concept_socket_io.SocketIOState
 import chat.sphinx.concept_view_model_coordinator.ViewModelCoordinator
 import chat.sphinx.concept_wallet.WalletDataHandler
 import chat.sphinx.dashboard.R
@@ -49,7 +45,6 @@ import chat.sphinx.dashboard.ui.viewstates.DeepLinkPopupViewState
 import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
 import chat.sphinx.kotlin_response.LoadResponse
 import chat.sphinx.kotlin_response.Response
-import chat.sphinx.kotlin_response.exception
 import chat.sphinx.logger.SphinxLogger
 import chat.sphinx.menu_bottom.ui.MenuBottomViewState
 import chat.sphinx.menu_bottom_scanner.ScannerMenuHandler
@@ -158,7 +153,6 @@ internal class DashboardViewModel @Inject constructor(
     private val chatRepository: ChatRepository,
     private val feedRepository: FeedRepository,
     private val actionsRepository: ActionsRepository,
-    private val networkQueryLightning: NetworkQueryLightning,
     private val lightningRepository: LightningRepository,
 
     private val networkQueryVersion: NetworkQueryVersion,
@@ -420,8 +414,6 @@ internal class DashboardViewModel @Inject constructor(
                 handleExternalRequestLink(externalRequestLink)
             } ?: deepLink?.toStakworkAuthorizeLink()?.let { stakworkAuthorizeLink ->
                 handleStakworkAuthorizeLink(stakworkAuthorizeLink)
-            } ?: deepLink?.toCreateInvoiceLink()?.let { createInvoiceLink ->
-                handleCreateInvoiceLink(createInvoiceLink)
             } ?: deepLink?.toRedeemSatsLink()?.let { redeemSatsLink ->
                 handleRedeemSatsLink(redeemSatsLink)
             } ?: deepLink?.toFeedItemLink()?.let { feedItemLink ->
@@ -695,36 +687,6 @@ internal class DashboardViewModel @Inject constructor(
         deepLinkPopupViewStateContainer.updateViewState(
             DeepLinkPopupViewState.RedeemSatsPopup(link)
         )
-    }
-
-    private fun handleCreateInvoiceLink(link: CreateInvoiceLink) {
-        viewModelScope.launch(mainImmediate) {
-            val postRequestPaymentDto = PostRequestPaymentDto(
-                link.amount.toLong(),
-            )
-
-            networkQueryLightning.postRequestPayment(postRequestPaymentDto)
-                .collect { loadResponse ->
-                    @javax.annotation.meta.Exhaustive
-                    when (loadResponse) {
-                        is LoadResponse.Loading -> {}
-                        is Response.Error -> {
-                            submitSideEffect(
-                                ChatListSideEffect.Notify(
-                                    app.getString(R.string.failed_to_request_payment)
-                                )
-                            )
-                        }
-                        is Response.Success -> {
-                            dashboardNavigator.toQRCodeDetail(
-                                loadResponse.value.invoice,
-                                app.getString(R.string.payment_request),
-                                app.getString(R.string.amount_n_sats, link.amount.toLong()),
-                            )
-                        }
-                    }
-                }
-        }
     }
 
     private suspend fun handleExternalRequestLink(link: ExternalRequestLink) {
@@ -1299,47 +1261,11 @@ internal class DashboardViewModel @Inject constructor(
     }
 
     private fun payLightningPaymentRequest(lightningPaymentRequest: LightningPaymentRequest) {
-        viewModelScope.launch(mainImmediate) {
-            val payLightningPaymentRequestDto = PayRequestDto(lightningPaymentRequest.value)
-            networkQueryLightning.putLightningPaymentRequest(payLightningPaymentRequestDto).collect { loadResponse ->
-                @Exhaustive
-                when (loadResponse) {
-                    is LoadResponse.Loading -> {
-                        submitSideEffect(
-                            ChatListSideEffect.Notify(app.getString(R.string.attempting_payment_request), true)
-                        )
-                    }
-                    is Response.Error -> {
-                        submitSideEffect(
-                            ChatListSideEffect.Notify(
-                                String.format(
-                                    app.getString(R.string.error_payment_message),
-                                    loadResponse.exception?.message ?: loadResponse.cause.message
-                                ), true)
-                        )
-                    }
-                    is Response.Success -> {
-                        submitSideEffect(
-                            ChatListSideEffect.Notify(app.getString(R.string.successfully_paid_invoice), true)
-                        )
-                    }
-                }
-            }
-        }
+        viewModelScope.launch(mainImmediate) {}
     }
 
     private val _restoreProgressStateFlow: MutableStateFlow<RestoreProgressViewState?> by lazy {
         MutableStateFlow(null)
-    }
-
-    init {
-        viewModelScope.launch(mainImmediate) {
-            socketIOManager.socketIOStateFlow.collect { state ->
-                if (state is SocketIOState.Uninitialized) {
-                    socketIOManager.connect()
-                }
-            }
-        }
     }
 
 //    val networkStateFlow: StateFlow<Pair<LoadResponse<Boolean, ResponseError>, Boolean>>

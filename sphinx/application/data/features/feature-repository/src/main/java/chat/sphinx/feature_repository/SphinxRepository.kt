@@ -13,19 +13,14 @@ import chat.sphinx.concept_network_query_chat.NetworkQueryChat
 import chat.sphinx.concept_network_query_chat.model.*
 import chat.sphinx.concept_network_query_contact.NetworkQueryContact
 import chat.sphinx.concept_network_query_contact.model.ContactDto
-import chat.sphinx.concept_network_query_contact.model.GithubPATDto
 import chat.sphinx.concept_network_query_contact.model.PostContactDto
-import chat.sphinx.concept_network_query_contact.model.PutContactDto
 import chat.sphinx.concept_network_query_discover_tribes.NetworkQueryDiscoverTribes
 import chat.sphinx.concept_network_query_feed_search.NetworkQueryFeedSearch
 import chat.sphinx.concept_network_query_feed_search.model.toFeedSearchResult
 import chat.sphinx.concept_network_query_feed_status.NetworkQueryFeedStatus
 import chat.sphinx.concept_network_query_feed_status.model.ContentFeedStatusDto
 import chat.sphinx.concept_network_query_feed_status.model.EpisodeStatusDto
-import chat.sphinx.concept_network_query_feed_status.model.PostFeedStatusDto
-import chat.sphinx.concept_network_query_feed_status.model.PutFeedStatusDto
 import chat.sphinx.concept_network_query_invite.NetworkQueryInvite
-import chat.sphinx.concept_network_query_lightning.NetworkQueryLightning
 import chat.sphinx.concept_network_query_meme_server.NetworkQueryMemeServer
 import chat.sphinx.concept_network_query_message.NetworkQueryMessage
 import chat.sphinx.concept_network_query_message.model.*
@@ -145,7 +140,6 @@ import chat.sphinx.wrapper_lightning.NodeBalance
 import chat.sphinx.wrapper_lightning.NodeBalanceAll
 import chat.sphinx.wrapper_lightning.toWalletMnemonic
 import chat.sphinx.wrapper_meme_server.AuthenticationChallenge
-import chat.sphinx.wrapper_meme_server.PublicAttachmentInfo
 import chat.sphinx.wrapper_message.*
 import chat.sphinx.wrapper_message.Msg.Companion.toMsg
 import chat.sphinx.wrapper_message.MsgSender.Companion.toMsgSender
@@ -201,7 +195,6 @@ abstract class SphinxRepository(
     private val networkQueryMemeServer: NetworkQueryMemeServer,
     private val networkQueryChat: NetworkQueryChat,
     private val networkQueryContact: NetworkQueryContact,
-    private val networkQueryLightning: NetworkQueryLightning,
     private val networkQueryMessage: NetworkQueryMessage,
     private val networkQueryInvite: NetworkQueryInvite,
     private val networkQueryAuthorizeExternal: NetworkQueryAuthorizeExternal,
@@ -1558,9 +1551,6 @@ abstract class SphinxRepository(
                             upsertInvite(msg.dto, queries)
                         }
                     }
-                }
-                is SphinxSocketIOMessage.Type.InvoicePayment -> {
-                    // TODO: Implement
                 }
                 is SphinxSocketIOMessage.Type.MessageType, is SphinxSocketIOMessage.Type.Group -> {
 
@@ -2930,7 +2920,7 @@ abstract class SphinxRepository(
                     .getString(REPOSITORY_LIGHTNING_BALANCE, null)
                     ?.let { balanceString ->
 
-                        balanceString.toNodeBalance()?.let { nodeBalance ->
+                        balanceString.toLong().toNodeBalance()?.let { nodeBalance ->
                             accountBalanceStateFlow.value = nodeBalance
                         }
                     }

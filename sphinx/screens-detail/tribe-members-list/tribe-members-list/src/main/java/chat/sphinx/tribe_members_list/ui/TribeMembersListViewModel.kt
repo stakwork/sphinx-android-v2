@@ -55,7 +55,6 @@ internal class TribeMembersListViewModel @Inject constructor(
     private val messageRepository: MessageRepository,
     private val chatRepository: ChatRepository,
     private val contactRepository: ContactRepository,
-    private val networkQueryContact: NetworkQueryContact,
     private val connectManagerRepository: ConnectManagerRepository,
     savedStateHandle: SavedStateHandle,
 ): SideEffectViewModel<

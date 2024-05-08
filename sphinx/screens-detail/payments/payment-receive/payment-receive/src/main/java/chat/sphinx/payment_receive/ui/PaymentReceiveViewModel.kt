@@ -3,8 +3,6 @@ package chat.sphinx.payment_receive.ui
 import android.app.Application
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
-import chat.sphinx.concept_network_query_lightning.NetworkQueryLightning
-import chat.sphinx.concept_network_query_lightning.model.invoice.PostRequestPaymentDto
 import chat.sphinx.concept_repository_chat.ChatRepository
 import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.concept_repository_message.MessageRepository
@@ -53,7 +51,6 @@ internal class PaymentReceiveViewModel @Inject constructor(
     private val paymentReceiveNavigator: PaymentReceiveNavigator,
     private val app: Application,
     private val contactRepository: ContactRepository,
-    private val networkQueryLightning: NetworkQueryLightning,
     private val messageRepository: MessageRepository,
     private val chatRepository: ChatRepository,
 ): PaymentViewModel<PaymentReceiveFragmentArgs, PaymentReceiveViewState>(

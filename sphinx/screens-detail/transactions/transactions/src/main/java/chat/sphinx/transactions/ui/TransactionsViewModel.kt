@@ -34,7 +34,6 @@ internal class TransactionsViewModel @Inject constructor(
     private val contactRepository: ContactRepository,
     private val chatRepository: ChatRepository,
     private val messageRepository: MessageRepository,
-    private val networkQueryMessage: NetworkQueryMessage,
     private val connectManagerRepository: ConnectManagerRepository,
 ): BaseViewModel<TransactionsViewState>(
     dispatchers,

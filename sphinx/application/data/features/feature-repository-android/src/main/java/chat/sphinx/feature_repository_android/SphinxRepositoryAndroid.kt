@@ -6,7 +6,6 @@ import chat.sphinx.concept_coredb.CoreDB
 import chat.sphinx.concept_crypto_rsa.RSA
 import chat.sphinx.concept_meme_input_stream.MemeInputStreamHandler
 import chat.sphinx.concept_meme_server.MemeServerTokenHandler
-import chat.sphinx.concept_network_query_action_track.NetworkQueryActionTrack
 import chat.sphinx.concept_network_query_chat.NetworkQueryChat
 import chat.sphinx.concept_network_query_contact.NetworkQueryContact
 import chat.sphinx.concept_network_query_discover_tribes.NetworkQueryDiscoverTribes
@@ -53,7 +52,6 @@ class SphinxRepositoryAndroid(
     mediaCacheHandler: MediaCacheHandler,
     memeInputStreamHandler: MemeInputStreamHandler,
     memeServerTokenHandler: MemeServerTokenHandler,
-    networkQueryActionTrack: NetworkQueryActionTrack,
     networkQueryDiscoverTribes: NetworkQueryDiscoverTribes,
     networkQueryMemeServer: NetworkQueryMemeServer,
     networkQueryChat: NetworkQueryChat,
@@ -81,7 +79,6 @@ class SphinxRepositoryAndroid(
     mediaCacheHandler,
     memeInputStreamHandler,
     memeServerTokenHandler,
-    networkQueryActionTrack,
     networkQueryDiscoverTribes,
     networkQueryMemeServer,
     networkQueryChat,

@@ -8,7 +8,6 @@ import chat.sphinx.concept_meme_input_stream.MemeInputStreamHandler
 import chat.sphinx.concept_network_call.NetworkCall
 import chat.sphinx.concept_network_client.NetworkClient
 import chat.sphinx.concept_network_client_cache.NetworkClientCache
-import chat.sphinx.concept_network_query_action_track.NetworkQueryActionTrack
 import chat.sphinx.concept_network_query_chat.NetworkQueryChat
 import chat.sphinx.concept_network_query_contact.NetworkQueryContact
 import chat.sphinx.concept_network_query_crypter.NetworkQueryCrypter
@@ -26,7 +25,6 @@ import chat.sphinx.concept_relay.RelayDataHandler
 import chat.sphinx.concept_wallet.WalletDataHandler
 import chat.sphinx.feature_link_preview.LinkPreviewHandlerImpl
 import chat.sphinx.feature_network_client.NetworkClientImpl
-import chat.sphinx.feature_network_query_action_track.NetworkQueryActionTrackImpl
 import chat.sphinx.feature_network_query_chat.NetworkQueryChatImpl
 import chat.sphinx.feature_network_query_contact.NetworkQueryContactImpl
 import chat.sphinx.feature_network_query_crypter.NetworkQueryCrypterImpl
@@ -345,18 +343,6 @@ object NetworkModule {
         networkQueryCrypterImpl: NetworkQueryCrypterImpl
     ): NetworkQueryCrypter =
         networkQueryCrypterImpl
-
-    @Provides
-    fun provideNetworkQueryActionTrackImpl(
-        networkRelayCall: NetworkRelayCall
-    ): NetworkQueryActionTrackImpl =
-        NetworkQueryActionTrackImpl(networkRelayCall)
-
-    @Provides
-    fun provideNetworkQueryActionTrack(
-        networkQueryActionTrackImpl: NetworkQueryActionTrackImpl
-    ): NetworkQueryActionTrack =
-        networkQueryActionTrackImpl
 
     @Provides
     fun provideNetworkQueryDiscoverTribesImpl(

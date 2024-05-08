@@ -5,10 +5,6 @@ import chat.sphinx.concept_coredb.CoreDB
 import chat.sphinx.concept_crypto_rsa.RSA
 import chat.sphinx.concept_meme_input_stream.MemeInputStreamHandler
 import chat.sphinx.concept_meme_server.MemeServerTokenHandler
-import chat.sphinx.concept_network_query_action_track.NetworkQueryActionTrack
-import chat.sphinx.concept_network_query_action_track.model.ActionTrackDto
-import chat.sphinx.concept_network_query_action_track.model.SyncActionsDto
-import chat.sphinx.concept_network_query_action_track.model.toActionTrackMetaDataDtoOrNull
 import chat.sphinx.concept_network_query_chat.NetworkQueryChat
 import chat.sphinx.concept_network_query_chat.model.*
 import chat.sphinx.concept_network_query_contact.NetworkQueryContact
@@ -118,8 +114,6 @@ import chat.sphinx.wrapper_common.lightning.toLightningRouteHint
 import chat.sphinx.wrapper_common.lightning.toSat
 import chat.sphinx.wrapper_common.message.*
 import chat.sphinx.wrapper_common.payment.PaymentTemplate
-import chat.sphinx.wrapper_common.subscription.EndNumber
-import chat.sphinx.wrapper_common.subscription.SubscriptionId
 import chat.sphinx.wrapper_contact.*
 import chat.sphinx.wrapper_feed.*
 import chat.sphinx.wrapper_invite.Invite
@@ -142,7 +136,6 @@ import chat.sphinx.wrapper_podcast.Podcast
 import chat.sphinx.wrapper_relay.*
 import chat.sphinx.wrapper_rsa.RsaPrivateKey
 import chat.sphinx.wrapper_rsa.RsaPublicKey
-import chat.sphinx.wrapper_subscription.Subscription
 import com.squareup.moshi.Moshi
 import com.squareup.sqldelight.runtime.coroutines.asFlow
 import com.squareup.sqldelight.runtime.coroutines.mapToList
@@ -181,7 +174,6 @@ abstract class SphinxRepository(
     private val mediaCacheHandler: MediaCacheHandler,
     private val memeInputStreamHandler: MemeInputStreamHandler,
     private val memeServerTokenHandler: MemeServerTokenHandler,
-    private val networkQueryActionTrack: NetworkQueryActionTrack,
     private val networkQueryDiscoverTribes: NetworkQueryDiscoverTribes,
     private val networkQueryMemeServer: NetworkQueryMemeServer,
     private val networkQueryChat: NetworkQueryChat,
@@ -6426,75 +6418,6 @@ abstract class SphinxRepository(
         return response ?: Response.Error(ResponseError("Returned before completing"))
     }
 
-    override suspend fun authorizeExternal(
-        relayUrl: String,
-        host: String,
-        challenge: String
-    ): Response<Boolean, ResponseError> {
-        var response: Response<Boolean, ResponseError>? = null
-
-        applicationScope.launch(mainImmediate) {
-            networkQueryAuthorizeExternal.verifyExternal().collect { loadResponse ->
-                when (loadResponse) {
-                    is LoadResponse.Loading -> {
-                    }
-
-                    is Response.Error -> {
-                        response = loadResponse
-                    }
-
-                    is Response.Success -> {
-
-                        val token = loadResponse.value.token
-                        val info = loadResponse.value.info
-
-                        networkQueryAuthorizeExternal.signBase64(
-                            AUTHORIZE_EXTERNAL_BASE_64
-                        ).collect { sigResponse ->
-
-                            when (sigResponse) {
-                                is LoadResponse.Loading -> {
-                                }
-
-                                is Response.Error -> {
-                                    response = sigResponse
-                                }
-
-                                is Response.Success -> {
-
-                                    info.verificationSignature = sigResponse.value.sig
-                                    info.url = relayUrl
-
-                                    networkQueryAuthorizeExternal.authorizeExternal(
-                                        host,
-                                        challenge,
-                                        token,
-                                        info,
-                                    ).collect { authorizeResponse ->
-                                        when (authorizeResponse) {
-                                            is LoadResponse.Loading -> {
-                                            }
-
-                                            is Response.Error -> {
-                                                response = authorizeResponse
-                                            }
-
-                                            is Response.Success -> {
-                                                response = Response.Success(true)
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }.join()
-
-        return response ?: Response.Error(ResponseError("Returned before completing"))
-    }
-
     override suspend fun deletePeopleProfile(
         body: String
     ): Response<Boolean, ResponseError> {
@@ -8058,34 +7981,34 @@ abstract class SphinxRepository(
             val actionsDboList = queries.actionTrackGetAllNotUploaded()
                 .executeAsList()
 
-            for (chunk in actionsDboList.chunked(50)) {
-                val actionsIds = chunk.map { it.id }
-
-                val actionTrackDTOs: MutableList<ActionTrackDto> = mutableListOf()
-
-                chunk.forEach {
-                    it.meta_data.value.toActionTrackMetaDataDtoOrNull(moshi)?.let { metaDataDto ->
-                        actionTrackDTOs.add(
-                            ActionTrackDto(
-                                it.type.value,
-                                metaDataDto
-                            )
-                        )
-                    }
-                }
-
-                networkQueryActionTrack.sendActionsTracked(
-                    SyncActionsDto(actionTrackDTOs)
-                ).collect { response ->
-                    when (response) {
-                        is Response.Success -> {
-                            queries.actionTrackUpdateUploadedItems(actionsIds)
-                        }
-                        is Response.Error -> {}
-                        else -> {}
-                    }
-                }
-            }
+//            for (chunk in actionsDboList.chunked(50)) {
+//                val actionsIds = chunk.map { it.id }
+//
+//                val actionTrackDTOs: MutableList<ActionTrackDto> = mutableListOf()
+//
+//                chunk.forEach {
+//                    it.meta_data.value.toActionTrackMetaDataDtoOrNull(moshi)?.let { metaDataDto ->
+//                        actionTrackDTOs.add(
+//                            ActionTrackDto(
+//                                it.type.value,
+//                                metaDataDto
+//                            )
+//                        )
+//                    }
+//                }
+//
+//                networkQueryActionTrack.sendActionsTracked(
+//                    SyncActionsDto(actionTrackDTOs)
+//                ).collect { response ->
+//                    when (response) {
+//                        is Response.Success -> {
+//                            queries.actionTrackUpdateUploadedItems(actionsIds)
+//                        }
+//                        is Response.Error -> {}
+//                        else -> {}
+//                    }
+//                }
+//            }
         }
     }
 

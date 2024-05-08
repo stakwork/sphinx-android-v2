@@ -74,20 +74,20 @@ internal class EditContactViewModel @Inject constructor(
                 if (contact != null) {
                     contact.nodePubKey?.let { lightningNodePubKey ->
 
-                        val subscription = subscriptionRepository.getActiveSubscriptionByContactId(
-                            contactId
-                        ).firstOrNull()
+//                        val subscription = subscriptionRepository.getActiveSubscriptionByContactId(
+//                            contactId
+//                        ).firstOrNull()
 
-                        submitSideEffect(
-                            ContactSideEffect.ExistingContact(
-                                contact.alias?.value,
-                                contact.photoUrl,
-                                contact.getColorKey(),
-                                lightningNodePubKey,
-                                contact.routeHint,
-                                subscription != null
-                            )
-                        )
+//                        submitSideEffect(
+//                            ContactSideEffect.ExistingContact(
+//                                contact.alias?.value,
+//                                contact.photoUrl,
+//                                contact.getColorKey(),
+//                                lightningNodePubKey,
+//                                contact.routeHint,
+//                                subscription != null
+//                            )
+//                        )
                     }
                 }
             }

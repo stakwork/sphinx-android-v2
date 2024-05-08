@@ -6,7 +6,6 @@ import chat.sphinx.concept_network_query_chat.model.TribeDto
 import chat.sphinx.concept_network_query_chat.model.feed.FeedDto
 import chat.sphinx.concept_network_query_contact.model.ContactDto
 import chat.sphinx.concept_network_query_invite.model.InviteDto
-import chat.sphinx.concept_network_query_subscription.model.SubscriptionDto
 import chat.sphinx.conceptcoredb.SphinxDatabaseQueries
 import chat.sphinx.example.wrapper_mqtt.MessageDto
 import chat.sphinx.wrapper_chat.*
@@ -787,23 +786,23 @@ inline fun TransactionCallbacks.deleteMessageById(
     queries.messageMediaDeleteById(messageId)
 }
 
-@Suppress("NOTHING_TO_INLINE")
-inline fun TransactionCallbacks.upsertSubscription(subscriptionDto: SubscriptionDto, queries: SphinxDatabaseQueries) {
-    queries.subscriptionUpsert(
-        id = SubscriptionId(subscriptionDto.id),
-        amount = Sat(subscriptionDto.amount),
-        contact_id = ContactId(subscriptionDto.contact_id),
-        chat_id = ChatId(subscriptionDto.chat_id),
-        count = SubscriptionCount(subscriptionDto.count.toLong()),
-        cron = Cron(subscriptionDto.cron),
-        end_date = subscriptionDto.end_date?.toDateTime(),
-        end_number = subscriptionDto.end_number?.let { EndNumber(it.toLong()) },
-        created_at = subscriptionDto.created_at.toDateTime(),
-        updated_at = subscriptionDto.updated_at.toDateTime(),
-        ended = subscriptionDto.endedActual,
-        paused = subscriptionDto.pausedActual,
-    )
-}
+//@Suppress("NOTHING_TO_INLINE")
+//inline fun TransactionCallbacks.upsertSubscription(subscriptionDto: SubscriptionDto, queries: SphinxDatabaseQueries) {
+//    queries.subscriptionUpsert(
+//        id = SubscriptionId(subscriptionDto.id),
+//        amount = Sat(subscriptionDto.amount),
+//        contact_id = ContactId(subscriptionDto.contact_id),
+//        chat_id = ChatId(subscriptionDto.chat_id),
+//        count = SubscriptionCount(subscriptionDto.count.toLong()),
+//        cron = Cron(subscriptionDto.cron),
+//        end_date = subscriptionDto.end_date?.toDateTime(),
+//        end_number = subscriptionDto.end_number?.let { EndNumber(it.toLong()) },
+//        created_at = subscriptionDto.created_at.toDateTime(),
+//        updated_at = subscriptionDto.updated_at.toDateTime(),
+//        ended = subscriptionDto.endedActual,
+//        paused = subscriptionDto.pausedActual,
+//    )
+//}
 
 @Suppress("NOTHING_TO_INLINE")
 inline fun TransactionCallbacks.deleteSubscriptionById(

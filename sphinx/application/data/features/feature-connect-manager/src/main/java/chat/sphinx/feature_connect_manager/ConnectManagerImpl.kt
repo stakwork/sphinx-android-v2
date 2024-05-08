@@ -12,7 +12,6 @@ import chat.sphinx.wrapper_common.lightning.toLightningRouteHint
 import chat.sphinx.wrapper_contact.NewContact
 import chat.sphinx.wrapper_lightning.WalletMnemonic
 import chat.sphinx.wrapper_lightning.toWalletMnemonic
-import chat.sphinx.wrapper_message.MessageType
 import com.ensarsarajcic.kotlinx.serialization.msgpack.MsgPack
 import com.ensarsarajcic.kotlinx.serialization.msgpack.MsgPackDynamicSerializer
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -526,7 +525,7 @@ class ConnectManagerImpl: ConnectManager()
                 ownerSeed!!,
                 now,
                 contactPubKey,
-                MessageType.DELETE.toUByte(),
+                17.toUByte(), // Fix this hardcoded value
                 sphinxMessage,
                 getCurrentUserState(),
                 ownerInfoStateFlow.value?.alias ?: "",

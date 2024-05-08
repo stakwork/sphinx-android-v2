@@ -7,7 +7,6 @@ import chat.sphinx.concept_network_query_contact.NetworkQueryContact
 import chat.sphinx.concept_network_query_invite.NetworkQueryInvite
 import chat.sphinx.concept_network_query_verify_external.NetworkQueryAuthorizeExternal
 import chat.sphinx.concept_network_query_people.NetworkQueryPeople
-import chat.sphinx.concept_network_query_redeem_badge_token.NetworkQueryRedeemBadgeToken
 import chat.sphinx.concept_network_relay_call.NetworkRelayCall
 import chat.sphinx.concept_network_tor.*
 import chat.sphinx.concept_relay.RelayDataHandler
@@ -17,7 +16,6 @@ import chat.sphinx.feature_network_client.NetworkClientImpl
 import chat.sphinx.feature_network_query_chat.NetworkQueryChatImpl
 import chat.sphinx.feature_network_query_contact.NetworkQueryContactImpl
 import chat.sphinx.feature_network_query_invite.NetworkQueryInviteImpl
-import chat.sphinx.feature_network_query_redeem_badge_token.NetworkQueryRedeemBadgeTokenImpl
 import chat.sphinx.feature_network_query_verify_external.NetworkQueryAuthorizeExternalImpl
 import chat.sphinx.feature_network_query_people.NetworkQueryPeopleImpl
 import chat.sphinx.feature_network_relay_call.NetworkRelayCallImpl
@@ -224,10 +222,6 @@ abstract class NetworkQueryTestHelper: AuthenticationCoreDefaultsTestHelper() {
 
     protected open val nqSaveProfile: NetworkQueryPeople by lazy {
         NetworkQueryPeopleImpl(networkRelayCall)
-    }
-
-    protected open val nqRedeemBadgeToken: NetworkQueryRedeemBadgeToken by lazy {
-        NetworkQueryRedeemBadgeTokenImpl(networkRelayCall)
     }
 
     @Before

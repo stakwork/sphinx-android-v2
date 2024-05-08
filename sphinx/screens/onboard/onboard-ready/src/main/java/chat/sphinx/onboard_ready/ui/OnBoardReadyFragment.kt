@@ -81,9 +81,7 @@ internal class OnBoardReadyFragment: SideEffectFragment<
 
             if (nickname != null && pubkey != null) {
                 viewModel.saveInviterAndFinish(nickname, pubkey.value, routeHint, inviteString)
-            } else if (inviteString != null){
-                viewModel.finishInvite(inviteString)
-            } else {
+            } else if (inviteString != null){ } else {
                 viewModel.finishSignup()
             }
         }

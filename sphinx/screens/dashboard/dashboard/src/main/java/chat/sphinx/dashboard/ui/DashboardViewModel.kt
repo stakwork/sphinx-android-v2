@@ -989,9 +989,7 @@ internal class DashboardViewModel @Inject constructor(
         )
 
         when (viewState) {
-            is DeepLinkPopupViewState.RedeemTokensPopup -> {
-                redeemBadgeToken(viewState.body)
-            }
+            is DeepLinkPopupViewState.RedeemTokensPopup -> {}
             is DeepLinkPopupViewState.SaveProfilePopup -> {
                 savePeopleProfile(viewState.body)
             }
@@ -1054,35 +1052,6 @@ internal class DashboardViewModel @Inject constructor(
         deepLinkPopupViewStateContainer.updateViewState(
             DeepLinkPopupViewState.PopupDismissed
         )
-    }
-
-    private suspend fun redeemBadgeToken(body: String) {
-            viewModelScope.launch(mainImmediate) {
-                val response = repositoryDashboard.redeemBadgeToken(
-                    body
-                )
-
-                when (response) {
-                    is Response.Error -> {
-                        submitSideEffect(
-                            ChatListSideEffect.Notify(
-                                app.getString(R.string.dashboard_redeem_badge_token_generic_error)
-                            )
-                        )
-                    }
-                    is Response.Success -> {
-                        submitSideEffect(
-                            ChatListSideEffect.Notify(
-                                app.getString(R.string.dashboard_redeem_badge_token_success)
-                            )
-                        )
-                    }
-                }
-            }.join()
-
-            deepLinkPopupViewStateContainer.updateViewState(
-                DeepLinkPopupViewState.PopupDismissed
-            )
     }
 
     val deepLinkPopupViewStateContainer: ViewStateContainer<DeepLinkPopupViewState> by lazy {

@@ -10,7 +10,6 @@ import app.cash.exhaustive.Exhaustive
 import chat.sphinx.camera_view_model_coordinator.request.CameraRequest
 import chat.sphinx.camera_view_model_coordinator.response.CameraResponse
 import chat.sphinx.concept_background_login.BackgroundLoginHandler
-import chat.sphinx.concept_network_query_relay_keys.NetworkQueryRelayKeys
 import chat.sphinx.concept_network_tor.TorManager
 import chat.sphinx.concept_relay.RelayDataHandler
 import chat.sphinx.concept_repository_contact.ContactRepository
@@ -105,7 +104,6 @@ internal class ProfileViewModel @Inject constructor(
     private val lightningRepository: LightningRepository,
     private val feedRepository: FeedRepository,
     private val repositoryMedia: RepositoryMedia,
-    private val networkQueryRelayKeys: NetworkQueryRelayKeys,
     private val relayDataHandler: RelayDataHandler,
     private val walletDataHandler: WalletDataHandler,
     private val torManager: TorManager,
@@ -423,18 +421,6 @@ internal class ProfileViewModel @Inject constructor(
                 submitSideEffect(ProfileSideEffect.UpdatingRelayUrl)
 
                 var transportKey: RsaPublicKey? = null
-
-                networkQueryRelayKeys.getRelayTransportKey(relayUrl).collect { loadResponse ->
-                    @javax.annotation.meta.Exhaustive
-                    when (loadResponse) {
-                        is LoadResponse.Loading -> {}
-                        is Response.Error -> {}
-
-                        is Response.Success -> {
-                            transportKey = RsaPublicKey(loadResponse.value.transport_key.toCharArray())
-                        }
-                    }
-                }
 
                 val transportToken = relayDataHandler.retrieveRelayTransportToken(
                     authorizationToken,

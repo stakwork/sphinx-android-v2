@@ -224,7 +224,6 @@ internal class DashboardViewModel @Inject constructor(
 
         syncFeedRecommendationsState()
 
-        getRelayKeys()
         checkAppVersion()
         handleDeepLink(args.argDeepLink)
 
@@ -389,11 +388,6 @@ internal class DashboardViewModel @Inject constructor(
                     }
             }
         }
-    }
-
-    private fun getRelayKeys() {
-        repositoryDashboard.getAndSaveTransportKey(forceGet = true)
-        repositoryDashboard.getOrCreateHMacKey(forceGet = true)
     }
 
     fun handleDeepLink(deepLink: String?) {

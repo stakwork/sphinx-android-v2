@@ -63,16 +63,6 @@ class NetworkQueryMemeServerImpl(
             responseJsonClass = MemeServerAuthenticationDto::class.java,
         )
 
-    override fun signChallenge(
-        challenge: AuthenticationChallenge,
-        relayData: Triple<Pair<AuthorizationToken, TransportToken?>, RequestSignature?, RelayUrl>?
-    ): Flow<LoadResponse<MemeServerChallengeSigDto, ResponseError>> =
-        networkRelayCall.relayGet(
-            responseJsonClass = MemeServerChallengeSigRelayResponse::class.java,
-            relayEndpoint = String.format(ENDPOINT_SIGNER, challenge.value),
-            relayData = relayData,
-        )
-
     override fun verifyAuthentication(
         id: AuthenticationId,
         sig: AuthenticationSig,

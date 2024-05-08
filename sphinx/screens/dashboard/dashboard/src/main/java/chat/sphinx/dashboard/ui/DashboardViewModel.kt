@@ -1026,28 +1026,28 @@ internal class DashboardViewModel @Inject constructor(
     }
 
     private suspend fun savePeopleProfile(body: String) {
-        viewModelScope.launch(mainImmediate) {
-            val response = repositoryDashboard.savePeopleProfile(
-                body
-            )
-
-            when (response) {
-                is Response.Error -> {
-                    submitSideEffect(
-                        ChatListSideEffect.Notify(
-                            app.getString(R.string.dashboard_save_profile_generic_error)
-                        )
-                    )
-                }
-                is Response.Success -> {
-                    submitSideEffect(
-                        ChatListSideEffect.Notify(
-                            app.getString(R.string.dashboard_save_profile_success)
-                        )
-                    )
-                }
-            }
-        }.join()
+//        viewModelScope.launch(mainImmediate) {
+//            val response = repositoryDashboard.savePeopleProfile(
+//                body
+//            )
+//
+//            when (response) {
+//                is Response.Error -> {
+//                    submitSideEffect(
+//                        ChatListSideEffect.Notify(
+//                            app.getString(R.string.dashboard_save_profile_generic_error)
+//                        )
+//                    )
+//                }
+//                is Response.Success -> {
+//                    submitSideEffect(
+//                        ChatListSideEffect.Notify(
+//                            app.getString(R.string.dashboard_save_profile_success)
+//                        )
+//                    )
+//                }
+//            }
+//        }.join()
 
         deepLinkPopupViewStateContainer.updateViewState(
             DeepLinkPopupViewState.PopupDismissed

@@ -5416,36 +5416,36 @@ abstract class SphinxRepository(
         var results: MutableList<FeedRecommendation> = mutableListOf()
 
         applicationScope.launch(mainImmediate) {
-            networkQueryFeedSearch.getFeedRecommendations().collect { response ->
-                @Exhaustive
-                when (response) {
-                    is LoadResponse.Loading -> {}
-                    is Response.Error -> {}
-                    is Response.Success -> {
-                        response.value.forEachIndexed { index, feedRecommendation ->
-                            results.add(
-                                FeedRecommendation(
-                                    id = feedRecommendation.ref_id,
-                                    pubKey = feedRecommendation.pub_key,
-                                    feedType = feedRecommendation.type,
-                                    description = feedRecommendation.description,
-                                    smallImageUrl = feedRecommendation.s_image_url,
-                                    mediumImageUrl = feedRecommendation.m_image_url,
-                                    largeImageUrl = feedRecommendation.l_image_url,
-                                    link = feedRecommendation.link,
-                                    title = feedRecommendation.episode_title,
-                                    showTitle = feedRecommendation.show_title,
-                                    date = feedRecommendation.date,
-                                    timestamp = feedRecommendation.timestamp,
-                                    topics = feedRecommendation.topics,
-                                    guests = feedRecommendation.guests,
-                                    position = index + 1
-                                )
-                            )
-                        }
-                    }
-                }
-            }
+//            networkQueryFeedSearch.getFeedRecommendations().collect { response ->
+//                @Exhaustive
+//                when (response) {
+//                    is LoadResponse.Loading -> {}
+//                    is Response.Error -> {}
+//                    is Response.Success -> {
+//                        response.value.forEachIndexed { index, feedRecommendation ->
+//                            results.add(
+//                                FeedRecommendation(
+//                                    id = feedRecommendation.ref_id,
+//                                    pubKey = feedRecommendation.pub_key,
+//                                    feedType = feedRecommendation.type,
+//                                    description = feedRecommendation.description,
+//                                    smallImageUrl = feedRecommendation.s_image_url,
+//                                    mediumImageUrl = feedRecommendation.m_image_url,
+//                                    largeImageUrl = feedRecommendation.l_image_url,
+//                                    link = feedRecommendation.link,
+//                                    title = feedRecommendation.episode_title,
+//                                    showTitle = feedRecommendation.show_title,
+//                                    date = feedRecommendation.date,
+//                                    timestamp = feedRecommendation.timestamp,
+//                                    topics = feedRecommendation.topics,
+//                                    guests = feedRecommendation.guests,
+//                                    position = index + 1
+//                                )
+//                            )
+//                        }
+//                    }
+//                }
+//            }
         }.join()
 
         recommendationsPodcast.value = mapRecommendationsPodcast(results)
@@ -6298,31 +6298,31 @@ abstract class SphinxRepository(
         }
 
         delay(25L)
-        networkQueryInvite.payInvite(invite.inviteString).collect { loadResponse ->
-            @Exhaustive
-            when (loadResponse) {
-                is LoadResponse.Loading -> {
-                }
-
-                is Response.Error -> {
-                    contactLock.withLock {
-                        withContext(io) {
-                            queries.transaction {
-                                updatedContactIds.add(invite.contactId)
-                                updateInviteStatus(
-                                    invite.id,
-                                    InviteStatus.PaymentPending,
-                                    queries
-                                )
-                            }
-                        }
-                    }
-                }
-
-                is Response.Success -> {
-                }
-            }
-        }
+//        networkQueryInvite.payInvite(invite.inviteString).collect { loadResponse ->
+//            @Exhaustive
+//            when (loadResponse) {
+//                is LoadResponse.Loading -> {
+//                }
+//
+//                is Response.Error -> {
+//                    contactLock.withLock {
+//                        withContext(io) {
+//                            queries.transaction {
+//                                updatedContactIds.add(invite.contactId)
+//                                updateInviteStatus(
+//                                    invite.id,
+//                                    InviteStatus.PaymentPending,
+//                                    queries
+//                                )
+//                            }
+//                        }
+//                    }
+//                }
+//
+//                is Response.Success -> {
+//                }
+//            }
+//        }
     }
 
     override suspend fun deleteInvite(invite: Invite): Response<Any, ResponseError> {
@@ -6353,32 +6353,32 @@ abstract class SphinxRepository(
         var response: Response<String, ResponseError>? = null
 
         applicationScope.launch(mainImmediate) {
-            networkQueryMemeServer.signChallenge(
-                AuthenticationChallenge(challenge)
-            ).collect { loadResponse ->
-                when (loadResponse) {
-                    is LoadResponse.Loading -> {
-                    }
-
-                    is Response.Error -> {
-                        response = loadResponse
-                    }
-
-                    is Response.Success -> {
-
-                        val sig = loadResponse.value.sig
-                        val publicKey = accountOwner.value?.nodePubKey?.value ?: ""
-
-                        var urlString = "https://auth.sphinx.chat/oauth_verify?id=$id&sig=$sig&pubkey=$publicKey"
-
-                        accountOwner.value?.routeHint?.value?.let {
-                            urlString += "&route_hint=$it"
-                        }
-
-                        response = Response.Success(urlString)
-                    }
-                }
-            }
+//            networkQueryMemeServer.signChallenge(
+//                AuthenticationChallenge(challenge)
+//            ).collect { loadResponse ->
+//                when (loadResponse) {
+//                    is LoadResponse.Loading -> {
+//                    }
+//
+//                    is Response.Error -> {
+//                        response = loadResponse
+//                    }
+//
+//                    is Response.Success -> {
+//
+//                        val sig = loadResponse.value.sig
+//                        val publicKey = accountOwner.value?.nodePubKey?.value ?: ""
+//
+//                        var urlString = "https://auth.sphinx.chat/oauth_verify?id=$id&sig=$sig&pubkey=$publicKey"
+//
+//                        accountOwner.value?.routeHint?.value?.let {
+//                            urlString += "&route_hint=$it"
+//                        }
+//
+//                        response = Response.Success(urlString)
+//                    }
+//                }
+//            }
         }.join()
 
         return response ?: Response.Error(ResponseError("Returned before completing"))
@@ -6423,19 +6423,19 @@ abstract class SphinxRepository(
         applicationScope.launch(mainImmediate) {
             moshi.adapter(DeletePeopleProfileDto::class.java).fromJson(body)
                 ?.let { deletePeopleProfileDto ->
-                    networkQueryPeople.deletePeopleProfile(
-                        deletePeopleProfileDto
-                    ).collect { loadResponse ->
-                        when (loadResponse) {
-                            is LoadResponse.Loading -> {
-                            }
-                            is Response.Error -> {
-                            }
-                            is Response.Success -> {
-                                response = Response.Success(true)
-                            }
-                        }
-                    }
+//                    networkQueryPeople.deletePeopleProfile(
+//                        deletePeopleProfileDto
+//                    ).collect { loadResponse ->
+//                        when (loadResponse) {
+//                            is LoadResponse.Loading -> {
+//                            }
+//                            is Response.Error -> {
+//                            }
+//                            is Response.Success -> {
+//                                response = Response.Success(true)
+//                            }
+//                        }
+//                    }
                 }
         }.join()
 
@@ -6449,22 +6449,22 @@ abstract class SphinxRepository(
 
         applicationScope.launch(mainImmediate) {
             moshi.adapter(PeopleProfileDto::class.java).fromJson(body)?.let { profile ->
-                networkQueryPeople.savePeopleProfile(
-                    profile
-                ).collect { saveProfileResponse ->
-                    when (saveProfileResponse) {
-                        is LoadResponse.Loading -> {
-                        }
-
-                        is Response.Error -> {
-                            response = saveProfileResponse
-                        }
-
-                        is Response.Success -> {
-                            response = Response.Success(true)
-                        }
-                    }
-                }
+//                networkQueryPeople.savePeopleProfile(
+//                    profile
+//                ).collect { saveProfileResponse ->
+//                    when (saveProfileResponse) {
+//                        is LoadResponse.Loading -> {
+//                        }
+//
+//                        is Response.Error -> {
+//                            response = saveProfileResponse
+//                        }
+//
+//                        is Response.Success -> {
+//                            response = Response.Success(true)
+//                        }
+//                    }
+//                }
             }
         }.join()
 

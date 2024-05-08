@@ -12,7 +12,6 @@ import chat.sphinx.concept_network_query_contact.NetworkQueryContact
 import chat.sphinx.concept_network_query_discover_tribes.NetworkQueryDiscoverTribes
 import chat.sphinx.concept_network_query_invite.NetworkQueryInvite
 import chat.sphinx.concept_network_query_meme_server.NetworkQueryMemeServer
-import chat.sphinx.concept_network_query_message.NetworkQueryMessage
 import chat.sphinx.concept_network_query_feed_search.NetworkQueryFeedSearch
 import chat.sphinx.concept_network_query_feed_status.NetworkQueryFeedStatus
 import chat.sphinx.concept_network_query_people.NetworkQueryPeople
@@ -24,7 +23,6 @@ import chat.sphinx.concept_paging.PageSourceWrapper
 import chat.sphinx.concept_relay.RelayDataHandler
 import chat.sphinx.concept_repository_dashboard.DashboardItem
 import chat.sphinx.concept_repository_dashboard_android.RepositoryDashboardAndroid
-import chat.sphinx.concept_socket_io.SocketIOManager
 import chat.sphinx.concept_wallet.WalletDataHandler
 import chat.sphinx.conceptcoredb.DashboardDbo
 import chat.sphinx.conceptcoredb.SphinxDatabaseQueries
@@ -62,7 +60,6 @@ class SphinxRepositoryAndroid(
     networkQueryMemeServer: NetworkQueryMemeServer,
     networkQueryChat: NetworkQueryChat,
     networkQueryContact: NetworkQueryContact,
-    networkQueryMessage: NetworkQueryMessage,
     networkQueryInvite: NetworkQueryInvite,
     networkQueryAuthorizeExternal: NetworkQueryAuthorizeExternal,
     networkQueryPeople: NetworkQueryPeople,
@@ -74,7 +71,6 @@ class SphinxRepositoryAndroid(
     connectManager: ConnectManager,
     walletDataHandler: WalletDataHandler,
     rsa: RSA,
-    socketIOManager: SocketIOManager,
     sphinxNotificationManager: SphinxNotificationManager,
     LOG: SphinxLogger,
 ): SphinxRepository(
@@ -94,7 +90,6 @@ class SphinxRepositoryAndroid(
     networkQueryMemeServer,
     networkQueryChat,
     networkQueryContact,
-    networkQueryMessage,
     networkQueryInvite,
     networkQueryAuthorizeExternal,
     networkQueryPeople,
@@ -106,7 +101,6 @@ class SphinxRepositoryAndroid(
     connectManager,
     walletDataHandler,
     rsa,
-    socketIOManager,
     sphinxNotificationManager,
     LOG,
 ), RepositoryDashboardAndroid<DashboardDbo>

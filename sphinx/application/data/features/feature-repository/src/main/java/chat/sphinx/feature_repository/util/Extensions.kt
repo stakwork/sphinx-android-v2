@@ -6,9 +6,9 @@ import chat.sphinx.concept_network_query_chat.model.TribeDto
 import chat.sphinx.concept_network_query_chat.model.feed.FeedDto
 import chat.sphinx.concept_network_query_contact.model.ContactDto
 import chat.sphinx.concept_network_query_invite.model.InviteDto
-import chat.sphinx.concept_network_query_message.model.MessageDto
 import chat.sphinx.concept_network_query_subscription.model.SubscriptionDto
 import chat.sphinx.conceptcoredb.SphinxDatabaseQueries
+import chat.sphinx.example.wrapper_mqtt.MessageDto
 import chat.sphinx.wrapper_chat.*
 import chat.sphinx.wrapper_common.*
 import chat.sphinx.wrapper_common.chat.ChatUUID
@@ -687,7 +687,7 @@ fun TransactionCallbacks.upsertMessage(
 
     val chatId: ChatId = dto.chat_id?.let {
         ChatId(it)
-    } ?: dto.chat?.id?.let {
+    } ?: dto.chat?.let {
         ChatId(it)
     } ?: ChatId(ChatId.NULL_CHAT_ID.toLong())
 

@@ -39,7 +39,6 @@ dependencies {
     implementation project(path: ':sphinx:activity:insetter-activity')
     implementation project(path: ':sphinx:screens-detail:common:detail-resources')
 
-    api project(path: ':sphinx:application:network:concepts:concept-socket-io')
 
     implementation deps.google.zxing
 

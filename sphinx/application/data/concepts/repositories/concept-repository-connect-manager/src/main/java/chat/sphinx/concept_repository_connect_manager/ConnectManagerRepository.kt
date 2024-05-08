@@ -1,10 +1,10 @@
 package chat.sphinx.concept_repository_connect_manager
 
-import chat.sphinx.concept_network_query_message.model.TransactionDto
 import chat.sphinx.concept_repository_connect_manager.model.ConnectionManagerState
 import chat.sphinx.concept_repository_connect_manager.model.NetworkStatus
 import chat.sphinx.concept_repository_connect_manager.model.RestoreProcessState
 import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
+import chat.sphinx.example.wrapper_mqtt.TransactionDto
 import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_contact.NewContact
 import kotlinx.coroutines.flow.Flow

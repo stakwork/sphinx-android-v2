@@ -1,12 +1,11 @@
 package chat.sphinx.transactions.ui
 
 import androidx.lifecycle.viewModelScope
-import chat.sphinx.concept_network_query_message.NetworkQueryMessage
-import chat.sphinx.concept_network_query_message.model.TransactionDto
 import chat.sphinx.concept_repository_chat.ChatRepository
 import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
 import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.concept_repository_message.MessageRepository
+import chat.sphinx.example.wrapper_mqtt.TransactionDto
 import chat.sphinx.transactions.navigation.TransactionsNavigator
 import chat.sphinx.transactions.ui.viewstate.TransactionHolderViewState
 import chat.sphinx.wrapper_chat.isConversation
@@ -17,6 +16,7 @@ import chat.sphinx.wrapper_common.message.MessageUUID
 import chat.sphinx.wrapper_common.message.toMessageUUID
 import chat.sphinx.wrapper_contact.Contact
 import chat.sphinx.wrapper_message.SenderAlias
+import chat.sphinx.wrapper_message.toSenderAlias
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.matthewnelson.android_feature_viewmodel.BaseViewModel
 import io.matthewnelson.android_feature_viewmodel.currentViewState
@@ -150,7 +150,7 @@ internal class TransactionsViewModel @Inject constructor(
                     transaction.getSenderId()?.let { senderId ->
                         contactIdsMap[transaction.id] = senderId
                     }
-                    transaction.getSenderAlias()?.let { senderAlias ->
+                    transaction.getSenderAlias()?.toSenderAlias()?.let { senderAlias ->
                         contactAliasMap[transaction.id] = senderAlias
                     }
                 }

@@ -17,7 +17,6 @@ import chat.sphinx.concept_network_query_people.model.isProfilePath
 import chat.sphinx.concept_network_query_people.model.isSaveMethod
 import chat.sphinx.concept_network_query_verify_external.NetworkQueryAuthorizeExternal
 import chat.sphinx.concept_network_query_version.NetworkQueryVersion
-import chat.sphinx.concept_relay.RelayDataHandler
 import chat.sphinx.concept_repository_actions.ActionsRepository
 import chat.sphinx.concept_repository_chat.ChatRepository
 import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
@@ -31,7 +30,6 @@ import chat.sphinx.concept_service_media.MediaPlayerServiceController
 import chat.sphinx.concept_service_notification.PushNotificationRegistrar
 import chat.sphinx.concept_signer_manager.SignerManager
 import chat.sphinx.concept_signer_manager.SignerPhoneCallback
-import chat.sphinx.concept_socket_io.SocketIOManager
 import chat.sphinx.concept_view_model_coordinator.ViewModelCoordinator
 import chat.sphinx.concept_wallet.WalletDataHandler
 import chat.sphinx.dashboard.R
@@ -163,7 +161,6 @@ internal class DashboardViewModel @Inject constructor(
 
     private val walletDataHandler: WalletDataHandler,
 
-    private val relayDataHandler: RelayDataHandler,
     private val mediaPlayerServiceController: MediaPlayerServiceController,
 
     private val scannerCoordinator: ViewModelCoordinator<ScannerRequest, ScannerResponse>,
@@ -171,7 +168,6 @@ internal class DashboardViewModel @Inject constructor(
     private val connectManagerRepository: ConnectManagerRepository,
 
     private val LOG: SphinxLogger,
-    private val socketIOManager: SocketIOManager,
 ) : MotionLayoutViewModel<
         Any,
         Context,
@@ -906,29 +902,22 @@ internal class DashboardViewModel @Inject constructor(
                     DeepLinkPopupViewState.ExternalAuthorizePopupProcessing
                 )
 
-                val relayUrl: RelayUrl = relayDataHandler.retrieveRelayUrl() ?: return@launch
 
-                val response = repositoryDashboard.authorizeExternal(
-                    relayUrl.value,
-                    viewState.link.host,
-                    viewState.link.challenge
-                )
-
-                when (response) {
-                    is Response.Error -> {
-                        submitSideEffect(
-                            ChatListSideEffect.Notify(response.cause.message)
-                        )
-                    }
-                    is Response.Success -> {
-                        val i = Intent(Intent.ACTION_VIEW)
-                        i.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                        i.data = Uri.parse(
-                            "https://${viewState.link.host}?challenge=${viewState.link.challenge}"
-                        )
-                        app.startActivity(i)
-                    }
-                }
+//                when (response) {
+//                    is Response.Error -> {
+//                        submitSideEffect(
+//                            ChatListSideEffect.Notify(response.cause.message)
+//                        )
+//                    }
+//                    is Response.Success -> {
+//                        val i = Intent(Intent.ACTION_VIEW)
+//                        i.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+//                        i.data = Uri.parse(
+//                            "https://${viewState.link.host}?challenge=${viewState.link.challenge}"
+//                        )
+//                        app.startActivity(i)
+//                    }
+//                }
             } else if (viewState is DeepLinkPopupViewState.StakworkAuthorizePopup) {
                 deepLinkPopupViewStateContainer.updateViewState(
                     DeepLinkPopupViewState.ExternalAuthorizePopupProcessing

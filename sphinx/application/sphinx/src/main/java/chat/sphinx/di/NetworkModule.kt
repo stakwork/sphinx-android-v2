@@ -15,7 +15,6 @@ import chat.sphinx.concept_network_query_crypter.NetworkQueryCrypter
 import chat.sphinx.concept_network_query_discover_tribes.NetworkQueryDiscoverTribes
 import chat.sphinx.concept_network_query_invite.NetworkQueryInvite
 import chat.sphinx.concept_network_query_meme_server.NetworkQueryMemeServer
-import chat.sphinx.concept_network_query_message.NetworkQueryMessage
 import chat.sphinx.concept_network_query_feed_search.NetworkQueryFeedSearch
 import chat.sphinx.concept_network_query_feed_status.NetworkQueryFeedStatus
 import chat.sphinx.concept_network_query_subscription.NetworkQuerySubscription
@@ -27,7 +26,6 @@ import chat.sphinx.concept_network_query_version.NetworkQueryVersion
 import chat.sphinx.concept_network_relay_call.NetworkRelayCall
 import chat.sphinx.concept_network_tor.TorManager
 import chat.sphinx.concept_relay.RelayDataHandler
-import chat.sphinx.concept_socket_io.SocketIOManager
 import chat.sphinx.concept_wallet.WalletDataHandler
 import chat.sphinx.feature_link_preview.LinkPreviewHandlerImpl
 import chat.sphinx.feature_network_client.NetworkClientImpl
@@ -39,7 +37,6 @@ import chat.sphinx.feature_network_query_discover_tribes.NetworkQueryDiscoverTri
 import chat.sphinx.feature_network_query_feed_status.NetworkQueryFeedStatusImpl
 import chat.sphinx.feature_network_query_invite.NetworkQueryInviteImpl
 import chat.sphinx.feature_network_query_meme_server.NetworkQueryMemeServerImpl
-import chat.sphinx.feature_network_query_message.NetworkQueryMessageImpl
 import chat.sphinx.feature_network_query_podcast_search.NetworkQueryFeedSearchImpl
 import chat.sphinx.feature_network_query_subscription.NetworkQuerySubscriptionImpl
 import chat.sphinx.feature_network_query_verify_external.NetworkQueryAuthorizeExternalImpl
@@ -50,7 +47,6 @@ import chat.sphinx.feature_network_query_version.NetworkQueryVersionImpl
 import chat.sphinx.feature_network_relay_call.NetworkRelayCallImpl
 import chat.sphinx.feature_network_tor.TorManagerAndroid
 import chat.sphinx.feature_relay.RelayDataHandlerImpl
-import chat.sphinx.feature_socket_io.SocketIOManagerImpl
 import chat.sphinx.feature_sphinx_service.ApplicationServiceTracker
 import chat.sphinx.feature_wallet.WalletDataHandlerImpl
 import chat.sphinx.logger.SphinxLogger
@@ -195,29 +191,6 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideSocketIOManagerImpl(
-        dispatchers: CoroutineDispatchers,
-        moshi: Moshi,
-        networkClient: NetworkClient,
-        relayDataHandler: RelayDataHandler,
-        LOG: SphinxLogger,
-    ): SocketIOManagerImpl =
-        SocketIOManagerImpl(
-            dispatchers,
-            moshi,
-            networkClient,
-            relayDataHandler,
-            LOG,
-        )
-
-    @Provides
-    fun provideSocketIOManager(
-        socketIOManagerImpl: SocketIOManagerImpl
-    ): SocketIOManager =
-        socketIOManagerImpl
-
-    @Provides
-    @Singleton
     fun provideNetworkRelayCallImpl(
         dispatchers: CoroutineDispatchers,
         moshi: Moshi,
@@ -299,19 +272,6 @@ object NetworkModule {
         networkQueryInviteImpl: NetworkQueryInviteImpl
     ): NetworkQueryInvite =
         networkQueryInviteImpl
-
-    @Provides
-    @Singleton
-    fun provideNetworkQueryMessageImpl(
-        networkRelayCall: NetworkRelayCall
-    ): NetworkQueryMessageImpl =
-        NetworkQueryMessageImpl(networkRelayCall)
-
-    @Provides
-    fun provideNetworkQueryMessage(
-        networkQueryMessageImpl: NetworkQueryMessageImpl
-    ): NetworkQueryMessage =
-        networkQueryMessageImpl
 
     @Provides
     @Singleton

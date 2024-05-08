@@ -43,8 +43,6 @@ dependencies {
     implementation project(path: ':sphinx:application:data:concepts:concept-image-loader')
     implementation project(path: ':sphinx:application:common:resources')
 
-    api project(path: ':sphinx:application:network:concepts:concept-socket-io')
-
     implementation deps.google.zxing
 
     implementation deps.google.hilt

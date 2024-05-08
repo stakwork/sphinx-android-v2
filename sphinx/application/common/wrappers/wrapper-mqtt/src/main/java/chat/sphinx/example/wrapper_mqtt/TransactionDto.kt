@@ -1,12 +1,10 @@
-package chat.sphinx.concept_network_query_message.model
+package chat.sphinx.example.wrapper_mqtt
 
 import chat.sphinx.wrapper_common.DateTime
 import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_common.dashboard.ContactId
 import chat.sphinx.wrapper_common.dashboard.toChatId
 import chat.sphinx.wrapper_common.dashboard.toContactId
-import chat.sphinx.wrapper_message.SenderAlias
-import chat.sphinx.wrapper_message.toSenderAlias
 import com.squareup.moshi.JsonClass
 
 
@@ -46,8 +44,8 @@ data class TransactionDto(
         return sender.toContactId()
     }
 
-    fun getSenderAlias(): SenderAlias? {
-        return sender_alias?.toSenderAlias()
+    fun getSenderAlias(): String? {
+        return sender_alias
     }
 
     fun getReceiverId(): ContactId? {

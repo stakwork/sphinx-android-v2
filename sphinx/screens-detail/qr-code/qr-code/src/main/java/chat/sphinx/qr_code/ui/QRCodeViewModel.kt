@@ -7,7 +7,6 @@ import android.graphics.Color
 import android.provider.MediaStore
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
-import chat.sphinx.concept_socket_io.SocketIOManager
 import chat.sphinx.qr_code.R
 import chat.sphinx.qr_code.navigation.QRCodeNavigator
 import chat.sphinx.share_qr_code.ShareQRCodeMenuHandler
@@ -33,7 +32,6 @@ import javax.inject.Inject
 internal class QRCodeViewModel @Inject constructor(
     private val app: Application,
     val navigator: QRCodeNavigator,
-    private val socketIOManager: SocketIOManager,
     private val mediaCacheHandler: MediaCacheHandler,
     dispatchers: CoroutineDispatchers,
     handle: SavedStateHandle,

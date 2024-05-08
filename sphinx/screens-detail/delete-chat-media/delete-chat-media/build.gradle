@@ -47,7 +47,6 @@ dependencies {
     implementation project(path: ':sphinx:activity:concepts:concept-user-colors-helper')
 
 
-    api project(path: ':sphinx:application:network:concepts:concept-socket-io')
 
     implementation deps.google.zxing
 

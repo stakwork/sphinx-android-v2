@@ -47,10 +47,6 @@ dependencies {
     implementation project(path: ':sphinx:screens:chats:chat-common:chat-common')
     implementation project(path: ':sphinx:screens:chats:chat-tribe:chat-tribe')
 
-
-
-    api project(path: ':sphinx:application:network:concepts:concept-socket-io')
-
     implementation deps.google.zxing
 
     implementation deps.google.hilt

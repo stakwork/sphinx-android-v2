@@ -1,10 +1,8 @@
-package chat.sphinx.concept_network_query_message.model
+package chat.sphinx.example.wrapper_mqtt
 
-import chat.sphinx.concept_network_query_chat.model.ChatDto
-import chat.sphinx.concept_network_query_contact.model.ContactDto
-import chat.sphinx.wrapper_message_media.FileName
 import com.squareup.moshi.JsonClass
 import java.io.File
+import java.nio.file.LinkOption
 
 @JsonClass(generateAdapter = true)
 data class MessageDto(
@@ -36,8 +34,8 @@ data class MessageDto(
     val original_muid: String?,
     val reply_uuid: String?,
     val network_type: Int?,
-    val chat: ChatDto?,
-    val contact: ContactDto?,
+    val chat: Long?,
+    val contact: Long?,
     val recipient_alias: String?,
     val recipient_pic: String?,
     val push: Any?,

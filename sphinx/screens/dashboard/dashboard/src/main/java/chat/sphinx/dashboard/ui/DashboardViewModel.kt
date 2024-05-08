@@ -16,7 +16,6 @@ import chat.sphinx.concept_network_query_people.model.isDeleteMethod
 import chat.sphinx.concept_network_query_people.model.isProfilePath
 import chat.sphinx.concept_network_query_people.model.isSaveMethod
 import chat.sphinx.concept_network_query_verify_external.NetworkQueryAuthorizeExternal
-import chat.sphinx.concept_network_query_version.NetworkQueryVersion
 import chat.sphinx.concept_repository_actions.ActionsRepository
 import chat.sphinx.concept_repository_chat.ChatRepository
 import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
@@ -153,7 +152,6 @@ internal class DashboardViewModel @Inject constructor(
     private val actionsRepository: ActionsRepository,
     private val lightningRepository: LightningRepository,
 
-    private val networkQueryVersion: NetworkQueryVersion,
     private val networkQueryAuthorizeExternal: NetworkQueryAuthorizeExternal,
     private val networkQueryPeople: NetworkQueryPeople,
     private val pushNotificationRegistrar: PushNotificationRegistrar,
@@ -224,7 +222,6 @@ internal class DashboardViewModel @Inject constructor(
 
         syncFeedRecommendationsState()
 
-        checkAppVersion()
         handleDeepLink(args.argDeepLink)
 
         actionsRepository.syncActions()
@@ -1109,24 +1106,6 @@ internal class DashboardViewModel @Inject constructor(
 
     suspend fun getAccountBalance(): StateFlow<NodeBalance?> =
         repositoryDashboard.getAccountBalance()
-
-    private fun checkAppVersion() {
-        viewModelScope.launch(mainImmediate) {
-            networkQueryVersion.getAppVersions().collect { loadResponse ->
-                @Exhaustive
-                when (loadResponse) {
-                    is LoadResponse.Loading -> {
-                    }
-                    is Response.Error -> {
-                    }
-                    is Response.Success -> {
-                        newVersionAvailable.value = loadResponse.value.kotlin > buildConfigVersionCode.value.toLong()
-                        currentVersion.value = "VERSION: ${buildConfigVersionCode.value}"
-                    }
-                }
-            }
-        }
-    }
 
     private var messagesCountJob: Job? = null
     fun screenInit() {

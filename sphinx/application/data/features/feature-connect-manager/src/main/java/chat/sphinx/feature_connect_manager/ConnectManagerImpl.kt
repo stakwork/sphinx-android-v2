@@ -942,7 +942,7 @@ class ConnectManagerImpl: ConnectManager()
                     muid,
                     contactPubKey,
                     yearFromNow!!,
-                    convertSatsToMillisats(amount),
+                    amount.toULong(),
                 )
             } else {
                 if (metaData != null) {

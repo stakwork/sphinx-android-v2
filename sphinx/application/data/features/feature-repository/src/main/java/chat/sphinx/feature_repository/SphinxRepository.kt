@@ -1839,77 +1839,6 @@ abstract class SphinxRepository(
         )
     }
 
-    private suspend fun processChatDtos(
-        chats: List<ChatDto>,
-        contacts: Map<ContactId, ContactDto>? = null
-    ): Response<Boolean, ResponseError> {
-        val queries = coreDB.getSphinxDatabaseQueries()
-        try {
-
-            var error: Throwable? = null
-            val handler = CoroutineExceptionHandler { _, throwable ->
-                error = throwable
-            }
-
-            applicationScope.launch(io + handler) {
-                chatLock.withLock {
-
-                    messageLock.withLock {
-
-                        queries.transaction {
-                            for (dto in chats) {
-                                if (dto.deletedActual) {
-                                    LOG.d(TAG, "Removing Chats/Messages for ${ChatId(dto.id)}")
-                                    deleteChatById(
-                                        ChatId(dto.id),
-                                        queries,
-                                        latestMessageUpdatedTimeMap
-                                    )
-                                } else {
-                                    val contactDto: ContactDto? =
-                                        if (dto.type == ChatType.CONVERSATION) {
-                                            dto.contact_ids.elementAtOrNull(1)?.let { contactId ->
-                                                contacts?.get(ContactId(contactId))
-                                            }
-                                        } else {
-                                            null
-                                        }
-
-                                    upsertChat(
-                                        dto,
-                                        moshi,
-                                        chatSeenMap,
-                                        queries,
-                                        contactDto,
-                                        accountOwner.value?.nodePubKey
-                                    )
-                                }
-
-                            }
-                        }
-
-                    }
-
-                }
-            }.join()
-
-            error?.let {
-                throw it
-            }
-
-            return Response.Success(true)
-
-        } catch (e: IllegalArgumentException) {
-            val msg = "Failed to convert Json from Relay while processing Chats"
-            LOG.e(TAG, msg, e)
-            return Response.Error(ResponseError(msg, e))
-        } catch (e: ParseException) {
-            val msg = "Failed to convert date/time from Relay while processing Chats"
-            LOG.e(TAG, msg, e)
-            return Response.Error(ResponseError(msg, e))
-        }
-    }
-
     override fun streamFeedPayments(
         chatId: ChatId,
         feedId: String,
@@ -2233,6 +2162,7 @@ abstract class SphinxRepository(
         val queries = coreDB.getSphinxDatabaseQueries()
         var response: Response<Any, ResponseError> = Response.Success(Any())
 
+        // TODO V2 updateOwner
 //        try {
 //            accountOwner.collect { owner ->
 //
@@ -2791,64 +2721,6 @@ abstract class SphinxRepository(
 
     override val networkRefreshBalance: MutableStateFlow<Long?> by lazy {
         MutableStateFlow(null)
-
-//        flow {
-//            networkQueryLightning.getBalance().collect { loadResponse ->
-//                @Exhaustive
-//                when (loadResponse) {
-//                    is LoadResponse.Loading -> {
-//                        emit(loadResponse)
-//                    }
-//                    is Response.Error -> {
-//                        emit(loadResponse)
-//
-//                        (loadResponse.exception as? CustomException)?.let { exception ->
-//                            if (exception.code == AUTHENTICATION_ERROR) {
-//                                saveTransportKey()
-//                            }
-//                        }
-//                    }
-//                    is Response.Success -> {
-//
-//                        try {
-//                            val jsonString: String = withContext(default) {
-//                                moshi.adapter(BalanceDto::class.java)
-//                                    .toJson(loadResponse.value)
-//                            } ?: throw NullPointerException("Converting BalanceDto to Json failed")
-//
-//                            balanceLock.withLock {
-//                                accountBalanceStateFlow.value = loadResponse.value.toNodeBalance()
-//
-//                                authenticationStorage.putString(
-//                                    REPOSITORY_LIGHTNING_BALANCE,
-//                                    jsonString
-//                                )
-//                            }
-//
-//                            emit(Response.Success(true))
-//                        } catch (e: Exception) {
-//
-//                            // this should _never_ happen, as if the network call was
-//                            // successful, it went from json -> dto, and we're just going
-//                            // back from dto -> json to persist it...
-//                            emit(
-//                                Response.Error(
-//                                    ResponseError(
-//                                        """
-//                                        Network Fetching of balance was successful, but
-//                                        conversion to a string for persisting failed.
-//                                        ${loadResponse.value}
-//                                    """.trimIndent(),
-//                                        e
-//                                    )
-//                                )
-//                            )
-//                        }
-//
-//                    }
-//                }
-//            }
-//        }
     }
 
     override suspend fun getAccountBalanceAll(
@@ -3460,31 +3332,6 @@ abstract class SphinxRepository(
                 }
             }
         }
-
-//        val wasMarkedSeen: Boolean =
-//            chatLock.withLock {
-//                messageLock.withLock {
-//                    withContext(io) {
-//                        chatSeenMap.withLock { map ->
-//
-//                            if (map[chatId]?.isTrue() != true) {
-//
-//                                queries.updateSeen(chatId)
-//                                LOG.d(TAG, "Chat [$chatId] marked as Seen")
-//                                map[chatId] = Seen.True
-//
-//                                true
-//                            } else {
-//                                false
-//                            }
-//                        }
-//                    }
-//                }
-//            }
-
-//        if (executeNetworkRequest && wasMarkedSeen) {
-//            networkQueryMessage.readMessages(chatId).collect { _ -> }
-//        }
     }
 
     private val provisionalMessageLock = Mutex()
@@ -3656,31 +3503,6 @@ abstract class SphinxRepository(
                     }
                 }
             }
-
-//            val isPaidTextMessage =
-//                sendMessage.attachmentInfo?.mediaType?.isSphinxText == true &&
-//                        sendMessage.paidMessagePrice?.value ?: 0 > 0
-//
-//            val messageContent: String? = if (isPaidTextMessage) null else message?.second?.value
-//
-//            val remoteTextMap: Map<String, String>? =
-//                if (isPaidTextMessage) null else getRemoteTextMap(
-//                    UnencryptedString(message?.first?.value ?: ""),
-//                    contact,
-//                    chat
-//                )
-//
-//            val mediaKeyMap: Map<String, String>? = if (media != null) {
-//                getMediaKeyMap(
-//                    owner.id,
-//                    media.second,
-//                    UnencryptedString(media.first.value.joinToString("")),
-//                    contact,
-//                    chat
-//                )
-//            } else {
-//                null
-//            }
 
             if (contact != null || chat != null) {
                 if (media != null) {

@@ -4377,89 +4377,6 @@ abstract class SphinxRepository(
             message.paymentRequest?.value?.let {
                 connectManager.processInvoicePayment(it)
             }
-
-//            val newPayment = NewMessage(
-//                id = provisionalId,
-//                uuid = null,
-//                chatId = message.chatId,
-//                type = MessageType.Payment,
-//                sender = accountOwner.value?.id ?: ContactId(0),
-//                receiver = null,
-//                amount = message.amount,
-//                paymentHash = message.paymentHash,
-//                paymentRequest = null,
-//                date = DateTime.nowUTC().toDateTime(),
-//                expirationDate = null,
-//                messageContent = null,
-//                status = MessageStatus.Confirmed,
-//                seen = Seen.True,
-//                senderAlias = null,
-//                senderPic = null,
-//                originalMUID = null,
-//                replyUUID = null,
-//                flagged = false.toFlagged(),
-//                recipientAlias = null,
-//                recipientPic = null,
-//                person = null,
-//                threadUUID = null,
-//                errorMessage = null,
-//                isPinned = false,
-//                messageContentDecrypted = null,
-//                messageDecryptionError = false,
-//                messageDecryptionException = null,
-//                messageMedia = null,
-//                feedBoost = null,
-//                callLinkMessage = null,
-//                podcastClip = null,
-//                giphyData = null,
-//                reactions = null,
-//                purchaseItems = null,
-//                replyMessage = null,
-//                thread = null
-//            )
-
-//            chatLock.withLock {
-//                messageLock.withLock {
-//                    withContext(io) {
-//                        queries.transaction {
-//                            upsertNewMessage(newPayment, queries, null)
-//                        }
-//                    }
-//
-//                    queries.transaction {
-//                        updateChatNewLatestMessage(
-//                            newPayment,
-//                            message.chatId,
-//                            latestMessageUpdatedTimeMap,
-//                            queries
-//                        )
-//                    }
-//                }
-//            }
-
-//            val newPaymentMessage = chat.sphinx.example.wrapper_mqtt.Message(
-//                null,
-//                message.amount.value.toInt(),
-//                null,
-//                null,
-//                null,
-//                null,
-//                null,
-//                null,
-//                message.paymentRequest?.value
-//            ).toJson(moshi)
-
-
-//            if (contact != null) {
-//                connectManager.sendMessage(
-//                    newPaymentMessage,
-//                    contact.nodePubKey?.value ?: "",
-//                    provisionalId.value,
-//                    MessageType.PAYMENT,
-//                    null,
-//                    false
-//                )
-//            }
         }
     }
 
@@ -4775,60 +4692,24 @@ abstract class SphinxRepository(
 
                 val queries = coreDB.getSphinxDatabaseQueries()
 
-                networkQueryChat.getTribeInfo(chatHost, LightningNodePubKey(chatUUID.value)).collect { loadResponse ->
-                    when (loadResponse) {
+                networkQueryChat.getTribeInfo(chatHost, LightningNodePubKey(chatUUID.value))
+                    .collect { loadResponse ->
+                        when (loadResponse) {
 
-                        is LoadResponse.Loading -> {}
-                        is Response.Error -> {}
+                            is LoadResponse.Loading -> {}
+                            is Response.Error -> {}
 
-                        is Response.Success -> {
-                            val tribeDto = loadResponse.value
+                            is Response.Success -> {
+                                val tribeDto = loadResponse.value
 
-                            if (owner?.nodePubKey != chat.ownerPubKey) {
-
-//                                val didChangeNameOrPhotoUrl = (
-//                                    tribeDto.name != chat.name?.value ?: "" ||
-//                                    tribeDto.img != chat.photoUrl?.value ?: ""
-//                                )
-
-//                                chatLock.withLock {
-//                                    queries.transaction {
-//                                        updateChatTribeData(tribeDto, chat.id, queries)
-//                                    }
-//                                }
-//
-//                                if (didChangeNameOrPhotoUrl) {
-//                                    networkQueryChat.updateTribe(
-//                                        chat.id,
-//                                        PostGroupDto(
-//                                            tribeDto.name,
-//                                            tribeDto.description,
-//                                            img = tribeDto.img ?: "",
-//                                        )
-//                                    ).collect {}
-//                                }
-
+                                // TODO V2 updateTribeInfo
+                                if (owner?.nodePubKey != chat.ownerPubKey) {
+                                }
                             }
-
-//                            chat.host?.let { host ->
-//                                val feedType = (tribeDto.feed_type ?: 0).toFeedType()
-//
-//                                tribeData = TribeData(
-//                                    host,
-//                                    chat.uuid,
-//                                    tribeDto.feed_url?.toFeedUrl(),
-//                                    feedType,
-//                                    tribeDto.pin?.toMessageUUID(),
-//                                    tribeDto.app_url?.toAppUrl(),
-//                                    tribeDto.badges
-//                                )
-//                            }
                         }
                     }
-                }
             }
         }
-
         return tribeData
     }
 
@@ -6066,47 +5947,6 @@ abstract class SphinxRepository(
             }
         }
 
-    override fun createNewInvite(
-        nickname: String,
-        welcomeMessage: String
-    ): Flow<LoadResponse<Any, ResponseError>> = flow {
-
-        val queries = coreDB.getSphinxDatabaseQueries()
-
-        var response: Response<Any, ResponseError>? = null
-
-        emit(LoadResponse.Loading)
-
-//        applicationScope.launch(mainImmediate) {
-//            networkQueryContact.createNewInvite(nickname, welcomeMessage)
-//                .collect { loadResponse ->
-//                    @Exhaustive
-//                    when (loadResponse) {
-//                        is LoadResponse.Loading -> {
-//                        }
-//
-//                        is Response.Error -> {
-//                            response = loadResponse
-//                        }
-//
-//                        is Response.Success -> {
-//                            contactLock.withLock {
-//                                withContext(io) {
-//                                    queries.transaction {
-//                                        updatedContactIds.add(ContactId(loadResponse.value.id))
-//                                        upsertContact(loadResponse.value, queries)
-//                                    }
-//                                }
-//                            }
-//                            response = Response.Success(true)
-//                        }
-//                    }
-//                }
-//        }.join()
-
-        emit(response ?: Response.Error(ResponseError("")))
-    }
-
     override suspend fun payForInvite(invite: Invite) {
         val queries = coreDB.getSphinxDatabaseQueries()
 
@@ -6151,7 +5991,7 @@ abstract class SphinxRepository(
         val queries = coreDB.getSphinxDatabaseQueries()
 //        val response = networkQueryContact.deleteContact(invite.contactId)
 
-        // TODO V2 deleteContact
+        // TODO V2 deleteInvite
 
 //        if (response is Response.Success) {
 //            contactLock.withLock {
@@ -6567,55 +6407,6 @@ abstract class SphinxRepository(
                 )
             }
         }.join()
-
-        return response
-    }
-
-    override suspend fun kickMemberFromTribe(
-        chatId: ChatId,
-        contactPubKey: LightningNodePubKey
-    ): Response<Any, ResponseError> {
-        var response: Response<Any, ResponseError> =
-            Response.Error(ResponseError(("Failed to kick member from tribe")))
-
-//        applicationScope.launch(mainImmediate) {
-//            val queries = coreDB.getSphinxDatabaseQueries()
-//
-//            networkQueryChat.kickMemberFromChat(
-//                chatId,
-//                contactPubKey
-//            ).collect { loadResponse ->
-//
-//                when (loadResponse) {
-//                    is LoadResponse.Loading -> {
-//                    }
-//
-//                    is Response.Error -> {
-//                        response = loadResponse
-//                    }
-//                    is Response.Success -> {
-//                        response = loadResponse
-//
-//                        chatLock.withLock {
-//                            messageLock.withLock {
-//                                withContext(io) {
-//                                    queries.transaction {
-//                                        upsertChat(
-//                                            loadResponse.value,
-//                                            moshi,
-//                                            chatSeenMap,
-//                                            queries,
-//                                            null,
-//                                            accountOwner.value?.nodePubKey
-//                                        )
-//                                    }
-//                                }
-//                            }
-//                        }
-//                    }
-//                }
-//            }
-//        }.join()
 
         return response
     }

@@ -84,5 +84,4 @@ interface ChatRepository {
 
     suspend fun addTribeMember(addMember: AddMember): Response<Any, ResponseError>
 
-    suspend fun kickMemberFromTribe(chatId: ChatId, contactPubKey: LightningNodePubKey): Response<Any, ResponseError>
 }

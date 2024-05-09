@@ -33,7 +33,6 @@ interface ContactRepository {
     // Need to review DB upsert when setting invites on upsertNewContact query
     fun getInviteByContactId(contactId: ContactId): Flow<Invite?>
     fun getInviteById(inviteId: InviteId): Flow<Invite?>
-    fun createNewInvite(nickname: String, welcomeMessage: String): Flow<LoadResponse<Any, ResponseError>>
 
     var updatedContactIds: MutableList<ContactId>
 

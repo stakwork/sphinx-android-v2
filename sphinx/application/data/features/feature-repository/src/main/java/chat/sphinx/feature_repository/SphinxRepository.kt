@@ -2011,6 +2011,8 @@ abstract class SphinxRepository(
 
     override suspend fun deleteContactById(contactId: ContactId): Response<Any, ResponseError> {
         val queries = coreDB.getSphinxDatabaseQueries()
+        val contact = queries.contactGetById(contactId).executeAsOneOrNull()
+        val pubKeyToDelete = "c/${contact?.node_pub_key?.value}"
 
         var owner: Contact? = accountOwner.value
 
@@ -2031,6 +2033,23 @@ abstract class SphinxRepository(
             val msg = "Account Owner was null, or deleteContactById was called for account owner."
             LOG.w(TAG, msg)
             return Response.Error(ResponseError(msg))
+        }
+
+        if (contact != null) {
+            connectionManagerState.value = ConnectionManagerState.DeleteUserState(listOf(pubKeyToDelete))
+
+            contactLock.withLock {
+                queries.transaction {
+                    deleteContactById(contactId, queries)
+                }
+            }
+
+            chatLock.withLock {
+                queries.transaction {
+                    deleteChatById(contactId.value.toChatId(), queries, null)
+                }
+            }
+
         }
 
         var deleteContactResponse: Response<Any, ResponseError> = Response.Success(Any())

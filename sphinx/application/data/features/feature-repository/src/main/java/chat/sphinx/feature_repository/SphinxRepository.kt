@@ -2451,45 +2451,7 @@ abstract class SphinxRepository(
             ResponseError("generate Github PAT failed to execute")
         )
 
-        relayDataHandler.retrieveRelayTransportKey()?.let { key ->
-
-            applicationScope.launch(mainImmediate) {
-
-                val encryptionResponse = rsa.encrypt(
-                    key,
-                    UnencryptedString(pat),
-                    formatOutput = false,
-                    dispatcher = default,
-                )
-
-                @Exhaustive
-                when (encryptionResponse) {
-                    is Response.Error -> {}
-
-                    is Response.Success -> {
-
-                        // TODO v2 generateGithubPAT
-//                        networkQueryContact.generateGithubPAT(
-//                            GithubPATDto(
-//                                encryptionResponse.value.value
-//                            )
-//                        ).collect { loadResponse ->
-//                            @Exhaustive
-//                            when (loadResponse) {
-//                                is LoadResponse.Loading -> {}
-//
-//                                is Response.Error -> {
-//                                    response = loadResponse
-//                                }
-//                                is Response.Success -> {
-//                                    response = Response.Success(true)
-//                                }
-//                            }
-//                        }
-                    }
-                }
-            }.join()
-        }
+        // TODO v2 generateGithubPAT
 
         return response
     }
@@ -3827,49 +3789,45 @@ abstract class SphinxRepository(
         }
     }
 
-    override fun flagMessage(message: Message, chat: Chat) {
-        applicationScope.launch(mainImmediate) {
-            val queries = coreDB.getSphinxDatabaseQueries()
-
-            messageLock.withLock {
-                withContext(io) {
-                    queries.messageUpdateFlagged(
-                        true.toFlagged(),
-                        message.id
-                    )
-                }
-            }
-
-            val supportContactPubKey = LightningNodePubKey(
-                "023d70f2f76d283c6c4e58109ee3a2816eb9d8feb40b23d62469060a2b2867b77f"
-            )
-
-            getContactByPubKey(supportContactPubKey).firstOrNull()?.let { supportContact ->
-                val messageSender = getContactById(message.sender).firstOrNull()
-
-                var flagMessageContent =
-                    "Message Flagged\n- Message: ${message.uuid?.value ?: "Empty Message UUID"}\n- Sender: ${messageSender?.nodePubKey?.value ?: "Empty Sender"}"
-
-                if (chat.isTribe()) {
-                    flagMessageContent += "\n- Tribe: ${chat.uuid.value}"
-                }
-
-                val messageBuilder = SendMessage.Builder()
-                messageBuilder.setText(flagMessageContent.trimIndent())
-
-                messageBuilder.setContactId(supportContact.id)
-
-                getConversationByContactId(supportContact.id).firstOrNull()
-                    ?.let { supportContactChat ->
-                        messageBuilder.setChatId(supportContactChat.id)
-                    }
-
-                sendMessage(
-                    messageBuilder.build().first
-                )
-            }
-        }
-    }
+//    override fun flagMessage(message: Message, chat: Chat) {
+//        applicationScope.launch(mainImmediate) {
+//            val queries = coreDB.getSphinxDatabaseQueries()
+//
+//            messageLock.withLock {
+//                withContext(io) {
+//                    queries.messageUpdateFlagged(
+//                        true.toFlagged(),
+//                        message.id
+//                    )
+//                }
+//            }
+//
+//            getContactByPubKey(supportContactPubKey).firstOrNull()?.let { supportContact ->
+//                val messageSender = getContactById(message.sender).firstOrNull()
+//
+//                var flagMessageContent =
+//                    "Message Flagged\n- Message: ${message.uuid?.value ?: "Empty Message UUID"}\n- Sender: ${messageSender?.nodePubKey?.value ?: "Empty Sender"}"
+//
+//                if (chat.isTribe()) {
+//                    flagMessageContent += "\n- Tribe: ${chat.uuid.value}"
+//                }
+//
+//                val messageBuilder = SendMessage.Builder()
+//                messageBuilder.setText(flagMessageContent.trimIndent())
+//
+//                messageBuilder.setContactId(supportContact.id)
+//
+//                getConversationByContactId(supportContact.id).firstOrNull()
+//                    ?.let { supportContactChat ->
+//                        messageBuilder.setChatId(supportContactChat.id)
+//                    }
+//
+//                sendMessage(
+//                    messageBuilder.build().first
+//                )
+//            }
+//        }
+//    }
 
     override suspend fun deleteMessage(message: Message) {
         val queries = coreDB.getSphinxDatabaseQueries()
@@ -7232,16 +7190,6 @@ abstract class SphinxRepository(
         }
 
         return response ?: Response.Error(ResponseError(("Failed to load payment templates")))
-    }
-
-    override fun getAndSaveTransportKey(forceGet: Boolean) {
-        applicationScope.launch(io) {
-            if (!forceGet) {
-                relayDataHandler.retrieveRelayTransportKey()?.let {
-                    return@launch
-                }
-            }
-        }
     }
 
     private val actionTrackDboMessagePresenterMapper: ActionTrackDboMessagePresenterMapper by lazy {

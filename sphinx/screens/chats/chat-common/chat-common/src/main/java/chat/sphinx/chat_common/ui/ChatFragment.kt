@@ -816,7 +816,7 @@ abstract class ChatFragment<
                                     viewModel.resendMessage(message)
                                 }
                                 is MenuItemState.Flag -> {
-                                    viewModel.flagMessage(message)
+//                                    viewModel.flagMessage(message)
                                 }
                                 is MenuItemState.PinMessage -> {
                                     viewModel.pinMessage(message)

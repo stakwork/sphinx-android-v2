@@ -241,7 +241,6 @@ abstract class NetworkQueryTestHelper: AuthenticationCoreDefaultsTestHelper() {
 
             // persist our relay url and java web token to test storage
             relayDataHandler.persistAuthorizationToken(creds.jwt)
-            relayDataHandler.persistRelayUrl(creds.relayUrl)
         }
 
         // if null, do nothing.

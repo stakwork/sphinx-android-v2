@@ -43,8 +43,6 @@ class RelayDataHandlerImplUnitTest: AuthenticationCoreDefaultsTestHelper() {
     @Test
     fun `login is required for anything to work`() =
         testDispatcher.runBlockingTest {
-            Assert.assertFalse(relayHandler.persistRelayUrl(RelayUrl(RAW_URL)))
-            Assert.assertNull(relayHandler.retrieveRelayUrl())
             Assert.assertFalse(relayHandler.persistAuthorizationToken(AuthorizationToken(RAW_JWT)))
             Assert.assertNull(relayHandler.retrieveAuthorizationToken())
         }
@@ -53,11 +51,6 @@ class RelayDataHandlerImplUnitTest: AuthenticationCoreDefaultsTestHelper() {
     fun `persisted data is encrypted`() =
         testDispatcher.runBlockingTest {
             login()
-
-            Assert.assertTrue(relayHandler.persistRelayUrl(RelayUrl(RAW_URL)))
-            testStorage.getString(RelayDataHandlerImpl.RELAY_URL_KEY, null)?.let { encryptedUrl ->
-                Assert.assertTrue(encryptedUrl.isSalted)
-            } ?: Assert.fail("Failed to persist relay url to storage")
 
             Assert.assertTrue(relayHandler.persistAuthorizationToken(AuthorizationToken(RAW_JWT)))
             testStorage.getString(RelayDataHandlerImpl.RELAY_AUTHORIZATION_KEY, null)?.let { encryptedJwt ->

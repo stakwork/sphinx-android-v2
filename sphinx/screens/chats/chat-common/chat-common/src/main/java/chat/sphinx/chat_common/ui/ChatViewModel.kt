@@ -1636,18 +1636,18 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         }
     }
 
-    fun flagMessage(message: Message) {
-        val sideEffect = ChatSideEffect.AlertConfirmFlagMessage {
-            viewModelScope.launch(mainImmediate) {
-                val chat = getChat()
-                messageRepository.flagMessage(message, chat)
-            }
-        }
-
-        viewModelScope.launch(mainImmediate) {
-            submitSideEffect(sideEffect)
-        }
-    }
+//    fun flagMessage(message: Message) {
+//        val sideEffect = ChatSideEffect.AlertConfirmFlagMessage {
+//            viewModelScope.launch(mainImmediate) {
+//                val chat = getChat()
+//                messageRepository.flagMessage(message, chat)
+//            }
+//        }
+//
+//        viewModelScope.launch(mainImmediate) {
+//            submitSideEffect(sideEffect)
+//        }
+//    }
 
     @JvmSynthetic
     internal fun chatMenuOptionCamera() {

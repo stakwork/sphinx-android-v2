@@ -77,36 +77,10 @@ internal class OnBoardMessageViewModel @Inject constructor(
                         // User has authenticated
                     }
                     is AuthenticationResponse.Success.Authenticated -> {
-
-                        if (relayUrl.value.startsWith("http://") && !relayUrl.isOnionAddress) {
-                            submitSideEffect(
-                                OnBoardMessageSideEffect.RelayUrlHttpConfirmation(
-                                    relayUrl = relayUrl,
-                                    callback = { url ->
-                                        if (url != null) {
-                                            proceedToLightningScreen(
-                                                relayUrl,
-                                                authToken,
-                                                transportKey,
-                                                hMacKey,
-                                                inviterData
-                                            )
-                                        } else {
-                                            // cancelled
-                                            updateViewState(OnBoardMessageViewState.Idle)
-                                        }
-                                    }
-                                )
-                            )
-                        } else {
-                            proceedToLightningScreen(
-                                relayUrl,
-                                authToken,
-                                transportKey,
-                                hMacKey,
-                                inviterData
-                            )
-                        }
+                        proceedToLightningScreen(
+                            authToken,
+                            inviterData
+                        )
                     }
                     is AuthenticationResponse.Success.Key -> {
                         // will never be returned
@@ -118,28 +92,15 @@ internal class OnBoardMessageViewModel @Inject constructor(
 
     private var proceedJob: Job? = null
     private fun proceedToLightningScreen(
-        relayUrl: RelayUrl,
         authorizationToken: AuthorizationToken,
-        transportKey: RsaPublicKey?,
-        hMacKey: RelayHMacKey?,
         inviterData: OnBoardInviterData,
     ) {
         if (proceedJob?.isActive == true) {
             return
         }
-
         proceedJob = viewModelScope.launch(mainImmediate) {
             relayDataHandler.persistAuthorizationToken(authorizationToken)
-            relayDataHandler.persistRelayUrl(relayUrl)
             signerManager.persistMnemonic()
-
-            transportKey?.let { key ->
-                relayDataHandler.persistRelayTransportKey(key)
-            }
-
-            hMacKey?.let { key ->
-                relayDataHandler.persistRelayHMacKey(key)
-            }
 
             val step2 = onBoardStepHandler.persistOnBoardStep2Data(inviterData)
 

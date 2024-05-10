@@ -79,10 +79,10 @@ interface MessageRepository {
         chat: Chat,
     )
 
-    fun flagMessage(
-        message: Message,
-        chat: Chat,
-    )
+//    fun flagMessage(
+//        message: Message,
+//        chat: Chat,
+//    )
 
     fun sendBoost(
         chatId: ChatId,

@@ -213,29 +213,6 @@ internal class OnBoardConnectingViewModel @Inject constructor(
                 // TODO: Ask to use Tor before any network calls go out.
                 // TODO: Hit relayUrl to verify creds work
 
-                val relayUrl = relayDataHandler.formatRelayUrl(decryptedCode.relayUrl)
-                torManager.setTorRequired(relayUrl.isOnionAddress)
-
-                var transportKey: RsaPublicKey? = null
-
-//                networkQueryRelayKeys.getRelayTransportKey(relayUrl).collect { loadResponse ->
-//                    @Exhaustive
-//                    when (loadResponse) {
-//                        is LoadResponse.Loading -> {}
-//                        is Response.Error -> {}
-//
-//                        is Response.Success -> {
-//                            transportKey = RsaPublicKey(loadResponse.value.transport_key.toCharArray())
-//
-//                            relayDataHandler.persistRelayTransportKey(transportKey)
-//                        }
-//                    }
-//                }
-
-                var ownerPrivateKey = RsaPrivateKey(
-                    Password(decryptedCode.privateKey.value.copyOf()).value
-                )
-
                 var success: KeyRestoreResponse.Success? = null
                 keyRestore.restoreKeys(
                     privateKey = decryptedCode.privateKey,
@@ -243,7 +220,7 @@ internal class OnBoardConnectingViewModel @Inject constructor(
                     userPin = pin,
                     relayUrl = decryptedCode.relayUrl,
                     authorizationToken = decryptedCode.authorizationToken,
-                    transportKey = transportKey
+                    transportKey = null
                 ).collect { flowResponse ->
                     // TODO: Implement in Authentication View when it get's built/refactored
                     if (flowResponse is KeyRestoreResponse.Success) {
@@ -332,9 +309,6 @@ internal class OnBoardConnectingViewModel @Inject constructor(
             PasswordGenerator(passwordLength = 20).password.value.joinToString("")
         )
 
-        val relayUrl = relayDataHandler.formatRelayUrl(ip)
-        torManager.setTorRequired(relayUrl.isOnionAddress)
-
         val inviterData: OnBoardInviterData? = redeemInviteDto?.let { dto ->
             OnBoardInviterData(
                 dto.nickname,
@@ -345,13 +319,6 @@ internal class OnBoardConnectingViewModel @Inject constructor(
                 dto.pin
             )
         }
-
-        val relayTransportToken = transportToken ?: transportKey?.let { transportKey ->
-            relayDataHandler.retrieveRelayTransportToken(
-                authToken,
-                transportKey
-            )
-        } ?: null
 
         var generateTokenResponse: LoadResponse<GenerateTokenResponse, ResponseError> = Response.Error(
             ResponseError("generateToken endpoint failed")

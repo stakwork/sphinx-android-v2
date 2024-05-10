@@ -92,14 +92,9 @@ class SphinxKeyRestore(
                 // in case the user closes the application in the middle of encrypting
                 // keys before they can be persisted.
                 emit(KeyRestoreResponse.NotifyState.EncryptingRelayUrl)
-                relayDataHandlerImpl.persistRelayUrlImpl(relayUrl, privateKey)
 
                 emit(KeyRestoreResponse.NotifyState.EncryptingJavaWebToken)
                 relayDataHandlerImpl.persistJavaWebTokenImpl(jwt, privateKey)
-
-                transportKey?.let { key ->
-                    relayDataHandlerImpl.persistRelayTransportKeyImpl(key, privateKey)
-                }
 
                 // Set keys that will be consumed when generateEncryptionKey is called
                 encryptionKeyHandler.setKeysToRestore(privateKey, publicKey)

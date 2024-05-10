@@ -444,6 +444,8 @@ internal interface _UniFFILib : Library {
     ): RustBuffer.ByValue
     fun uniffi_sphinxrs_fn_func_send(`seed`: RustBuffer.ByValue,`uniqueTime`: RustBuffer.ByValue,`to`: RustBuffer.ByValue,`msgType`: Byte,`msgJson`: RustBuffer.ByValue,`state`: RustBuffer.ByValue,`myAlias`: RustBuffer.ByValue,`myImg`: RustBuffer.ByValue,`amtMsat`: Long,`isTribe`: Byte,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
+    fun uniffi_sphinxrs_fn_func_keysend(`seed`: RustBuffer.ByValue,`uniqueTime`: RustBuffer.ByValue,`to`: RustBuffer.ByValue,`state`: RustBuffer.ByValue,`amtMsat`: Long,`data`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
+    ): RustBuffer.ByValue
     fun uniffi_sphinxrs_fn_func_make_media_token(`seed`: RustBuffer.ByValue,`uniqueTime`: RustBuffer.ByValue,`state`: RustBuffer.ByValue,`host`: RustBuffer.ByValue,`muid`: RustBuffer.ByValue,`to`: RustBuffer.ByValue,`expiry`: Int,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_sphinxrs_fn_func_make_media_token_with_meta(`seed`: RustBuffer.ByValue,`uniqueTime`: RustBuffer.ByValue,`state`: RustBuffer.ByValue,`host`: RustBuffer.ByValue,`muid`: RustBuffer.ByValue,`to`: RustBuffer.ByValue,`expiry`: Int,`meta`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
@@ -581,6 +583,8 @@ internal interface _UniFFILib : Library {
     fun uniffi_sphinxrs_checksum_func_handle(
     ): Short
     fun uniffi_sphinxrs_checksum_func_send(
+    ): Short
+    fun uniffi_sphinxrs_checksum_func_keysend(
     ): Short
     fun uniffi_sphinxrs_checksum_func_make_media_token(
     ): Short
@@ -767,6 +771,9 @@ private fun uniffiCheckApiChecksums(lib: _UniFFILib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_sphinxrs_checksum_func_send() != 56750.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sphinxrs_checksum_func_keysend() != 64232.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_sphinxrs_checksum_func_make_media_token() != 53931.toShort()) {
@@ -1053,7 +1060,8 @@ data class Msg (
     var `msat`: ULong?, 
     var `timestamp`: ULong?, 
     var `sentTo`: String?, 
-    var `fromMe`: Boolean?
+    var `fromMe`: Boolean?, 
+    var `paymentHash`: String?
 ) {
     
 }
@@ -1071,6 +1079,7 @@ public object FfiConverterTypeMsg: FfiConverterRustBuffer<Msg> {
             FfiConverterOptionalULong.read(buf),
             FfiConverterOptionalString.read(buf),
             FfiConverterOptionalBoolean.read(buf),
+            FfiConverterOptionalString.read(buf),
         )
     }
 
@@ -1084,7 +1093,8 @@ public object FfiConverterTypeMsg: FfiConverterRustBuffer<Msg> {
             FfiConverterOptionalULong.allocationSize(value.`msat`) +
             FfiConverterOptionalULong.allocationSize(value.`timestamp`) +
             FfiConverterOptionalString.allocationSize(value.`sentTo`) +
-            FfiConverterOptionalBoolean.allocationSize(value.`fromMe`)
+            FfiConverterOptionalBoolean.allocationSize(value.`fromMe`) +
+            FfiConverterOptionalString.allocationSize(value.`paymentHash`)
     )
 
     override fun write(value: Msg, buf: ByteBuffer) {
@@ -1098,6 +1108,7 @@ public object FfiConverterTypeMsg: FfiConverterRustBuffer<Msg> {
             FfiConverterOptionalULong.write(value.`timestamp`, buf)
             FfiConverterOptionalString.write(value.`sentTo`, buf)
             FfiConverterOptionalBoolean.write(value.`fromMe`, buf)
+            FfiConverterOptionalString.write(value.`paymentHash`, buf)
     }
 }
 
@@ -2496,6 +2507,15 @@ fun `send`(`seed`: String, `uniqueTime`: String, `to`: String, `msgType`: UByte,
     return FfiConverterTypeRunReturn.lift(
     rustCallWithError(SphinxException) { _status ->
     _UniFFILib.INSTANCE.uniffi_sphinxrs_fn_func_send(FfiConverterString.lower(`seed`),FfiConverterString.lower(`uniqueTime`),FfiConverterString.lower(`to`),FfiConverterUByte.lower(`msgType`),FfiConverterString.lower(`msgJson`),FfiConverterByteArray.lower(`state`),FfiConverterString.lower(`myAlias`),FfiConverterString.lower(`myImg`),FfiConverterULong.lower(`amtMsat`),FfiConverterBoolean.lower(`isTribe`),_status)
+})
+}
+
+@Throws(SphinxException::class)
+
+fun `keysend`(`seed`: String, `uniqueTime`: String, `to`: String, `state`: ByteArray, `amtMsat`: ULong, `data`: ByteArray?): RunReturn {
+    return FfiConverterTypeRunReturn.lift(
+    rustCallWithError(SphinxException) { _status ->
+    _UniFFILib.INSTANCE.uniffi_sphinxrs_fn_func_keysend(FfiConverterString.lower(`seed`),FfiConverterString.lower(`uniqueTime`),FfiConverterString.lower(`to`),FfiConverterByteArray.lower(`state`),FfiConverterULong.lower(`amtMsat`),FfiConverterOptionalByteArray.lower(`data`),_status)
 })
 }
 

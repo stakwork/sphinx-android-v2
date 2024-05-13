@@ -424,6 +424,10 @@ abstract class SphinxRepository(
         connectManager.retrieveTribeMembersList(tribeServerPubKey, tribePubKey)
     }
 
+    override fun sendKeySend(pubKey: String, amount: Long) {
+        connectManager.sendKeySend(pubKey, amount)
+    }
+
     override fun getTribeServerPubKey(): String? {
         return connectManager.getTribeServerPubKey()
     }

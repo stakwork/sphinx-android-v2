@@ -675,6 +675,26 @@ class ConnectManagerImpl: ConnectManager()
         return null
     }
 
+    override fun sendKeySend(pubKey: String, amount: Long) {
+        val now = getTimestampInMilliseconds()
+        try {
+            val keySend = uniffi.sphinxrs.keysend(
+                ownerSeed!!,
+                now,
+                pubKey,
+                getCurrentUserState(),
+                convertSatsToMillisats(amount),
+                null
+            )
+            handleRunReturn(keySend, mqttClient)
+        } catch (e: Exception) {
+//            notifyListeners {
+//                onConnectManagerError(ConnectManagerError.SendKeySendError)
+//            }
+            Log.e("MQTT_MESSAGES", "sendKeySend ${e.message}")
+        }
+    }
+
     override fun getTribeServerPubKey(): String? {
         return try {
             val defaultTribe = getDefaultTribeServer(

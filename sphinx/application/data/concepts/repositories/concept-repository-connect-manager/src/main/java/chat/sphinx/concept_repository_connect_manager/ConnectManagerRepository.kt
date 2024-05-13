@@ -44,6 +44,8 @@ interface ConnectManagerRepository {
         tribeServerPubKey: String,
         tribePubKey: String
     )
+    fun sendKeySend(pubKey: String, amount: Long)
+
     fun getTribeServerPubKey(): String?
     fun getPayments(lastMessageDate: Long, limit: Int)
     suspend fun getPubKeyByEncryptedChild(child: String): Flow<ChatId?>

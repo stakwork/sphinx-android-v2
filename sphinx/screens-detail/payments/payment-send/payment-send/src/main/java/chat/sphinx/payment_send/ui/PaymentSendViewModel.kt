@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import chat.sphinx.concept_repository_chat.ChatRepository
+import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
 import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.concept_repository_lightning.LightningRepository
 import chat.sphinx.concept_repository_message.MessageRepository
@@ -65,6 +66,7 @@ internal class PaymentSendViewModel @Inject constructor(
     private val lightningRepository: LightningRepository,
     private val messageRepository: MessageRepository,
     private val chatRepository: ChatRepository,
+    private val connectManagerRepository: ConnectManagerRepository,
     private val scannerCoordinator: ViewModelCoordinator<ScannerRequest, ScannerResponse>
 ): PaymentViewModel<PaymentSendFragmentArgs, PaymentSendViewState>(
     dispatchers,
@@ -156,7 +158,10 @@ internal class PaymentSendViewModel @Inject constructor(
                         sendPaymentBuilder.paymentAmount,
                         lightningNodePubKey?.value ?: ""
                     ) {
-                        sendPayment()
+                        connectManagerRepository.sendKeySend(
+                            lightningNodePubKey?.value ?: "",
+                            sendPaymentBuilder.paymentAmount
+                        )
                     }
                 )
             }

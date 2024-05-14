@@ -325,6 +325,17 @@ internal class DashboardViewModel @Inject constructor(
                             app.getString(R.string.connect_manager_sign_bytes_error))
                         )
                     }
+                    is ConnectManagerError.SendKeySendError -> {
+                        submitSideEffect(ChatListSideEffect.Notify(
+                            app.getString(R.string.connect_manager_keysend_error))
+                        )
+                    }
+                    is ConnectManagerError.LoadTransactionsError -> {
+                        submitSideEffect(ChatListSideEffect.Notify(
+                            app.getString(R.string.connect_manager_load_transactions_error))
+                        )
+                    }
+                    else -> {}
                 }
             }
         }

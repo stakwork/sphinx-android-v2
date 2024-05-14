@@ -28,4 +28,6 @@ sealed class ConnectManagerError {
     object GetReadMessagesError: ConnectManagerError()
     object SignBytesError: ConnectManagerError()
     object SetMuteError: ConnectManagerError()
+    object LoadTransactionsError: ConnectManagerError()
+    object SendKeySendError: ConnectManagerError()
 }

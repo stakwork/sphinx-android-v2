@@ -189,5 +189,7 @@
     <string name="connect_manager_get_read_messages_error">Error al recuperar mensajes leídos.</string>
     <string name="connect_manager_sign_bytes_error">Error al firmar bytes.</string>
     <string name="connect_manager_set_mute_error">>Error al configurar el estado de silencio</string>
+    <string name="connect_manager_keysend_error">Error al enviar keysend</string>
+    <string name="connect_manager_load_transactions_error">Error al cargar transacciones</string>
 
 </resources>

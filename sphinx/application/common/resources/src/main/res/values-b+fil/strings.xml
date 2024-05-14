@@ -258,5 +258,7 @@
     <string name="connect_manager_get_read_messages_error">Error retrieving read messages.</string>
     <string name="connect_manager_sign_bytes_error">Error signing bytes.</string>
     <string name="connect_manager_set_mute_error">Error setting mute status.</string>
+    <string name="connect_manager_keysend_error">Error on keysend</string>
+    <string name="connect_manager_load_transactions_error">Error loading transactions</string>
 
 </resources>

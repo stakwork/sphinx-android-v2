@@ -688,9 +688,9 @@ class ConnectManagerImpl: ConnectManager()
             )
             handleRunReturn(keySend, mqttClient)
         } catch (e: Exception) {
-//            notifyListeners {
-//                onConnectManagerError(ConnectManagerError.SendKeySendError)
-//            }
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.SendKeySendError)
+            }
             Log.e("MQTT_MESSAGES", "sendKeySend ${e.message}")
         }
     }
@@ -767,9 +767,9 @@ class ConnectManagerImpl: ConnectManager()
             )
             handleRunReturn(payments, mqttClient)
         } catch (e: Exception) {
-//            notifyListeners {
-//                onConnectManagerError(ConnectManagerError.FetchPaymentsError)
-//            }
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.LoadTransactionsError)
+            }
             Log.e("MQTT_MESSAGES", "getPayments ${e.message}")
         }
     }
@@ -796,7 +796,6 @@ class ConnectManagerImpl: ConnectManager()
                 child
             )
         } catch (e: Exception) {
-            val pim = e
             null
         }
     }

@@ -215,12 +215,6 @@ abstract class SphinxRepository(
         const val DATE_NIXON_SHOCK = "1971-08-15T00:00:00.000Z"
 
         const val MEDIA_KEY_SIZE = 32
-        const val MEDIA_PROVISIONAL_TOKEN = "Media_Provisional_Token"
-
-        const val AUTHORIZE_EXTERNAL_BASE_64 = "U3BoaW54IFZlcmlmaWNhdGlvbg=="
-
-        const val AUTHENTICATION_ERROR = 401
-
     }
 
 

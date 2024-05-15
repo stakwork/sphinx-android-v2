@@ -23,6 +23,7 @@ import chat.sphinx.kotlin_response.Response
 import chat.sphinx.menu_bottom_profile_pic.PictureMenuHandler
 import chat.sphinx.menu_bottom_profile_pic.PictureMenuViewModel
 import chat.sphinx.wrapper_chat.ChatHost
+import chat.sphinx.wrapper_chat.toChatHost
 import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_common.lightning.LightningNodePubKey
 import chat.sphinx.wrapper_common.tribe.toTribeJoinLink
@@ -140,32 +141,37 @@ internal class JoinTribeViewModel @Inject constructor(
 
         args.argTribeLink.toTribeJoinLink()?.let { tribeJoinLink ->
             viewModelScope.launch(mainImmediate) {
+                val chatHost = tribeJoinLink.tribeHost.toChatHost()
 
-                networkQueryChat.getTribeInfo(ChatHost(tribeJoinLink.tribeHost), LightningNodePubKey(tribeJoinLink.tribePubkey)).collect { loadResponse ->
-                    when (loadResponse) {
-                        is LoadResponse.Loading ->
-                            viewStateContainer.updateViewState(JoinTribeViewState.LoadingTribe)
-                        is Response.Error -> {
-                            submitSideEffect(JoinTribeSideEffect.Notify.InvalidTribe)
-                            viewStateContainer.updateViewState(JoinTribeViewState.ErrorLoadingTribe)
-                        }
-                        is Response.Success -> {
+                if (chatHost != null) {
+                    networkQueryChat.getTribeInfo(chatHost, LightningNodePubKey(tribeJoinLink.tribePubkey)).collect { loadResponse ->
+                        when (loadResponse) {
+                            is LoadResponse.Loading ->
+                                viewStateContainer.updateViewState(JoinTribeViewState.LoadingTribe)
 
-                            newTribeInfo = loadResponse.value
-                            newTribeInfo?.set(tribeJoinLink.tribeHost, tribeJoinLink.tribePubkey)
+                            is Response.Error -> {
+                                submitSideEffect(JoinTribeSideEffect.Notify.InvalidTribe)
+                                viewStateContainer.updateViewState(JoinTribeViewState.ErrorLoadingTribe)
+                            }
 
-                            val tribeLoaded = JoinTribeViewState.TribeLoaded(
-                                loadResponse.value.name,
-                                loadResponse.value.description.toString(),
-                                loadResponse.value.img,
-                                loadResponse.value.price_to_join.toString(),
-                                loadResponse.value.price_per_message.toString(),
-                                loadResponse.value.escrow_amount.toString(),
-                                loadResponse.value.escrow_millis.escrowMillisToHours().toString(),
-                                accountOwnerStateFlow.value?.alias?.value,
-                                accountOwnerStateFlow.value?.photoUrl?.value
-                            )
-                            updateViewState(tribeLoaded)
+                            is Response.Success -> {
+
+                                newTribeInfo = loadResponse.value
+                                newTribeInfo?.set(tribeJoinLink.tribeHost, tribeJoinLink.tribePubkey)
+
+                                val tribeLoaded = JoinTribeViewState.TribeLoaded(
+                                    loadResponse.value.name,
+                                    loadResponse.value.description.toString(),
+                                    loadResponse.value.img,
+                                    loadResponse.value.price_to_join.toString(),
+                                    loadResponse.value.price_per_message.toString(),
+                                    loadResponse.value.escrow_amount.toString(),
+                                    loadResponse.value.escrow_millis.escrowMillisToHours().toString(),
+                                    accountOwnerStateFlow.value?.alias?.value,
+                                    accountOwnerStateFlow.value?.photoUrl?.value
+                                )
+                                updateViewState(tribeLoaded)
+                            }
                         }
                     }
                 }

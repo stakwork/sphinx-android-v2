@@ -75,36 +75,6 @@ internal class InviteFriendViewModel @Inject constructor(
                 submitSideEffect(InviteFriendSideEffect.EmptySats)
                 updateViewState(InviteFriendViewState.InviteCreationFailed)
             }
-
-//            if (nickname == null || nickname.isEmpty()) {
-//                submitSideEffect(InviteFriendSideEffect.EmptyNickname)
-//                updateViewState(InviteFriendViewState.InviteCreationFailed)
-//                return@launch
-//            }
-//
-//            val message = if (welcomeMessage?.trim()?.isNotEmpty() == true) {
-//                welcomeMessage
-//            } else {
-//                app.getString(R.string.invite_friend_message_hint)
-//            }
-//
-//            contactRepository.createNewInvite(nickname, message).collect { loadResponse ->
-//                @Exhaustive
-//                when (loadResponse) {
-//                    is LoadResponse.Loading -> {
-//                        updateViewState(InviteFriendViewState.InviteCreationLoading)
-//                    }
-//
-//                    is Response.Error -> {
-//                        submitSideEffect(InviteFriendSideEffect.InviteFailed)
-//                        updateViewState(InviteFriendViewState.InviteCreationFailed)
-//                    }
-//
-//                    is Response.Success -> {
-//                        updateViewState(InviteFriendViewState.InviteCreationSucceed)
-//                    }
-//                }
-//            }
         }
     }
 }

@@ -106,6 +106,11 @@ class ChatTribeViewModel @Inject constructor(
     moshi,
     LOG,
 ) {
+
+    companion object {
+        private const val TRIBES_DEFAULT_SERVER_URL = "34.229.52.200:8801"
+    }
+
     override val args: ChatTribeFragmentArgs by savedStateHandle.navArgs()
     override val chatId: ChatId = args.chatId
     override val contactId: ContactId?
@@ -538,7 +543,7 @@ class ChatTribeViewModel @Inject constructor(
     fun navigateToTribeShareScreen() {
         viewModelScope.launch(mainImmediate) {
             val chat = getChat()
-            val shareTribeURL = "sphinx.chat://?action=tribe&uuid=${chat.uuid.value}&host=${chat.host?.value}"
+            val shareTribeURL = "sphinx.chat://?action=tribe&uuid=${chat.uuid.value}&host=${TRIBES_DEFAULT_SERVER_URL}"
             (chatNavigator as TribeChatNavigator).toShareTribeScreen(shareTribeURL, app.getString(R.string.qr_code_title))
         }
 

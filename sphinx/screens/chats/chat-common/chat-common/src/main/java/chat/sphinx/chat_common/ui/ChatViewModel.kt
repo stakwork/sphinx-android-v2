@@ -2343,7 +2343,17 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
         val sideEffect = ChatSideEffect.AlertConfirmPayAttachment {
             payAttachmentJob = viewModelScope.launch(mainImmediate) {
-                messageRepository.payAttachment(message)
+                getAccountBalance().firstOrNull()?.let { balance ->
+                    val price = message.messageMedia?.mediaToken?.getPriceFromMediaToken()?.value
+
+                    if (price == null || price > balance.balance.value) {
+                        submitSideEffect(
+                            ChatSideEffect.Notify(app.getString(R.string.balance_too_low))
+                        )
+                    } else {
+                        messageRepository.payAttachment(message)
+                    }
+                }
             }
         }
 

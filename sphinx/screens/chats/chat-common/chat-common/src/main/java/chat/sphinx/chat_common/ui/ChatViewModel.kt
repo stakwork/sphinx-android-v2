@@ -61,6 +61,7 @@ import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
 import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.concept_repository_dashboard_android.RepositoryDashboardAndroid
 import chat.sphinx.concept_repository_feed.FeedRepository
+import chat.sphinx.concept_repository_lightning.LightningRepository
 import chat.sphinx.concept_repository_media.RepositoryMedia
 import chat.sphinx.concept_repository_message.MessageRepository
 import chat.sphinx.concept_repository_message.model.SendMessage
@@ -87,6 +88,7 @@ import chat.sphinx.wrapper_feed.Feed
 import chat.sphinx.wrapper_feed.isNewsletter
 import chat.sphinx.wrapper_feed.isPodcast
 import chat.sphinx.wrapper_feed.isVideo
+import chat.sphinx.wrapper_lightning.NodeBalance
 import chat.sphinx.wrapper_message.*
 import chat.sphinx.wrapper_message_media.*
 import com.giphy.sdk.core.models.Media
@@ -129,6 +131,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
     protected val contactRepository: ContactRepository,
     protected val messageRepository: MessageRepository,
     protected val actionsRepository: ActionsRepository,
+    protected val lightningRepository: LightningRepository,
     protected val repositoryDashboard: RepositoryDashboardAndroid<Any>,
     protected val networkQueryPeople: NetworkQueryPeople,
     val mediaCacheHandler: MediaCacheHandler,
@@ -204,6 +207,9 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
     private val latestThreadMessagesFlow: MutableStateFlow<List<Message>?> = MutableStateFlow(null)
     private val scrollDownButtonCount: MutableStateFlow<Long?> = MutableStateFlow(null)
+
+    private suspend fun getAccountBalance(): StateFlow<NodeBalance?> =
+        lightningRepository.getAccountBalance()
 
     protected abstract val chatSharedFlow: SharedFlow<Chat?>
 
@@ -2354,9 +2360,15 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
         val sideEffect = ChatSideEffect.AlertConfirmPayInvoice {
             payInvoiceJob = viewModelScope.launch(mainImmediate) {
-
-                messageRepository.payNewPaymentRequest(message)
-
+                getAccountBalance().firstOrNull()?.let { balance ->
+                    if (message.amount.value > balance.balance.value) {
+                        submitSideEffect(
+                            ChatSideEffect.Notify(app.getString(R.string.balance_too_low))
+                        )
+                    } else {
+                        messageRepository.payNewPaymentRequest(message)
+                    }
+                }
             }
         }
 

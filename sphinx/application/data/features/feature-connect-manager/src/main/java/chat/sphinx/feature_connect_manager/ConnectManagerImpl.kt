@@ -609,6 +609,7 @@ class ConnectManagerImpl: ConnectManager()
     ) {
         val now = getTimestampInMilliseconds()
 
+        // Initial tribe is hardcoded for now
         try {
             val createInvite = makeInvite(
                 ownerSeed!!,
@@ -618,7 +619,7 @@ class ConnectManagerImpl: ConnectManager()
                 convertSatsToMillisats(sats),
                 ownerInfoStateFlow.value?.alias ?: "",
                 "34.229.52.200:8801",
-                tribeServerPubKey
+                "02792ee5b9162f9a00686aaa5d5274e91fd42a141113007797b5c1872d43f78e07"
             )
 
             if (createInvite.newInvite != null) {

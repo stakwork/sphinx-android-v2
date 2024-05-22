@@ -1515,5 +1515,4 @@ class ConnectManagerImpl: ConnectManager()
     private fun isConnected(): Boolean {
         return mqttClient?.isConnected ?: false
     }
-
 }

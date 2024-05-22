@@ -50,4 +50,9 @@ dependencies {
     implementation deps.square.moshi
     implementation deps.msgpack.sdk
 
+    // Test
+    androidTestImplementation KAtestDeps.androidx.core
+    androidTestImplementation KAtestDeps.androidx.espresso
+    androidTestImplementation KAtestDeps.androidx.junit
+
 }

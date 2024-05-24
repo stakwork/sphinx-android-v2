@@ -54,5 +54,4 @@ dependencies {
     androidTestImplementation KAtestDeps.androidx.core
     androidTestImplementation KAtestDeps.androidx.espresso
     androidTestImplementation KAtestDeps.androidx.junit
-
 }

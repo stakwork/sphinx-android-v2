@@ -54,17 +54,19 @@ import chat.sphinx.concept_link_preview.model.TribePreviewName
 import chat.sphinx.concept_link_preview.model.toPreviewImageUrlOrNull
 import chat.sphinx.concept_meme_input_stream.MemeInputStreamHandler
 import chat.sphinx.concept_meme_server.MemeServerTokenHandler
-import chat.sphinx.concept_network_query_lightning.NetworkQueryLightning
 import chat.sphinx.concept_network_query_people.NetworkQueryPeople
 import chat.sphinx.concept_repository_actions.ActionsRepository
 import chat.sphinx.concept_repository_chat.ChatRepository
+import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
 import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.concept_repository_dashboard_android.RepositoryDashboardAndroid
 import chat.sphinx.concept_repository_feed.FeedRepository
+import chat.sphinx.concept_repository_lightning.LightningRepository
 import chat.sphinx.concept_repository_media.RepositoryMedia
 import chat.sphinx.concept_repository_message.MessageRepository
 import chat.sphinx.concept_repository_message.model.SendMessage
 import chat.sphinx.concept_view_model_coordinator.ViewModelCoordinator
+import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
 import chat.sphinx.kotlin_response.*
 import chat.sphinx.logger.SphinxLogger
 import chat.sphinx.logger.e
@@ -86,6 +88,7 @@ import chat.sphinx.wrapper_feed.Feed
 import chat.sphinx.wrapper_feed.isNewsletter
 import chat.sphinx.wrapper_feed.isPodcast
 import chat.sphinx.wrapper_feed.isVideo
+import chat.sphinx.wrapper_lightning.NodeBalance
 import chat.sphinx.wrapper_message.*
 import chat.sphinx.wrapper_message_media.*
 import com.giphy.sdk.core.models.Media
@@ -128,17 +131,18 @@ abstract class ChatViewModel<ARGS : NavArgs>(
     protected val contactRepository: ContactRepository,
     protected val messageRepository: MessageRepository,
     protected val actionsRepository: ActionsRepository,
+    protected val lightningRepository: LightningRepository,
     protected val repositoryDashboard: RepositoryDashboardAndroid<Any>,
-    protected val networkQueryLightning: NetworkQueryLightning,
     protected val networkQueryPeople: NetworkQueryPeople,
     val mediaCacheHandler: MediaCacheHandler,
     protected val savedStateHandle: SavedStateHandle,
     protected val cameraCoordinator: ViewModelCoordinator<CameraRequest, CameraResponse>,
     protected val linkPreviewHandler: LinkPreviewHandler,
     private val memeInputStreamHandler: MemeInputStreamHandler,
+    private val connectManagerRepository: ConnectManagerRepository,
     val moshi: Moshi,
     protected val LOG: SphinxLogger,
-) : MotionLayoutViewModel<
+    ) : MotionLayoutViewModel<
         Nothing,
         ChatSideEffectFragment,
         ChatSideEffect,
@@ -203,6 +207,9 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
     private val latestThreadMessagesFlow: MutableStateFlow<List<Message>?> = MutableStateFlow(null)
     private val scrollDownButtonCount: MutableStateFlow<Long?> = MutableStateFlow(null)
+
+    private suspend fun getAccountBalance(): StateFlow<NodeBalance?> =
+        lightningRepository.getAccountBalance()
 
     protected abstract val chatSharedFlow: SharedFlow<Chat?>
 
@@ -966,7 +973,6 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         val setupViewStateContainerJob = viewModelScope.launch(mainImmediate) {
             viewStateContainer.viewStateFlow.firstOrNull()
         }
-        forceKeyExchange()
 
         viewModelScope.launch(mainImmediate) {
             delay(500)
@@ -985,9 +991,53 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                 }
             }
         }
+
+        collectConnectManagerErrorState()
     }
 
-    protected abstract fun forceKeyExchange()
+    private fun collectConnectManagerErrorState(){
+        viewModelScope.launch(mainImmediate) {
+            connectManagerRepository.connectManagerErrorState.collect { connectManagerError ->
+                when (connectManagerError) {
+                    is ConnectManagerError.SendMessageError -> {
+                        submitSideEffect(ChatSideEffect.Notify(
+                            app.getString(R.string.connect_manager_send_message_error))
+                        )
+                    }
+                    is ConnectManagerError.PayContactInvoiceError -> {
+                        submitSideEffect(ChatSideEffect.Notify(
+                            app.getString(R.string.connect_manager_pay_contact_invoice_error))
+                        )
+                    }
+                    is ConnectManagerError.PaymentHashError -> {
+                        submitSideEffect(ChatSideEffect.Notify(
+                            app.getString(R.string.connect_manager_payment_hash_error))
+                        )
+                    }
+                    is ConnectManagerError.ReadMessageError -> {
+                        submitSideEffect(ChatSideEffect.Notify(
+                            app.getString(R.string.connect_manager_read_message_error))
+                        )
+                    }
+                    is ConnectManagerError.SignBytesError -> {
+                        submitSideEffect(ChatSideEffect.Notify(
+                            app.getString(R.string.connect_manager_sign_bytes_error))
+                        )
+                    }
+                    is ConnectManagerError.MediaTokenError -> {
+                        submitSideEffect(ChatSideEffect.Notify(
+                            app.getString(R.string.connect_manager_media_token_error))
+                        )
+                    }
+                    is ConnectManagerError.SetMuteError -> {
+                        submitSideEffect(ChatSideEffect.Notify(
+                            app.getString(R.string.connect_manager_set_mute_error))
+                        )
+                    }
+                }
+            }
+        }
+    }
 
     var messagesLoadJob: Job? = null
     fun screenInit() {
@@ -1054,8 +1104,6 @@ abstract class ChatViewModel<ARGS : NavArgs>(
             )
         }
     }
-
-    abstract val checkRoute: Flow<LoadResponse<Boolean, ResponseError>>
 
     abstract fun readMessages()
 
@@ -1224,6 +1272,10 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                 }
             }
         }
+    }
+
+    suspend fun getPubKeyByEncryptedChild(child: String): ChatId? {
+        return connectManagerRepository.getPubKeyByEncryptedChild(child).firstOrNull()
     }
 
     abstract fun navigateToNotificationLevel()
@@ -1590,18 +1642,18 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         }
     }
 
-    fun flagMessage(message: Message) {
-        val sideEffect = ChatSideEffect.AlertConfirmFlagMessage {
-            viewModelScope.launch(mainImmediate) {
-                val chat = getChat()
-                messageRepository.flagMessage(message, chat)
-            }
-        }
-
-        viewModelScope.launch(mainImmediate) {
-            submitSideEffect(sideEffect)
-        }
-    }
+//    fun flagMessage(message: Message) {
+//        val sideEffect = ChatSideEffect.AlertConfirmFlagMessage {
+//            viewModelScope.launch(mainImmediate) {
+//                val chat = getChat()
+//                messageRepository.flagMessage(message, chat)
+//            }
+//        }
+//
+//        viewModelScope.launch(mainImmediate) {
+//            submitSideEffect(sideEffect)
+//        }
+//    }
 
     @JvmSynthetic
     internal fun chatMenuOptionCamera() {
@@ -2291,7 +2343,17 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
         val sideEffect = ChatSideEffect.AlertConfirmPayAttachment {
             payAttachmentJob = viewModelScope.launch(mainImmediate) {
-                messageRepository.payAttachment(message)
+                getAccountBalance().firstOrNull()?.let { balance ->
+                    val price = message.messageMedia?.mediaToken?.getPriceFromMediaToken()?.value
+
+                    if (price == null || price > balance.balance.value) {
+                        submitSideEffect(
+                            ChatSideEffect.Notify(app.getString(R.string.balance_too_low))
+                        )
+                    } else {
+                        messageRepository.payAttachment(message)
+                    }
+                }
             }
         }
 
@@ -2308,23 +2370,15 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
         val sideEffect = ChatSideEffect.AlertConfirmPayInvoice {
             payInvoiceJob = viewModelScope.launch(mainImmediate) {
-
-                messageRepository.payNewPaymentRequest(message)
-
-//                @Exhaustive
-//                when (val response = messageRepository.payPaymentRequest(message)) {
-//                    is Response.Error -> {
-//                        submitSideEffect(ChatSideEffect.Notify(
-//                            String.format(
-//                                app.getString(R.string.error_payment_message),
-//                                response.exception?.message ?: response.cause.message
-//                            )
-//                        ))
-//                    }
-//                    is Response.Success -> {
-//                        delay(100L)
-//                    }
-//                }
+                getAccountBalance().firstOrNull()?.let { balance ->
+                    if (message.amount.value > balance.balance.value) {
+                        submitSideEffect(
+                            ChatSideEffect.Notify(app.getString(R.string.balance_too_low))
+                        )
+                    } else {
+                        messageRepository.payNewPaymentRequest(message)
+                    }
+                }
             }
         }
 

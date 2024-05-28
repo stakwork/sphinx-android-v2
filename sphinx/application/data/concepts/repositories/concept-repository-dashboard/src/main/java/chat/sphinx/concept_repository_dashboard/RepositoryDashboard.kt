@@ -52,13 +52,6 @@ interface RepositoryDashboard {
     fun getAllSubscribedFeeds(): Flow<List<Feed>>
 
     fun getRecommendedFeeds(): Flow<List<FeedRecommendation>>
-
-    suspend fun authorizeExternal(
-        relayUrl: String,
-        host: String,
-        challenge: String
-    ): Response<Boolean, ResponseError>
-
     suspend fun authorizeStakwork(
         host: String,
         id: String,
@@ -78,21 +71,12 @@ interface RepositoryDashboard {
         body: String
     ): Response<Boolean, ResponseError>
 
-    suspend fun redeemBadgeToken(
-        body: String
-    ): Response<Boolean, ResponseError>
-
     val networkRefreshBalance: MutableStateFlow<Long?>
-    val networkRefreshContacts: Flow<LoadResponse<Boolean, ResponseError>>
     val networkRefreshLatestContacts: Flow<LoadResponse<RestoreProgress, ResponseError>>
     val networkRefreshFeedContent: Flow<LoadResponse<RestoreProgress, ResponseError>>
     val networkRefreshMessages: Flow<LoadResponse<RestoreProgress, ResponseError>>
 
     suspend fun didCancelRestore()
-
-    fun getAndSaveTransportKey(forceGet: Boolean = false)
-    fun saveTransportKey()
-    fun getOrCreateHMacKey(forceGet: Boolean = false)
 
     suspend fun clearDatabase()
 }

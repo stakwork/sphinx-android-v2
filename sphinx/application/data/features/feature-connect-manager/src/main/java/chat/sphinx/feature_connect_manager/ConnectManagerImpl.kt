@@ -5,12 +5,13 @@ import android.util.Log
 import chat.sphinx.example.concept_connect_manager.ConnectManager
 import chat.sphinx.example.concept_connect_manager.ConnectManagerListener
 import chat.sphinx.example.concept_connect_manager.model.OwnerInfo
+import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
+import chat.sphinx.example.wrapper_mqtt.NewInvite
 import chat.sphinx.wrapper_common.lightning.toLightningNodePubKey
 import chat.sphinx.wrapper_common.lightning.toLightningRouteHint
 import chat.sphinx.wrapper_contact.NewContact
 import chat.sphinx.wrapper_lightning.WalletMnemonic
 import chat.sphinx.wrapper_lightning.toWalletMnemonic
-import chat.sphinx.wrapper_message.MessageType
 import com.ensarsarajcic.kotlinx.serialization.msgpack.MsgPack
 import com.ensarsarajcic.kotlinx.serialization.msgpack.MsgPackDynamicSerializer
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,6 +34,7 @@ import uniffi.sphinxrs.codeFromInvite
 import uniffi.sphinxrs.fetchMsgs
 import uniffi.sphinxrs.getDefaultTribeServer
 import uniffi.sphinxrs.getMsgsCounts
+import uniffi.sphinxrs.getMutes
 import uniffi.sphinxrs.getReads
 import uniffi.sphinxrs.getSubscriptionTopic
 import uniffi.sphinxrs.getTribeManagementTopic
@@ -47,6 +49,7 @@ import uniffi.sphinxrs.makeMediaTokenWithMeta
 import uniffi.sphinxrs.makeMediaTokenWithPrice
 import uniffi.sphinxrs.mnemonicFromEntropy
 import uniffi.sphinxrs.mnemonicToSeed
+import uniffi.sphinxrs.mute
 import uniffi.sphinxrs.paymentHashFromInvoice
 import uniffi.sphinxrs.processInvite
 import uniffi.sphinxrs.read
@@ -59,6 +62,7 @@ import uniffi.sphinxrs.signBytes
 import uniffi.sphinxrs.xpubFromSeed
 import java.security.SecureRandom
 import java.util.Calendar
+import kotlin.math.min
 
 class ConnectManagerImpl: ConnectManager()
 {
@@ -69,10 +73,10 @@ class ConnectManagerImpl: ConnectManager()
     private var ownerSeed: String? = null
     private var inviteCode: String? = null
     private var inviteInitialTribe: String? = null
+    private var currentInvite: NewInvite? = null
     private var restoreMnemonicWords: List<String>? = emptyList()
     private var inviterContact: NewContact? = null
     private var hasAttemptedReconnect = false
-    private var restoreLastOwnerIndex = 0
 
     private val _ownerInfoStateFlow: MutableStateFlow<OwnerInfo?> by lazy {
         MutableStateFlow(null)
@@ -97,18 +101,22 @@ class ConnectManagerImpl: ConnectManager()
 
         seed.first?.let { firstSeed ->
             val xPub = generateXPub(firstSeed, now, network)
-            val sig = rootSignMs(firstSeed, now, network)
+            val sig = signMs(firstSeed, now, network)
             ownerSeed = firstSeed
 
             if (xPub != null) {
                 var invite: RunReturn? = null
 
                 if (inviteCode != null) {
-                    invite = processInvite(ownerSeed!!, now, getCurrentUserState(), inviteCode!!)
-                    _mixerIp = invite.lspHost
+                    invite = processNewInvite(ownerSeed!!, now, getCurrentUserState(), inviteCode!!)
+                    _mixerIp = invite?.lspHost
                 }
 
                 connectToMQTT(mixerIp!!, xPub, now, sig, invite)
+            } else {
+                notifyListeners {
+                    onConnectManagerError(ConnectManagerError.GenerateXPubError)
+                }
             }
         }
     }
@@ -137,6 +145,9 @@ class ConnectManagerImpl: ConnectManager()
 
                 words.toWalletMnemonic()
             } catch (e: Exception) {
+                notifyListeners {
+                    onConnectManagerError(ConnectManagerError.GenerateMnemonicError)
+                }
                 null
             }
         }
@@ -148,7 +159,6 @@ class ConnectManagerImpl: ConnectManager()
                 notifyListeners {
                     onMnemonicWords(words)
                 }
-
             } catch (e: Exception) {}
         }
 
@@ -159,6 +169,30 @@ class ConnectManagerImpl: ConnectManager()
         return try {
             xpubFromSeed(seed, time, network)
         } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun signMs(seed: String, time: String, network: String): String {
+        return try {
+            rootSignMs(seed, time, network)
+        } catch (e: Exception) {
+            ""
+        }
+    }
+
+    private fun processNewInvite(
+        seed: String,
+        uniqueTime: String,
+        state: ByteArray,
+        inviteQr: String
+    ): RunReturn? {
+        return try {
+            processInvite(seed, uniqueTime, state, inviteQr)
+        } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.ProcessInviteError)
+            }
             null
         }
     }
@@ -262,19 +296,14 @@ class ConnectManagerImpl: ConnectManager()
         password: String,
         invite: RunReturn? = null
     ) {
-        mqttClient = try {
-            MqttAsyncClient(serverURI, clientId, null)
-        } catch (e: MqttException) {
-            e.printStackTrace()
-            return
-        }
-
-        val options = MqttConnectOptions().apply {
-            this.userName = key
-            this.password = password.toCharArray()
-        }
-
         try {
+            mqttClient = MqttAsyncClient(serverURI, clientId, null)
+
+            val options = MqttConnectOptions().apply {
+                this.userName = key
+                this.password = password.toCharArray()
+            }
+
             mqttClient?.connect(options, null, object : IMqttActionListener {
                 override fun onSuccess(asyncActionToken: IMqttToken?) {
                     Log.d("MQTT_MESSAGES", "MQTT CONNECTED!")
@@ -294,6 +323,8 @@ class ConnectManagerImpl: ConnectManager()
                 override fun onFailure(asyncActionToken: IMqttToken?, exception: Throwable?) {
                     Log.d("MQTT_MESSAGES", "Failed to connect to MQTT: ${exception?.message}")
 
+                    // If it's the first time trying to connect, try to reconnect otherwise
+                    // prevent infinite loop
                     if (!hasAttemptedReconnect) {
                         hasAttemptedReconnect = true
                         reconnectWithBackoff()
@@ -332,12 +363,16 @@ class ConnectManagerImpl: ConnectManager()
                 }
             })
         } catch (e: MqttException) {
-            Log.d("MQTT_MESSAGES", "MQTT DISCONNECTED! exception")
-            e.printStackTrace()
+            Log.d("MQTT_MESSAGES", "MQTT DISCONNECTED! exception ${e.printStackTrace()}")
+
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.MqttConnectError)
+            }
 
             reconnectWithBackoff()
         }
     }
+
 
     private fun handleMessageArrived(topic: String?, message: MqttMessage?) {
         if (topic != null && message?.payload != null) {
@@ -417,10 +452,13 @@ class ConnectManagerImpl: ConnectManager()
                     handleRunReturn(fetchMessages, mqttClient)
 
                     getReadMessages()
-                    Log.d("SELLAMO", "fetchMessages")
+                    getMutedChats()
                 }
             }
         } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.SubscribeOwnerError)
+            }
             Log.e("MQTT_MESSAGES", "${e.message}")
         }
     }
@@ -456,13 +494,18 @@ class ConnectManagerImpl: ConnectManager()
             )
             handleRunReturn(message, mqttClient)
 
-            message.msgs.firstOrNull()?.uuid?.let { msgUUID ->
-                notifyListeners {
-                    onMessageUUID(msgUUID, provisionalId)
+            message.msgs.firstOrNull()?.let { sentMessage ->
+                sentMessage.uuid?.let { msgUuid ->
+                    notifyListeners {
+                        onMessageTagAndUuid(sentMessage.tag, msgUuid, provisionalId)
+                    }
                 }
             }
 
         } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.SendMessageError)
+            }
             Log.e("MQTT_MESSAGES", "send ${e.message}")
         }
     }
@@ -482,7 +525,7 @@ class ConnectManagerImpl: ConnectManager()
                 ownerSeed!!,
                 now,
                 contactPubKey,
-                MessageType.DELETE.toUByte(),
+                17.toUByte(), // Fix this hardcoded value
                 sphinxMessage,
                 getCurrentUserState(),
                 ownerInfoStateFlow.value?.alias ?: "",
@@ -493,6 +536,9 @@ class ConnectManagerImpl: ConnectManager()
             handleRunReturn(message, mqttClient)
 
         } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.DeleteMessageError)
+            }
             Log.e("MQTT_MESSAGES", "send ${e.message}")
         }
     }
@@ -522,6 +568,9 @@ class ConnectManagerImpl: ConnectManager()
             handleRunReturn(joinTribeMessage, mqttClient)
 
         } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.JoinTribeError)
+            }
             Log.e("MQTT_MESSAGES", "joinTribe ${e.message}")
         }
     }
@@ -545,6 +594,9 @@ class ConnectManagerImpl: ConnectManager()
             }
         }
         catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.CreateTribeError)
+            }
             Log.e("MQTT_MESSAGES", "createTribe ${e.message}")
         }
     }
@@ -554,9 +606,10 @@ class ConnectManagerImpl: ConnectManager()
         welcomeMessage: String,
         sats: Long,
         tribeServerPubKey: String?
-    ): Pair<String, String>? {
+    ) {
         val now = getTimestampInMilliseconds()
 
+        // Initial tribe is hardcoded for now
         try {
             val createInvite = makeInvite(
                 ownerSeed!!,
@@ -566,22 +619,32 @@ class ConnectManagerImpl: ConnectManager()
                 convertSatsToMillisats(sats),
                 ownerInfoStateFlow.value?.alias ?: "",
                 "34.229.52.200:8801",
-                tribeServerPubKey
+                "02792ee5b9162f9a00686aaa5d5274e91fd42a141113007797b5c1872d43f78e07"
             )
 
             if (createInvite.newInvite != null) {
-                handleRunReturn(createInvite, mqttClient)
-
-                val invite = createInvite.newInvite ?: return null
+                val invite = createInvite.newInvite ?: return
                 val code = codeFromInvite(invite)
+                val tag = createInvite.msgs.getOrNull(0)?.tag
 
-                return Pair(invite, code)
+                currentInvite = NewInvite(
+                    nickname,
+                    sats,
+                    welcomeMessage,
+                    tribeServerPubKey,
+                    invite,
+                    code,
+                    tag
+                )
+
+                handleRunReturn(createInvite, mqttClient)
             }
-
         } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.CreateInviteError)
+            }
             Log.e("MQTT_MESSAGES", "createInvite ${e.message}")
         }
-        return null
     }
 
     override fun createInvoice(amount: Long, memo: String): Pair<String, String>? {
@@ -605,9 +668,32 @@ class ConnectManagerImpl: ConnectManager()
             }
 
         } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.CreateInvoiceError)
+            }
             Log.e("MQTT_MESSAGES", "makeInvoice ${e.message}")
         }
         return null
+    }
+
+    override fun sendKeySend(pubKey: String, amount: Long) {
+        val now = getTimestampInMilliseconds()
+        try {
+            val keySend = uniffi.sphinxrs.keysend(
+                ownerSeed!!,
+                now,
+                pubKey,
+                getCurrentUserState(),
+                convertSatsToMillisats(amount),
+                null
+            )
+            handleRunReturn(keySend, mqttClient)
+        } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.SendKeySendError)
+            }
+            Log.e("MQTT_MESSAGES", "sendKeySend ${e.message}")
+        }
     }
 
     override fun getTribeServerPubKey(): String? {
@@ -618,6 +704,9 @@ class ConnectManagerImpl: ConnectManager()
             Log.d("MQTT_MESSAGES", "getDefaultTribeServer $defaultTribe")
             defaultTribe
         } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.ServerPubKeyError)
+            }
             null
         }
     }
@@ -637,6 +726,9 @@ class ConnectManagerImpl: ConnectManager()
             )
             handleRunReturn(processInvoice, mqttClient)
         } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.PayContactInvoiceError)
+            }
             Log.e("MQTT_MESSAGES", "processInvoicePayment ${e.message}")
         }
     }
@@ -644,6 +736,66 @@ class ConnectManagerImpl: ConnectManager()
     override fun retrievePaymentHash(paymentRequest: String): String? {
         return try {
             paymentHashFromInvoice(paymentRequest)
+        } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.PaymentHashError)
+            }
+            null
+        }
+    }
+
+    override fun getPayments(
+        lastMsgDate: Long,
+        limit: Int,
+        scid: Long?,
+        remoteOnly: Boolean?,
+        minMsat: Long?,
+        reverse: Boolean?
+    ) {
+        val now = getTimestampInMilliseconds()
+
+        try {
+            val payments = uniffi.sphinxrs.fetchPayments(
+                ownerSeed!!,
+                now,
+                getCurrentUserState(),
+                lastMsgDate.plus(1000).toULong(),
+                limit.toUInt(),
+                scid?.toULong(),
+                remoteOnly ?: false,
+                minMsat?.toULong(),
+                true
+            )
+            handleRunReturn(payments, mqttClient)
+        } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.LoadTransactionsError)
+            }
+            Log.e("MQTT_MESSAGES", "getPayments ${e.message}")
+        }
+    }
+
+    override fun getPubKeyFromChildIndex(childIndex: Long): String? {
+        return try {
+            uniffi.sphinxrs.contactPubkeyByChildIndex(
+                getCurrentUserState(),
+                childIndex.toULong()
+            )
+        } catch (e: Exception) {
+//            notifyListeners {
+//                onConnectManagerError(ConnectManagerError.PubKeyFromChildIndexError)
+//            }
+            null
+        }
+    }
+
+    override fun getPubKeyByEncryptedChild(child: String): String? {
+        return try {
+            uniffi.sphinxrs.contactPubkeyByEncryptedChild(
+                ownerSeed!!,
+                getCurrentUserState(),
+                child
+            )
         } catch (e: Exception) {
             null
         }
@@ -663,6 +815,9 @@ class ConnectManagerImpl: ConnectManager()
             handleRunReturn(tribeMembers, mqttClient)
         }
         catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.ListTribeMembersError)
+            }
             Log.e("MQTT_MESSAGES", "tribeMembers ${e.message}")
         }
     }
@@ -684,6 +839,9 @@ class ConnectManagerImpl: ConnectManager()
                 onRestoreNextPageMessages(totalHighestIndex ?: 0, limit)
             }
         } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.FetchMessageError)
+            }
             Log.e("MQTT_MESSAGES", "fetchMessagesOnRestoreAccount ${e.message}")
         }
     }
@@ -700,6 +858,9 @@ class ConnectManagerImpl: ConnectManager()
             )
             handleRunReturn(fetchFirstMsg, mqttClient)
         } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.FetchFirstMessageError)
+            }
             Log.e("MQTT_MESSAGES", "fetchFirstMessagesPerKey ${e.message}")
         }
     }
@@ -713,6 +874,9 @@ class ConnectManagerImpl: ConnectManager()
             )
             handleRunReturn(messageAmount, mqttClient)
         } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.MessageCountError)
+            }
             Log.e("MQTT_MESSAGES", "getAllMessagesCount ${e.message}")
         }
     }
@@ -745,7 +909,27 @@ class ConnectManagerImpl: ConnectManager()
             )
             handleRunReturn(token, mqttClient)
         } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.SetDeviceIdError)
+            }
             Log.e("MQTT_MESSAGES", "setOwnerDeviceId ${e.message}")
+        }
+    }
+
+    override fun setMute(muteLevel: Int, contactPubKey: String) {
+        try {
+            val mute = mute(
+                ownerSeed!!,
+                getTimestampInMilliseconds(),
+                getCurrentUserState(),
+                contactPubKey,
+                muteLevel.toUByte()
+            )
+            handleRunReturn(mute, mqttClient)
+        } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.SetMuteError)
+            }
         }
     }
 
@@ -778,7 +962,7 @@ class ConnectManagerImpl: ConnectManager()
                     muid,
                     contactPubKey,
                     yearFromNow!!,
-                    convertSatsToMillisats(amount),
+                    amount.toULong(),
                 )
             } else {
                 if (metaData != null) {
@@ -805,6 +989,9 @@ class ConnectManagerImpl: ConnectManager()
                 }
             }
         } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.MediaTokenError)
+            }
             Log.d("MQTT_MESSAGES", "Error to generate media token $e")
             null
         }
@@ -824,6 +1011,9 @@ class ConnectManagerImpl: ConnectManager()
             )
             handleRunReturn(readMessage, mqttClient)
         } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.ReadMessageError)
+            }
             Log.e("MQTT_MESSAGES", "readMessage ${e.message}")
         }
     }
@@ -837,7 +1027,23 @@ class ConnectManagerImpl: ConnectManager()
             )
             handleRunReturn(readMessages, mqttClient)
         } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.GetReadMessagesError)
+            }
             Log.e("MQTT_MESSAGES", "getReadMessages ${e.message}")
+        }
+    }
+
+    override fun getMutedChats() {
+        try {
+            val mutedChats = getMutes(
+                ownerSeed!!,
+                getTimestampInMilliseconds(),
+                getCurrentUserState()
+            )
+            handleRunReturn(mutedChats, mqttClient)
+        } catch (e: Exception) {
+            Log.e("MQTT_MESSAGES", "getMutedChats ${e.message}")
         }
     }
 
@@ -967,9 +1173,6 @@ class ConnectManagerImpl: ConnectManager()
 
             // Handling new invite created
             rr.newInvite?.let { invite ->
-                notifyListeners {
-                    onNewInviteCreated(invite)
-                }
                 Log.d("MQTT_MESSAGES", "=> new_invite $invite")
             }
 
@@ -988,7 +1191,8 @@ class ConnectManagerImpl: ConnectManager()
                     false,
                     null,
                     code,
-                    null
+                    null,
+                    null,
                 )
 
                 subscribeOwnerMQTT()
@@ -1035,6 +1239,27 @@ class ConnectManagerImpl: ConnectManager()
 
             // Sent
             rr.sentStatus?.let { sentStatus ->
+                val tagAndStatus = extractTagAndStatus(sentStatus)
+
+                if (tagAndStatus?.first == currentInvite?.tag) {
+                    if (tagAndStatus?.second == true) {
+
+                        notifyListeners {
+                            onNewInviteCreated(
+                                currentInvite?.nickname.orEmpty(),
+                                currentInvite?.inviteString ?: "",
+                                currentInvite?.inviteCode ?: "",
+                                currentInvite?.invitePrice ?: 0L,
+                            )
+                        }
+                        currentInvite = null
+                    }
+                } else {
+                    notifyListeners {
+                        onSentStatus(sentStatus)
+                    }
+                }
+
                 Log.d("MQTT_MESSAGES", "=> sent_status $sentStatus")
             }
 
@@ -1046,11 +1271,38 @@ class ConnectManagerImpl: ConnectManager()
             rr.lspHost?.let { lspHost ->
                 mixerIp = lspHost
             }
-        } else {
-            // MQTT ERROR
-        }
 
+            rr.muteLevels?.let { muteLevels ->
+                notifyListeners {
+                    onUpdateMutes(muteLevels)
+                }
+                Log.d("MQTT_MESSAGES", "=> muteLevels $muteLevels")
+            }
+            rr.payments?.let { payments ->
+                notifyListeners {
+                    onPayments(payments)
+                }
+                logLongString("PAYMENTS_MESSAGES", payments)
+            }
+            rr.paymentsTotal?.let { paymentsTotal ->
+                Log.d("MQTT_MESSAGES", "=> paymentsTotal $paymentsTotal")
+            }
+        } else {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.MqttClientError)
+            }
+        }
     }
+
+     private fun logLongString(tag: String, str: String) {
+        val maxLogSize = 4000 // You can set it to 4000 or any suitable chunk size
+        for (i in 0..str.length / maxLogSize) {
+            val start = i * maxLogSize
+            val end = (i + 1) * maxLogSize
+            Log.d(tag, str.substring(start, min(end, str.length)))
+        }
+    }
+
     override fun retrieveLspIp(): String? {
         return mixerIp
     }
@@ -1066,19 +1318,22 @@ class ConnectManagerImpl: ConnectManager()
                 challenge.toByteArray()
             )
         } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.SignBytesError)
+            }
             null
         }
 
         if (signedChallenge != null) {
 
-           val sign = ByteArray(signedChallenge.length / 2) { index ->
-               val start = index * 2
-               val end = start + 2
-               val byteValue = signedChallenge.substring(start, end).toInt(16)
-               byteValue.toByte()
-           }.encodeBase64()
-               .replace("/", "_")
-               .replace("+", "-")
+            val sign = ByteArray(signedChallenge.length / 2) { index ->
+                val start = index * 2
+                val end = start + 2
+                val byteValue = signedChallenge.substring(start, end).toInt(16)
+                byteValue.toByte()
+            }.encodeBase64()
+                .replace("/", "_")
+                .replace("+", "-")
 
             notifyListeners {
                 onSignedChallenge(sign)
@@ -1206,6 +1461,21 @@ class ConnectManagerImpl: ConnectManager()
 
 
         return result
+    }
+
+    private fun extractTagAndStatus(sentStatusJson: String?): Pair<String, Boolean>? {
+        if (sentStatusJson == null) return null
+
+        try {
+            val jsonObject = JSONObject(sentStatusJson)
+            val tag = jsonObject.getString("tag")
+            val status = jsonObject.getString("status") == "COMPLETE"
+
+            return Pair(tag, status)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return null
     }
 
     private fun decodeBase64ToMap(encodedString: String): MutableMap<String, ByteArray> {

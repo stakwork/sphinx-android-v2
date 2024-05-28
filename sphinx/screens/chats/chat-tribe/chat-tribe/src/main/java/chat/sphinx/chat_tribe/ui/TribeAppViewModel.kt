@@ -14,10 +14,6 @@ import chat.sphinx.chat_tribe.ui.viewstate.WebViewLayoutScreenViewState
 import chat.sphinx.chat_tribe.ui.viewstate.TribeFeedViewState
 import chat.sphinx.chat_tribe.ui.viewstate.WebAppViewState
 import chat.sphinx.chat_tribe.ui.viewstate.WebViewViewState
-import chat.sphinx.concept_network_query_lightning.NetworkQueryLightning
-import chat.sphinx.concept_network_query_lightning.model.webview.LsatWebViewDto
-import chat.sphinx.concept_network_query_message.NetworkQueryMessage
-import chat.sphinx.concept_network_query_message.model.PostPaymentDto
 import chat.sphinx.concept_network_query_verify_external.NetworkQueryAuthorizeExternal
 import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.kotlin_response.LoadResponse
@@ -46,11 +42,7 @@ internal class TribeAppViewModel @Inject constructor(
     private val app: Application,
     private val contactRepository: ContactRepository,
     private val moshi: Moshi,
-    private val networkQueryLightning: NetworkQueryLightning,
     private val networkQueryAuthorizeExternal: NetworkQueryAuthorizeExternal,
-    private val networkQueryMessage: NetworkQueryMessage,
-
-
     ) : BaseViewModel<TribeFeedViewState>(dispatchers, TribeFeedViewState.Idle) {
 
     private val _sphinxWebViewDtoStateFlow: MutableStateFlow<SphinxWebViewDto?> by lazy {
@@ -176,28 +168,28 @@ internal class TribeAppViewModel @Inject constructor(
 
                 if (challenge?.isNotEmpty() == false) {
                     viewModelScope.launch(mainImmediate) {
-                        networkQueryAuthorizeExternal.signBase64(challenge)
-                            .collect { loadResponse ->
-                                @Exhaustive
-                                when (loadResponse) {
-                                    is LoadResponse.Loading -> {}
-                                    is Response.Error -> {
-                                        webViewViewStateContainer.updateViewState(
-                                            WebViewViewState.ChallengeError(
-                                                error = app.getString(R.string.side_effect_challenge_error))
-                                        )
-                                    }
-                                    is Response.Success -> {
-                                        val signature = loadResponse.value.sig
-
-                                        sendAuthorization(
-                                            amount.toLong(),
-                                            pubKey.value,
-                                            signature
-                                        )
-                                    }
-                                }
-                            }
+//                        networkQueryAuthorizeExternal.signBase64(challenge)
+//                            .collect { loadResponse ->
+//                                @Exhaustive
+//                                when (loadResponse) {
+//                                    is LoadResponse.Loading -> {}
+//                                    is Response.Error -> {
+//                                        webViewViewStateContainer.updateViewState(
+//                                            WebViewViewState.ChallengeError(
+//                                                error = app.getString(R.string.side_effect_challenge_error))
+//                                        )
+//                                    }
+//                                    is Response.Success -> {
+//                                        val signature = loadResponse.value.sig
+//
+//                                        sendAuthorization(
+//                                            amount.toLong(),
+//                                            pubKey.value,
+//                                            signature
+//                                        )
+//                                    }
+//                                }
+//                            }
                     }
                 } else {
                     sendAuthorization(amount.toLong(), pubKey.value, null)
@@ -210,37 +202,7 @@ internal class TribeAppViewModel @Inject constructor(
         sphinxWebViewDtoStateFlow.value?.amt?.let { amount ->
             sphinxWebViewDtoStateFlow.value?.dest?.let { destination ->
                 if (budgetStateFlow.value.value >= amount) {
-                    viewModelScope.launch(mainImmediate) {
-                        networkQueryMessage.sendPayment(
-                            PostPaymentDto(
-                                chat_id = null,
-                                contact_id = null,
-                                text = null,
-                                remote_text = null,
-                                amount = amount.toLong(),
-                                destination_key = destination
-                            )
-                        ).collect { loadResponse ->
-                            @Exhaustive
-                            when (loadResponse) {
-                                is LoadResponse.Loading -> {}
-                                is Response.Error -> {
-                                    sendMessage(
-                                        type = TYPE_KEYSEND,
-                                        success = false,
-                                        error = app.getString(R.string.side_effect_keysend_error)
-                                    )
-                                }
-                                is Response.Success -> {
-                                    sendMessage(
-                                        type = TYPE_KEYSEND,
-                                        success = true,
-                                        error = null
-                                    )
-                                }
-                            }
-                        }
-                    }
+                    viewModelScope.launch(mainImmediate) {}
                     return
                 }
             }
@@ -261,36 +223,7 @@ internal class TribeAppViewModel @Inject constructor(
 
                 amount?.let { nnAmount ->
                     if (budgetStateFlow.value.value >= (nnAmount.value)) {
-                        viewModelScope.launch(mainImmediate) {
-                            networkQueryLightning.payLsat(
-                                LsatWebViewDto(
-                                    sphinxWebViewDtoStateFlow.value?.paymentRequest,
-                                    sphinxWebViewDtoStateFlow.value?.macaroon,
-                                    sphinxWebViewDtoStateFlow.value?.issuer
-                                )
-                            ).collect { loadResponse ->
-                                @Exhaustive
-                                when (loadResponse) {
-                                    is LoadResponse.Loading -> {}
-                                    is Response.Error -> {
-                                        sendMessage(
-                                            type = TYPE_LSAT,
-                                            success = false,
-                                            error = app.getString(R.string.side_effect_error_pay_lsat)
-                                        )
-                                    }
-                                    is Response.Success -> {
-                                        _budgetStateFlow.value = Sat(budgetStateFlow.value.value - nnAmount.value)
-                                        sendMessage(
-                                            type = TYPE_LSAT,
-                                            success = true,
-                                            lsat = loadResponse.value.lsat,
-                                            error = null
-                                        )
-                                    }
-                                }
-                            }
-                        }
+                        viewModelScope.launch(mainImmediate) {}
                     } else {
                         sendMessage(
                             type = TYPE_LSAT,

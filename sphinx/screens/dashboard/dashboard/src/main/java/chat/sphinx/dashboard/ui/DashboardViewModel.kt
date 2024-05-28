@@ -10,17 +10,12 @@ import androidx.lifecycle.viewModelScope
 import app.cash.exhaustive.Exhaustive
 import chat.sphinx.concept_background_login.BackgroundLoginHandler
 import chat.sphinx.concept_network_query_crypter.NetworkQueryCrypter
-import chat.sphinx.concept_network_query_lightning.NetworkQueryLightning
-import chat.sphinx.concept_network_query_lightning.model.invoice.PayRequestDto
-import chat.sphinx.concept_network_query_lightning.model.invoice.PostRequestPaymentDto
 import chat.sphinx.concept_network_query_people.NetworkQueryPeople
 import chat.sphinx.concept_network_query_people.model.isClaimOnLiquidPath
 import chat.sphinx.concept_network_query_people.model.isDeleteMethod
 import chat.sphinx.concept_network_query_people.model.isProfilePath
 import chat.sphinx.concept_network_query_people.model.isSaveMethod
 import chat.sphinx.concept_network_query_verify_external.NetworkQueryAuthorizeExternal
-import chat.sphinx.concept_network_query_version.NetworkQueryVersion
-import chat.sphinx.concept_relay.RelayDataHandler
 import chat.sphinx.concept_repository_actions.ActionsRepository
 import chat.sphinx.concept_repository_chat.ChatRepository
 import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
@@ -34,8 +29,6 @@ import chat.sphinx.concept_service_media.MediaPlayerServiceController
 import chat.sphinx.concept_service_notification.PushNotificationRegistrar
 import chat.sphinx.concept_signer_manager.SignerManager
 import chat.sphinx.concept_signer_manager.SignerPhoneCallback
-import chat.sphinx.concept_socket_io.SocketIOManager
-import chat.sphinx.concept_socket_io.SocketIOState
 import chat.sphinx.concept_view_model_coordinator.ViewModelCoordinator
 import chat.sphinx.concept_wallet.WalletDataHandler
 import chat.sphinx.dashboard.R
@@ -46,10 +39,9 @@ import chat.sphinx.dashboard.ui.viewstates.ChatListFooterButtonsViewState
 import chat.sphinx.dashboard.ui.viewstates.DashboardMotionViewState
 import chat.sphinx.dashboard.ui.viewstates.DashboardTabsViewState
 import chat.sphinx.dashboard.ui.viewstates.DeepLinkPopupViewState
+import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
 import chat.sphinx.kotlin_response.LoadResponse
 import chat.sphinx.kotlin_response.Response
-import chat.sphinx.kotlin_response.ResponseError
-import chat.sphinx.kotlin_response.exception
 import chat.sphinx.logger.SphinxLogger
 import chat.sphinx.menu_bottom.ui.MenuBottomViewState
 import chat.sphinx.menu_bottom_scanner.ScannerMenuHandler
@@ -83,8 +75,6 @@ import chat.sphinx.wrapper_common.lightning.LightningNodePubKey
 import chat.sphinx.wrapper_common.lightning.LightningPaymentRequest
 import chat.sphinx.wrapper_common.lightning.LightningRouteHint
 import chat.sphinx.wrapper_common.lightning.Sat
-import chat.sphinx.wrapper_common.lightning.getPubKey
-import chat.sphinx.wrapper_common.lightning.getRouteHint
 import chat.sphinx.wrapper_common.lightning.isValidLightningNodeLink
 import chat.sphinx.wrapper_common.lightning.isValidLightningNodePubKey
 import chat.sphinx.wrapper_common.lightning.isValidLightningPaymentRequest
@@ -93,7 +83,6 @@ import chat.sphinx.wrapper_common.lightning.toLightningNodePubKey
 import chat.sphinx.wrapper_common.lightning.toLightningPaymentRequestOrNull
 import chat.sphinx.wrapper_common.lightning.toLightningRouteHint
 import chat.sphinx.wrapper_common.lightning.toSat
-import chat.sphinx.wrapper_common.lightning.toVirtualLightningNodeAddress
 import chat.sphinx.wrapper_common.message.SphinxCallLink
 import chat.sphinx.wrapper_common.message.toSphinxCallLink
 import chat.sphinx.wrapper_common.toCreateInvoiceLink
@@ -161,10 +150,8 @@ internal class DashboardViewModel @Inject constructor(
     private val chatRepository: ChatRepository,
     private val feedRepository: FeedRepository,
     private val actionsRepository: ActionsRepository,
-    private val networkQueryLightning: NetworkQueryLightning,
     private val lightningRepository: LightningRepository,
 
-    private val networkQueryVersion: NetworkQueryVersion,
     private val networkQueryAuthorizeExternal: NetworkQueryAuthorizeExternal,
     private val networkQueryPeople: NetworkQueryPeople,
     private val pushNotificationRegistrar: PushNotificationRegistrar,
@@ -172,7 +159,6 @@ internal class DashboardViewModel @Inject constructor(
 
     private val walletDataHandler: WalletDataHandler,
 
-    private val relayDataHandler: RelayDataHandler,
     private val mediaPlayerServiceController: MediaPlayerServiceController,
 
     private val scannerCoordinator: ViewModelCoordinator<ScannerRequest, ScannerResponse>,
@@ -180,7 +166,6 @@ internal class DashboardViewModel @Inject constructor(
     private val connectManagerRepository: ConnectManagerRepository,
 
     private val LOG: SphinxLogger,
-    private val socketIOManager: SocketIOManager,
 ) : MotionLayoutViewModel<
         Any,
         Context,
@@ -230,14 +215,13 @@ internal class DashboardViewModel @Inject constructor(
         }
         connectManagerRepository.connectAndSubscribeToMqtt(getUserState())
         setDeviceId()
-        collectConnectionStateStateFlow()
+        collectConnectionState()
+        collectConnectManagerErrorState()
 
         getHideBalanceState()
 
         syncFeedRecommendationsState()
 
-        getRelayKeys()
-        checkAppVersion()
         handleDeepLink(args.argDeepLink)
 
         actionsRepository.syncActions()
@@ -264,7 +248,7 @@ internal class DashboardViewModel @Inject constructor(
         }
     }
 
-    private fun collectConnectionStateStateFlow() {
+    private fun collectConnectionState() {
         viewModelScope.launch(mainImmediate) {
             connectManagerRepository.connectionManagerState.collect { connectionState ->
                 when (connectionState) {
@@ -286,6 +270,77 @@ internal class DashboardViewModel @Inject constructor(
             }
         }
     }
+
+    private fun collectConnectManagerErrorState() {
+        viewModelScope.launch(mainImmediate) {
+            connectManagerRepository.connectManagerErrorState.collect { connectManagerError ->
+                when (connectManagerError) {
+                    is ConnectManagerError.GenerateXPubError -> {
+                        submitSideEffect(ChatListSideEffect.Notify(
+                            app.getString(R.string.connect_manager_generate_xpub_error))
+                        )
+                    }
+                    is ConnectManagerError.MqttConnectError -> {
+                        submitSideEffect(ChatListSideEffect.Notify(
+                            app.getString(R.string.connect_manager_mqtt_connect_error))
+                        )
+                    }
+                    is ConnectManagerError.MqttClientError -> {
+                        submitSideEffect(ChatListSideEffect.Notify(
+                            app.getString(R.string.connect_manager_mqtt_client_error))
+                        )
+                    }
+                    is ConnectManagerError.MqttInitError -> {
+                        submitSideEffect(ChatListSideEffect.Notify(
+                            app.getString(R.string.connect_manager_mqtt_init_error))
+                        )
+                    }
+                    is ConnectManagerError.JoinTribeError -> {
+                        submitSideEffect(ChatListSideEffect.Notify(
+                            app.getString(R.string.connect_manager_join_tribe_error))
+                        )
+                    }
+                    is ConnectManagerError.CreateTribeError -> {
+                        submitSideEffect(ChatListSideEffect.Notify(
+                            app.getString(R.string.connect_manager_create_tribe_error))
+                        )
+                    }
+                    is ConnectManagerError.CreateInviteError -> {
+                        submitSideEffect(ChatListSideEffect.Notify(
+                            app.getString(R.string.connect_manager_create_invite_error))
+                        )
+                    }
+                    is ConnectManagerError.CreateInvoiceError -> {
+                        submitSideEffect(ChatListSideEffect.Notify(
+                            app.getString(R.string.connect_manager_create_invoice_error))
+                        )
+                    }
+                    is ConnectManagerError.GetReadMessagesError -> {
+                        submitSideEffect(ChatListSideEffect.Notify(
+                            app.getString(R.string.connect_manager_get_read_messages_error))
+                        )
+                    }
+                    is ConnectManagerError.SignBytesError -> {
+                        submitSideEffect(ChatListSideEffect.Notify(
+                            app.getString(R.string.connect_manager_sign_bytes_error))
+                        )
+                    }
+                    is ConnectManagerError.SendKeySendError -> {
+                        submitSideEffect(ChatListSideEffect.Notify(
+                            app.getString(R.string.connect_manager_keysend_error))
+                        )
+                    }
+                    is ConnectManagerError.LoadTransactionsError -> {
+                        submitSideEffect(ChatListSideEffect.Notify(
+                            app.getString(R.string.connect_manager_load_transactions_error))
+                        )
+                    }
+                    else -> {}
+                }
+            }
+        }
+    }
+
 
     private fun storeUserState(state: String) {
         val editor = userStateSharedPreferences.edit()
@@ -343,11 +398,6 @@ internal class DashboardViewModel @Inject constructor(
         }
     }
 
-    private fun getRelayKeys() {
-        repositoryDashboard.getAndSaveTransportKey(forceGet = true)
-        repositoryDashboard.getOrCreateHMacKey(forceGet = true)
-    }
-
     fun handleDeepLink(deepLink: String?) {
         viewModelScope.launch(mainImmediate) {
             delay(100L)
@@ -362,8 +412,6 @@ internal class DashboardViewModel @Inject constructor(
                 handleExternalRequestLink(externalRequestLink)
             } ?: deepLink?.toStakworkAuthorizeLink()?.let { stakworkAuthorizeLink ->
                 handleStakworkAuthorizeLink(stakworkAuthorizeLink)
-            } ?: deepLink?.toCreateInvoiceLink()?.let { createInvoiceLink ->
-                handleCreateInvoiceLink(createInvoiceLink)
             } ?: deepLink?.toRedeemSatsLink()?.let { redeemSatsLink ->
                 handleRedeemSatsLink(redeemSatsLink)
             } ?: deepLink?.toFeedItemLink()?.let { feedItemLink ->
@@ -419,6 +467,10 @@ internal class DashboardViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    suspend fun getPubKeyByEncryptedChild(child: String): ChatId? {
+        return connectManagerRepository.getPubKeyByEncryptedChild(child).firstOrNull()
     }
 
     private fun syncFeedRecommendationsState() {
@@ -523,7 +575,7 @@ internal class DashboardViewModel @Inject constructor(
                     val pubKey = contactInfo.getOrNull(0)?.toLightningNodePubKey()
                     val contactRouteHint = "${contactInfo.getOrNull(1)}_${contactInfo.getOrNull(2)}".toLightningRouteHint()
 
-                    if (pubKey != null && contactRouteHint != null) {
+                    if (pubKey != null) {
                         handleContactLink(pubKey, contactRouteHint)
                     } else {
                         null
@@ -633,36 +685,6 @@ internal class DashboardViewModel @Inject constructor(
         deepLinkPopupViewStateContainer.updateViewState(
             DeepLinkPopupViewState.RedeemSatsPopup(link)
         )
-    }
-
-    private fun handleCreateInvoiceLink(link: CreateInvoiceLink) {
-        viewModelScope.launch(mainImmediate) {
-            val postRequestPaymentDto = PostRequestPaymentDto(
-                link.amount.toLong(),
-            )
-
-            networkQueryLightning.postRequestPayment(postRequestPaymentDto)
-                .collect { loadResponse ->
-                    @javax.annotation.meta.Exhaustive
-                    when (loadResponse) {
-                        is LoadResponse.Loading -> {}
-                        is Response.Error -> {
-                            submitSideEffect(
-                                ChatListSideEffect.Notify(
-                                    app.getString(R.string.failed_to_request_payment)
-                                )
-                            )
-                        }
-                        is Response.Success -> {
-                            dashboardNavigator.toQRCodeDetail(
-                                loadResponse.value.invoice,
-                                app.getString(R.string.payment_request),
-                                app.getString(R.string.amount_n_sats, link.amount.toLong()),
-                            )
-                        }
-                    }
-                }
-        }
     }
 
     private suspend fun handleExternalRequestLink(link: ExternalRequestLink) {
@@ -882,29 +904,22 @@ internal class DashboardViewModel @Inject constructor(
                     DeepLinkPopupViewState.ExternalAuthorizePopupProcessing
                 )
 
-                val relayUrl: RelayUrl = relayDataHandler.retrieveRelayUrl() ?: return@launch
 
-                val response = repositoryDashboard.authorizeExternal(
-                    relayUrl.value,
-                    viewState.link.host,
-                    viewState.link.challenge
-                )
-
-                when (response) {
-                    is Response.Error -> {
-                        submitSideEffect(
-                            ChatListSideEffect.Notify(response.cause.message)
-                        )
-                    }
-                    is Response.Success -> {
-                        val i = Intent(Intent.ACTION_VIEW)
-                        i.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                        i.data = Uri.parse(
-                            "https://${viewState.link.host}?challenge=${viewState.link.challenge}"
-                        )
-                        app.startActivity(i)
-                    }
-                }
+//                when (response) {
+//                    is Response.Error -> {
+//                        submitSideEffect(
+//                            ChatListSideEffect.Notify(response.cause.message)
+//                        )
+//                    }
+//                    is Response.Success -> {
+//                        val i = Intent(Intent.ACTION_VIEW)
+//                        i.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+//                        i.data = Uri.parse(
+//                            "https://${viewState.link.host}?challenge=${viewState.link.challenge}"
+//                        )
+//                        app.startActivity(i)
+//                    }
+//                }
             } else if (viewState is DeepLinkPopupViewState.StakworkAuthorizePopup) {
                 deepLinkPopupViewStateContainer.updateViewState(
                     DeepLinkPopupViewState.ExternalAuthorizePopupProcessing
@@ -985,9 +1000,7 @@ internal class DashboardViewModel @Inject constructor(
         )
 
         when (viewState) {
-            is DeepLinkPopupViewState.RedeemTokensPopup -> {
-                redeemBadgeToken(viewState.body)
-            }
+            is DeepLinkPopupViewState.RedeemTokensPopup -> {}
             is DeepLinkPopupViewState.SaveProfilePopup -> {
                 savePeopleProfile(viewState.body)
             }
@@ -1024,61 +1037,32 @@ internal class DashboardViewModel @Inject constructor(
     }
 
     private suspend fun savePeopleProfile(body: String) {
-        viewModelScope.launch(mainImmediate) {
-            val response = repositoryDashboard.savePeopleProfile(
-                body
-            )
-
-            when (response) {
-                is Response.Error -> {
-                    submitSideEffect(
-                        ChatListSideEffect.Notify(
-                            app.getString(R.string.dashboard_save_profile_generic_error)
-                        )
-                    )
-                }
-                is Response.Success -> {
-                    submitSideEffect(
-                        ChatListSideEffect.Notify(
-                            app.getString(R.string.dashboard_save_profile_success)
-                        )
-                    )
-                }
-            }
-        }.join()
+//        viewModelScope.launch(mainImmediate) {
+//            val response = repositoryDashboard.savePeopleProfile(
+//                body
+//            )
+//
+//            when (response) {
+//                is Response.Error -> {
+//                    submitSideEffect(
+//                        ChatListSideEffect.Notify(
+//                            app.getString(R.string.dashboard_save_profile_generic_error)
+//                        )
+//                    )
+//                }
+//                is Response.Success -> {
+//                    submitSideEffect(
+//                        ChatListSideEffect.Notify(
+//                            app.getString(R.string.dashboard_save_profile_success)
+//                        )
+//                    )
+//                }
+//            }
+//        }.join()
 
         deepLinkPopupViewStateContainer.updateViewState(
             DeepLinkPopupViewState.PopupDismissed
         )
-    }
-
-    private suspend fun redeemBadgeToken(body: String) {
-            viewModelScope.launch(mainImmediate) {
-                val response = repositoryDashboard.redeemBadgeToken(
-                    body
-                )
-
-                when (response) {
-                    is Response.Error -> {
-                        submitSideEffect(
-                            ChatListSideEffect.Notify(
-                                app.getString(R.string.dashboard_redeem_badge_token_generic_error)
-                            )
-                        )
-                    }
-                    is Response.Success -> {
-                        submitSideEffect(
-                            ChatListSideEffect.Notify(
-                                app.getString(R.string.dashboard_redeem_badge_token_success)
-                            )
-                        )
-                    }
-                }
-            }.join()
-
-            deepLinkPopupViewStateContainer.updateViewState(
-                DeepLinkPopupViewState.PopupDismissed
-            )
     }
 
     val deepLinkPopupViewStateContainer: ViewStateContainer<DeepLinkPopupViewState> by lazy {
@@ -1102,24 +1086,6 @@ internal class DashboardViewModel @Inject constructor(
 
     suspend fun getAccountBalance(): StateFlow<NodeBalance?> =
         repositoryDashboard.getAccountBalance()
-
-    private fun checkAppVersion() {
-        viewModelScope.launch(mainImmediate) {
-            networkQueryVersion.getAppVersions().collect { loadResponse ->
-                @Exhaustive
-                when (loadResponse) {
-                    is LoadResponse.Loading -> {
-                    }
-                    is Response.Error -> {
-                    }
-                    is Response.Success -> {
-                        newVersionAvailable.value = loadResponse.value.kotlin > buildConfigVersionCode.value.toLong()
-                        currentVersion.value = "VERSION: ${buildConfigVersionCode.value}"
-                    }
-                }
-            }
-        }
-    }
 
     private var messagesCountJob: Job? = null
     fun screenInit() {
@@ -1237,47 +1203,11 @@ internal class DashboardViewModel @Inject constructor(
     }
 
     private fun payLightningPaymentRequest(lightningPaymentRequest: LightningPaymentRequest) {
-        viewModelScope.launch(mainImmediate) {
-            val payLightningPaymentRequestDto = PayRequestDto(lightningPaymentRequest.value)
-            networkQueryLightning.putLightningPaymentRequest(payLightningPaymentRequestDto).collect { loadResponse ->
-                @Exhaustive
-                when (loadResponse) {
-                    is LoadResponse.Loading -> {
-                        submitSideEffect(
-                            ChatListSideEffect.Notify(app.getString(R.string.attempting_payment_request), true)
-                        )
-                    }
-                    is Response.Error -> {
-                        submitSideEffect(
-                            ChatListSideEffect.Notify(
-                                String.format(
-                                    app.getString(R.string.error_payment_message),
-                                    loadResponse.exception?.message ?: loadResponse.cause.message
-                                ), true)
-                        )
-                    }
-                    is Response.Success -> {
-                        submitSideEffect(
-                            ChatListSideEffect.Notify(app.getString(R.string.successfully_paid_invoice), true)
-                        )
-                    }
-                }
-            }
-        }
+        viewModelScope.launch(mainImmediate) {}
     }
 
     private val _restoreProgressStateFlow: MutableStateFlow<RestoreProgressViewState?> by lazy {
         MutableStateFlow(null)
-    }
-
-    init {
-        viewModelScope.launch(mainImmediate) {
-            socketIOManager.socketIOStateFlow.collect { state ->
-                if (state is SocketIOState.Uninitialized) {
-                    socketIOManager.connect()
-                }
-            }
-        }
     }
 
 //    val networkStateFlow: StateFlow<Pair<LoadResponse<Boolean, ResponseError>, Boolean>>

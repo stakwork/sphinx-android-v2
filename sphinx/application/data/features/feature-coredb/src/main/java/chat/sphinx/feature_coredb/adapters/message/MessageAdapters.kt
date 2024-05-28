@@ -172,3 +172,14 @@ internal class ErrorMessageAdapter: ColumnAdapter<ErrorMessage, String> {
     }
 }
 
+internal class TagMessageAdapter: ColumnAdapter<TagMessage, String> {
+    override fun decode(databaseValue: String): TagMessage {
+        return TagMessage(databaseValue)
+    }
+
+    override fun encode(value: TagMessage): String {
+        return value.value
+    }
+}
+
+

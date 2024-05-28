@@ -5,13 +5,8 @@ import chat.sphinx.concept_network_client.NetworkClient
 import chat.sphinx.concept_network_query_chat.NetworkQueryChat
 import chat.sphinx.concept_network_query_contact.NetworkQueryContact
 import chat.sphinx.concept_network_query_invite.NetworkQueryInvite
-import chat.sphinx.concept_network_query_lightning.NetworkQueryLightning
-import chat.sphinx.concept_network_query_message.NetworkQueryMessage
-import chat.sphinx.concept_network_query_subscription.NetworkQuerySubscription
 import chat.sphinx.concept_network_query_verify_external.NetworkQueryAuthorizeExternal
 import chat.sphinx.concept_network_query_people.NetworkQueryPeople
-import chat.sphinx.concept_network_query_redeem_badge_token.NetworkQueryRedeemBadgeToken
-import chat.sphinx.concept_network_query_version.NetworkQueryVersion
 import chat.sphinx.concept_network_relay_call.NetworkRelayCall
 import chat.sphinx.concept_network_tor.*
 import chat.sphinx.concept_relay.RelayDataHandler
@@ -21,13 +16,8 @@ import chat.sphinx.feature_network_client.NetworkClientImpl
 import chat.sphinx.feature_network_query_chat.NetworkQueryChatImpl
 import chat.sphinx.feature_network_query_contact.NetworkQueryContactImpl
 import chat.sphinx.feature_network_query_invite.NetworkQueryInviteImpl
-import chat.sphinx.feature_network_query_lightning.NetworkQueryLightningImpl
-import chat.sphinx.feature_network_query_message.NetworkQueryMessageImpl
-import chat.sphinx.feature_network_query_redeem_badge_token.NetworkQueryRedeemBadgeTokenImpl
-import chat.sphinx.feature_network_query_subscription.NetworkQuerySubscriptionImpl
 import chat.sphinx.feature_network_query_verify_external.NetworkQueryAuthorizeExternalImpl
 import chat.sphinx.feature_network_query_people.NetworkQueryPeopleImpl
-import chat.sphinx.feature_network_query_version.NetworkQueryVersionImpl
 import chat.sphinx.feature_network_relay_call.NetworkRelayCallImpl
 import chat.sphinx.feature_relay.RelayDataHandlerImpl
 import chat.sphinx.logger.LogType
@@ -226,32 +216,12 @@ abstract class NetworkQueryTestHelper: AuthenticationCoreDefaultsTestHelper() {
         NetworkQueryInviteImpl(networkRelayCall)
     }
 
-    protected open val nqMessage: NetworkQueryMessage by lazy {
-        NetworkQueryMessageImpl(networkRelayCall)
-    }
-
-    protected open val nqSubscription: NetworkQuerySubscription by lazy {
-        NetworkQuerySubscriptionImpl(networkRelayCall)
-    }
-
-    protected open val nqVersion: NetworkQueryVersion by lazy {
-        NetworkQueryVersionImpl(networkRelayCall)
-    }
-
-    protected open val nqLightning: NetworkQueryLightning by lazy {
-        NetworkQueryLightningImpl(networkRelayCall)
-    }
-
     protected open val nqAuthorizeExternal: NetworkQueryAuthorizeExternal by lazy {
         NetworkQueryAuthorizeExternalImpl(networkRelayCall)
     }
 
     protected open val nqSaveProfile: NetworkQueryPeople by lazy {
         NetworkQueryPeopleImpl(networkRelayCall)
-    }
-
-    protected open val nqRedeemBadgeToken: NetworkQueryRedeemBadgeToken by lazy {
-        NetworkQueryRedeemBadgeTokenImpl(networkRelayCall)
     }
 
     @Before
@@ -271,7 +241,6 @@ abstract class NetworkQueryTestHelper: AuthenticationCoreDefaultsTestHelper() {
 
             // persist our relay url and java web token to test storage
             relayDataHandler.persistAuthorizationToken(creds.jwt)
-            relayDataHandler.persistRelayUrl(creds.relayUrl)
         }
 
         // if null, do nothing.

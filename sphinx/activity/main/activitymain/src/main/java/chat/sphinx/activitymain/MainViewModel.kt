@@ -13,6 +13,7 @@ import chat.sphinx.activitymain.navigation.drivers.DetailNavigationDriver
 import chat.sphinx.activitymain.navigation.drivers.PrimaryNavigationDriver
 import chat.sphinx.activitymain.ui.MainViewState
 import chat.sphinx.concept_repository_actions.ActionsRepository
+import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
 import chat.sphinx.concept_repository_feed.FeedRepository
 import chat.sphinx.concept_repository_media.RepositoryMedia
 import chat.sphinx.concept_service_media.MediaPlayerServiceController
@@ -49,7 +50,8 @@ class MainViewModel @Inject constructor(
     private val feedRepository: FeedRepository,
     private val repositoryMedia: RepositoryMedia,
     private val mediaPlayerServiceController: MediaPlayerServiceController,
-): BaseViewModel<MainViewState>(dispatchers, MainViewState.DetailScreenInactive), NavigationViewModel<PrimaryNavigationDriver>
+    val connectManagerRepository: ConnectManagerRepository
+    ): BaseViewModel<MainViewState>(dispatchers, MainViewState.DetailScreenInactive), NavigationViewModel<PrimaryNavigationDriver>
 {
     private var storageData: StorageData? = null
     private val storageLimitSharedPreferences: SharedPreferences = app.applicationContext.getSharedPreferences(STORAGE_LIMIT_KEY, Context.MODE_PRIVATE)

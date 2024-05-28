@@ -7,13 +7,17 @@ import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import chat.sphinx.activitymain.MainActivity
+import chat.sphinx.concept_repository_chat.ChatRepository
+import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
 import chat.sphinx.logger.SphinxLogger
 import chat.sphinx.logger.d
+import chat.sphinx.wrapper_chat.isTribe
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import dagger.hilt.android.AndroidEntryPoint
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.firstOrNull
 import javax.inject.Inject
 import chat.sphinx.resources.R as R_common
 
@@ -32,6 +36,14 @@ internal class SphinxFirebaseMessagingService: FirebaseMessagingService() {
     @Inject
     @Suppress("ProtectedInFinal")
     protected lateinit var dispatchers: CoroutineDispatchers
+
+    @Inject
+    @Suppress("ProtectedInFinal")
+    protected lateinit var connectManagerRepository: ConnectManagerRepository
+
+    @Inject
+    @Suppress("ProtectedInFinal")
+    protected lateinit var chatRepository: ChatRepository
 
     @Inject
     @Suppress("ProtectedInFinal")
@@ -57,11 +69,26 @@ internal class SphinxFirebaseMessagingService: FirebaseMessagingService() {
             return
         }
 
-        // Extract data from the message
-        // Extract data from the message
         val title: String = p0.data["title"] ?: ""
-        val messageBody: String = p0.data["body"] ?: ""
-        val chatId: Long? = (p0.data["chat_id"] ?: "").toLongOrNull()
+        var messageBody: String = "You have new messages"
+        val child: String? = p0.data["child"]
+
+        val message = "You have new messages %s"
+
+        // Get Contact/Tribe name from the child
+        runBlocking {
+            child?.let { nnChild ->
+                val chatId = connectManagerRepository.getPubKeyByEncryptedChild(nnChild).firstOrNull()
+                val chat = chatId?.let { chatRepository.getChatById(it).firstOrNull() }
+                val name = chat?.name?.value
+
+                messageBody = if (chat?.isTribe() == true && !name.isNullOrEmpty()) {
+                    String.format(message, "in $name Tribe")
+                } else {
+                    String.format(message, "from $name")
+                }
+            }
+        }
 
         // Create an intent to open MainActivity when the notification is clicked
         val intent = Intent(
@@ -70,7 +97,7 @@ internal class SphinxFirebaseMessagingService: FirebaseMessagingService() {
         )
 
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-        intent.putExtra("chat_id", chatId)
+        intent.putExtra("child", child)
 
         val pendingIntent = PendingIntent.getActivity(
             this,
@@ -114,6 +141,7 @@ internal class SphinxFirebaseMessagingService: FirebaseMessagingService() {
         super.onCreate()
         LOG.d(TAG, "onCreate")
     }
+
     override fun onDestroy() {
         super.onDestroy()
         supervisor.cancel()

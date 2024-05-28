@@ -16,22 +16,21 @@ import chat.sphinx.chat_tribe.ui.viewstate.*
 import chat.sphinx.concept_link_preview.LinkPreviewHandler
 import chat.sphinx.concept_meme_input_stream.MemeInputStreamHandler
 import chat.sphinx.concept_meme_server.MemeServerTokenHandler
-import chat.sphinx.concept_network_query_lightning.NetworkQueryLightning
-import chat.sphinx.concept_network_query_lightning.model.route.isRouteAvailable
 import chat.sphinx.concept_network_query_people.NetworkQueryPeople
 import chat.sphinx.concept_network_query_people.model.ChatLeaderboardDto
 import chat.sphinx.concept_repository_actions.ActionsRepository
 import chat.sphinx.concept_repository_chat.ChatRepository
+import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
 import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.concept_repository_dashboard_android.RepositoryDashboardAndroid
 import chat.sphinx.concept_repository_feed.FeedRepository
+import chat.sphinx.concept_repository_lightning.LightningRepository
 import chat.sphinx.concept_repository_media.RepositoryMedia
 import chat.sphinx.concept_repository_message.MessageRepository
 import chat.sphinx.concept_repository_message.model.SendMessage
 import chat.sphinx.concept_view_model_coordinator.ViewModelCoordinator
 import chat.sphinx.kotlin_response.LoadResponse
 import chat.sphinx.kotlin_response.Response
-import chat.sphinx.kotlin_response.ResponseError
 import chat.sphinx.kotlin_response.message
 import chat.sphinx.logger.SphinxLogger
 import chat.sphinx.menu_bottom.ui.MenuBottomViewState
@@ -57,7 +56,6 @@ import io.matthewnelson.concept_views.viewstate.value
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import javax.annotation.meta.Exhaustive
 import javax.inject.Inject
 
 internal inline val ChatTribeFragmentArgs.chatId: ChatId
@@ -75,14 +73,15 @@ class ChatTribeViewModel @Inject constructor(
     contactRepository: ContactRepository,
     messageRepository: MessageRepository,
     actionsRepository: ActionsRepository,
+    lightningRepository: LightningRepository,
     repositoryDashboard: RepositoryDashboardAndroid<Any>,
-    networkQueryLightning: NetworkQueryLightning,
     networkQueryPeople: NetworkQueryPeople,
     mediaCacheHandler: MediaCacheHandler,
     savedStateHandle: SavedStateHandle,
     cameraViewModelCoordinator: ViewModelCoordinator<CameraRequest, CameraResponse>,
     linkPreviewHandler: LinkPreviewHandler,
     memeInputStreamHandler: MemeInputStreamHandler,
+    connectManagerRepository: ConnectManagerRepository,
     moshi: Moshi,
     LOG: SphinxLogger,
 ): ChatViewModel<ChatTribeFragmentArgs>(
@@ -96,17 +95,23 @@ class ChatTribeViewModel @Inject constructor(
     contactRepository,
     messageRepository,
     actionsRepository,
+    lightningRepository,
     repositoryDashboard,
-    networkQueryLightning,
     networkQueryPeople,
     mediaCacheHandler,
     savedStateHandle,
     cameraViewModelCoordinator,
     linkPreviewHandler,
     memeInputStreamHandler,
+    connectManagerRepository,
     moshi,
     LOG,
 ) {
+
+    companion object {
+        private const val TRIBES_DEFAULT_SERVER_URL = "34.229.52.200:8801"
+    }
+
     override val args: ChatTribeFragmentArgs by savedStateHandle.navArgs()
     override val chatId: ChatId = args.chatId
     override val contactId: ContactId?
@@ -236,8 +241,6 @@ class ChatTribeViewModel @Inject constructor(
         }
     }
 
-    override fun forceKeyExchange() {}
-
     override suspend fun getInitialHolderViewStateForReceivedMessage(
         message: Message,
         owner: Contact
@@ -247,23 +250,6 @@ class ChatTribeViewModel @Inject constructor(
         } ?: message.senderAlias?.let { alias ->
             InitialHolderViewState.Initials(alias.value.getInitials(), message.getColorKey())
         } ?: InitialHolderViewState.None
-    }
-
-    override val checkRoute: Flow<LoadResponse<Boolean, ResponseError>> = flow {
-        networkQueryLightning.checkRoute(chatId).collect { response ->
-            @Exhaustive
-            when (response) {
-                is LoadResponse.Loading -> {
-                    emit(response)
-                }
-                is Response.Error -> {
-                    emit(response)
-                }
-                is Response.Success -> {
-                    emit(Response.Success(response.value.isRouteAvailable))
-                }
-            }
-        }
     }
 
     override fun readMessages() {
@@ -558,7 +544,7 @@ class ChatTribeViewModel @Inject constructor(
     fun navigateToTribeShareScreen() {
         viewModelScope.launch(mainImmediate) {
             val chat = getChat()
-            val shareTribeURL = "sphinx.chat://?action=tribe&uuid=${chat.uuid.value}&host=${chat.host?.value}"
+            val shareTribeURL = "sphinx.chat://?action=tribe&uuid=${chat.uuid.value}&host=${TRIBES_DEFAULT_SERVER_URL}"
             (chatNavigator as TribeChatNavigator).toShareTribeScreen(shareTribeURL, app.getString(R.string.qr_code_title))
         }
 

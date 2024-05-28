@@ -6,10 +6,8 @@ import chat.sphinx.concept_network_query_chat.model.TribeDto
 import chat.sphinx.concept_network_query_chat.model.feed.FeedDto
 import chat.sphinx.concept_network_query_contact.model.ContactDto
 import chat.sphinx.concept_network_query_invite.model.InviteDto
-import chat.sphinx.concept_network_query_lightning.model.balance.BalanceDto
-import chat.sphinx.concept_network_query_message.model.MessageDto
-import chat.sphinx.concept_network_query_subscription.model.SubscriptionDto
 import chat.sphinx.conceptcoredb.SphinxDatabaseQueries
+import chat.sphinx.example.wrapper_mqtt.MessageDto
 import chat.sphinx.wrapper_chat.*
 import chat.sphinx.wrapper_common.*
 import chat.sphinx.wrapper_common.chat.ChatUUID
@@ -40,20 +38,6 @@ import chat.sphinx.wrapper_message_media.*
 import chat.sphinx.wrapper_rsa.RsaPublicKey
 import com.squareup.moshi.Moshi
 import com.squareup.sqldelight.TransactionCallbacks
-
-@Suppress("NOTHING_TO_INLINE")
-inline fun BalanceDto.toNodeBalanceOrNull(): NodeBalance? =
-    try {
-        toNodeBalance()
-    } catch (e: IllegalArgumentException) {
-        null
-    }
-
-@Suppress("NOTHING_TO_INLINE")
-inline fun BalanceDto.toNodeBalance(): NodeBalance =
-    NodeBalance(
-        Sat(balance),
-    )
 
 @Suppress("NOTHING_TO_INLINE")
 inline fun String.toNodeBalance(): NodeBalance? {
@@ -668,6 +652,7 @@ fun TransactionCallbacks.upsertNewMessage(
         message.person,
         message.threadUUID,
         message.errorMessage,
+        message.tagMessage,
         MessageId(message.id.value),
         message.uuid,
         chatId,
@@ -701,7 +686,7 @@ fun TransactionCallbacks.upsertMessage(
 
     val chatId: ChatId = dto.chat_id?.let {
         ChatId(it)
-    } ?: dto.chat?.id?.let {
+    } ?: dto.chat?.let {
         ChatId(it)
     } ?: ChatId(ChatId.NULL_CHAT_ID.toLong())
 
@@ -735,6 +720,7 @@ fun TransactionCallbacks.upsertMessage(
         dto.person?.toMessagePerson(),
         dto.thread_uuid?.toThreadUUID(),
         dto.error_message?.toErrorMessage(),
+        dto.tag_message?.toTagMessage(),
         MessageId(dto.id),
         dto.uuid?.toMessageUUID(),
         chatId,
@@ -800,23 +786,23 @@ inline fun TransactionCallbacks.deleteMessageById(
     queries.messageMediaDeleteById(messageId)
 }
 
-@Suppress("NOTHING_TO_INLINE")
-inline fun TransactionCallbacks.upsertSubscription(subscriptionDto: SubscriptionDto, queries: SphinxDatabaseQueries) {
-    queries.subscriptionUpsert(
-        id = SubscriptionId(subscriptionDto.id),
-        amount = Sat(subscriptionDto.amount),
-        contact_id = ContactId(subscriptionDto.contact_id),
-        chat_id = ChatId(subscriptionDto.chat_id),
-        count = SubscriptionCount(subscriptionDto.count.toLong()),
-        cron = Cron(subscriptionDto.cron),
-        end_date = subscriptionDto.end_date?.toDateTime(),
-        end_number = subscriptionDto.end_number?.let { EndNumber(it.toLong()) },
-        created_at = subscriptionDto.created_at.toDateTime(),
-        updated_at = subscriptionDto.updated_at.toDateTime(),
-        ended = subscriptionDto.endedActual,
-        paused = subscriptionDto.pausedActual,
-    )
-}
+//@Suppress("NOTHING_TO_INLINE")
+//inline fun TransactionCallbacks.upsertSubscription(subscriptionDto: SubscriptionDto, queries: SphinxDatabaseQueries) {
+//    queries.subscriptionUpsert(
+//        id = SubscriptionId(subscriptionDto.id),
+//        amount = Sat(subscriptionDto.amount),
+//        contact_id = ContactId(subscriptionDto.contact_id),
+//        chat_id = ChatId(subscriptionDto.chat_id),
+//        count = SubscriptionCount(subscriptionDto.count.toLong()),
+//        cron = Cron(subscriptionDto.cron),
+//        end_date = subscriptionDto.end_date?.toDateTime(),
+//        end_number = subscriptionDto.end_number?.let { EndNumber(it.toLong()) },
+//        created_at = subscriptionDto.created_at.toDateTime(),
+//        updated_at = subscriptionDto.updated_at.toDateTime(),
+//        ended = subscriptionDto.endedActual,
+//        paused = subscriptionDto.pausedActual,
+//    )
+//}
 
 @Suppress("NOTHING_TO_INLINE")
 inline fun TransactionCallbacks.deleteSubscriptionById(

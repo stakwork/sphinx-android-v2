@@ -132,14 +132,17 @@ internal class DashboardFragment : MotionLayoutFragment<
     }
 
     private fun handlePushNotification() {
-        val chatId = activity?.intent?.extras?.getString("chat_id")?.toLongOrNull() ?: activity?.intent?.extras?.getLong("chat_id")
-        chatId?.let { nnChatId ->
-            viewModel.handleDeepLink(
-                PushNotificationLink("sphinx.chat://?action=push&chatId=$nnChatId").value
-            )
-        }
+        lifecycleScope.launch {
+            val pubKey = activity?.intent?.extras?.getString("child") ?: activity?.intent?.extras?.getString("child")
+            val chatId = pubKey?.let { viewModel.getPubKeyByEncryptedChild(it) }
+            chatId?.let { nnChatId ->
+                viewModel.handleDeepLink(
+                    PushNotificationLink("sphinx.chat://?action=push&chatId=${nnChatId.value}").value
+                )
+            }
 
-        activity?.intent = null
+            activity?.intent = null
+        }
     }
 
     override fun onRefresh() {

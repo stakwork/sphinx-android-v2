@@ -8,51 +8,35 @@ import chat.sphinx.concept_meme_input_stream.MemeInputStreamHandler
 import chat.sphinx.concept_network_call.NetworkCall
 import chat.sphinx.concept_network_client.NetworkClient
 import chat.sphinx.concept_network_client_cache.NetworkClientCache
-import chat.sphinx.concept_network_query_action_track.NetworkQueryActionTrack
 import chat.sphinx.concept_network_query_chat.NetworkQueryChat
 import chat.sphinx.concept_network_query_contact.NetworkQueryContact
 import chat.sphinx.concept_network_query_crypter.NetworkQueryCrypter
 import chat.sphinx.concept_network_query_discover_tribes.NetworkQueryDiscoverTribes
 import chat.sphinx.concept_network_query_invite.NetworkQueryInvite
-import chat.sphinx.concept_network_query_lightning.NetworkQueryLightning
 import chat.sphinx.concept_network_query_meme_server.NetworkQueryMemeServer
-import chat.sphinx.concept_network_query_message.NetworkQueryMessage
 import chat.sphinx.concept_network_query_feed_search.NetworkQueryFeedSearch
 import chat.sphinx.concept_network_query_feed_status.NetworkQueryFeedStatus
-import chat.sphinx.concept_network_query_subscription.NetworkQuerySubscription
 import chat.sphinx.concept_network_query_verify_external.NetworkQueryAuthorizeExternal
 import chat.sphinx.concept_network_query_people.NetworkQueryPeople
-import chat.sphinx.concept_network_query_redeem_badge_token.NetworkQueryRedeemBadgeToken
-import chat.sphinx.concept_network_query_relay_keys.NetworkQueryRelayKeys
-import chat.sphinx.concept_network_query_version.NetworkQueryVersion
 import chat.sphinx.concept_network_relay_call.NetworkRelayCall
 import chat.sphinx.concept_network_tor.TorManager
 import chat.sphinx.concept_relay.RelayDataHandler
-import chat.sphinx.concept_socket_io.SocketIOManager
 import chat.sphinx.concept_wallet.WalletDataHandler
 import chat.sphinx.feature_link_preview.LinkPreviewHandlerImpl
 import chat.sphinx.feature_network_client.NetworkClientImpl
-import chat.sphinx.feature_network_query_action_track.NetworkQueryActionTrackImpl
 import chat.sphinx.feature_network_query_chat.NetworkQueryChatImpl
 import chat.sphinx.feature_network_query_contact.NetworkQueryContactImpl
 import chat.sphinx.feature_network_query_crypter.NetworkQueryCrypterImpl
 import chat.sphinx.feature_network_query_discover_tribes.NetworkQueryDiscoverTribesImpl
 import chat.sphinx.feature_network_query_feed_status.NetworkQueryFeedStatusImpl
 import chat.sphinx.feature_network_query_invite.NetworkQueryInviteImpl
-import chat.sphinx.feature_network_query_lightning.NetworkQueryLightningImpl
 import chat.sphinx.feature_network_query_meme_server.NetworkQueryMemeServerImpl
-import chat.sphinx.feature_network_query_message.NetworkQueryMessageImpl
 import chat.sphinx.feature_network_query_podcast_search.NetworkQueryFeedSearchImpl
-import chat.sphinx.feature_network_query_subscription.NetworkQuerySubscriptionImpl
 import chat.sphinx.feature_network_query_verify_external.NetworkQueryAuthorizeExternalImpl
 import chat.sphinx.feature_network_query_people.NetworkQueryPeopleImpl
-import chat.sphinx.feature_network_query_redeem_badge_token.NetworkQueryRedeemBadgeTokenImpl
-import chat.sphinx.feature_network_query_transport_key.NetworkQueryRelayKeysImpl
-import chat.sphinx.feature_network_query_version.NetworkQueryVersionImpl
 import chat.sphinx.feature_network_relay_call.NetworkRelayCallImpl
 import chat.sphinx.feature_network_tor.TorManagerAndroid
 import chat.sphinx.feature_relay.RelayDataHandlerImpl
-import chat.sphinx.feature_socket_io.SocketIOManagerImpl
 import chat.sphinx.feature_sphinx_service.ApplicationServiceTracker
 import chat.sphinx.feature_wallet.WalletDataHandlerImpl
 import chat.sphinx.logger.SphinxLogger
@@ -197,29 +181,6 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideSocketIOManagerImpl(
-        dispatchers: CoroutineDispatchers,
-        moshi: Moshi,
-        networkClient: NetworkClient,
-        relayDataHandler: RelayDataHandler,
-        LOG: SphinxLogger,
-    ): SocketIOManagerImpl =
-        SocketIOManagerImpl(
-            dispatchers,
-            moshi,
-            networkClient,
-            relayDataHandler,
-            LOG,
-        )
-
-    @Provides
-    fun provideSocketIOManager(
-        socketIOManagerImpl: SocketIOManagerImpl
-    ): SocketIOManager =
-        socketIOManagerImpl
-
-    @Provides
-    @Singleton
     fun provideNetworkRelayCallImpl(
         dispatchers: CoroutineDispatchers,
         moshi: Moshi,
@@ -304,45 +265,6 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideNetworkQueryLightningImpl(
-        networkRelayCall: NetworkRelayCall
-    ): NetworkQueryLightningImpl =
-        NetworkQueryLightningImpl(networkRelayCall)
-
-    @Provides
-    fun provideNetworkQueryLightning(
-        networkQueryLightningImpl: NetworkQueryLightningImpl
-    ): NetworkQueryLightning =
-        networkQueryLightningImpl
-
-    @Provides
-    @Singleton
-    fun provideNetworkQueryMessageImpl(
-        networkRelayCall: NetworkRelayCall
-    ): NetworkQueryMessageImpl =
-        NetworkQueryMessageImpl(networkRelayCall)
-
-    @Provides
-    fun provideNetworkQueryMessage(
-        networkQueryMessageImpl: NetworkQueryMessageImpl
-    ): NetworkQueryMessage =
-        networkQueryMessageImpl
-
-    @Provides
-    @Singleton
-    fun provideNetworkQuerySubscriptionImpl(
-        networkRelayCall: NetworkRelayCall
-    ): NetworkQuerySubscriptionImpl =
-        NetworkQuerySubscriptionImpl(networkRelayCall)
-
-    @Provides
-    fun provideNetworkQuerySubscription(
-        networkQuerySubscriptionImpl: NetworkQuerySubscriptionImpl
-    ): NetworkQuerySubscription =
-        networkQuerySubscriptionImpl
-
-    @Provides
-    @Singleton
     fun provideNetworkQueryMemeServerImpl(
         dispatchers: CoroutineDispatchers,
         networkRelayCall: NetworkRelayCall,
@@ -354,19 +276,6 @@ object NetworkModule {
         networkQueryMemeServerImpl: NetworkQueryMemeServerImpl
     ): NetworkQueryMemeServer =
         networkQueryMemeServerImpl
-
-    @Provides
-    @Singleton
-    fun provideNetworkQueryVersionImpl(
-        networkRelayCall: NetworkRelayCall
-    ): NetworkQueryVersionImpl =
-        NetworkQueryVersionImpl(networkRelayCall)
-
-    @Provides
-    fun provideNetworkQueryVersion(
-        networkQueryVersionImpl: NetworkQueryVersionImpl
-    ): NetworkQueryVersion =
-        networkQueryVersionImpl
 
     @Provides
     @Singleton
@@ -409,32 +318,6 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideNetworkQueryRedeemBadgeTokenImpl(
-        networkRelayCall: NetworkRelayCall
-    ): NetworkQueryRedeemBadgeTokenImpl =
-        NetworkQueryRedeemBadgeTokenImpl(networkRelayCall)
-
-    @Provides
-    fun provideNetworkQueryRedeemBadgeToken(
-        networkQueryRedeemBadgeTokenImpl: NetworkQueryRedeemBadgeTokenImpl
-    ): NetworkQueryRedeemBadgeToken =
-        networkQueryRedeemBadgeTokenImpl
-
-    @Provides
-    @Singleton
-    fun provideNetworkQueryTransportKeyImpl(
-        networkRelayCall: NetworkRelayCall
-    ): NetworkQueryRelayKeysImpl =
-        NetworkQueryRelayKeysImpl(networkRelayCall)
-
-    @Provides
-    fun provideNetworkQueryTransportKey(
-        networkQueryTransportKeyImpl: NetworkQueryRelayKeysImpl
-    ): NetworkQueryRelayKeys =
-        networkQueryTransportKeyImpl
-
-    @Provides
-    @Singleton
     fun provideNetworkQueryCrypterImpl(
         networkRelayCall: NetworkRelayCall
     ): NetworkQueryCrypterImpl =
@@ -445,18 +328,6 @@ object NetworkModule {
         networkQueryCrypterImpl: NetworkQueryCrypterImpl
     ): NetworkQueryCrypter =
         networkQueryCrypterImpl
-
-    @Provides
-    fun provideNetworkQueryActionTrackImpl(
-        networkRelayCall: NetworkRelayCall
-    ): NetworkQueryActionTrackImpl =
-        NetworkQueryActionTrackImpl(networkRelayCall)
-
-    @Provides
-    fun provideNetworkQueryActionTrack(
-        networkQueryActionTrackImpl: NetworkQueryActionTrackImpl
-    ): NetworkQueryActionTrack =
-        networkQueryActionTrackImpl
 
     @Provides
     fun provideNetworkQueryDiscoverTribesImpl(

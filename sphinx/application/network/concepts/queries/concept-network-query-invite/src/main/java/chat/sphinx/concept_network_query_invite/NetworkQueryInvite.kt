@@ -30,14 +30,6 @@ abstract class NetworkQueryInvite {
         inviteString: InviteString
     ): Flow<LoadResponse<HubRedeemInviteResponse, ResponseError>>
 
-    abstract fun finishInvite(
-        inviteString: String
-    ): Flow<LoadResponse<RedeemInviteResponseDto, ResponseError>>
-
-    abstract fun payInvite(
-        inviteString: InviteString
-    ): Flow<LoadResponse<PayInviteDto, ResponseError>>
-
     //////////////
     /// DELETE ///
     //////////////

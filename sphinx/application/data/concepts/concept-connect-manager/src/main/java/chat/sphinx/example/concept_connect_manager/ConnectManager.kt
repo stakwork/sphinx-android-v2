@@ -1,6 +1,7 @@
 package chat.sphinx.example.concept_connect_manager
 
 import chat.sphinx.example.concept_connect_manager.model.OwnerInfo
+import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
 import chat.sphinx.wrapper_contact.NewContact
 import chat.sphinx.wrapper_lightning.WalletMnemonic
 import kotlinx.coroutines.flow.StateFlow
@@ -51,18 +52,33 @@ abstract class ConnectManager {
         welcomeMessage: String,
         sats: Long,
         tribeServerPubKey: String?
-    ): Pair<String, String>? // inviteString, inviteCode
+    )
 
     abstract fun createInvoice(
         amount: Long,
         memo: String
     ): Pair<String, String>? // invoice, paymentHash
 
+    abstract fun sendKeySend(pubKey: String, amount: Long)
+
     abstract fun getTribeServerPubKey(): String?
 
     abstract fun processInvoicePayment(paymentRequest: String)
 
     abstract fun retrievePaymentHash(paymentRequest: String): String?
+
+    abstract fun getPayments(
+        lastMsgDate: Long,
+        limit: Int,
+        scid: Long?, // fetch payments for a single child key
+        remoteOnly: Boolean?, // only payments routed through other LSPs
+        minMsat: Long?, // include only payments above this amount
+        reverse: Boolean?
+    )
+
+    abstract fun getPubKeyFromChildIndex(childIndex: Long): String?
+
+    abstract fun getPubKeyByEncryptedChild(child: String): String?
 
     abstract fun retrieveTribeMembersList(
         tribeServerPubKey: String,
@@ -83,6 +99,7 @@ abstract class ConnectManager {
     )
 
     abstract fun getReadMessages()
+    abstract fun getMutedChats()
     abstract fun retrieveLspIp(): String?
     abstract fun addListener(listener: ConnectManagerListener): Boolean
     abstract fun removeListener(listener: ConnectManagerListener): Boolean
@@ -92,6 +109,7 @@ abstract class ConnectManager {
     abstract fun getAllMessagesCount()
     abstract fun reconnectWithBackoff()
     abstract fun setOwnerDeviceId(deviceId: String)
+    abstract fun setMute(muteLevel: Int, contactPubKey: String)
 }
 
 interface ConnectManagerListener {
@@ -114,20 +132,31 @@ interface ConnectManagerListener {
     fun onRestoreContacts(contacts: List<String?>)
     fun onRestoreTribes(tribes: List<Pair<String?, Boolean?>>) // Sender, FromMe
     fun onRestoreNextPageMessages(highestIndex: Long, limit: Int)
-
     fun onNewTribeCreated(newTribe: String)
     fun onTribeMembersList(tribeMembers: String)
-    fun onMessageUUID(msgUUID: String, provisionalId: Long)
+    fun onMessageTagAndUuid(tag: String?, msgUUID: String, provisionalId: Long)
     fun onUpdateUserState(userState: String)
     fun onDeleteUserState(userState: List<String>)
     fun onSignedChallenge(sign: String)
     fun onNewBalance(balance: Long)
+    fun onPayments(payments: String)
     fun onNetworkStatusChange(isConnected: Boolean)
     fun listenToOwnerCreation(callback: () -> Unit)
-    fun onNewInviteCreated(inviteString: String)
+
+    fun onNewInviteCreated(
+        nickname: String,
+        inviteString: String,
+        inviteCode: String,
+        sats: Long
+    )
+
+    fun onSentStatus(sentStatus: String)
+
     fun onLastReadMessages(lastReadMessages: String)
+    fun onUpdateMutes(mutes: String)
     fun onMessagesCounts(msgsCounts: String)
     fun onInitialTribe(tribe: String)
+    fun onConnectManagerError(error: ConnectManagerError)
 
 }
 

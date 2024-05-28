@@ -4,7 +4,6 @@ import android.app.Application
 import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
-import chat.sphinx.concept_network_query_contact.NetworkQueryContact
 import chat.sphinx.concept_repository_chat.ChatRepository
 import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
 import chat.sphinx.concept_repository_connect_manager.model.ConnectionManagerState
@@ -55,7 +54,6 @@ internal class TribeMembersListViewModel @Inject constructor(
     private val messageRepository: MessageRepository,
     private val chatRepository: ChatRepository,
     private val contactRepository: ContactRepository,
-    private val networkQueryContact: NetworkQueryContact,
     private val connectManagerRepository: ConnectManagerRepository,
     savedStateHandle: SavedStateHandle,
 ): SideEffectViewModel<
@@ -116,44 +114,14 @@ internal class TribeMembersListViewModel @Inject constructor(
                     tribeServerPubKey,
                     tribePubKey
                 )
+            } else {
+                submitSideEffect(
+                    TribeMembersListSideEffect.Notify(
+                        app.getString(R.string.connect_manager_server_pubkey_error)
+                    )
+                )
             }
         }
-
-//        networkQueryContact.getTribeMembers(
-//            chatId = ChatId(args.argChatId),
-//            offset = page * itemsPerPage,
-//            limit = itemsPerPage
-//        ).collect{ loadResponse ->
-//            val firstPage = (page == 0)
-//
-//            @Exhaustive
-//            when (loadResponse) {
-//                is LoadResponse.Loading -> {
-//                    updateViewState(
-//                        TribeMembersListViewState.ListMode(listOf(), true, firstPage)
-//                    )
-//                }
-//                is Response.Error -> {
-//                    updateViewState(
-//                        TribeMembersListViewState.ListMode(listOf(), false, firstPage)
-//                    )
-//                }
-//                is Response.Success -> {
-//                    if (loadResponse.value.contacts.isNotEmpty()) {
-//                        updateViewState(
-//                            TribeMembersListViewState.ListMode(
-//                                processMembers(
-//                                    loadResponse.value.contacts,
-//                                    getOwner()
-//                                ),
-//                                false,
-//                                firstPage
-//                            )
-//                        )
-//                    }
-//                }
-//            }
-//        }
     }
 
     private suspend fun fetchTribeMembers(){

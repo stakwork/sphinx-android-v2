@@ -60,7 +60,7 @@ internal class SubscriptionFragment: SideEffectDetailFragment<
             }
 
             textViewDetailSubscriptionDelete.setOnClickListener {
-                viewModel.deleteSubscription()
+//                viewModel.deleteSubscription()
             }
 
             switchSubscriptionEnablement.setOnClickListener {
@@ -69,10 +69,10 @@ internal class SubscriptionFragment: SideEffectDetailFragment<
 
                 if (switchSubscriptionEnablement.isChecked) {
                     // We are about to pause the subscription ask for confirmation
-                    viewModel.pauseSubscription()
+//                    viewModel.pauseSubscription()
                 } else {
                     // We should restart the subscription
-                    viewModel.restartSubscription()
+//                    viewModel.restartSubscription()
                 }
             }
 
@@ -157,12 +157,12 @@ internal class SubscriptionFragment: SideEffectDetailFragment<
                     else -> null
                 }
 
-                viewModel.saveSubscription(
-                    amount,
-                    cron,
-                    endDate,
-                    endNumber
-                )
+//                viewModel.saveSubscription(
+//                    amount,
+//                    cron,
+//                    endDate,
+//                    endNumber
+//                )
             }
             (requireActivity() as InsetterActivity).addNavigationBarPadding(layoutConstraintSubscription)
         }

@@ -26,6 +26,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import dev.chrisbanes.insetter.applyInsetter
 import io.matthewnelson.android_feature_navigation.requests.PopBackStack
 import io.matthewnelson.android_feature_viewmodel.updateViewState
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import chat.sphinx.resources.R as R_common
 
@@ -124,8 +125,12 @@ class MainActivity: MotionLayoutNavigationActivity<
         askNotificationPermission()
         addWindowInsetChangeListener()
 
-        intent.extras?.getString("chat_id")?.toLongOrNull()?.let { chatId ->
-            handlePushNotification(chatId)
+        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+        intent.extras?.getString("child")?.let { chatId ->
+            viewModel.connectManagerRepository.getPubKeyByEncryptedChild(chatId).firstOrNull()?.let {
+                handlePushNotification(it.value)
+            }
+        }
         }
     }
 

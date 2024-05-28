@@ -67,28 +67,10 @@ internal class OnBoardReadyViewModel @Inject constructor(
                         submitSideEffect(OnBoardReadySideEffect.CreateInviterFailed)
                     }
                     is Response.Success -> {
-                        if (inviteString != null && inviteString.isNotEmpty()) {
-                            finishInvite(inviteString)
-                        } else {
+                        if (inviteString != null && inviteString.isNotEmpty()) { }
+                        else {
                             finishSignup()
                         }
-                    }
-                }
-            }
-        }
-    }
-
-    fun finishInvite(inviteString: String) {
-        viewModelScope.launch(mainImmediate) {
-            networkQueryInvite.finishInvite(inviteString).collect { loadResponse ->
-                when (loadResponse) {
-                    is LoadResponse.Loading -> {}
-
-                    is Response.Error -> {
-                        finishSignup()
-                    }
-                    is Response.Success -> {
-                        finishSignup()
                     }
                 }
             }

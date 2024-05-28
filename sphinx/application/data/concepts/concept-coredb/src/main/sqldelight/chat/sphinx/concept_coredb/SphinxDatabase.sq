@@ -78,6 +78,7 @@ import chat.sphinx.wrapper_message.MessageType;
 import chat.sphinx.wrapper_message.RecipientAlias;
 import chat.sphinx.wrapper_message.ReplyUUID;
 import chat.sphinx.wrapper_message.SenderAlias;
+import chat.sphinx.wrapper_message.TagMessage;
 import chat.sphinx.wrapper_message.ThreadUUID;
 import chat.sphinx.wrapper_message_media.FileName;
 import chat.sphinx.wrapper_message_media.MediaKey;
@@ -749,7 +750,8 @@ CREATE TABLE messageDbo(
     push                        INTEGER         AS Push DEFAULT 0,
     person                      TEXT            AS MessagePerson,
     thread_uuid                 TEXT            AS ThreadUUID,
-    error_message               TEXT            AS ErrorMessage
+    error_message               TEXT            AS ErrorMessage,
+    tag_message                 TEXT            AS TagMessage
 );
 
 messageGetAllReactionsByUUID:
@@ -831,6 +833,10 @@ LIMIT 1;
 
 messageGetMaxId:
 SELECT MAX(id) FROM messageDbo;
+
+messageGetLastMessage:
+SELECT * FROM messageDbo
+WHERE id = (SELECT MAX(id) FROM messageDbo);
 
 messageGetMaxIdByChatId:
 SELECT *
@@ -938,6 +944,11 @@ SELECT *
 FROM messageDbo
 WHERE id IN ?;
 
+messageGetByPaymentHashes:
+SELECT *
+FROM messageDbo
+WHERE payment_hash IN :payment_hashes;
+
 messagesSearchByTerm:
 SELECT *
 FROM messageDbo
@@ -961,6 +972,13 @@ UPDATE messageDbo
 SET status = :status
 WHERE id = ?;
 
+messageUpdateStatusByTag:
+UPDATE messageDbo
+SET status = :status,
+    payment_hash = :payment_hash,
+    error_message = :error_message
+WHERE tag_message = ?;
+
 messageUpdateType:
 UPDATE messageDbo
 SET type = :type
@@ -981,9 +999,11 @@ UPDATE messageDbo
 SET flagged = :flagged
 WHERE id = ?;
 
-messageUpdateUUID:
+messageUpdateTagAndUUID:
 UPDATE messageDbo
-SET uuid = :uuid
+SET tag_message = :tag_message,
+    uuid = :uuid,
+    status = 1
 WHERE id = ?;
 
 messageUpdateUUIDByUUID:
@@ -1011,7 +1031,8 @@ messageUpsert {
         push = :push,
         person = :person,
         thread_uuid = :thread_uuid,
-        error_message = :error_message
+        error_message = :error_message,
+        tag_message = :tag_message
     WHERE id = :id;
 
     INSERT OR IGNORE INTO messageDbo(
@@ -1041,7 +1062,8 @@ messageUpsert {
         push,
         person,
         thread_uuid,
-        error_message
+        error_message,
+        tag_message
     )
     VALUES (
         :id,
@@ -1070,7 +1092,8 @@ messageUpsert {
         :push,
         :person,
         :thread_uuid,
-        :error_message
+        :error_message,
+        :tag_message
     );
 }
 

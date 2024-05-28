@@ -38,6 +38,12 @@ interface MessageRepository {
 
     fun getMessageById(messageId: MessageId): Flow<Message?>
     fun getMessagesByIds(messagesIds: List<MessageId>): Flow<List<Message?>>
+
+    fun getMessagesByPaymentHashes(paymentHashes: List<LightningPaymentHash>): Flow<List<Message?>>
+
+    fun getMaxIdMessage(): Flow<Long?>
+    fun getLastMessage(): Flow<Message?>
+
     fun getTribeLastMemberRequestBySenderAlias(alias: SenderAlias, chatId: ChatId): Flow<Message?>
     fun getMessageByUUID(messageUUID: MessageUUID): Flow<Message?>
     fun getPaymentsTotalFor(feedId: FeedId): Flow<Sat?>
@@ -73,10 +79,10 @@ interface MessageRepository {
         chat: Chat,
     )
 
-    fun flagMessage(
-        message: Message,
-        chat: Chat,
-    )
+//    fun flagMessage(
+//        message: Message,
+//        chat: Chat,
+//    )
 
     fun sendBoost(
         chatId: ChatId,

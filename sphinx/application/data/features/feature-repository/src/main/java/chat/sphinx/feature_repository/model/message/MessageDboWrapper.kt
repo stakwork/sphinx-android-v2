@@ -67,6 +67,8 @@ class MessageDboWrapper(
         get() = messageDbo.thread_uuid
     override val errorMessage: ErrorMessage?
         get() = messageDbo.error_message
+    override val tagMessage: TagMessage?
+        get() = messageDbo.tag_message
 
     @Volatile
     @Suppress("PropertyName")

@@ -38,6 +38,7 @@ class NewMessage(
     override val person: MessagePerson? = null,
     override val threadUUID: ThreadUUID? = null,
     override val errorMessage: ErrorMessage? = null,
+    override val tagMessage: TagMessage? = null,
     override val isPinned: Boolean = false,
 
     override val messageContentDecrypted: MessageContentDecrypted? = null,
@@ -81,7 +82,7 @@ class NewMessage(
                 "senderAlias=$senderAlias, senderPic=$senderPic, originalMUID=$originalMUID, " +
                 "replyUUID=$replyUUID, flagged=$flagged, recipientAlias=$recipientAlias, " +
                 "recipientPic=$recipientPic, person=$person, threadUUID=$threadUUID, " +
-                "errorMessage=$errorMessage, isPinned=$isPinned, " +
+                "errorMessage=$errorMessage, tagMessage=$tagMessage, isPinned=$isPinned, " +
                 "messageContentDecrypted=$messageContentDecrypted, " +
                 "messageDecryptionError=$messageDecryptionError, " +
                 "messageDecryptionException=$messageDecryptionException, " +

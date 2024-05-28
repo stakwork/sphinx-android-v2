@@ -242,11 +242,7 @@ internal class ProfileFragment: SideEffectFragment<
                     if (hasFocus) {
                         return@setOnFocusChangeListener
                     }
-                    onStopSupervisor.scope.launch(viewModel.mainImmediate) {
-                        viewModel.updateRelayUrl(
-                            editTextProfileAdvancedContainerServerUrl.text?.toString()
-                        )
-                    }
+                    // TODO V2  Update sever URL
                 }
 
                 removeFocusOnEnter(editTextProfileAdvancedContainerServerUrl)
@@ -345,17 +341,6 @@ internal class ProfileFragment: SideEffectFragment<
 
                 nodeBalance.balance.asFormattedString().let { balance ->
                     binding.includeProfileNamePictureHolder.textViewProfileSatBalance.text = balance
-                }
-            }
-        }
-
-        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
-            viewModel.relayUrlStateFlow.collect { relayUrl ->
-                relayUrl?.let { nnRelayUrl ->
-                    binding
-                        .includeProfileAdvancedContainerHolder
-                        .editTextProfileAdvancedContainerServerUrl
-                        .setText(nnRelayUrl)
                 }
             }
         }

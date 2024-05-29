@@ -28,6 +28,7 @@ import org.eclipse.paho.client.mqttv3.MqttException
 import org.eclipse.paho.client.mqttv3.MqttMessage
 import org.json.JSONException
 import org.json.JSONObject
+import uniffi.sphinxrs.ParsedInvite
 import uniffi.sphinxrs.RunReturn
 import uniffi.sphinxrs.addContact
 import uniffi.sphinxrs.codeFromInvite
@@ -36,7 +37,6 @@ import uniffi.sphinxrs.getDefaultTribeServer
 import uniffi.sphinxrs.getMsgsCounts
 import uniffi.sphinxrs.getMutes
 import uniffi.sphinxrs.getReads
-import uniffi.sphinxrs.getSubscriptionTopic
 import uniffi.sphinxrs.getTribeManagementTopic
 import uniffi.sphinxrs.handle
 import uniffi.sphinxrs.initialSetup
@@ -50,6 +50,7 @@ import uniffi.sphinxrs.makeMediaTokenWithPrice
 import uniffi.sphinxrs.mnemonicFromEntropy
 import uniffi.sphinxrs.mnemonicToSeed
 import uniffi.sphinxrs.mute
+import uniffi.sphinxrs.parseInvite
 import uniffi.sphinxrs.paymentHashFromInvoice
 import uniffi.sphinxrs.processInvite
 import uniffi.sphinxrs.read
@@ -62,6 +63,7 @@ import uniffi.sphinxrs.signBytes
 import uniffi.sphinxrs.xpubFromSeed
 import java.security.SecureRandom
 import java.util.Calendar
+import java.util.UUID
 import kotlin.math.min
 
 class ConnectManagerImpl: ConnectManager()
@@ -78,10 +80,15 @@ class ConnectManagerImpl: ConnectManager()
     private var inviterContact: NewContact? = null
     private var hasAttemptedReconnect = false
 
-    private val _ownerInfoStateFlow: MutableStateFlow<OwnerInfo?> by lazy {
-        MutableStateFlow(null)
+    private val _ownerInfoStateFlow: MutableStateFlow<OwnerInfo> by lazy {
+        MutableStateFlow(OwnerInfo(
+            null,
+            null,
+            null,
+            null
+        ))
     }
-    override val ownerInfoStateFlow: StateFlow<OwnerInfo?>
+    override val ownerInfoStateFlow: StateFlow<OwnerInfo>
         get() = _ownerInfoStateFlow.asStateFlow()
 
     private var mixerIp: String?
@@ -105,14 +112,32 @@ class ConnectManagerImpl: ConnectManager()
             ownerSeed = firstSeed
 
             if (xPub != null) {
-                var invite: RunReturn? = null
+                var invite: ParsedInvite? = null
 
                 if (inviteCode != null) {
-                    invite = processNewInvite(ownerSeed!!, now, getCurrentUserState(), inviteCode!!)
-                    _mixerIp = invite?.lspHost
+                    invite = parseInvite(inviteCode!!)
+
+                    val parts = invite.inviterContactInfo?.split("_")
+                    val okKey = parts?.getOrNull(0)?.toLightningNodePubKey()
+                    val routeHint = "${parts?.getOrNull(1)}_${parts?.getOrNull(2)}".toLightningRouteHint()
+
+                    // add contact alias
+                    inviterContact = NewContact(
+                        null,
+                        okKey,
+                        routeHint,
+                        null,
+                        false,
+                        null,
+                        invite.code,
+                        null,
+                        null,
+                    )
+
+                    _mixerIp = invite.lspHost
                 }
 
-                connectToMQTT(mixerIp!!, xPub, now, sig, invite)
+                connectToMQTT(mixerIp!!, xPub, now, sig)
             } else {
                 notifyListeners {
                     onConnectManagerError(ConnectManagerError.GenerateXPubError)
@@ -189,6 +214,17 @@ class ConnectManagerImpl: ConnectManager()
     ): RunReturn? {
         return try {
             processInvite(seed, uniqueTime, state, inviteQr)
+        } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.ProcessInviteError)
+            }
+            null
+        }
+    }
+
+    private fun parseNewInvite(inviteQr: String): ParsedInvite? {
+        return try {
+            parseInvite(inviteQr)
         } catch (e: Exception) {
             notifyListeners {
                 onConnectManagerError(ConnectManagerError.ProcessInviteError)
@@ -294,7 +330,6 @@ class ConnectManagerImpl: ConnectManager()
         clientId: String,
         key: String,
         password: String,
-        invite: RunReturn? = null
     ) {
         try {
             mqttClient = MqttAsyncClient(serverURI, clientId, null)
@@ -309,11 +344,7 @@ class ConnectManagerImpl: ConnectManager()
                     Log.d("MQTT_MESSAGES", "MQTT CONNECTED!")
                     hasAttemptedReconnect = false
 
-                    if (invite != null) {
-                        handleRunReturn(invite, mqttClient)
-                    } else {
-                        subscribeOwnerMQTT()
-                    }
+                    subscribeOwnerMQTT()
 
                     notifyListeners {
                         onNetworkStatusChange(true)
@@ -414,17 +445,18 @@ class ConnectManagerImpl: ConnectManager()
                 val blockSetup = setBlockheight(0.toUInt())
                 handleRunReturn(blockSetup, client)
 
-                // Subscribe to MQTT topic
-                val subtopic = getSubscriptionTopic(
+                // Initial setup and handling
+                val setUp = initialSetup(
                     ownerSeed!!,
                     getTimestampInMilliseconds(),
                     getCurrentUserState(),
+                    UUID.randomUUID().toString(),
+                    inviterContact?.inviteCode
                 )
+                handleRunReturn(setUp, client)
 
                 val qos = IntArray(1) { 1 }
-                client.subscribe(arrayOf(subtopic), qos)
 
-                // Subscribe to tribe management topic
                 val tribeSubtopic = getTribeManagementTopic(
                     ownerSeed!!,
                     getTimestampInMilliseconds(),
@@ -432,15 +464,7 @@ class ConnectManagerImpl: ConnectManager()
                 )
                 client.subscribe(arrayOf(tribeSubtopic), qos)
 
-                // Initial setup and handling
-                val setUp = initialSetup(
-                    ownerSeed!!,
-                    getTimestampInMilliseconds(),
-                    getCurrentUserState()
-                )
-                handleRunReturn(setUp, client)
-
-                if (ownerInfoStateFlow.value != null && restoreMnemonicWords?.isEmpty() == true) {
+                if (ownerInfoStateFlow.value.messageLastIndex != null && restoreMnemonicWords?.isEmpty() == true) {
 
                     val fetchMessages = fetchMsgs(
                         ownerSeed!!,
@@ -1079,6 +1103,12 @@ class ConnectManagerImpl: ConnectManager()
                 Log.d("MQTT_MESSAGES", "=> stateMp $it")
             }
 
+            rr.subscriptionTopics.forEach { topic ->
+                val qos = IntArray(1) { 1 }
+                client.subscribe(arrayOf(topic), qos)
+                Log.d("MQTT_MESSAGES", "=> subscribed to $topic")
+            }
+
             // Publish to topics based on the new array structure
             rr.topics.forEachIndexed { index, topic ->
                 val payload = rr.payloads.getOrElse(index) { ByteArray(0) }
@@ -1421,13 +1451,13 @@ class ConnectManagerImpl: ConnectManager()
     }
 
     private fun storeUserStateOnSharedPreferences(newUserState: MutableMap<String, ByteArray>) {
-        val existingUserState = retrieveUserStateMap(ownerInfoStateFlow.value?.userState)
+        val existingUserState = retrieveUserStateMap(ownerInfoStateFlow.value.userState)
         existingUserState.putAll(newUserState)
 
         val encodedString = encodeMapToBase64(existingUserState)
 
         // Update class var
-        _ownerInfoStateFlow.value = ownerInfoStateFlow.value?.copy(
+        _ownerInfoStateFlow.value = ownerInfoStateFlow.value.copy(
             userState = encodedString
         )
 

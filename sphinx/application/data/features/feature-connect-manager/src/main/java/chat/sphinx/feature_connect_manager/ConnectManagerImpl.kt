@@ -1476,7 +1476,8 @@ class ConnectManagerImpl: ConnectManager()
     }
 
     private fun getCurrentUserState(): ByteArray {
-        val userStateMap = retrieveUserStateMap(ownerInfoStateFlow.value?.userState)
+        val userStateMap = retrieveUserStateMap(ownerInfoStateFlow.value.userState)
+        Log.d("MQTT_MESSAGES", "getCurrentUserState $userStateMap")
         return MsgPack.encodeToByteArray(MsgPackDynamicSerializer, userStateMap)
     }
 

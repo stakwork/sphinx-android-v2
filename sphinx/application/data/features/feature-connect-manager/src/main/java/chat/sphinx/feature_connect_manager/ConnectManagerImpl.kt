@@ -270,9 +270,15 @@ class ConnectManagerImpl: ConnectManager()
     ) {
         _mixerIp = serverUri
         walletMnemonic = mnemonicWords
-        _ownerInfoStateFlow.value = ownerInfo
 
         if (isConnected()) {
+            _ownerInfoStateFlow.value = OwnerInfo(
+                ownerInfo.alias,
+                ownerInfo.picture,
+                ownerInfoStateFlow.value.userState,
+                ownerInfo.messageLastIndex
+            )
+
             // It's called when invitee first init the dashboard
             if (inviterContact != null) {
                 createContact(inviterContact!!)
@@ -288,6 +294,7 @@ class ConnectManagerImpl: ConnectManager()
             // return always that the mqtt is connected
             return
         }
+        _ownerInfoStateFlow.value = ownerInfo
 
         val seed = try {
             mnemonicToSeed(mnemonicWords.value)

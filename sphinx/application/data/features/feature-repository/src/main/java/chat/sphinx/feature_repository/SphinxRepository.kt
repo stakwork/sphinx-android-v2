@@ -546,7 +546,7 @@ abstract class SphinxRepository(
                     )
 
                 queries.inviteUpdateStatus(InviteStatus.Complete, invite.id)
-                queries.chatUpdateNameAndStatus(ChatName(contact.contactAlias?.value ?: ""),ChatStatus.Approved, ChatId(contactId.value))
+                queries.chatUpdateNameAndStatus(ChatName(contact.contactAlias?.value ?: "unknown"),ChatStatus.Approved, ChatId(contactId.value))
                 queries.dashboardUpdateConversation(contact.contactAlias?.value, contact.photoUrl, contactId)
 
             } else { }

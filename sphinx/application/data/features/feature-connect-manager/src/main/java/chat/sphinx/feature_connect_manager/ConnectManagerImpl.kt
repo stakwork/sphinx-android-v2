@@ -33,6 +33,7 @@ import uniffi.sphinxrs.RunReturn
 import uniffi.sphinxrs.addContact
 import uniffi.sphinxrs.codeFromInvite
 import uniffi.sphinxrs.fetchMsgs
+import uniffi.sphinxrs.fetchMsgsBatch
 import uniffi.sphinxrs.getDefaultTribeServer
 import uniffi.sphinxrs.getMsgsCounts
 import uniffi.sphinxrs.getMutes
@@ -473,12 +474,13 @@ class ConnectManagerImpl: ConnectManager()
 
                 if (ownerInfoStateFlow.value.messageLastIndex != null && restoreMnemonicWords?.isEmpty() == true) {
 
-                    val fetchMessages = fetchMsgs(
+                    val fetchMessages = fetchMsgsBatch(
                         ownerSeed!!,
                         getTimestampInMilliseconds(),
                         getCurrentUserState(),
-                        ownerInfoStateFlow.value?.messageLastIndex?.plus(1)?.toULong() ?: 0.toULong(),
-                        100.toUInt()
+                        ownerInfoStateFlow.value.messageLastIndex?.plus(1)?.toULong() ?: 0.toULong(),
+                        null,
+                        false
                     )
                     handleRunReturn(fetchMessages, mqttClient)
 

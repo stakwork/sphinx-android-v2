@@ -1355,11 +1355,21 @@ abstract class SphinxRepository(
             }
 
             if (!fromMe && contact?.photoUrl?.value != msgSender.photo_url) {
-
                 contact?.id?.let { contactId ->
                     contactLock.withLock {
                         queries.contactUpdatePhotoUrl(
                             msgSender.photo_url?.toPhotoUrl(),
+                            contactId
+                        )
+                    }
+                }
+            }
+
+            if (!fromMe && contact?.alias?.value != msgSender.alias) {
+                contact?.id?.let { contactId ->
+                    contactLock.withLock {
+                        queries.contactUpdateAlias(
+                            msgSender.alias?.toContactAlias(),
                             contactId
                         )
                     }

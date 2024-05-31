@@ -508,6 +508,11 @@ UPDATE contactDbo
 SET photo_url = :photo_url
 WHERE id = ?;
 
+contactUpdateAlias:
+UPDATE contactDbo
+SET alias = :alias
+WHERE id = ?;
+
 contactUpdateDetails:
 UPDATE contactDbo
 SET alias = :alias,

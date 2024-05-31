@@ -449,10 +449,6 @@ class ConnectManagerImpl: ConnectManager()
                 val networkSetup = setNetwork(network)
                 handleRunReturn(networkSetup, client)
 
-                // Block height setup and handling
-                val blockSetup = setBlockheight(0.toUInt())
-                handleRunReturn(blockSetup, client)
-
                 // Initial setup and handling
                 val setUp = initialSetup(
                     ownerSeed!!,

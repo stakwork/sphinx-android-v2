@@ -424,6 +424,8 @@ internal interface _UniFFILib : Library {
     ): RustBuffer.ByValue
     fun uniffi_sphinxrs_fn_func_set_blockheight(`blockheight`: Int,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
+    fun uniffi_sphinxrs_fn_func_get_blockheight(`seed`: RustBuffer.ByValue,`uniqueTime`: RustBuffer.ByValue,`state`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
+    ): RustBuffer.ByValue
     fun uniffi_sphinxrs_fn_func_add_contact(`seed`: RustBuffer.ByValue,`uniqueTime`: RustBuffer.ByValue,`state`: RustBuffer.ByValue,`toPubkey`: RustBuffer.ByValue,`routeHint`: RustBuffer.ByValue,`myAlias`: RustBuffer.ByValue,`myImg`: RustBuffer.ByValue,`amtMsat`: Long,`inviteCode`: RustBuffer.ByValue,`theirAlias`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_sphinxrs_fn_func_get_contact(`state`: RustBuffer.ByValue,`pubkey`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
@@ -565,6 +567,8 @@ internal interface _UniFFILib : Library {
     fun uniffi_sphinxrs_checksum_func_set_device(
     ): Short
     fun uniffi_sphinxrs_checksum_func_set_blockheight(
+    ): Short
+    fun uniffi_sphinxrs_checksum_func_get_blockheight(
     ): Short
     fun uniffi_sphinxrs_checksum_func_add_contact(
     ): Short
@@ -745,6 +749,9 @@ private fun uniffiCheckApiChecksums(lib: _UniFFILib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_sphinxrs_checksum_func_set_blockheight() != 43943.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sphinxrs_checksum_func_get_blockheight() != 25615.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_sphinxrs_checksum_func_add_contact() != 30931.toShort()) {
@@ -1168,6 +1175,8 @@ data class RunReturn (
     var `msgsTotal`: ULong?, 
     var `msgsCounts`: String?, 
     var `subscriptionTopics`: List<String>, 
+    var `settleTopic`: String?, 
+    var `settlePayload`: ByteArray?, 
     var `topics`: List<String>, 
     var `payloads`: List<ByteArray>, 
     var `stateMp`: ByteArray?, 
@@ -1202,6 +1211,8 @@ public object FfiConverterTypeRunReturn: FfiConverterRustBuffer<RunReturn> {
             FfiConverterOptionalULong.read(buf),
             FfiConverterOptionalString.read(buf),
             FfiConverterSequenceString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalByteArray.read(buf),
             FfiConverterSequenceString.read(buf),
             FfiConverterSequenceByteArray.read(buf),
             FfiConverterOptionalByteArray.read(buf),
@@ -1233,6 +1244,8 @@ public object FfiConverterTypeRunReturn: FfiConverterRustBuffer<RunReturn> {
             FfiConverterOptionalULong.allocationSize(value.`msgsTotal`) +
             FfiConverterOptionalString.allocationSize(value.`msgsCounts`) +
             FfiConverterSequenceString.allocationSize(value.`subscriptionTopics`) +
+            FfiConverterOptionalString.allocationSize(value.`settleTopic`) +
+            FfiConverterOptionalByteArray.allocationSize(value.`settlePayload`) +
             FfiConverterSequenceString.allocationSize(value.`topics`) +
             FfiConverterSequenceByteArray.allocationSize(value.`payloads`) +
             FfiConverterOptionalByteArray.allocationSize(value.`stateMp`) +
@@ -1263,6 +1276,8 @@ public object FfiConverterTypeRunReturn: FfiConverterRustBuffer<RunReturn> {
             FfiConverterOptionalULong.write(value.`msgsTotal`, buf)
             FfiConverterOptionalString.write(value.`msgsCounts`, buf)
             FfiConverterSequenceString.write(value.`subscriptionTopics`, buf)
+            FfiConverterOptionalString.write(value.`settleTopic`, buf)
+            FfiConverterOptionalByteArray.write(value.`settlePayload`, buf)
             FfiConverterSequenceString.write(value.`topics`, buf)
             FfiConverterSequenceByteArray.write(value.`payloads`, buf)
             FfiConverterOptionalByteArray.write(value.`stateMp`, buf)
@@ -2469,6 +2484,15 @@ fun `setBlockheight`(`blockheight`: UInt): RunReturn {
     return FfiConverterTypeRunReturn.lift(
     rustCallWithError(SphinxException) { _status ->
     _UniFFILib.INSTANCE.uniffi_sphinxrs_fn_func_set_blockheight(FfiConverterUInt.lower(`blockheight`),_status)
+})
+}
+
+@Throws(SphinxException::class)
+
+fun `getBlockheight`(`seed`: String, `uniqueTime`: String, `state`: ByteArray): RunReturn {
+    return FfiConverterTypeRunReturn.lift(
+    rustCallWithError(SphinxException) { _status ->
+    _UniFFILib.INSTANCE.uniffi_sphinxrs_fn_func_get_blockheight(FfiConverterString.lower(`seed`),FfiConverterString.lower(`uniqueTime`),FfiConverterByteArray.lower(`state`),_status)
 })
 }
 

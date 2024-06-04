@@ -149,7 +149,9 @@ sealed class DashboardChat {
                             getMessageSender(message, context, false)
                         )
                     } else {
-                        context.getString(R.string.last_message_description_welcome_member)
+                        context.getString(
+                            R.string.last_message_description_has_join_tribe,
+                            getMessageSender(message, context, false))
                     }
                 }
                 message.type.isGroupKick() -> {

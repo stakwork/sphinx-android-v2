@@ -1280,12 +1280,7 @@ abstract class SphinxRepository(
                 queries.messageDeleteByUUID(msgUuid)
             }
 
-            val senderAlias = if ( msgType == MessageType.GroupAction.MemberApprove ||
-                msgType == MessageType.GroupAction.MemberReject  ||
-                msgType == MessageType.GroupAction.Kick
-            ) {
-                existingMessage?.sender_alias
-            } else msgSender.alias?.toSenderAlias()
+            val senderAlias = msgSender.alias?.toSenderAlias()
 
             val status = when {
                 fromMe && existingMessage?.payment_request != null -> MessageStatus.Pending

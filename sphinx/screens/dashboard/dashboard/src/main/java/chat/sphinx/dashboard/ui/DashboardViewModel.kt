@@ -51,7 +51,6 @@ import chat.sphinx.scanner_view_model_coordinator.request.ScannerRequest
 import chat.sphinx.scanner_view_model_coordinator.response.ScannerResponse
 import chat.sphinx.wrapper_chat.Chat
 import chat.sphinx.wrapper_chat.isConversation
-import chat.sphinx.wrapper_common.CreateInvoiceLink
 import chat.sphinx.wrapper_common.ExternalAuthorizeLink
 import chat.sphinx.wrapper_common.ExternalRequestLink
 import chat.sphinx.wrapper_common.FeedRecommendationsToggle
@@ -85,7 +84,6 @@ import chat.sphinx.wrapper_common.lightning.toLightningRouteHint
 import chat.sphinx.wrapper_common.lightning.toSat
 import chat.sphinx.wrapper_common.message.SphinxCallLink
 import chat.sphinx.wrapper_common.message.toSphinxCallLink
-import chat.sphinx.wrapper_common.toCreateInvoiceLink
 import chat.sphinx.wrapper_common.toExternalAuthorizeLink
 import chat.sphinx.wrapper_common.toExternalRequestLink
 import chat.sphinx.wrapper_common.toPeopleConnectLink
@@ -105,7 +103,6 @@ import chat.sphinx.wrapper_feed.isNewsletter
 import chat.sphinx.wrapper_feed.isPodcast
 import chat.sphinx.wrapper_feed.isVideo
 import chat.sphinx.wrapper_lightning.NodeBalance
-import chat.sphinx.wrapper_relay.RelayUrl
 import com.squareup.moshi.Moshi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.matthewnelson.android_feature_navigation.util.navArgs
@@ -193,6 +190,7 @@ internal class DashboardViewModel @Inject constructor(
     companion object {
         const val USER_STATE_SHARED_PREFERENCES = "user_state_settings"
         const val ONION_STATE_KEY = "onion_state"
+        const val NETWORK_MIXER_IP = "network_mixer_ip"
     }
 
     private val _hideBalanceStateFlow: MutableStateFlow<Int> by lazy {
@@ -213,7 +211,7 @@ internal class DashboardViewModel @Inject constructor(
                 backgroundLoginHandler.updateLoginTime()
             }
         }
-        connectManagerRepository.connectAndSubscribeToMqtt(getUserState())
+        connectManagerRepository.connectAndSubscribeToMqtt(getUserState(), getNetworkMixerIp())
         setDeviceId()
         collectConnectionState()
         collectConnectManagerErrorState()
@@ -351,6 +349,10 @@ internal class DashboardViewModel @Inject constructor(
 
     private fun getUserState(): String? {
         return userStateSharedPreferences.getString(ONION_STATE_KEY, null)
+    }
+
+    private fun getNetworkMixerIp(): String? {
+        return userStateSharedPreferences.getString(NETWORK_MIXER_IP, null)
     }
 
     private fun deleteUserState(userStates: List<String>) {

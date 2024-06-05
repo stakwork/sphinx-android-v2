@@ -138,7 +138,7 @@ internal sealed class OnBoardConnectSideEffect: SideEffect<Context>() {
             builder.setTitle(value.getString(R.string.select_bitcoin_network))
 
             val items = arrayOf(BITCOIN_NETWORK_REG_TEST.toCapitalized(), BITCOIN_NETWORK_MAIN_NET.toCapitalized())
-            builder.setSingleChoiceItems(items, 0
+            builder.setSingleChoiceItems(items, 1
             ) { _, p1 ->
                 when (p1) {
                     0 -> {

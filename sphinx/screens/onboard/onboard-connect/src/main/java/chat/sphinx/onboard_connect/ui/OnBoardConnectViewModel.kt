@@ -220,8 +220,20 @@ internal class OnBoardConnectViewModel @Inject constructor(
                 }
 
                 if (redemptionCode is RedemptionCode.MnemonicRestoration) {
+                    // create a dialog to select network
                     connectManagerRepository.setMnemonicWords(redemptionCode.mnemonic)
-                    presentLoginModal()
+
+                    submitSideEffect(OnBoardConnectSideEffect.CheckBitcoinNetwork(
+                        regTestCallback = {
+                            connectManagerRepository.setNetworkType(BITCOIN_NETWORK_REG_TEST)
+                        }, mainNetCallback = {
+                            connectManagerRepository.setNetworkType(BITCOIN_NETWORK_MAIN_NET)
+                        }, callback = {
+                            viewModelScope.launch(mainImmediate) {
+                                presentLoginModal()
+                            }
+                        })
+                    )
                 }
             }
         } else {

@@ -8,7 +8,6 @@ import chat.sphinx.concept_meme_server.MemeServerTokenHandler
 import chat.sphinx.concept_network_query_chat.NetworkQueryChat
 import chat.sphinx.concept_network_query_chat.model.*
 import chat.sphinx.concept_network_query_contact.NetworkQueryContact
-import chat.sphinx.concept_network_query_contact.model.ContactDto
 import chat.sphinx.concept_network_query_contact.model.PostContactDto
 import chat.sphinx.concept_network_query_discover_tribes.NetworkQueryDiscoverTribes
 import chat.sphinx.concept_network_query_feed_search.NetworkQueryFeedSearch
@@ -122,7 +121,6 @@ import chat.sphinx.wrapper_lightning.LightningServiceProvider
 import chat.sphinx.wrapper_lightning.NodeBalance
 import chat.sphinx.wrapper_lightning.NodeBalanceAll
 import chat.sphinx.wrapper_lightning.toWalletMnemonic
-import chat.sphinx.wrapper_meme_server.AuthenticationChallenge
 import chat.sphinx.wrapper_message.*
 import chat.sphinx.wrapper_message.Msg.Companion.toMsg
 import chat.sphinx.wrapper_message.MsgSender.Companion.toMsgSender
@@ -152,7 +150,6 @@ import kotlinx.coroutines.sync.withLock
 import okio.base64.encodeBase64
 import java.io.File
 import java.io.InputStream
-import java.text.ParseException
 import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.collections.LinkedHashMap
@@ -273,7 +270,7 @@ abstract class SphinxRepository(
         }
     }
 
-    override fun connectAndSubscribeToMqtt(userState: String?) {
+    override fun connectAndSubscribeToMqtt(userState: String?, mixerIp: String?) {
         applicationScope.launch(mainImmediate) {
             val queries = coreDB.getSphinxDatabaseQueries()
             val mnemonic = walletDataHandler.retrieveWalletMnemonic()
@@ -287,9 +284,9 @@ abstract class SphinxRepository(
                 lastMessageIndex
             )
 
-            if (mnemonic != null && okKey != null) {
+            if (mnemonic != null && okKey != null && mixerIp != null) {
                 connectManager.initializeMqttAndSubscribe(
-                    "34.229.52.200:1883",
+                    mixerIp,
                     mnemonic,
                     ownerInfo
                 )
@@ -404,6 +401,10 @@ abstract class SphinxRepository(
 
     override fun setInviteCode(inviteString: String) {
         connectManager.setInviteCode(inviteString)
+    }
+
+    override fun setNetworkType(network: String) {
+        connectManager.setNetworkType(network)
     }
 
     override fun setMnemonicWords(words: List<String>?) {

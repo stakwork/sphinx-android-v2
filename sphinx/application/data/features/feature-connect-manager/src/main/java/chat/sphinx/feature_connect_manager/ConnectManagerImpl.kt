@@ -32,7 +32,6 @@ import uniffi.sphinxrs.ParsedInvite
 import uniffi.sphinxrs.RunReturn
 import uniffi.sphinxrs.addContact
 import uniffi.sphinxrs.codeFromInvite
-import uniffi.sphinxrs.fetchMsgs
 import uniffi.sphinxrs.fetchMsgsBatch
 import uniffi.sphinxrs.getDefaultTribeServer
 import uniffi.sphinxrs.getMsgsCounts
@@ -57,7 +56,6 @@ import uniffi.sphinxrs.processInvite
 import uniffi.sphinxrs.read
 import uniffi.sphinxrs.rootSignMs
 import uniffi.sphinxrs.send
-import uniffi.sphinxrs.setBlockheight
 import uniffi.sphinxrs.setNetwork
 import uniffi.sphinxrs.setPushToken
 import uniffi.sphinxrs.signBytes
@@ -72,7 +70,7 @@ class ConnectManagerImpl: ConnectManager()
     private var _mixerIp: String? = null
     private var walletMnemonic: WalletMnemonic? = null
     private var mqttClient: MqttAsyncClient? = null
-    private val network = "regtest"
+    private var network = "mainnet"
     private var ownerSeed: String? = null
     private var inviteCode: String? = null
     private var inviteInitialTribe: String? = null
@@ -153,6 +151,10 @@ class ConnectManagerImpl: ConnectManager()
 
     override fun setMnemonicWords(words: List<String>?) {
         this.restoreMnemonicWords = words
+    }
+
+    override fun setNetworkType(network: String) {
+        this.network = network
     }
 
     @OptIn(ExperimentalUnsignedTypes::class)

@@ -20,12 +20,15 @@ interface ConnectManagerRepository {
 
     fun createOwnerAccount(lspIp: String)
     fun createContact(contact: NewContact)
-    fun connectAndSubscribeToMqtt(userState: String?) {}
+    fun connectAndSubscribeToMqtt(userState: String?, mixerIp: String?) {}
     fun singChallenge(challenge: String)
     fun createInvite(nickname: String, welcomeMessage: String, sats: Long, tribeServerPubKey: String?)
     fun setInviteCode(inviteString: String)
+    fun setNetworkType(network: String)
     fun setMnemonicWords(words: List<String>?)
     fun setOwnerDeviceId(deviceId: String)
+
+
 
     fun joinTribe(
         tribeHost: String,

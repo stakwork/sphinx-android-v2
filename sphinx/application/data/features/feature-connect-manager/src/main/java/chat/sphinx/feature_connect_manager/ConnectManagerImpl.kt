@@ -78,6 +78,7 @@ class ConnectManagerImpl: ConnectManager()
     private var restoreMnemonicWords: List<String>? = emptyList()
     private var inviterContact: NewContact? = null
     private var hasAttemptedReconnect = false
+    private var tribeServer: String? = null
 
     companion object {
         const val TEST_V2_SERVER_IP = "34.229.52.200:1883"
@@ -109,59 +110,78 @@ class ConnectManagerImpl: ConnectManager()
 
     // Key Generation and Management
     override fun createAccount() {
+        if (!restoreMnemonicWords.isNullOrEmpty()) {
+            notifyListeners {
+                onRestoreAccount(isTestEnvironment())
+            }
+        } else {
+            val seed = generateMnemonicAndSeed(null)
+            val now = getTimestampInMilliseconds()
+
+            seed?.let { firstSeed ->
+                var invite: ParsedInvite? = null
+                ownerSeed = firstSeed
+
+                if (inviteCode != null) {
+                    invite = parseInvite(inviteCode!!)
+
+                    val hostAndPubKey = invite.initialTribe?.let { extractTribeServerAndPubkey(it) }
+                    val parts = invite.inviterContactInfo?.split("_")
+                    val okKey = parts?.getOrNull(0)?.toLightningNodePubKey()
+                    val routeHint =
+                        "${parts?.getOrNull(1)}_${parts?.getOrNull(2)}".toLightningRouteHint()
+
+                    // add contact alias
+                    inviterContact = NewContact(
+                        null,
+                        okKey,
+                        routeHint,
+                        null,
+                        false,
+                        null,
+                        invite.code,
+                        null,
+                        null,
+                    )
+                    _mixerIp = invite.lspHost
+                    tribeServer = hostAndPubKey?.first ?: TEST_V2_TRIBES_SERVER
+
+                    network = if (isTestServer()) {
+                        REGTEST_NETWORK
+                    } else {
+                        MAINNET_NETWORK
+                    }
+                }
+
+                val xPub = generateXPub(firstSeed, now, network)
+                val sig = signMs(firstSeed, now, network)
+
+                if (xPub != null) {
+                    connectToMQTT(mixerIp!!, xPub, now, sig)
+                }
+//                notifyListeners {
+//                    onConnectManagerError(ConnectManagerError.GenerateXPubError)
+//                }
+            }
+        }
+    }
+
+    override fun restoreAccount(defaultTribe: String?, tribeHost: String?, mixerServerIp: String?) {
         val restoreMnemonic = restoreMnemonicWords?.joinToString(" ")
         val seed = generateMnemonicAndSeed(restoreMnemonic)
         val now = getTimestampInMilliseconds()
 
         seed?.let { firstSeed ->
-            var invite: ParsedInvite? = null
             ownerSeed = firstSeed
-
-            if (inviteCode != null) {
-                invite = parseInvite(inviteCode!!)
-
-                val parts = invite.inviterContactInfo?.split("_")
-                val okKey = parts?.getOrNull(0)?.toLightningNodePubKey()
-                val routeHint = "${parts?.getOrNull(1)}_${parts?.getOrNull(2)}".toLightningRouteHint()
-
-                // add contact alias
-                inviterContact = NewContact(
-                    null,
-                    okKey,
-                    routeHint,
-                    null,
-                    false,
-                    null,
-                    invite.code,
-                    null,
-                    null,
-                )
-                _mixerIp = invite.lspHost
-
-                network = if (isTestEnvironment()) {
-                    notifyListeners {
-                        onUpdateTribeServer(TEST_V2_TRIBES_SERVER)
-                    }
-                    REGTEST_NETWORK
-                } else {
-                    MAINNET_NETWORK
-                }
-            }
+            _mixerIp = mixerServerIp ?: TEST_V2_SERVER_IP
+            tribeServer = defaultTribe ?: TEST_V2_TRIBES_SERVER
 
             val xPub = generateXPub(firstSeed, now, network)
             val sig = signMs(firstSeed, now, network)
 
-            // if mainet call endpoint to get tribe server and mixeIP
-            notifyListeners {
-                mixerIp?.replace("tcp://", "")?.let { onUpdateMixerIp(it) }
-            }
-
             if (xPub != null) {
                 connectToMQTT(mixerIp!!, xPub, now, sig)
             }
-//                notifyListeners {
-//                    onConnectManagerError(ConnectManagerError.GenerateXPubError)
-//                }
         }
     }
 
@@ -181,10 +201,14 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
-    private fun isTestEnvironment(): Boolean {
+    private fun isTestServer(): Boolean {
         val ip = mixerIp ?: return false
         val port = ip.substringAfterLast(":").toIntOrNull() ?: return false
         return port == 1883
+    }
+
+    private fun isTestEnvironment(): Boolean {
+        return network == REGTEST_NETWORK
     }
 
 
@@ -305,7 +329,7 @@ class ConnectManagerImpl: ConnectManager()
     ) {
         _mixerIp = serverUri
         walletMnemonic = mnemonicWords
-        network = if (isTestEnvironment()) REGTEST_NETWORK else MAINNET_NETWORK
+        network = if (isTestServer()) REGTEST_NETWORK else MAINNET_NETWORK
 
         if (isConnected()) {
             _ownerInfoStateFlow.value = OwnerInfo(
@@ -953,11 +977,14 @@ class ConnectManagerImpl: ConnectManager()
                 onNetworkStatusChange(false)
             }
 
-            initializeMqttAndSubscribe(
-                mixerIp!!,
-                walletMnemonic!!,
-                ownerInfoStateFlow.value!!,
-            )
+            if (mixerIp != null && walletMnemonic != null && ownerInfoStateFlow.value != null) {
+
+                initializeMqttAndSubscribe(
+                    mixerIp!!,
+                    walletMnemonic!!,
+                    ownerInfoStateFlow.value,
+                )
+            }
 
             Log.d("MQTT_MESSAGES", "onReconnectMqtt")
         }
@@ -1235,10 +1262,18 @@ class ConnectManagerImpl: ConnectManager()
 
                 if (okKey != null && routeHint != null) {
                     notifyListeners {
-                        onOwnerRegistered(okKey, routeHint, isRestoreAccount)
+                        onOwnerRegistered(
+                            okKey,
+                            routeHint,
+                            isRestoreAccount,
+                            mixerIp?.replace("tcp://", ""),
+                            tribeServer
+                        )
                     }
                 }
                 Log.d("MQTT_MESSAGES", "=> my_contact_info $myContactInfo")
+                Log.d("MQTT_MESSAGES", "=> my_contact_info mixerIp $mixerIp")
+                Log.d("MQTT_MESSAGES", "=> my_contact_info tribeServer $tribeServer")
             }
 
             // Handling new invite created
@@ -1504,6 +1539,7 @@ class ConnectManagerImpl: ConnectManager()
         // Update SharedPreferences
         notifyListeners {
             onUpdateUserState(encodedString)
+            Log.d("MQTT_MESSAGES", "storeUserStateOnSharedPreferences $encodedString")
         }
     }
 
@@ -1583,6 +1619,12 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
+    private fun extractTribeServerAndPubkey(url: String): Pair<String, String>? {
+        val regex = Regex("https://([^/]+)/tribes/([^/]+)")
+        return regex.find(url)?.groupValues?.takeIf { it.size == 3 }?.let {
+            it[1] to it[2]
+        }
+    }
     private fun isConnected(): Boolean {
         return mqttClient?.isConnected ?: false
     }

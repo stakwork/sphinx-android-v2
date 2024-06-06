@@ -384,13 +384,10 @@ internal class OnBoardConnectingViewModel @Inject constructor(
                     is ConnectionManagerState.MnemonicWords -> {
                         submitSideEffect(OnBoardConnectingSideEffect.ShowMnemonicToUser(connectionState.words) {})
                     }
-                    is ConnectionManagerState.NetworkMixerIp -> {
-                        storeNetworkMixerIp(connectionState.mixerIp)
-                    }
-                    is ConnectionManagerState.TribeServerIp -> {
-                        storeTribeServerIp(connectionState.tribeIp)
-                    }
                     is ConnectionManagerState.OwnerRegistered -> {
+                        connectionState.mixerServerIp?.let { storeNetworkMixerIp(it) }
+                        connectionState.tirbeServerHost?.let { storeTribeServerIp(it) }
+
                         if (connectionState.isRestoreAccount) {
                             navigator.toDashboardScreen()
                         } else {

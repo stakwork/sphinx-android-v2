@@ -253,14 +253,24 @@ abstract class SphinxRepository(
         connectionManagerState.value = ConnectionManagerState.MnemonicWords(words)
     }
 
-    override fun onOwnerRegistered(okKey: String, routeHint: String, isRestoreAccount: Boolean) {
+    override fun onOwnerRegistered(
+        okKey: String,
+        routeHint: String,
+        isRestoreAccount: Boolean,
+        mixerServerIp: String?,
+        tribeServerHost: String?
+    ) {
         applicationScope.launch(mainImmediate) {
             val scid = routeHint.toLightningRouteHint()?.getScid()
 
             if (scid != null && accountOwner.value?.nodePubKey == null) {
                 createOwner(okKey, routeHint, scid)
 
-                connectionManagerState.value = ConnectionManagerState.OwnerRegistered(isRestoreAccount)
+                connectionManagerState.value = ConnectionManagerState.OwnerRegistered(
+                    isRestoreAccount,
+                    mixerServerIp,
+                    tribeServerHost
+                )
                 delay(1000L)
 
                 if (isRestoreAccount) {
@@ -839,14 +849,6 @@ abstract class SphinxRepository(
         connectionManagerState.value = ConnectionManagerState.DeleteUserState(userState)
     }
 
-    override fun onUpdateMixerIp(mixerIp: String) {
-        connectionManagerState.value = ConnectionManagerState.NetworkMixerIp(mixerIp)
-    }
-
-    override fun onUpdateTribeServer(tribeServer: String) {
-        connectionManagerState.value = ConnectionManagerState.TribeServerIp(tribeServer)
-    }
-
     override fun onSignedChallenge(sign: String) {
         connectionManagerState.value = ConnectionManagerState.SignedChallenge(sign)
     }
@@ -939,6 +941,26 @@ abstract class SphinxRepository(
             withContext(dispatchers.mainImmediate) {
                 delay(1000L)
                 callback.invoke()
+            }
+        }
+    }
+
+    override fun onRestoreAccount(isTestEnvironment: Boolean) {
+        if (isTestEnvironment) {
+            connectManager.restoreAccount(null, null, null)
+        } else {
+            applicationScope.launch(mainImmediate) {
+                networkQueryContact.getAccountConfig().collect { loadResponse ->
+                    when (loadResponse) {
+                        is Response.Success -> {
+                            connectManager.restoreAccount(
+                                loadResponse.value.tribe,
+                                loadResponse.value.tribe_host,
+                                loadResponse.value.default_lsp
+                            )
+                        }
+                    }
+                }
             }
         }
     }

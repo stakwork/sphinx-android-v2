@@ -11,6 +11,11 @@ abstract class ConnectManager {
     abstract val ownerInfoStateFlow: StateFlow<OwnerInfo?>
 
     abstract fun createAccount()
+    abstract fun restoreAccount(
+        defaultTribe: String?,
+        tribeHost: String?,
+        mixerServerIp: String?
+    )
     abstract fun setInviteCode(inviteString: String)
     abstract fun setMnemonicWords(words: List<String>?)
     abstract fun setNetworkType(isTestEnvironment: Boolean)
@@ -116,7 +121,13 @@ abstract class ConnectManager {
 interface ConnectManagerListener {
 
     fun onMnemonicWords(words: String)
-    fun onOwnerRegistered(okKey: String, routeHint: String, isRestoreAccount: Boolean)
+    fun onOwnerRegistered(
+        okKey: String,
+        routeHint: String,
+        isRestoreAccount: Boolean,
+        mixerServerIp: String?,
+        tribeServerHost: String?
+    )
 
     fun onMessage(
         msg: String,
@@ -138,13 +149,12 @@ interface ConnectManagerListener {
     fun onMessageTagAndUuid(tag: String?, msgUUID: String, provisionalId: Long)
     fun onUpdateUserState(userState: String)
     fun onDeleteUserState(userState: List<String>)
-    fun onUpdateMixerIp(mixerIp: String)
-    fun onUpdateTribeServer(tribeServer: String)
     fun onSignedChallenge(sign: String)
     fun onNewBalance(balance: Long)
     fun onPayments(payments: String)
     fun onNetworkStatusChange(isConnected: Boolean)
     fun listenToOwnerCreation(callback: () -> Unit)
+    fun onRestoreAccount(isTestEnvironment: Boolean)
 
     fun onNewInviteCreated(
         nickname: String,

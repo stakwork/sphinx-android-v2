@@ -81,6 +81,7 @@ internal class OnBoardConnectViewModel @Inject constructor(
     companion object {
         const val BITCOIN_NETWORK_REG_TEST = "regtest"
         const val BITCOIN_NETWORK_MAIN_NET = "mainnet"
+        const val BITCOIN = "bitcoin"
     }
 
     val submitButtonViewStateContainer: ViewStateContainer<OnBoardConnectSubmitButtonViewState> by lazy {
@@ -225,9 +226,9 @@ internal class OnBoardConnectViewModel @Inject constructor(
 
                     submitSideEffect(OnBoardConnectSideEffect.CheckBitcoinNetwork(
                         regTestCallback = {
-                            connectManagerRepository.setNetworkType(BITCOIN_NETWORK_REG_TEST)
+                            connectManagerRepository.setNetworkType(true)
                         }, mainNetCallback = {
-                            connectManagerRepository.setNetworkType(BITCOIN_NETWORK_MAIN_NET)
+                            connectManagerRepository.setNetworkType(false)
                         }, callback = {
                             viewModelScope.launch(mainImmediate) {
                                 presentLoginModal()

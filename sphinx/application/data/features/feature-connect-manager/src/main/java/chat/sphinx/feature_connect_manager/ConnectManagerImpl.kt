@@ -70,7 +70,7 @@ class ConnectManagerImpl: ConnectManager()
     private var _mixerIp: String? = null
     private var walletMnemonic: WalletMnemonic? = null
     private var mqttClient: MqttAsyncClient? = null
-    private var network = "mainnet"
+    private var network = ""
     private var ownerSeed: String? = null
     private var inviteCode: String? = null
     private var inviteInitialTribe: String? = null
@@ -78,6 +78,15 @@ class ConnectManagerImpl: ConnectManager()
     private var restoreMnemonicWords: List<String>? = emptyList()
     private var inviterContact: NewContact? = null
     private var hasAttemptedReconnect = false
+
+    companion object {
+        const val TEST_V2_SERVER_IP = "34.229.52.200:1883"
+        const val TEST_V2_TRIBES_SERVER = "34.229.52.200:8801"
+        const val REGTEST_NETWORK = "regtest"
+        const val MAINNET_NETWORK = "bitcoin"
+        const val TEST_SERVER_PORT =  1883
+        const val PROD_SERVER_PORT = 8883
+    }
 
     private val _ownerInfoStateFlow: MutableStateFlow<OwnerInfo> by lazy {
         MutableStateFlow(OwnerInfo(
@@ -99,49 +108,60 @@ class ConnectManagerImpl: ConnectManager()
         }
 
     // Key Generation and Management
-    override fun createAccount(lspIp: String) {
-        mixerIp = lspIp
-
-        val seed = generateMnemonic()
+    override fun createAccount() {
+        val restoreMnemonic = restoreMnemonicWords?.joinToString(" ")
+        val seed = generateMnemonicAndSeed(restoreMnemonic)
         val now = getTimestampInMilliseconds()
 
-        seed.first?.let { firstSeed ->
-            val xPub = generateXPub(firstSeed, now, network)
-            val sig = signMs(firstSeed, now, network)
+        seed?.let { firstSeed ->
+            var invite: ParsedInvite? = null
             ownerSeed = firstSeed
 
-            if (xPub != null) {
-                var invite: ParsedInvite? = null
+            if (inviteCode != null) {
+                invite = parseInvite(inviteCode!!)
 
-                if (inviteCode != null) {
-                    invite = parseInvite(inviteCode!!)
+                val parts = invite.inviterContactInfo?.split("_")
+                val okKey = parts?.getOrNull(0)?.toLightningNodePubKey()
+                val routeHint = "${parts?.getOrNull(1)}_${parts?.getOrNull(2)}".toLightningRouteHint()
 
-                    val parts = invite.inviterContactInfo?.split("_")
-                    val okKey = parts?.getOrNull(0)?.toLightningNodePubKey()
-                    val routeHint = "${parts?.getOrNull(1)}_${parts?.getOrNull(2)}".toLightningRouteHint()
+                // add contact alias
+                inviterContact = NewContact(
+                    null,
+                    okKey,
+                    routeHint,
+                    null,
+                    false,
+                    null,
+                    invite.code,
+                    null,
+                    null,
+                )
+                _mixerIp = invite.lspHost
 
-                    // add contact alias
-                    inviterContact = NewContact(
-                        null,
-                        okKey,
-                        routeHint,
-                        null,
-                        false,
-                        null,
-                        invite.code,
-                        null,
-                        null,
-                    )
-
-                    _mixerIp = invite.lspHost
-                }
-
-                connectToMQTT(mixerIp!!, xPub, now, sig)
-            } else {
-                notifyListeners {
-                    onConnectManagerError(ConnectManagerError.GenerateXPubError)
+                network = if (isTestEnvironment()) {
+                    notifyListeners {
+                        onUpdateTribeServer(TEST_V2_TRIBES_SERVER)
+                    }
+                    REGTEST_NETWORK
+                } else {
+                    MAINNET_NETWORK
                 }
             }
+
+            val xPub = generateXPub(firstSeed, now, network)
+            val sig = signMs(firstSeed, now, network)
+
+            // if mainet call endpoint to get tribe server and mixeIP
+            notifyListeners {
+                mixerIp?.replace("tcp://", "")?.let { onUpdateMixerIp(it) }
+            }
+
+            if (xPub != null) {
+                connectToMQTT(mixerIp!!, xPub, now, sig)
+            }
+//                notifyListeners {
+//                    onConnectManagerError(ConnectManagerError.GenerateXPubError)
+//                }
         }
     }
 
@@ -153,16 +173,27 @@ class ConnectManagerImpl: ConnectManager()
         this.restoreMnemonicWords = words
     }
 
-    override fun setNetworkType(network: String) {
-        this.network = network
+    override fun setNetworkType(isTestEnvironment: Boolean) {
+        if (isTestEnvironment) {
+            this.network = REGTEST_NETWORK
+        } else {
+            this.network = MAINNET_NETWORK
+        }
     }
 
+    private fun isTestEnvironment(): Boolean {
+        val ip = mixerIp ?: return false
+        val port = ip.substringAfterLast(":").toIntOrNull() ?: return false
+        return port == 1883
+    }
+
+
     @OptIn(ExperimentalUnsignedTypes::class)
-    private fun generateMnemonic(): Pair<String?, WalletMnemonic?> {
+    private fun generateMnemonicAndSeed(restoreMnemonic: String?): String? {
         var seed: String? = null
 
         // Check if is account restoration
-        val mnemonic = if (!restoreMnemonicWords.isNullOrEmpty()) {
+        val mnemonic = if (!restoreMnemonic.isNullOrEmpty()) {
             restoreMnemonicWords!!.joinToString(" ").toWalletMnemonic()
         } else {
             try {
@@ -187,10 +218,11 @@ class ConnectManagerImpl: ConnectManager()
                 notifyListeners {
                     onMnemonicWords(words)
                 }
-            } catch (e: Exception) {}
+            } catch (e: Exception) {
+            }
         }
 
-        return Pair(seed, mnemonic)
+        return seed
     }
 
     private fun generateXPub(seed: String, time: String, network: String): String? {
@@ -248,7 +280,7 @@ class ConnectManagerImpl: ConnectManager()
                 getCurrentUserState(),
                 contact.lightningNodePubKey?.value!!,
                 contact.lightningRouteHint?.value!!,
-                ownerInfoStateFlow.value?.alias ?: "",
+                ownerInfoStateFlow.value.alias ?: "",
                 ownerInfoStateFlow.value?.picture ?: "",
                 3000.toULong(),
                 contact.inviteCode,
@@ -273,6 +305,7 @@ class ConnectManagerImpl: ConnectManager()
     ) {
         _mixerIp = serverUri
         walletMnemonic = mnemonicWords
+        network = if (isTestEnvironment()) REGTEST_NETWORK else MAINNET_NETWORK
 
         if (isConnected()) {
             _ownerInfoStateFlow.value = OwnerInfo(

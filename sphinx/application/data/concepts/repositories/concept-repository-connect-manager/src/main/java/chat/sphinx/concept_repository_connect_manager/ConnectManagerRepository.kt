@@ -18,13 +18,13 @@ interface ConnectManagerRepository {
     val connectManagerErrorState: MutableStateFlow<ConnectManagerError?>
     val transactionDtoState: MutableStateFlow<List<TransactionDto>?>
 
-    fun createOwnerAccount(lspIp: String)
+    fun createOwnerAccount()
     fun createContact(contact: NewContact)
     fun connectAndSubscribeToMqtt(userState: String?, mixerIp: String?) {}
     fun singChallenge(challenge: String)
     fun createInvite(nickname: String, welcomeMessage: String, sats: Long, tribeServerPubKey: String?)
     fun setInviteCode(inviteString: String)
-    fun setNetworkType(network: String)
+    fun setNetworkType(isTestEnvironment: Boolean)
     fun setMnemonicWords(words: List<String>?)
     fun setOwnerDeviceId(deviceId: String)
 

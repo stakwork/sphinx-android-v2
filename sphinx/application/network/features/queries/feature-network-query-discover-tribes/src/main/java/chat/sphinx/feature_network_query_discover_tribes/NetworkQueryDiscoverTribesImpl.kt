@@ -8,12 +8,11 @@ import chat.sphinx.kotlin_response.ResponseError
 import kotlinx.coroutines.flow.Flow
 
 class NetworkQueryDiscoverTribesImpl(
-    private val networkRelayCall: NetworkRelayCall
-    ): NetworkQueryDiscoverTribes() {
+    private val networkRelayCall: NetworkRelayCall,
+): NetworkQueryDiscoverTribes() {
 
     companion object {
         private const val TRIBES_DEFAULT_SERVER_URL = "http://34.229.52.200:8801"
-
         private const val ENDPOINT_OFFSET_TRIBES = "/tribes?limit=%s&page=%s&sortBy=member_count"
         private const val ENDPOINT_SEARCH_TRIBES = "&search=%s"
         private const val ENDPOINT_TAGS_TRIBES = "&tags=%s"

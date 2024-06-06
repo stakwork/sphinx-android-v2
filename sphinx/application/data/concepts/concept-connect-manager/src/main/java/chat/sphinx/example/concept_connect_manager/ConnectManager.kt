@@ -10,11 +10,10 @@ abstract class ConnectManager {
 
     abstract val ownerInfoStateFlow: StateFlow<OwnerInfo?>
 
-    abstract fun createAccount(lspIp: String)
+    abstract fun createAccount()
     abstract fun setInviteCode(inviteString: String)
     abstract fun setMnemonicWords(words: List<String>?)
-
-    abstract fun setNetworkType(network: String)
+    abstract fun setNetworkType(isTestEnvironment: Boolean)
     abstract fun createContact(contact: NewContact)
     abstract fun initializeMqttAndSubscribe(
         serverUri: String,
@@ -139,6 +138,8 @@ interface ConnectManagerListener {
     fun onMessageTagAndUuid(tag: String?, msgUUID: String, provisionalId: Long)
     fun onUpdateUserState(userState: String)
     fun onDeleteUserState(userState: List<String>)
+    fun onUpdateMixerIp(mixerIp: String)
+    fun onUpdateTribeServer(tribeServer: String)
     fun onSignedChallenge(sign: String)
     fun onNewBalance(balance: Long)
     fun onPayments(payments: String)

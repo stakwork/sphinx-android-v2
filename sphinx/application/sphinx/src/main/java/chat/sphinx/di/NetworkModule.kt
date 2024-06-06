@@ -2,6 +2,7 @@ package chat.sphinx.di
 
 import android.app.Application
 import android.content.Context
+import android.content.SharedPreferences
 import chat.sphinx.concept_crypto_rsa.RSA
 import chat.sphinx.concept_link_preview.LinkPreviewHandler
 import chat.sphinx.concept_meme_input_stream.MemeInputStreamHandler
@@ -63,6 +64,9 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
+
+    const val USER_STATE_SHARED_PREFERENCES = "user_state_settings"
+    const val TRIBE_SERVER_IP = "tribe_server_ip"
 
     @Provides
     @Singleton
@@ -331,7 +335,7 @@ object NetworkModule {
 
     @Provides
     fun provideNetworkQueryDiscoverTribesImpl(
-        networkRelayCall: NetworkRelayCall
+        networkRelayCall: NetworkRelayCall,
     ): NetworkQueryDiscoverTribesImpl =
         NetworkQueryDiscoverTribesImpl(networkRelayCall)
 

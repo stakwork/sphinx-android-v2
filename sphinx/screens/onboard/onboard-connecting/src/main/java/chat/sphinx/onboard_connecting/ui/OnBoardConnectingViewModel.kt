@@ -24,7 +24,6 @@ import chat.sphinx.kotlin_response.Response
 import chat.sphinx.kotlin_response.ResponseError
 import chat.sphinx.onboard_common.OnBoardStepHandler
 import chat.sphinx.onboard_common.model.OnBoardInviterData
-import chat.sphinx.onboard_common.model.OnBoardStep
 import chat.sphinx.onboard_common.model.RedemptionCode
 import chat.sphinx.onboard_connecting.R
 import chat.sphinx.onboard_connecting.navigation.OnBoardConnectingNavigator
@@ -42,7 +41,6 @@ import io.matthewnelson.android_feature_viewmodel.submitSideEffect
 import io.matthewnelson.android_feature_viewmodel.updateViewState
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
 import io.matthewnelson.crypto_common.annotations.RawPasswordAccess
-import io.matthewnelson.crypto_common.annotations.UnencryptedDataAccess
 import io.matthewnelson.crypto_common.clazzes.*
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -139,6 +137,8 @@ internal class OnBoardConnectingViewModel @Inject constructor(
     companion object {
         const val USER_STATE_SHARED_PREFERENCES = "user_state_settings"
         const val ONION_STATE_KEY = "onion_state"
+        const val NETWORK_MIXER_IP = "network_mixer_ip"
+        const val TRIBE_SERVER_IP = "tribe_server_ip"
     }
 
     init {
@@ -170,7 +170,7 @@ internal class OnBoardConnectingViewModel @Inject constructor(
                 if (signerManager.isPhoneSignerSettingUp()) {
                     continuePhoneSignerSetup()
                 } else {
-                    connectManagerRepository.createOwnerAccount("34.229.52.200:1883")
+                    connectManagerRepository.createOwnerAccount()
 
 //                    submitSideEffect(OnBoardConnectingSideEffect.InvalidCode)
 //                    navigator.popBackStack()
@@ -183,6 +183,20 @@ internal class OnBoardConnectingViewModel @Inject constructor(
         val editor = userStateSharedPreferences.edit()
 
         editor.putString(ONION_STATE_KEY, state)
+        editor.apply()
+    }
+
+    private fun storeNetworkMixerIp(state: String) {
+        val editor = userStateSharedPreferences.edit()
+
+        editor.putString(NETWORK_MIXER_IP, state)
+        editor.apply()
+    }
+
+    private fun storeTribeServerIp(state: String) {
+        val editor = userStateSharedPreferences.edit()
+
+        editor.putString(TRIBE_SERVER_IP, state)
         editor.apply()
     }
 
@@ -323,71 +337,6 @@ internal class OnBoardConnectingViewModel @Inject constructor(
         var generateTokenResponse: LoadResponse<GenerateTokenResponse, ResponseError> = Response.Error(
             ResponseError("generateToken endpoint failed")
         )
-
-//        if (relayTransportToken != null) {
-//            networkQueryContact.generateToken(
-//                password,
-//                nodePubKey,
-//                Triple(Pair(authToken, relayTransportToken), null, relayUrl)
-//            ).collect { loadResponse ->
-//                generateTokenResponse = loadResponse
-//            }
-//        } else {
-//            networkQueryContact.generateToken(
-//                relayUrl,
-//                authToken,
-//                password,
-//                nodePubKey
-//            ).collect { loadResponse ->
-//                generateTokenResponse = loadResponse
-//            }
-//        }
-
-//        @Exhaustive
-//        when (generateTokenResponse) {
-//            is LoadResponse.Loading -> {}
-//            is Response.Error -> {
-//                if (tokenRetries < 3) {
-//                    tokenRetries += 1
-//
-//                    registerTokenAndStartOnBoard(
-//                        ip,
-//                        nodePubKey,
-//                        password,
-//                        redeemInviteDto,
-//                        authToken,
-//                        transportKey,
-//                        relayTransportToken
-//                    )
-//                } else {
-//                    submitSideEffect(OnBoardConnectingSideEffect.GenerateTokenFailed)
-//                    navigator.popBackStack()
-//                }
-//            }
-//            is Response.Success -> {
-//
-//                val hMacKey = createHMacKey(
-//                    relayData = Triple(Pair(authToken, relayTransportToken), null, relayUrl),
-//                    transportKey = transportKey
-//                )
-//
-//                val step1Message: OnBoardStep.Step1_WelcomeMessage? =
-//                    onBoardStepHandler.persistOnBoardStep1Data(
-//                        relayUrl,
-//                        authToken,
-//                        transportKey,
-//                        hMacKey,
-//                        inviterData
-//                    )
-//
-//                if (step1Message == null) {
-//                    submitSideEffect(OnBoardConnectingSideEffect.GenerateTokenFailed)
-//                    navigator.popBackStack()
-//                } else {
-//                    navigator.toOnBoardMessageScreen(step1Message)
-//                }
-//            }
-//        }
     }
 
     private suspend fun goToConnectedScreen(
@@ -411,13 +360,6 @@ internal class OnBoardConnectingViewModel @Inject constructor(
         viewModelScope.launch(mainImmediate) {
             signerManager.getPublicKeyAndRelayUrl()?.let { publicKeyAndRelayUrl ->
                 publicKeyAndRelayUrl.second.toRelayUrl()?.let {
-//                    getTransportKey(
-//                        ip = it,
-//                        publicKeyAndRelayUrl.first,
-//                        null,
-//                        null,
-//                        token = null
-//                    )
                 } ?: run {
                     checkAdminFailed()
                 }
@@ -441,6 +383,12 @@ internal class OnBoardConnectingViewModel @Inject constructor(
                 when (connectionState) {
                     is ConnectionManagerState.MnemonicWords -> {
                         submitSideEffect(OnBoardConnectingSideEffect.ShowMnemonicToUser(connectionState.words) {})
+                    }
+                    is ConnectionManagerState.NetworkMixerIp -> {
+                        storeNetworkMixerIp(connectionState.mixerIp)
+                    }
+                    is ConnectionManagerState.TribeServerIp -> {
+                        storeTribeServerIp(connectionState.tribeIp)
                     }
                     is ConnectionManagerState.OwnerRegistered -> {
                         if (connectionState.isRestoreAccount) {

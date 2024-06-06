@@ -296,8 +296,8 @@ abstract class SphinxRepository(
         }
     }
 
-    override fun createOwnerAccount(lspIp: String) {
-        connectManager.createAccount(lspIp)
+    override fun createOwnerAccount() {
+        connectManager.createAccount()
     }
 
     override fun createContact(contact: NewContact) {
@@ -403,8 +403,8 @@ abstract class SphinxRepository(
         connectManager.setInviteCode(inviteString)
     }
 
-    override fun setNetworkType(network: String) {
-        connectManager.setNetworkType(network)
+    override fun setNetworkType(isTestEnvironment: Boolean) {
+        connectManager.setNetworkType(isTestEnvironment)
     }
 
     override fun setMnemonicWords(words: List<String>?) {
@@ -837,6 +837,14 @@ abstract class SphinxRepository(
 
     override fun onDeleteUserState(userState: List<String>) {
         connectionManagerState.value = ConnectionManagerState.DeleteUserState(userState)
+    }
+
+    override fun onUpdateMixerIp(mixerIp: String) {
+        connectionManagerState.value = ConnectionManagerState.NetworkMixerIp(mixerIp)
+    }
+
+    override fun onUpdateTribeServer(tribeServer: String) {
+        connectionManagerState.value = ConnectionManagerState.TribeServerIp(tribeServer)
     }
 
     override fun onSignedChallenge(sign: String) {

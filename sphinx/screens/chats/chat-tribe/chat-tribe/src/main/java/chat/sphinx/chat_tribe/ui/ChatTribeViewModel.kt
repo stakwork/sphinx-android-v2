@@ -1,6 +1,7 @@
 package chat.sphinx.chat_tribe.ui
 
 import android.app.Application
+import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import chat.sphinx.camera_view_model_coordinator.request.CameraRequest
@@ -109,11 +110,19 @@ class ChatTribeViewModel @Inject constructor(
 ) {
 
     companion object {
-        private const val TRIBES_DEFAULT_SERVER_URL = "34.229.52.200:8801"
+        private const val TRIBE_SERVER_IP = "tribe_server_ip"
+        private const val USER_STATE_SHARED_PREFERENCES = "user_state_settings"
+
     }
 
     override val args: ChatTribeFragmentArgs by savedStateHandle.navArgs()
     override val chatId: ChatId = args.chatId
+
+    private val tribeDefaultServerUrl = app.getSharedPreferences(
+        USER_STATE_SHARED_PREFERENCES,
+        Context.MODE_PRIVATE
+    ).getString(TRIBE_SERVER_IP, null)
+
     override val contactId: ContactId?
         get() = null
 
@@ -544,7 +553,7 @@ class ChatTribeViewModel @Inject constructor(
     fun navigateToTribeShareScreen() {
         viewModelScope.launch(mainImmediate) {
             val chat = getChat()
-            val shareTribeURL = "sphinx.chat://?action=tribe&uuid=${chat.uuid.value}&host=${TRIBES_DEFAULT_SERVER_URL}"
+            val shareTribeURL = "sphinx.chat://?action=tribe&uuid=${chat.uuid.value}&host=${tribeDefaultServerUrl}"
             (chatNavigator as TribeChatNavigator).toShareTribeScreen(shareTribeURL, app.getString(R.string.qr_code_title))
         }
 

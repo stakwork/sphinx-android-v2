@@ -20,6 +20,8 @@ abstract class ConnectManager {
     abstract fun setMnemonicWords(words: List<String>?)
     abstract fun setNetworkType(isTestEnvironment: Boolean)
     abstract fun createContact(contact: NewContact)
+    abstract fun deleteContact(pubKey: String)
+
     abstract fun initializeMqttAndSubscribe(
         serverUri: String,
         mnemonicWords: WalletMnemonic,

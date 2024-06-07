@@ -1136,16 +1136,13 @@ abstract class SphinxRepository(
         }
     }
 
-    fun extractUrlParts(url: String): Pair<String, String> {
-        // Regex to remove any protocol
+    fun extractUrlParts(url: String): Pair<String?, String?> {
         val cleanUrl = url.replace(Regex("^[a-zA-Z]+://"), "")
-
-        // Find the first '/' which separates host and path
         val separatorIndex = cleanUrl.indexOf("/")
 
-        // Extract the host and tribePubKey
-        val host = cleanUrl.substring(0, separatorIndex)
-        val tribePubKey = cleanUrl.substring(separatorIndex + 1).split("/").last()
+        if (separatorIndex == -1) return null to null
+        val host = cleanUrl.substring(0, separatorIndex).takeIf { it.isNotEmpty() }
+        val tribePubKey = cleanUrl.substring(separatorIndex + 1).split("/").lastOrNull()?.takeIf { it.isNotEmpty() }
 
         return host to tribePubKey
     }
@@ -1153,6 +1150,11 @@ abstract class SphinxRepository(
     override fun onInitialTribe(tribe: String) {
         applicationScope.launch(io) {
             val (host, tribePubKey) = extractUrlParts(tribe)
+
+            if (host == null || tribePubKey == null) {
+                return@launch
+            }
+
             networkQueryChat.getTribeInfo(ChatHost(host), LightningNodePubKey(tribePubKey))
                 .collect { loadResponse ->
                     when (loadResponse) {
@@ -2075,7 +2077,7 @@ abstract class SphinxRepository(
         }
 
         if (contact != null) {
-            // call connectManager deletecontact()
+            connectManager.deleteContact(pubKeyToDelete)
 
             contactLock.withLock {
                 queries.transaction {

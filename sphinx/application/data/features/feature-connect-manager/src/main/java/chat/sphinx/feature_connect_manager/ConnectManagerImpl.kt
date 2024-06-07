@@ -145,6 +145,7 @@ class ConnectManagerImpl: ConnectManager()
                     )
                     _mixerIp = invite.lspHost
                     tribeServer = hostAndPubKey?.first ?: TEST_V2_TRIBES_SERVER
+                    inviteInitialTribe = invite.initialTribe
 
                     network = if (isTestServer()) {
                         REGTEST_NETWORK
@@ -318,6 +319,10 @@ class ConnectManagerImpl: ConnectManager()
         } catch (e: Exception) {
             Log.e("MQTT_MESSAGES", "add contact excp $e")
         }
+    }
+
+    override fun deleteContact(pubKey: String) {
+        removeKeysFromUserState(listOf(pubKey))
     }
 
     // MQTT Connection Management
@@ -1170,6 +1175,11 @@ class ConnectManagerImpl: ConnectManager()
                 Log.d("MQTT_MESSAGES", "=> stateMp $it")
             }
 
+            rr.stateToDelete.let {
+                removeKeysFromUserState(it)
+                Log.d("MQTT_MESSAGES", "=> stateToDelete $it")
+            }
+
             rr.subscriptionTopics.forEach { topic ->
                 val qos = IntArray(1) { 1 }
                 client.subscribe(arrayOf(topic), qos)
@@ -1327,11 +1337,6 @@ class ConnectManagerImpl: ConnectManager()
                 // Call joinTribe with the url that comes on initialTribe
                 inviteInitialTribe = initialTribe
                 Log.d("MQTT_MESSAGES", "=> initialTribe $initialTribe")
-            }
-
-            rr.stateToDelete.let {
-                // Handle this internally on this class
-                Log.d("MQTT_MESSAGES", "=> stateToDelete $it")
             }
 
             // Handling other properties like sentStatus, settledStatus, error, etc.
@@ -1539,21 +1544,30 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
+    private fun removeKeysFromUserState(keys: List<String>) {
+        val existingUserState = retrieveUserStateMap(ownerInfoStateFlow.value.userState)
+
+        for (key in keys) {
+            existingUserState.remove(key)
+        }
+
+        val encodedString = encodeMapToBase64(existingUserState)
+
+        // Update class var
+        _ownerInfoStateFlow.value = ownerInfoStateFlow.value.copy(
+            userState = encodedString
+        )
+
+        // Update SharedPreferences
+        notifyListeners {
+            onUpdateUserState(encodedString)
+        }
+    }
+
     private fun retrieveUserStateMap(encodedString: String?): MutableMap<String, ByteArray> {
         val result = encodedString?.let {
             decodeBase64ToMap(it)
         } ?: mutableMapOf()
-
-        val chunkSize = 50 // Define the size of each chunk
-        val resultString = result.toString()
-        var index = 0
-
-        while (index < resultString.length) {
-            val endIndex = (index + chunkSize).coerceAtMost(resultString.length)
-            val chunk = resultString.substring(index, endIndex)
-            Log.d("MQTT_MESSAGES", "retrieveUserStateMap: $chunk")
-            index += chunkSize
-        }
 
         return result
     }

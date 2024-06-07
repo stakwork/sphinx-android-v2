@@ -1,10 +1,11 @@
 package chat.sphinx.concept_repository_connect_manager
 
-import chat.sphinx.concept_repository_connect_manager.model.ConnectionManagerState
+import chat.sphinx.concept_repository_connect_manager.model.OwnerRegistrationState
 import chat.sphinx.concept_repository_connect_manager.model.NetworkStatus
 import chat.sphinx.concept_repository_connect_manager.model.RestoreProcessState
 import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
 import chat.sphinx.example.wrapper_mqtt.TransactionDto
+import chat.sphinx.example.wrapper_mqtt.TribeMembersResponse
 import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_contact.NewContact
 import kotlinx.coroutines.flow.Flow
@@ -12,11 +13,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 
 interface ConnectManagerRepository {
 
-    val connectionManagerState: MutableStateFlow<ConnectionManagerState?>
+    val connectionManagerState: MutableStateFlow<OwnerRegistrationState?>
     val networkStatus: MutableStateFlow<NetworkStatus>
     val restoreProcessState: MutableStateFlow<RestoreProcessState?>
     val connectManagerErrorState: MutableStateFlow<ConnectManagerError?>
     val transactionDtoState: MutableStateFlow<List<TransactionDto>?>
+    val userStateFlow: MutableStateFlow<String?>
+    val tribeMembersState: MutableStateFlow<TribeMembersResponse?>
 
     fun createOwnerAccount()
     fun createContact(contact: NewContact)

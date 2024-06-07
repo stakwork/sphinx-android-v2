@@ -1330,10 +1330,7 @@ class ConnectManagerImpl: ConnectManager()
             }
 
             rr.stateToDelete.let {
-                notifyListeners {
-                    onDeleteUserState(it)
-                }
-
+                // Handle this internally on this class
                 Log.d("MQTT_MESSAGES", "=> stateToDelete $it")
             }
 

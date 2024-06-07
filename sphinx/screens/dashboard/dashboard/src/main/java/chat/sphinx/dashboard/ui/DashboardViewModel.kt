@@ -19,7 +19,7 @@ import chat.sphinx.concept_network_query_verify_external.NetworkQueryAuthorizeEx
 import chat.sphinx.concept_repository_actions.ActionsRepository
 import chat.sphinx.concept_repository_chat.ChatRepository
 import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
-import chat.sphinx.concept_repository_connect_manager.model.ConnectionManagerState
+import chat.sphinx.concept_repository_connect_manager.model.OwnerRegistrationState
 import chat.sphinx.concept_repository_connect_manager.model.NetworkStatus
 import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.concept_repository_dashboard_android.RepositoryDashboardAndroid
@@ -218,6 +218,8 @@ internal class DashboardViewModel @Inject constructor(
         connectManagerRepository.connectAndSubscribeToMqtt(getUserState(), getNetworkMixerIp())
         setDeviceId()
         collectConnectionState()
+        collectUserState()
+
         collectConnectManagerErrorState()
 
         getHideBalanceState()
@@ -254,13 +256,7 @@ internal class DashboardViewModel @Inject constructor(
         viewModelScope.launch(mainImmediate) {
             connectManagerRepository.connectionManagerState.collect { connectionState ->
                 when (connectionState) {
-                    is ConnectionManagerState.UserState -> {
-                        storeUserState(connectionState.userState)
-                    }
-                    is ConnectionManagerState.DeleteUserState -> {
-                        deleteUserState(connectionState.userState)
-                    }
-                    is ConnectionManagerState.NewInviteCode -> {
+                    is OwnerRegistrationState.NewInviteCode -> {
                         delay(500L)
                         dashboardNavigator.toQRCodeDetail(
                             connectionState.inviteCode,
@@ -268,6 +264,16 @@ internal class DashboardViewModel @Inject constructor(
                         )
                     }
                     else -> {}
+                }
+            }
+        }
+    }
+
+    private fun collectUserState() {
+        viewModelScope.launch(mainImmediate) {
+            connectManagerRepository.userStateFlow.collect { connectionState ->
+                if (connectionState != null) {
+                    storeUserState(connectionState)
                 }
             }
         }

@@ -28,7 +28,7 @@ import chat.sphinx.concept_repository_chat.ChatRepository
 import chat.sphinx.concept_repository_chat.model.AddMember
 import chat.sphinx.concept_repository_chat.model.CreateTribe
 import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
-import chat.sphinx.concept_repository_connect_manager.model.ConnectionManagerState
+import chat.sphinx.concept_repository_connect_manager.model.OwnerRegistrationState
 import chat.sphinx.concept_repository_connect_manager.model.NetworkStatus
 import chat.sphinx.concept_repository_connect_manager.model.RestoreProcessState
 import chat.sphinx.concept_repository_contact.ContactRepository
@@ -57,6 +57,7 @@ import chat.sphinx.example.wrapper_mqtt.NewCreateTribe.Companion.toNewCreateTrib
 import chat.sphinx.example.wrapper_mqtt.NewSentStatus.Companion.toNewSentStatus
 import chat.sphinx.example.wrapper_mqtt.Payment.Companion.toPaymentsList
 import chat.sphinx.example.wrapper_mqtt.TransactionDto
+import chat.sphinx.example.wrapper_mqtt.TribeMembersResponse
 import chat.sphinx.example.wrapper_mqtt.TribeMembersResponse.Companion.toTribeMembersList
 import chat.sphinx.example.wrapper_mqtt.toLspChannelInfo
 import chat.sphinx.feature_repository.mappers.action_track.*
@@ -219,7 +220,7 @@ abstract class SphinxRepository(
     /// Connect Manager ///
     //////////////////////
 
-    override val connectionManagerState: MutableStateFlow<ConnectionManagerState?> by lazy {
+    override val connectionManagerState: MutableStateFlow<OwnerRegistrationState?> by lazy {
         MutableStateFlow(null)
     }
 
@@ -239,6 +240,14 @@ abstract class SphinxRepository(
         MutableStateFlow(null)
     }
 
+    override val userStateFlow: MutableStateFlow<String?> by lazy {
+        MutableStateFlow(null)
+    }
+
+    override val tribeMembersState: MutableStateFlow<TribeMembersResponse?> by lazy {
+        MutableStateFlow(null)
+    }
+
     init {
         connectManager.addListener(this)
         memeServerTokenHandler.addListener(this)
@@ -250,7 +259,7 @@ abstract class SphinxRepository(
                 walletDataHandler.persistWalletMnemonic(it)
             }
         }
-        connectionManagerState.value = ConnectionManagerState.MnemonicWords(words)
+        connectionManagerState.value = OwnerRegistrationState.MnemonicWords(words)
     }
 
     override fun onOwnerRegistered(
@@ -266,7 +275,7 @@ abstract class SphinxRepository(
             if (scid != null && accountOwner.value?.nodePubKey == null) {
                 createOwner(okKey, routeHint, scid)
 
-                connectionManagerState.value = ConnectionManagerState.OwnerRegistered(
+                connectionManagerState.value = OwnerRegistrationState.OwnerRegistered(
                     isRestoreAccount,
                     mixerServerIp,
                     tribeServerHost
@@ -822,7 +831,7 @@ abstract class SphinxRepository(
         applicationScope.launch(mainImmediate) {
             try {
                 tribeMembers.toTribeMembersList(moshi)?.let { members ->
-                    connectionManagerState.value = ConnectionManagerState.TribeMembersList(members)
+                    tribeMembersState.value = members
                 }
             } catch (e: Exception) {
             }
@@ -842,15 +851,11 @@ abstract class SphinxRepository(
     }
 
     override fun onUpdateUserState(userState: String) {
-        connectionManagerState.value = ConnectionManagerState.UserState(userState)
-    }
-
-    override fun onDeleteUserState(userState: List<String>) {
-        connectionManagerState.value = ConnectionManagerState.DeleteUserState(userState)
+        userStateFlow.value = userState
     }
 
     override fun onSignedChallenge(sign: String) {
-        connectionManagerState.value = ConnectionManagerState.SignedChallenge(sign)
+        connectionManagerState.value = OwnerRegistrationState.SignedChallenge(sign)
     }
 
     override fun onNewBalance(balance: Long) {
@@ -2070,7 +2075,7 @@ abstract class SphinxRepository(
         }
 
         if (contact != null) {
-            connectionManagerState.value = ConnectionManagerState.DeleteUserState(listOf(pubKeyToDelete))
+            // call connectManager deletecontact()
 
             contactLock.withLock {
                 queries.transaction {

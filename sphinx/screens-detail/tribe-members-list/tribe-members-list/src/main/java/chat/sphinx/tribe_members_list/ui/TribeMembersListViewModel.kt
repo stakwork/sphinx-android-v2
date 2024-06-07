@@ -6,7 +6,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import chat.sphinx.concept_repository_chat.ChatRepository
 import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
-import chat.sphinx.concept_repository_connect_manager.model.ConnectionManagerState
+import chat.sphinx.concept_repository_connect_manager.model.OwnerRegistrationState
 import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.concept_repository_message.MessageRepository
 import chat.sphinx.example.wrapper_mqtt.TribeMembersResponse
@@ -125,21 +125,18 @@ internal class TribeMembersListViewModel @Inject constructor(
     }
 
     private suspend fun fetchTribeMembers(){
-        connectManagerRepository.connectionManagerState.collect { connectionState ->
-            when (connectionState) {
-                is ConnectionManagerState.TribeMembersList -> {
+        connectManagerRepository.tribeMembersState.collect { tribeMembersList ->
+            if (tribeMembersList != null) {
+                val tribeMembers = TribeMembersListViewState.ListMode(
+                    processMembers(
+                        tribeMembersList,
+                        getOwner()
+                    ),
+                    false,
+                    true
+                )
 
-                    val tribeMembers = TribeMembersListViewState.ListMode(
-                        processMembers(
-                            connectionState.tribeMembers,
-                            getOwner()
-                        ),
-                        false,
-                        true
-                    )
-
-                    updateViewState(tribeMembers)
-                }
+                updateViewState(tribeMembers)
             }
         }
     }

@@ -12,7 +12,7 @@ import chat.sphinx.concept_network_query_invite.model.RedeemInviteDto
 import chat.sphinx.concept_network_tor.TorManager
 import chat.sphinx.concept_relay.RelayDataHandler
 import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
-import chat.sphinx.concept_repository_connect_manager.model.ConnectionManagerState
+import chat.sphinx.concept_repository_connect_manager.model.OwnerRegistrationState
 import chat.sphinx.concept_signer_manager.CheckAdminCallback
 import chat.sphinx.concept_signer_manager.SignerManager
 import chat.sphinx.concept_wallet.WalletDataHandler
@@ -150,6 +150,7 @@ internal class OnBoardConnectingViewModel @Inject constructor(
             delay(500L)
             processCode()
         }
+        collectUserState()
         collectConnectionState()
         collectConnectManagerErrorState()
     }
@@ -385,10 +386,10 @@ internal class OnBoardConnectingViewModel @Inject constructor(
         viewModelScope.launch(mainImmediate) {
             connectManagerRepository.connectionManagerState.collect { connectionState ->
                 when (connectionState) {
-                    is ConnectionManagerState.MnemonicWords -> {
+                    is OwnerRegistrationState.MnemonicWords -> {
                         submitSideEffect(OnBoardConnectingSideEffect.ShowMnemonicToUser(connectionState.words) {})
                     }
-                    is ConnectionManagerState.OwnerRegistered -> {
+                    is OwnerRegistrationState.OwnerRegistered -> {
                         connectionState.mixerServerIp?.let { storeNetworkMixerIp(it) }
                         connectionState.tirbeServerHost?.let { storeTribeServerIp(it) }
 
@@ -398,10 +399,17 @@ internal class OnBoardConnectingViewModel @Inject constructor(
                             navigator.toOnBoardNameScreen()
                         }
                     }
-                    is ConnectionManagerState.UserState -> {
-                        storeUserState(connectionState.userState)
-                    }
                     else -> {}
+                }
+            }
+        }
+    }
+
+    private fun collectUserState() {
+        viewModelScope.launch(mainImmediate) {
+            connectManagerRepository.userStateFlow.collect { connectionState ->
+                if (connectionState != null) {
+                    storeUserState(connectionState)
                 }
             }
         }

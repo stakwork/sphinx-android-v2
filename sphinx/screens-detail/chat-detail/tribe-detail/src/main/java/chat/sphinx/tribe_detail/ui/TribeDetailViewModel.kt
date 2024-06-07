@@ -59,14 +59,15 @@ internal class TribeDetailViewModel @Inject constructor(
 {
     companion object {
         const val TAG = "TribeDetailViewModel"
-        private const val TRIBE_SERVER_IP = "tribe_server_ip"
+        const val SERVER_SETTINGS_SHARED_PREFERENCES = "server_ip_settings"
+        const val TRIBE_SERVER_IP = "tribe_server_ip"
     }
 
     private val args: TribeDetailFragmentArgs by savedStateHandle.navArgs()
     val chatId = args.chatId
 
     private val tribeDefaultServerUrl = app.getSharedPreferences(
-        TRIBE_SERVER_IP,
+        SERVER_SETTINGS_SHARED_PREFERENCES,
     Context.MODE_PRIVATE
     ).getString(TRIBE_SERVER_IP, null)
 

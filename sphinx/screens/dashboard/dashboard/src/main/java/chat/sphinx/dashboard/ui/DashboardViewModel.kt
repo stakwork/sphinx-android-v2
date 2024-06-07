@@ -189,6 +189,7 @@ internal class DashboardViewModel @Inject constructor(
 
     companion object {
         const val USER_STATE_SHARED_PREFERENCES = "user_state_settings"
+        const val SERVER_SETTINGS_SHARED_PREFERENCES = "server_ip_settings"
         const val ONION_STATE_KEY = "onion_state"
         const val NETWORK_MIXER_IP = "network_mixer_ip"
     }
@@ -204,6 +205,9 @@ internal class DashboardViewModel @Inject constructor(
 
     private val userStateSharedPreferences: SharedPreferences =
         app.getSharedPreferences(USER_STATE_SHARED_PREFERENCES, Context.MODE_PRIVATE)
+
+    private val serverSettingsSharedPreferences: SharedPreferences =
+        app.getSharedPreferences(SERVER_SETTINGS_SHARED_PREFERENCES, Context.MODE_PRIVATE)
 
     init {
         if (args.updateBackgroundLoginTime) {
@@ -350,11 +354,6 @@ internal class DashboardViewModel @Inject constructor(
     private fun getUserState(): String? {
         return userStateSharedPreferences.getString(ONION_STATE_KEY, null)
     }
-
-    private fun getNetworkMixerIp(): String? {
-        return userStateSharedPreferences.getString(NETWORK_MIXER_IP, null)
-    }
-
     private fun deleteUserState(userStates: List<String>) {
         val editor = userStateSharedPreferences.edit()
 
@@ -363,6 +362,11 @@ internal class DashboardViewModel @Inject constructor(
         }
         editor.apply()
     }
+
+    private fun getNetworkMixerIp(): String? {
+        return serverSettingsSharedPreferences.getString(NETWORK_MIXER_IP, null)
+    }
+
 
     private fun getHideBalanceState() {
         viewModelScope.launch(mainImmediate) {

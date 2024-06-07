@@ -65,9 +65,6 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-    const val USER_STATE_SHARED_PREFERENCES = "user_state_settings"
-    const val TRIBE_SERVER_IP = "tribe_server_ip"
-
     @Provides
     @Singleton
     fun provideTorManagerAndroid(

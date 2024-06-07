@@ -108,18 +108,16 @@ class ChatTribeViewModel @Inject constructor(
     moshi,
     LOG,
 ) {
-
     companion object {
         private const val TRIBE_SERVER_IP = "tribe_server_ip"
-        private const val USER_STATE_SHARED_PREFERENCES = "user_state_settings"
-
+        const val SERVER_SETTINGS_SHARED_PREFERENCES = "server_ip_settings"
     }
 
     override val args: ChatTribeFragmentArgs by savedStateHandle.navArgs()
     override val chatId: ChatId = args.chatId
 
     private val tribeDefaultServerUrl = app.getSharedPreferences(
-        USER_STATE_SHARED_PREFERENCES,
+        SERVER_SETTINGS_SHARED_PREFERENCES,
         Context.MODE_PRIVATE
     ).getString(TRIBE_SERVER_IP, null)
 

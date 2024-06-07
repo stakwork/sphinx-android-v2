@@ -134,8 +134,12 @@ internal class OnBoardConnectingViewModel @Inject constructor(
     private val userStateSharedPreferences: SharedPreferences =
         app.getSharedPreferences(USER_STATE_SHARED_PREFERENCES, Context.MODE_PRIVATE)
 
+    private val serverSettingsSharedPreferences: SharedPreferences =
+        app.getSharedPreferences(SERVER_SETTINGS_SHARED_PREFERENCES, Context.MODE_PRIVATE)
+
     companion object {
         const val USER_STATE_SHARED_PREFERENCES = "user_state_settings"
+        const val SERVER_SETTINGS_SHARED_PREFERENCES = "server_ip_settings"
         const val ONION_STATE_KEY = "onion_state"
         const val NETWORK_MIXER_IP = "network_mixer_ip"
         const val TRIBE_SERVER_IP = "tribe_server_ip"
@@ -187,14 +191,14 @@ internal class OnBoardConnectingViewModel @Inject constructor(
     }
 
     private fun storeNetworkMixerIp(state: String) {
-        val editor = userStateSharedPreferences.edit()
+        val editor = serverSettingsSharedPreferences.edit()
 
         editor.putString(NETWORK_MIXER_IP, state)
         editor.apply()
     }
 
     private fun storeTribeServerIp(state: String) {
-        val editor = userStateSharedPreferences.edit()
+        val editor = serverSettingsSharedPreferences.edit()
 
         editor.putString(TRIBE_SERVER_IP, state)
         editor.apply()

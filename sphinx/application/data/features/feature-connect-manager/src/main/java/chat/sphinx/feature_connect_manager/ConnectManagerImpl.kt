@@ -1539,7 +1539,12 @@ class ConnectManagerImpl: ConnectManager()
         // Update SharedPreferences
         notifyListeners {
             onUpdateUserState(encodedString)
-            Log.d("MQTT_MESSAGES", "storeUserStateOnSharedPreferences $encodedString")
+            val chunkSize = 100 // Adjust the chunk size as needed
+            for (i in encodedString.indices step chunkSize) {
+                val end = minOf(i + chunkSize, encodedString.length)
+                val chunk = encodedString.substring(i, end)
+                Log.d("MQTT_MESSAGES", "storeUserStateOnSharedPreferences $chunk")
+            }
         }
     }
 
@@ -1547,6 +1552,17 @@ class ConnectManagerImpl: ConnectManager()
         val result = encodedString?.let {
             decodeBase64ToMap(it)
         } ?: mutableMapOf()
+
+        val chunkSize = 50 // Define the size of each chunk
+        val resultString = result.toString()
+        var index = 0
+
+        while (index < resultString.length) {
+            val endIndex = (index + chunkSize).coerceAtMost(resultString.length)
+            val chunk = resultString.substring(index, endIndex)
+            Log.d("MQTT_MESSAGES", "retrieveUserStateMap: $chunk")
+            index += chunkSize
+        }
 
         return result
     }

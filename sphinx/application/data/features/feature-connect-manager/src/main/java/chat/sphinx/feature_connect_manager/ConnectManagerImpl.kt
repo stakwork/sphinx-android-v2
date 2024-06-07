@@ -1539,12 +1539,6 @@ class ConnectManagerImpl: ConnectManager()
         // Update SharedPreferences
         notifyListeners {
             onUpdateUserState(encodedString)
-            val chunkSize = 100 // Adjust the chunk size as needed
-            for (i in encodedString.indices step chunkSize) {
-                val end = minOf(i + chunkSize, encodedString.length)
-                val chunk = encodedString.substring(i, end)
-                Log.d("MQTT_MESSAGES", "storeUserStateOnSharedPreferences $chunk")
-            }
         }
     }
 

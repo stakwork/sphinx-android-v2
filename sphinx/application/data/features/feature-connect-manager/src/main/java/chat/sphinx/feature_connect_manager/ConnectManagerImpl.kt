@@ -61,8 +61,13 @@ import uniffi.sphinxrs.setPushToken
 import uniffi.sphinxrs.signBytes
 import uniffi.sphinxrs.xpubFromSeed
 import java.security.SecureRandom
+import java.security.cert.X509Certificate
 import java.util.Calendar
 import java.util.UUID
+import javax.net.ssl.SSLContext
+import javax.net.ssl.SSLSocketFactory
+import javax.net.ssl.TrustManager
+import javax.net.ssl.X509TrustManager
 import kotlin.math.min
 
 class ConnectManagerImpl: ConnectManager()
@@ -102,11 +107,18 @@ class ConnectManagerImpl: ConnectManager()
 
     private var mixerIp: String?
         get() = _mixerIp?.let {
-            if (!it.startsWith("tcp://")) "tcp://$it" else it
+            if (isTestEnvironment()) {
+                if (!it.startsWith("tcp://")) "tcp://$it" else it
+            } else {
+                if (!it.startsWith("ssl://")) "ssl://$it" else it
+            }
         }
         set(value) {
-            _mixerIp = value?.replace("tcp://", "")
+            _mixerIp = value?.replace("tcp://", "")?.replace("ssl://", "")
         }
+    private fun getRawMixerIp(): String? {
+        return _mixerIp
+    }
 
     // Key Generation and Management
     override fun createAccount() {
@@ -176,6 +188,12 @@ class ConnectManagerImpl: ConnectManager()
             ownerSeed = firstSeed
             _mixerIp = mixerServerIp ?: TEST_V2_SERVER_IP
             tribeServer = defaultTribe ?: TEST_V2_TRIBES_SERVER
+
+            network = if (isTestServer()) {
+                REGTEST_NETWORK
+            } else {
+                MAINNET_NETWORK
+            }
 
             val xPub = generateXPub(firstSeed, now, network)
             val sig = signMs(firstSeed, now, network)
@@ -406,9 +424,29 @@ class ConnectManagerImpl: ConnectManager()
         try {
             mqttClient = MqttAsyncClient(serverURI, clientId, null)
 
+            val sslContext: SSLContext? = if (!isTestEnvironment()) {
+                SSLContext.getInstance("TLS").apply {
+                    val trustAllCerts = arrayOf<X509TrustManager>(object : X509TrustManager {
+                        override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
+                        override fun checkClientTrusted(
+                            chain: Array<X509Certificate>,
+                            authType: String
+                        ) {}
+                        override fun checkServerTrusted(
+                            chain: Array<X509Certificate>,
+                            authType: String
+                        ) {}
+                    })
+                    init(null, trustAllCerts, SecureRandom())
+                }
+            } else {
+                null
+            }
+
             val options = MqttConnectOptions().apply {
                 this.userName = key
                 this.password = password.toCharArray()
+                this.socketFactory = sslContext?.socketFactory
             }
 
             mqttClient?.connect(options, null, object : IMqttActionListener {
@@ -436,7 +474,6 @@ class ConnectManagerImpl: ConnectManager()
             })
 
             mqttClient?.setCallback(object : MqttCallback {
-
                 override fun connectionLost(cause: Throwable?) {
                     Log.d("MQTT_MESSAGES", "MQTT DISCONNECTED! $cause ${cause?.message}")
 
@@ -475,7 +512,6 @@ class ConnectManagerImpl: ConnectManager()
             reconnectWithBackoff()
         }
     }
-
 
     private fun handleMessageArrived(topic: String?, message: MqttMessage?) {
         if (topic != null && message?.payload != null) {
@@ -1276,7 +1312,7 @@ class ConnectManagerImpl: ConnectManager()
                             okKey,
                             routeHint,
                             isRestoreAccount,
-                            mixerIp?.replace("tcp://", ""),
+                            getRawMixerIp(),
                             tribeServer
                         )
                     }

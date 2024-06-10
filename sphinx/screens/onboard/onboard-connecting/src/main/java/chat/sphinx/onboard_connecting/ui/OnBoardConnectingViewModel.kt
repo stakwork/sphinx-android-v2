@@ -143,6 +143,7 @@ internal class OnBoardConnectingViewModel @Inject constructor(
         const val ONION_STATE_KEY = "onion_state"
         const val NETWORK_MIXER_IP = "network_mixer_ip"
         const val TRIBE_SERVER_IP = "tribe_server_ip"
+        const val ENVIRONMENT_TYPE = "environment_type"
     }
 
     init {
@@ -205,6 +206,12 @@ internal class OnBoardConnectingViewModel @Inject constructor(
         editor.apply()
     }
 
+    private fun storeEnvironmentType(state: Boolean) {
+        val editor = serverSettingsSharedPreferences.edit()
+
+        editor.putBoolean(ENVIRONMENT_TYPE, state)
+        editor.apply()
+    }
 
     private var decryptionJob: Job? = null
     @OptIn(RawPasswordAccess::class)
@@ -392,12 +399,10 @@ internal class OnBoardConnectingViewModel @Inject constructor(
                     is OwnerRegistrationState.OwnerRegistered -> {
                         connectionState.mixerServerIp?.let { storeNetworkMixerIp(it) }
                         connectionState.tirbeServerHost?.let { storeTribeServerIp(it) }
+                        storeEnvironmentType(connectionState.isProductionEnvironment)
 
-                        if (connectionState.isRestoreAccount) {
-                            navigator.toDashboardScreen()
-                        } else {
-                            navigator.toOnBoardNameScreen()
-                        }
+                        delay(100L)
+                        navigator.toOnBoardNameScreen()
                     }
                     else -> {}
                 }

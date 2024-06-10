@@ -111,15 +111,19 @@ class ChatTribeViewModel @Inject constructor(
     companion object {
         private const val TRIBE_SERVER_IP = "tribe_server_ip"
         const val SERVER_SETTINGS_SHARED_PREFERENCES = "server_ip_settings"
+        const val ENVIRONMENT_TYPE = "environment_type"
     }
 
     override val args: ChatTribeFragmentArgs by savedStateHandle.navArgs()
     override val chatId: ChatId = args.chatId
 
-    private val tribeDefaultServerUrl = app.getSharedPreferences(
+    private val serverSettingsSharedPreferences = app.getSharedPreferences(
         SERVER_SETTINGS_SHARED_PREFERENCES,
         Context.MODE_PRIVATE
-    ).getString(TRIBE_SERVER_IP, null)
+    )
+
+    private val tribeDefaultServerUrl = serverSettingsSharedPreferences.getString(TRIBE_SERVER_IP, null)
+    private val isProductionEnvironment = serverSettingsSharedPreferences.getBoolean(ENVIRONMENT_TYPE, true)
 
     override val contactId: ContactId?
         get() = null
@@ -290,7 +294,7 @@ class ChatTribeViewModel @Inject constructor(
                         MoreMenuOptionsViewState.NotOwnTribe
                     }
 
-                chatRepository.updateTribeInfo(chat)?.let { tribeData ->
+                chatRepository.updateTribeInfo(chat, isProductionEnvironment)?.let { tribeData ->
 
                     if (!args.argThreadUUID.isNullOrEmpty()) {
                         _feedDataStateFlow.value = TribeFeedData.Result.NoFeed

@@ -65,8 +65,6 @@ import java.security.cert.X509Certificate
 import java.util.Calendar
 import java.util.UUID
 import javax.net.ssl.SSLContext
-import javax.net.ssl.SSLSocketFactory
-import javax.net.ssl.TrustManager
 import javax.net.ssl.X509TrustManager
 import kotlin.math.min
 
@@ -107,10 +105,10 @@ class ConnectManagerImpl: ConnectManager()
 
     private var mixerIp: String?
         get() = _mixerIp?.let {
-            if (isTestEnvironment()) {
-                if (!it.startsWith("tcp://")) "tcp://$it" else it
-            } else {
+            if (isProductionEnvironment()) {
                 if (!it.startsWith("ssl://")) "ssl://$it" else it
+            } else {
+                if (!it.startsWith("tcp://")) "tcp://$it" else it
             }
         }
         set(value) {
@@ -124,7 +122,7 @@ class ConnectManagerImpl: ConnectManager()
     override fun createAccount() {
         if (!restoreMnemonicWords.isNullOrEmpty()) {
             notifyListeners {
-                onRestoreAccount(isTestEnvironment())
+                onRestoreAccount(isProductionEnvironment())
             }
         } else {
             val seed = generateMnemonicAndSeed(null)
@@ -159,10 +157,10 @@ class ConnectManagerImpl: ConnectManager()
                     tribeServer = hostAndPubKey?.first ?: TEST_V2_TRIBES_SERVER
                     inviteInitialTribe = invite.initialTribe
 
-                    network = if (isTestServer()) {
-                        REGTEST_NETWORK
-                    } else {
+                    network = if (isProductionServer()) {
                         MAINNET_NETWORK
+                    } else {
+                        REGTEST_NETWORK
                     }
                 }
 
@@ -187,12 +185,12 @@ class ConnectManagerImpl: ConnectManager()
         seed?.let { firstSeed ->
             ownerSeed = firstSeed
             _mixerIp = mixerServerIp ?: TEST_V2_SERVER_IP
-            tribeServer = defaultTribe ?: TEST_V2_TRIBES_SERVER
+            tribeServer = tribeHost ?: TEST_V2_TRIBES_SERVER
 
-            network = if (isTestServer()) {
-                REGTEST_NETWORK
-            } else {
+            network = if (isProductionServer()) {
                 MAINNET_NETWORK
+            } else {
+                REGTEST_NETWORK
             }
 
             val xPub = generateXPub(firstSeed, now, network)
@@ -220,14 +218,14 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
-    private fun isTestServer(): Boolean {
+    private fun isProductionServer(): Boolean {
         val ip = mixerIp ?: return false
         val port = ip.substringAfterLast(":").toIntOrNull() ?: return false
-        return port == 1883
+        return port != 1883
     }
 
-    private fun isTestEnvironment(): Boolean {
-        return network == REGTEST_NETWORK
+    private fun isProductionEnvironment(): Boolean {
+        return network != REGTEST_NETWORK
     }
 
 
@@ -352,7 +350,7 @@ class ConnectManagerImpl: ConnectManager()
     ) {
         _mixerIp = serverUri
         walletMnemonic = mnemonicWords
-        network = if (isTestServer()) REGTEST_NETWORK else MAINNET_NETWORK
+        network = if (isProductionServer()) MAINNET_NETWORK else REGTEST_NETWORK
 
         if (isConnected()) {
             _ownerInfoStateFlow.value = OwnerInfo(
@@ -370,7 +368,7 @@ class ConnectManagerImpl: ConnectManager()
 
             if (inviteInitialTribe != null) {
                 notifyListeners {
-                    onInitialTribe(inviteInitialTribe!!)
+                    onInitialTribe(inviteInitialTribe!!, isProductionEnvironment())
                 }
             }
 
@@ -424,7 +422,7 @@ class ConnectManagerImpl: ConnectManager()
         try {
             mqttClient = MqttAsyncClient(serverURI, clientId, null)
 
-            val sslContext: SSLContext? = if (!isTestEnvironment()) {
+            val sslContext: SSLContext? = if (isProductionEnvironment()) {
                 SSLContext.getInstance("TLS").apply {
                     val trustAllCerts = arrayOf<X509TrustManager>(object : X509TrustManager {
                         override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
@@ -1262,7 +1260,7 @@ class ConnectManagerImpl: ConnectManager()
 
                     if (tribesToRestore.isNotEmpty()) {
                         notifyListeners {
-                            onRestoreTribes(tribesToRestore)
+                            onRestoreTribes(tribesToRestore, isProductionEnvironment())
                         }
                     }
                 }
@@ -1313,7 +1311,8 @@ class ConnectManagerImpl: ConnectManager()
                             routeHint,
                             isRestoreAccount,
                             getRawMixerIp(),
-                            tribeServer
+                            tribeServer,
+                            isProductionEnvironment()
                         )
                     }
                 }

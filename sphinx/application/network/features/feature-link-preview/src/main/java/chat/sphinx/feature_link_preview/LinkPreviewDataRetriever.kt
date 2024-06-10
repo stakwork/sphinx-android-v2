@@ -105,9 +105,9 @@ internal class TribePreviewDataRetriever(val tribeJoinLink: TribeJoinLink): Link
     @Volatile
     private var previewData: TribePreviewData? = null
 
-    suspend fun getTribePreview(networkQueryChat: NetworkQueryChat): TribePreviewData? =
+    suspend fun getTribePreview(networkQueryChat: NetworkQueryChat, isProductionEnvironment: Boolean): TribePreviewData? =
         previewData ?: lock.withLock {
-            previewData ?: retrievePreview(networkQueryChat)
+            previewData ?: retrievePreview(networkQueryChat, isProductionEnvironment)
                 .also {
                     if (it != null) {
                         previewData = it
@@ -116,13 +116,13 @@ internal class TribePreviewDataRetriever(val tribeJoinLink: TribeJoinLink): Link
 
         }
 
-    private suspend fun retrievePreview(networkQueryChat: NetworkQueryChat): TribePreviewData? {
-
+    private suspend fun retrievePreview(networkQueryChat: NetworkQueryChat, isProductionEnvironment: Boolean): TribePreviewData? {
         var data: TribePreviewData? = null
 
         networkQueryChat.getTribeInfo(
             ChatHost(tribeJoinLink.tribeHost),
-            LightningNodePubKey(tribeJoinLink.tribePubkey)
+            LightningNodePubKey(tribeJoinLink.tribePubkey),
+            isProductionEnvironment
         ).collect { response ->
             @Exhaustive
             when (response) {

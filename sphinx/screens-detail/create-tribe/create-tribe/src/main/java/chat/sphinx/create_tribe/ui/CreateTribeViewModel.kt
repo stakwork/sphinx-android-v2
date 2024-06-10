@@ -33,7 +33,6 @@ import kotlinx.coroutines.flow.*
 import io.matthewnelson.concept_media_cache.MediaCacheHandler
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import kotlin.system.exitProcess
 
 internal inline val CreateTribeFragmentArgs.chatId: ChatId?
     get() = if (argChatId == ChatId.NULL_CHAT_ID.toLong()) {
@@ -58,8 +57,18 @@ internal class CreateTribeViewModel @Inject constructor(
         CreateTribeViewState>(dispatchers, CreateTribeViewState.Idle),
     PictureMenuViewModel
 {
+    companion object {
+        const val SERVER_SETTINGS_SHARED_PREFERENCES = "server_ip_settings"
+        const val ENVIRONMENT_TYPE = "environment_type"
+    }
+
     private val args: CreateTribeFragmentArgs by savedStateHandle.navArgs()
     private val chatId: ChatId? = args.chatId
+
+    private val isProductionEnvironment = app.getSharedPreferences(
+        SERVER_SETTINGS_SHARED_PREFERENCES,
+        Context.MODE_PRIVATE
+    ).getBoolean(ENVIRONMENT_TYPE, true)
 
     private val chatSharedFlow: SharedFlow<Chat?> = flow {
         chatId?.let {
@@ -144,7 +153,11 @@ internal class CreateTribeViewModel @Inject constructor(
                 val host = chat.host
 
                 if (host != null) {
-                    networkQueryChat.getTribeInfo(host, LightningNodePubKey(chat.uuid.value)).collect { loadResponse ->
+                    networkQueryChat.getTribeInfo(
+                        host,
+                        LightningNodePubKey(chat.uuid.value),
+                        isProductionEnvironment
+                    ).collect { loadResponse ->
                         when (loadResponse) {
                             is LoadResponse.Loading -> {}
 

@@ -267,7 +267,8 @@ abstract class SphinxRepository(
         routeHint: String,
         isRestoreAccount: Boolean,
         mixerServerIp: String?,
-        tribeServerHost: String?
+        tribeServerHost: String?,
+        isProductionEnvironment: Boolean
     ) {
         applicationScope.launch(mainImmediate) {
             val scid = routeHint.toLightningRouteHint()?.getScid()
@@ -278,7 +279,8 @@ abstract class SphinxRepository(
                 connectionManagerState.value = OwnerRegistrationState.OwnerRegistered(
                     isRestoreAccount,
                     mixerServerIp,
-                    tribeServerHost
+                    tribeServerHost,
+                    isProductionEnvironment
                 )
                 delay(1000L)
 
@@ -717,7 +719,10 @@ abstract class SphinxRepository(
         }
     }
 
-    override fun onRestoreTribes(tribes: List<Pair<String?, Boolean?>>)  {
+    override fun onRestoreTribes(
+        tribes: List<Pair<String?, Boolean?>>,
+        isProductionEnvironment: Boolean
+    )  {
         applicationScope.launch(io) {
 
             val tribeList = tribes.mapNotNull { tribes ->
@@ -734,26 +739,10 @@ abstract class SphinxRepository(
             tribeList.forEach { tribe ->
                 val isAdmin = (tribe.first?.role == 0 && tribe.second == true)
                 tribe.first?.let {
-                    joinTribeOnRestoreAccount(it, isAdmin)
+                    joinTribeOnRestoreAccount(it, isAdmin, isProductionEnvironment)
                 }
             }
             restoreProcessState.value = RestoreProcessState.RestoreMessages
-        }
-    }
-
-    private suspend fun restoreOwnerAliasAndPicture() {
-        val queries = coreDB.getSphinxDatabaseQueries()
-        messageLock.withLock {
-            val ownerMsg = queries.messageGetOwnerInfo().executeAsOneOrNull()
-
-            if (ownerMsg != null) {
-                contactLock.withLock {
-                    queries.contactUpdateOwnerInfo(
-                        ownerMsg.sender_alias?.value?.toContactAlias(),
-                        ownerMsg.sender_pic,
-                    )
-                }
-            }
         }
     }
 
@@ -764,8 +753,7 @@ abstract class SphinxRepository(
                 delay(200L)
                 connectManager.fetchMessagesOnRestoreAccount(nextHighestIndex)
             } else {
-                delay(5000L) // Ensure messages are inserted before restoring owner info
-                restoreOwnerAliasAndPicture()
+
                 // Restore complete
             }
         }
@@ -950,10 +938,8 @@ abstract class SphinxRepository(
         }
     }
 
-    override fun onRestoreAccount(isTestEnvironment: Boolean) {
-        if (isTestEnvironment) {
-            connectManager.restoreAccount(null, null, null)
-        } else {
+    override fun onRestoreAccount(isProductionEnvironment: Boolean) {
+        if (isProductionEnvironment) {
             applicationScope.launch(mainImmediate) {
                 networkQueryContact.getAccountConfig().collect { loadResponse ->
                     when (loadResponse) {
@@ -967,6 +953,8 @@ abstract class SphinxRepository(
                     }
                 }
             }
+        } else {
+            connectManager.restoreAccount(null, null, null)
         }
     }
 
@@ -1147,7 +1135,7 @@ abstract class SphinxRepository(
         return host to tribePubKey
     }
 
-    override fun onInitialTribe(tribe: String) {
+    override fun onInitialTribe(tribe: String, isProductionEnvironment: Boolean) {
         applicationScope.launch(io) {
             val (host, tribePubKey) = extractUrlParts(tribe)
 
@@ -1155,7 +1143,7 @@ abstract class SphinxRepository(
                 return@launch
             }
 
-            networkQueryChat.getTribeInfo(ChatHost(host), LightningNodePubKey(tribePubKey))
+            networkQueryChat.getTribeInfo(ChatHost(host), LightningNodePubKey(tribePubKey), isProductionEnvironment)
                 .collect { loadResponse ->
                     when (loadResponse) {
                         is LoadResponse.Loading -> {}
@@ -1463,11 +1451,15 @@ abstract class SphinxRepository(
         }
     }
 
-    private suspend fun joinTribeOnRestoreAccount(contactInfo: MsgSender, isAdmin: Boolean) {
+    private suspend fun joinTribeOnRestoreAccount(
+        contactInfo: MsgSender,
+        isAdmin: Boolean,
+        isProductionEnvironment: Boolean)
+    {
         val host = contactInfo.host ?: return
 
         withContext(dispatchers.io) {
-            networkQueryChat.getTribeInfo(ChatHost(host), LightningNodePubKey(contactInfo.pubkey))
+            networkQueryChat.getTribeInfo(ChatHost(host), LightningNodePubKey(contactInfo.pubkey), isProductionEnvironment)
                 .collect { loadResponse ->
                     when (loadResponse) {
                         is LoadResponse.Loading -> {}
@@ -4682,7 +4674,7 @@ abstract class SphinxRepository(
         }
     }
 
-    override suspend fun updateTribeInfo(chat: Chat): TribeData? {
+    override suspend fun updateTribeInfo(chat: Chat, isProductionEnvironment: Boolean): TribeData? {
         var owner: Contact? = accountOwner.value
 
         if (owner == null) {
@@ -4710,7 +4702,7 @@ abstract class SphinxRepository(
 
                 val queries = coreDB.getSphinxDatabaseQueries()
 
-                networkQueryChat.getTribeInfo(chatHost, LightningNodePubKey(chatUUID.value))
+                networkQueryChat.getTribeInfo(chatHost, LightningNodePubKey(chatUUID.value), isProductionEnvironment)
                     .collect { loadResponse ->
                         when (loadResponse) {
 

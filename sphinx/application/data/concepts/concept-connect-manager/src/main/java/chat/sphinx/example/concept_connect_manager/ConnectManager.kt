@@ -128,7 +128,8 @@ interface ConnectManagerListener {
         routeHint: String,
         isRestoreAccount: Boolean,
         mixerServerIp: String?,
-        tribeServerHost: String?
+        tribeServerHost: String?,
+        isProductionEnvironment: Boolean
     )
 
     fun onMessage(
@@ -144,7 +145,7 @@ interface ConnectManagerListener {
     )
 
     fun onRestoreContacts(contacts: List<String?>)
-    fun onRestoreTribes(tribes: List<Pair<String?, Boolean?>>) // Sender, FromMe
+    fun onRestoreTribes(tribes: List<Pair<String?, Boolean?>>, isProductionEnvironment: Boolean) // Sender, FromMe
     fun onRestoreNextPageMessages(highestIndex: Long, limit: Int)
     fun onNewTribeCreated(newTribe: String)
     fun onTribeMembersList(tribeMembers: String)
@@ -155,7 +156,7 @@ interface ConnectManagerListener {
     fun onPayments(payments: String)
     fun onNetworkStatusChange(isConnected: Boolean)
     fun listenToOwnerCreation(callback: () -> Unit)
-    fun onRestoreAccount(isTestEnvironment: Boolean)
+    fun onRestoreAccount(isProductionEnvironment: Boolean)
 
     fun onNewInviteCreated(
         nickname: String,
@@ -169,7 +170,7 @@ interface ConnectManagerListener {
     fun onLastReadMessages(lastReadMessages: String)
     fun onUpdateMutes(mutes: String)
     fun onMessagesCounts(msgsCounts: String)
-    fun onInitialTribe(tribe: String)
+    fun onInitialTribe(tribe: String, isProductionEnvironment: Boolean)
     fun onConnectManagerError(error: ConnectManagerError)
 
 }

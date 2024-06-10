@@ -807,6 +807,7 @@ class ConnectManagerImpl: ConnectManager()
 
     override fun sendKeySend(pubKey: String, amount: Long) {
         val now = getTimestampInMilliseconds()
+
         try {
             val keySend = uniffi.sphinxrs.keysend(
                 ownerSeed!!,
@@ -975,14 +976,15 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
-    override fun fetchFirstMessagesPerKey() {
+    override fun fetchFirstMessagesPerKey(lastMsgIdx: Long) {
         try {
+            val limit = 100
             val fetchFirstMsg = uniffi.sphinxrs.fetchFirstMsgsPerKey(
                 ownerSeed!!,
                 getTimestampInMilliseconds(),
                 getCurrentUserState(),
-                0.toULong(),
-                null,
+                lastMsgIdx.toULong(),
+                limit.toUInt(),
                 false
             )
             handleRunReturn(fetchFirstMsg, mqttClient)
@@ -1271,6 +1273,13 @@ class ConnectManagerImpl: ConnectManager()
                     if (tribesToRestore.isNotEmpty()) {
                         notifyListeners {
                             onRestoreTribes(tribesToRestore, isProductionEnvironment())
+                        }
+                    }
+
+                    if (contactsToRestore.isNotEmpty() || tribesToRestore.isNotEmpty()) {
+                        val highestIndex = rr.msgs.maxByOrNull { it.index?.toLong() ?: 0L }?.index?.toLong()
+                        highestIndex?.let { nnHighestIndex ->
+                            fetchFirstMessagesPerKey(highestIndex.plus(1L))
                         }
                     }
                 }

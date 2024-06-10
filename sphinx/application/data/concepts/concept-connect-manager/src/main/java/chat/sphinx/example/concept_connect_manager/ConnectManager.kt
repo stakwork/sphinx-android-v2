@@ -113,7 +113,7 @@ abstract class ConnectManager {
     abstract fun removeListener(listener: ConnectManagerListener): Boolean
     abstract fun processChallengeSignature(challenge: String)
     abstract fun fetchMessagesOnRestoreAccount(totalHighestIndex: Long?)
-    abstract fun fetchFirstMessagesPerKey()
+    abstract fun fetchFirstMessagesPerKey(lastMsgIdx: Long)
     abstract fun getAllMessagesCount()
     abstract fun reconnectWithBackoff()
     abstract fun setOwnerDeviceId(deviceId: String)

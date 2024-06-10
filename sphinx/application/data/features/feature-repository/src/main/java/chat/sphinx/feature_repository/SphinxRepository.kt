@@ -1228,7 +1228,7 @@ abstract class SphinxRepository(
                 when (restoreProcessState) {
                     is RestoreProcessState.MessagesCounts -> {
                         msgCounts = restoreProcessState.msgsCounts
-                        connectManager.fetchFirstMessagesPerKey()
+                        connectManager.fetchFirstMessagesPerKey(0L)
                     }
                     is RestoreProcessState.RestoreMessages -> {
                         connectManager.fetchMessagesOnRestoreAccount(msgCounts?.total_highest_index)

@@ -534,7 +534,7 @@ abstract class SphinxRepository(
             val contact = NewContact(
                 contactAlias = contactInfo.alias?.toContactAlias(),
                 lightningNodePubKey = contactInfo.pubkey.toLightningNodePubKey(),
-                lightningRouteHint = null,
+                lightningRouteHint = contactInfo.route_hint?.toLightningRouteHint(),
                 photoUrl = contactInfo.photo_url?.toPhotoUrl(),
                 confirmed = contactInfo.confirmed,
                 null,
@@ -564,6 +564,7 @@ abstract class SphinxRepository(
                         contact.photoUrl,
                         contact.lightningNodePubKey,
                         ContactStatus.Confirmed,
+                        contact.lightningRouteHint,
                         ContactId(invite.id.value)
                     )
 
@@ -628,6 +629,7 @@ abstract class SphinxRepository(
                             // Add
                             MsgSender(
                                 sentTo,
+                                messageSender.route_hint,
                                 messageSender.alias,
                                 messageSender.photo_url,
                                 messageSender.person,

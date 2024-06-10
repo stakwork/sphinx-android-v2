@@ -15,7 +15,6 @@ import chat.sphinx.contact.ui.ContactSideEffect
 import chat.sphinx.contact.ui.ContactViewModel
 import chat.sphinx.contact.ui.ContactViewState
 import chat.sphinx.edit_contact.navigation.EditContactNavigator
-import chat.sphinx.example.concept_connect_manager.ConnectManager
 import chat.sphinx.kotlin_response.Response
 import chat.sphinx.scanner_view_model_coordinator.request.ScannerRequest
 import chat.sphinx.scanner_view_model_coordinator.response.ScannerResponse
@@ -74,20 +73,16 @@ internal class EditContactViewModel @Inject constructor(
                 if (contact != null) {
                     contact.nodePubKey?.let { lightningNodePubKey ->
 
-//                        val subscription = subscriptionRepository.getActiveSubscriptionByContactId(
-//                            contactId
-//                        ).firstOrNull()
-
-//                        submitSideEffect(
-//                            ContactSideEffect.ExistingContact(
-//                                contact.alias?.value,
-//                                contact.photoUrl,
-//                                contact.getColorKey(),
-//                                lightningNodePubKey,
-//                                contact.routeHint,
-//                                subscription != null
-//                            )
-//                        )
+                        submitSideEffect(
+                            ContactSideEffect.ExistingContact(
+                                contact.alias?.value,
+                                contact.photoUrl,
+                                contact.getColorKey(),
+                                lightningNodePubKey,
+                                contact.routeHint,
+                                false
+                            )
+                        )
                     }
                 }
             }

@@ -525,7 +525,8 @@ UPDATE contactDbo
 SET alias = :alias,
     photo_url = :photo_url,
     node_pub_key = :node_pub_key,
-    status = :status
+    status = :status,
+    route_hint = :route_hint
 WHERE id = ?;
 
 contactUpdateBlocked:

@@ -8,6 +8,7 @@ import java.lang.IllegalArgumentException
 @JsonClass(generateAdapter = true)
 data class MsgSender(
     val pubkey: String,
+    val route_hint: String?,
     val alias: String?,
     val photo_url: String?,
     val person: String?,

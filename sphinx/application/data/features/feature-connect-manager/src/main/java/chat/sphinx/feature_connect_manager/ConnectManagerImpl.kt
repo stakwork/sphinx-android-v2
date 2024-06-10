@@ -746,7 +746,7 @@ class ConnectManagerImpl: ConnectManager()
                 getCurrentUserState(),
                 _mixerIp!!,
                 convertSatsToMillisats(sats),
-                ownerInfoStateFlow.value?.alias ?: "",
+                ownerInfoStateFlow.value.alias ?: "",
                 "34.229.52.200:8801",
                 "02792ee5b9162f9a00686aaa5d5274e91fd42a141113007797b5c1872d43f78e07"
             )
@@ -953,7 +953,7 @@ class ConnectManagerImpl: ConnectManager()
 
     override fun fetchMessagesOnRestoreAccount(totalHighestIndex: Long?) {
         try {
-            val limit = 250
+            val limit = 100
             val fetchMessages = uniffi.sphinxrs.fetchMsgsBatch(
                 ownerSeed!!,
                 getTimestampInMilliseconds(),

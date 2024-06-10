@@ -82,6 +82,7 @@ class ConnectManagerImpl: ConnectManager()
     private var inviterContact: NewContact? = null
     private var hasAttemptedReconnect = false
     private var tribeServer: String? = null
+    private var settleRunReturn: MutableList<RunReturn> = mutableListOf()
 
     companion object {
         const val TEST_V2_SERVER_IP = "34.229.52.200:1883"
@@ -90,6 +91,7 @@ class ConnectManagerImpl: ConnectManager()
         const val MAINNET_NETWORK = "bitcoin"
         const val TEST_SERVER_PORT =  1883
         const val PROD_SERVER_PORT = 8883
+        const val COMPLETE_STATUS = "COMPLETE"
     }
 
     private val _ownerInfoStateFlow: MutableStateFlow<OwnerInfo> by lazy {
@@ -221,7 +223,7 @@ class ConnectManagerImpl: ConnectManager()
     private fun isProductionServer(): Boolean {
         val ip = mixerIp ?: return false
         val port = ip.substringAfterLast(":").toIntOrNull() ?: return false
-        return port != 1883
+        return port != TEST_SERVER_PORT
     }
 
     private fun isProductionEnvironment(): Boolean {
@@ -323,7 +325,7 @@ class ConnectManagerImpl: ConnectManager()
                 contact.lightningRouteHint?.value!!,
                 ownerInfoStateFlow.value.alias ?: "",
                 ownerInfoStateFlow.value?.picture ?: "",
-                3000.toULong(),
+                5000.toULong(),
                 contact.inviteCode,
                 contact.contactAlias?.value
             )
@@ -1203,6 +1205,14 @@ class ConnectManagerImpl: ConnectManager()
 
     private fun handleRunReturn(rr: RunReturn, client: MqttAsyncClient?) {
         if (client != null) {
+            rr.settleTopic?.let { settleTopic ->
+                rr.settlePayload?.let { payload ->
+                    client.publish(settleTopic, MqttMessage(payload))
+                    settleRunReturn.add(rr)
+                    Log.d("MQTT_MESSAGES", "=> settleRunReturn $settleTopic")
+                }
+            }
+
             // Set updated state into db
             rr.stateMp?.let {
                 storeUserState(it)
@@ -1407,6 +1417,7 @@ class ConnectManagerImpl: ConnectManager()
 
             // Settled
             rr.settledStatus?.let { settledStatus ->
+                handleSettleStatus(settledStatus)
                 Log.d("MQTT_MESSAGES", "=> settled_status $settledStatus")
             }
 
@@ -1436,8 +1447,31 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
+    private fun handleSettleStatus(settledStatus: String?) {
+        settledStatus?.let { status ->
+            try {
+                val data = status.toByteArray(Charsets.UTF_8)
+                val dictionary = JSONObject(String(data))
+                val htlcId = dictionary.getString("htlc_id")
+                val settleStatus = dictionary.getString("status")
+
+                if (settleStatus == COMPLETE_STATUS) {
+                    val rrObject = settleRunReturn.firstOrNull { it.msgs.firstOrNull()?.index == htlcId }
+
+                    rrObject?.let {
+                        handleRunReturn(it, mqttClient)
+                    }
+
+                    settleRunReturn = settleRunReturn.filter { it.msgs.firstOrNull()?.index != htlcId } as MutableList<RunReturn>
+                } else { }
+            } catch (e: JSONException) {
+                Log.d("MQTT_MESSAGES", "Error decoding JSON: ${e.message}")
+            }
+        }
+    }
+
      private fun logLongString(tag: String, str: String) {
-        val maxLogSize = 4000 // You can set it to 4000 or any suitable chunk size
+        val maxLogSize = 4000
         for (i in 0..str.length / maxLogSize) {
             val start = i * maxLogSize
             val end = (i + 1) * maxLogSize

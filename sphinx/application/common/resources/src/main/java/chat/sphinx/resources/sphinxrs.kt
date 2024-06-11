@@ -508,6 +508,10 @@ internal interface _UniFFILib : Library {
     ): RustBuffer.ByValue
     fun uniffi_sphinxrs_fn_func_delete_tribe(`seed`: RustBuffer.ByValue,`uniqueTime`: RustBuffer.ByValue,`state`: RustBuffer.ByValue,`tribeServerPubkey`: RustBuffer.ByValue,`tribePubkey`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
+    fun uniffi_sphinxrs_fn_func_add_node(`node`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
+    ): RustBuffer.ByValue
+    fun uniffi_sphinxrs_fn_func_concat_route(`state`: RustBuffer.ByValue,`endHops`: RustBuffer.ByValue,`routerPubkey`: RustBuffer.ByValue,`amtMsat`: Long,_uniffi_out_err: RustCallStatus, 
+    ): RustBuffer.ByValue
     fun ffi_sphinxrs_rustbuffer_alloc(`size`: Int,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
     fun ffi_sphinxrs_rustbuffer_from_bytes(`bytes`: ForeignBytes.ByValue,_uniffi_out_err: RustCallStatus, 
@@ -659,6 +663,10 @@ internal interface _UniFFILib : Library {
     fun uniffi_sphinxrs_checksum_func_update_tribe(
     ): Short
     fun uniffi_sphinxrs_checksum_func_delete_tribe(
+    ): Short
+    fun uniffi_sphinxrs_checksum_func_add_node(
+    ): Short
+    fun uniffi_sphinxrs_checksum_func_concat_route(
     ): Short
     fun ffi_sphinxrs_uniffi_contract_version(
     ): Int
@@ -893,6 +901,12 @@ private fun uniffiCheckApiChecksums(lib: _UniFFILib) {
     if (lib.uniffi_sphinxrs_checksum_func_delete_tribe() != 11926.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_sphinxrs_checksum_func_add_node() != 49737.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sphinxrs_checksum_func_concat_route() != 19565.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
 }
 
 // Public interface members begin here.
@@ -1103,7 +1117,8 @@ data class Msg (
     var `timestamp`: ULong?, 
     var `sentTo`: String?, 
     var `fromMe`: Boolean?, 
-    var `paymentHash`: String?
+    var `paymentHash`: String?, 
+    var `error`: String?
 ) {
     
 }
@@ -1122,6 +1137,7 @@ public object FfiConverterTypeMsg: FfiConverterRustBuffer<Msg> {
             FfiConverterOptionalString.read(buf),
             FfiConverterOptionalBoolean.read(buf),
             FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
         )
     }
 
@@ -1136,7 +1152,8 @@ public object FfiConverterTypeMsg: FfiConverterRustBuffer<Msg> {
             FfiConverterOptionalULong.allocationSize(value.`timestamp`) +
             FfiConverterOptionalString.allocationSize(value.`sentTo`) +
             FfiConverterOptionalBoolean.allocationSize(value.`fromMe`) +
-            FfiConverterOptionalString.allocationSize(value.`paymentHash`)
+            FfiConverterOptionalString.allocationSize(value.`paymentHash`) +
+            FfiConverterOptionalString.allocationSize(value.`error`)
     )
 
     override fun write(value: Msg, buf: ByteBuffer) {
@@ -1151,6 +1168,7 @@ public object FfiConverterTypeMsg: FfiConverterRustBuffer<Msg> {
             FfiConverterOptionalString.write(value.`sentTo`, buf)
             FfiConverterOptionalBoolean.write(value.`fromMe`, buf)
             FfiConverterOptionalString.write(value.`paymentHash`, buf)
+            FfiConverterOptionalString.write(value.`error`, buf)
     }
 }
 
@@ -2952,6 +2970,24 @@ fun `deleteTribe`(`seed`: String, `uniqueTime`: String, `state`: ByteArray, `tri
     return FfiConverterTypeRunReturn.lift(
     rustCallWithError(SphinxException) { _status ->
     _UniFFILib.INSTANCE.uniffi_sphinxrs_fn_func_delete_tribe(FfiConverterString.lower(`seed`),FfiConverterString.lower(`uniqueTime`),FfiConverterByteArray.lower(`state`),FfiConverterString.lower(`tribeServerPubkey`),FfiConverterString.lower(`tribePubkey`),_status)
+})
+}
+
+@Throws(SphinxException::class)
+
+fun `addNode`(`node`: String): RunReturn {
+    return FfiConverterTypeRunReturn.lift(
+    rustCallWithError(SphinxException) { _status ->
+    _UniFFILib.INSTANCE.uniffi_sphinxrs_fn_func_add_node(FfiConverterString.lower(`node`),_status)
+})
+}
+
+@Throws(SphinxException::class)
+
+fun `concatRoute`(`state`: ByteArray, `endHops`: String, `routerPubkey`: String, `amtMsat`: ULong): RunReturn {
+    return FfiConverterTypeRunReturn.lift(
+    rustCallWithError(SphinxException) { _status ->
+    _UniFFILib.INSTANCE.uniffi_sphinxrs_fn_func_concat_route(FfiConverterByteArray.lower(`state`),FfiConverterString.lower(`endHops`),FfiConverterString.lower(`routerPubkey`),FfiConverterULong.lower(`amtMsat`),_status)
 })
 }
 

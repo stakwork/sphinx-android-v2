@@ -1827,7 +1827,7 @@ abstract class ChatFragment<
     ) {
         if (messages.size > index) {
             (recyclerView.adapter as ConcatAdapter).adapters.firstOrNull()?.let { messagesListAdapter ->
-                messages[index]?.let { message ->
+                messages[index].let { message ->
                     (messagesListAdapter as MessageListAdapter<*>).highlightAndScrollToSearchResult(
                         message,
                         if (messages.size > prevIndex && prevIndex >= 0) messages[prevIndex] else null,

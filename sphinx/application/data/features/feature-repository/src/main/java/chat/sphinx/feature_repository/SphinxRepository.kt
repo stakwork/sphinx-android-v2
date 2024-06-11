@@ -680,7 +680,7 @@ abstract class SphinxRepository(
                     }
                 }
                 } catch (e: Exception) {
-                    LOG.e(TAG, "onMessageSent: ${e.message}", e)
+                    LOG.e(TAG, "onMessage: ${e.message}", e)
                 }
             }
         }
@@ -1255,8 +1255,8 @@ abstract class SphinxRepository(
         bolt11: Bolt11?
     ) {
         val queries = coreDB.getSphinxDatabaseQueries()
-        val contact = getContactByPubKey(LightningNodePubKey(msgSender.pubkey)).firstOrNull()
-        val chatTribe = getChatByUUID(ChatUUID(msgSender.pubkey)).firstOrNull()
+        val contact = msgSender.pubkey.toLightningNodePubKey()?.let { getContactByPubKey(it).firstOrNull() }
+        val chatTribe = msgSender.pubkey.toChatUUID()?.let { getChatByUUID(it).firstOrNull() }
         var messageMedia: MessageMediaDbo? = null
         val isTribe = contact == null
 

@@ -1205,14 +1205,28 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
-    private fun handleRunReturn(rr: RunReturn, client: MqttAsyncClient?) {
+    private fun handleRunReturn(
+        rr: RunReturn,
+        client: MqttAsyncClient?,
+        skipSettleTopic: Boolean = false
+    ) {
         if (client != null) {
+
             rr.settleTopic?.let { settleTopic ->
                 rr.settlePayload?.let { payload ->
                     client.publish(settleTopic, MqttMessage(payload))
-                    settleRunReturn.add(rr)
+                    if (!skipSettleTopic) {
+                        settleRunReturn.add(rr)
+                        return
+                    }
                     Log.d("MQTT_MESSAGES", "=> settleRunReturn $settleTopic")
                 }
+            }
+
+            // Settled
+            rr.settledStatus?.let { settledStatus ->
+                handleSettleStatus(settledStatus)
+                Log.d("MQTT_MESSAGES", "=> settled_status $settledStatus")
             }
 
             // Set updated state into db
@@ -1424,12 +1438,6 @@ class ConnectManagerImpl: ConnectManager()
                 Log.d("MQTT_MESSAGES", "=> sent_status $sentStatus")
             }
 
-            // Settled
-            rr.settledStatus?.let { settledStatus ->
-                handleSettleStatus(settledStatus)
-                Log.d("MQTT_MESSAGES", "=> settled_status $settledStatus")
-            }
-
             rr.lspHost?.let { lspHost ->
                 mixerIp = lspHost
             }
@@ -1468,7 +1476,7 @@ class ConnectManagerImpl: ConnectManager()
                     val rrObject = settleRunReturn.firstOrNull { it.msgs.firstOrNull()?.index == htlcId }
 
                     rrObject?.let {
-                        handleRunReturn(it, mqttClient)
+                        handleRunReturn(it, mqttClient, true)
                     }
 
                     settleRunReturn = settleRunReturn.filter { it.msgs.firstOrNull()?.index != htlcId } as MutableList<RunReturn>

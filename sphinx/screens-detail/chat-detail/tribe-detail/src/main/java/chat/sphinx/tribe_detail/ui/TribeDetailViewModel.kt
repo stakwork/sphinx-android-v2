@@ -12,9 +12,7 @@ import chat.sphinx.concept_repository_chat.ChatRepository
 import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.concept_service_media.MediaPlayerServiceController
 import chat.sphinx.concept_view_model_coordinator.ViewModelCoordinator
-import chat.sphinx.kotlin_response.Response
 import chat.sphinx.logger.SphinxLogger
-import chat.sphinx.logger.e
 import chat.sphinx.menu_bottom.ui.MenuBottomViewState
 import chat.sphinx.menu_bottom_profile_pic.PictureMenuHandler
 import chat.sphinx.menu_bottom_profile_pic.PictureMenuViewModel
@@ -24,12 +22,9 @@ import chat.sphinx.tribe.TribeMenuViewModel
 import chat.sphinx.tribe_detail.R
 import chat.sphinx.tribe_detail.navigation.TribeDetailNavigator
 import chat.sphinx.wrapper_chat.Chat
-import chat.sphinx.wrapper_chat.ChatAlias
 import chat.sphinx.wrapper_chat.isTribeOwnedByAccount
 import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_contact.Contact
-import chat.sphinx.wrapper_feed.Feed.Companion.TRIBES_DEFAULT_SERVER_URL
-import chat.sphinx.wrapper_meme_server.PublicAttachmentInfo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.matthewnelson.android_feature_navigation.util.navArgs
 import io.matthewnelson.android_feature_viewmodel.SideEffectViewModel
@@ -39,7 +34,6 @@ import io.matthewnelson.concept_views.viewstate.ViewStateContainer
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import javax.annotation.meta.Exhaustive
 import javax.inject.Inject
 
 internal inline val TribeDetailFragmentArgs.chatId: ChatId
@@ -65,12 +59,18 @@ internal class TribeDetailViewModel @Inject constructor(
 {
     companion object {
         const val TAG = "TribeDetailViewModel"
-        private const val TRIBES_DEFAULT_SERVER_URL = "34.229.52.200:8801"
+        const val SERVER_SETTINGS_SHARED_PREFERENCES = "server_ip_settings"
+        const val TRIBE_SERVER_IP = "tribe_server_ip"
     }
 
     private val args: TribeDetailFragmentArgs by savedStateHandle.navArgs()
-
     val chatId = args.chatId
+
+    private val tribeDefaultServerUrl = app.getSharedPreferences(
+        SERVER_SETTINGS_SHARED_PREFERENCES,
+    Context.MODE_PRIVATE
+    ).getString(TRIBE_SERVER_IP, null)
+
 
     val updatingImageViewStateContainer: ViewStateContainer<UpdatingImageViewState> by lazy {
         ViewStateContainer(UpdatingImageViewState.Idle)
@@ -275,7 +275,7 @@ internal class TribeDetailViewModel @Inject constructor(
         viewModelScope.launch(mainImmediate) {
             val chat = getChat()
             if (chat.isTribeOwnedByAccount(getOwner().nodePubKey)) {
-                val shareTribeURL = "sphinx.chat://?action=tribeV2&pubkey=${chat.uuid.value}&host=${TRIBES_DEFAULT_SERVER_URL}"
+                val shareTribeURL = "sphinx.chat://?action=tribeV2&pubkey=${chat.uuid.value}&host=${tribeDefaultServerUrl}"
                 navigator.toShareTribeScreen(shareTribeURL, app.getString(R.string.qr_code_title))
             }
         }

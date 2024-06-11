@@ -22,7 +22,6 @@ import chat.sphinx.kotlin_response.LoadResponse
 import chat.sphinx.kotlin_response.Response
 import chat.sphinx.menu_bottom_profile_pic.PictureMenuHandler
 import chat.sphinx.menu_bottom_profile_pic.PictureMenuViewModel
-import chat.sphinx.wrapper_chat.ChatHost
 import chat.sphinx.wrapper_chat.toChatHost
 import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_common.lightning.LightningNodePubKey
@@ -62,9 +61,18 @@ internal class JoinTribeViewModel @Inject constructor(
         >(dispatchers, JoinTribeViewState.LoadingTribe),
     PictureMenuViewModel
 {
+    companion object {
+        const val SERVER_SETTINGS_SHARED_PREFERENCES = "server_ip_settings"
+        const val ENVIRONMENT_TYPE = "environment_type"
+    }
+
     private val args: JoinTribeFragmentArgs by savedStateHandle.navArgs()
-//    private var tribeInfo : TribeDto? = null
     private var newTribeInfo : NewTribeDto? = null
+
+    private val isProductionEnvironment = app.getSharedPreferences(
+        SERVER_SETTINGS_SHARED_PREFERENCES,
+        Context.MODE_PRIVATE
+    ).getBoolean(ENVIRONMENT_TYPE, true)
 
     fun setMyAlias(alias: String?) {
         this.newTribeInfo?.myAlias = alias
@@ -144,7 +152,11 @@ internal class JoinTribeViewModel @Inject constructor(
                 val chatHost = tribeJoinLink.tribeHost.toChatHost()
 
                 if (chatHost != null) {
-                    networkQueryChat.getTribeInfo(chatHost, LightningNodePubKey(tribeJoinLink.tribePubkey)).collect { loadResponse ->
+                    networkQueryChat.getTribeInfo(
+                        chatHost,
+                        LightningNodePubKey(tribeJoinLink.tribePubkey),
+                        isProductionEnvironment
+                    ).collect { loadResponse ->
                         when (loadResponse) {
                             is LoadResponse.Loading ->
                                 viewStateContainer.updateViewState(JoinTribeViewState.LoadingTribe)

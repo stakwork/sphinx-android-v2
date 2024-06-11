@@ -28,15 +28,15 @@ import org.eclipse.paho.client.mqttv3.MqttException
 import org.eclipse.paho.client.mqttv3.MqttMessage
 import org.json.JSONException
 import org.json.JSONObject
+import uniffi.sphinxrs.ParsedInvite
 import uniffi.sphinxrs.RunReturn
 import uniffi.sphinxrs.addContact
 import uniffi.sphinxrs.codeFromInvite
-import uniffi.sphinxrs.fetchMsgs
+import uniffi.sphinxrs.fetchMsgsBatch
 import uniffi.sphinxrs.getDefaultTribeServer
 import uniffi.sphinxrs.getMsgsCounts
 import uniffi.sphinxrs.getMutes
 import uniffi.sphinxrs.getReads
-import uniffi.sphinxrs.getSubscriptionTopic
 import uniffi.sphinxrs.getTribeManagementTopic
 import uniffi.sphinxrs.handle
 import uniffi.sphinxrs.initialSetup
@@ -50,18 +50,22 @@ import uniffi.sphinxrs.makeMediaTokenWithPrice
 import uniffi.sphinxrs.mnemonicFromEntropy
 import uniffi.sphinxrs.mnemonicToSeed
 import uniffi.sphinxrs.mute
+import uniffi.sphinxrs.parseInvite
 import uniffi.sphinxrs.paymentHashFromInvoice
 import uniffi.sphinxrs.processInvite
 import uniffi.sphinxrs.read
 import uniffi.sphinxrs.rootSignMs
 import uniffi.sphinxrs.send
-import uniffi.sphinxrs.setBlockheight
 import uniffi.sphinxrs.setNetwork
 import uniffi.sphinxrs.setPushToken
 import uniffi.sphinxrs.signBytes
 import uniffi.sphinxrs.xpubFromSeed
 import java.security.SecureRandom
+import java.security.cert.X509Certificate
 import java.util.Calendar
+import java.util.UUID
+import javax.net.ssl.SSLContext
+import javax.net.ssl.X509TrustManager
 import kotlin.math.min
 
 class ConnectManagerImpl: ConnectManager()
@@ -69,7 +73,7 @@ class ConnectManagerImpl: ConnectManager()
     private var _mixerIp: String? = null
     private var walletMnemonic: WalletMnemonic? = null
     private var mqttClient: MqttAsyncClient? = null
-    private val network = "regtest"
+    private var network = ""
     private var ownerSeed: String? = null
     private var inviteCode: String? = null
     private var inviteInitialTribe: String? = null
@@ -77,46 +81,125 @@ class ConnectManagerImpl: ConnectManager()
     private var restoreMnemonicWords: List<String>? = emptyList()
     private var inviterContact: NewContact? = null
     private var hasAttemptedReconnect = false
+    private var tribeServer: String? = null
+    private var settleRunReturn: MutableList<RunReturn> = mutableListOf()
 
-    private val _ownerInfoStateFlow: MutableStateFlow<OwnerInfo?> by lazy {
-        MutableStateFlow(null)
+    companion object {
+        const val TEST_V2_SERVER_IP = "34.229.52.200:1883"
+        const val TEST_V2_TRIBES_SERVER = "34.229.52.200:8801"
+        const val REGTEST_NETWORK = "regtest"
+        const val MAINNET_NETWORK = "bitcoin"
+        const val TEST_SERVER_PORT =  1883
+        const val PROD_SERVER_PORT = 8883
+        const val COMPLETE_STATUS = "COMPLETE"
     }
-    override val ownerInfoStateFlow: StateFlow<OwnerInfo?>
+
+    private val _ownerInfoStateFlow: MutableStateFlow<OwnerInfo> by lazy {
+        MutableStateFlow(OwnerInfo(
+            null,
+            null,
+            null,
+            null
+        ))
+    }
+    override val ownerInfoStateFlow: StateFlow<OwnerInfo>
         get() = _ownerInfoStateFlow.asStateFlow()
 
     private var mixerIp: String?
         get() = _mixerIp?.let {
-            if (!it.startsWith("tcp://")) "tcp://$it" else it
+            if (isProductionEnvironment()) {
+                if (!it.startsWith("ssl://")) "ssl://$it" else it
+            } else {
+                if (!it.startsWith("tcp://")) "tcp://$it" else it
+            }
         }
         set(value) {
-            _mixerIp = value?.replace("tcp://", "")
+            _mixerIp = value?.replace("tcp://", "")?.replace("ssl://", "")
         }
+    private fun getRawMixerIp(): String? {
+        return _mixerIp
+    }
 
     // Key Generation and Management
-    override fun createAccount(lspIp: String) {
-        mixerIp = lspIp
+    override fun createAccount() {
+        if (!restoreMnemonicWords.isNullOrEmpty()) {
+            notifyListeners {
+                onRestoreAccount(isProductionEnvironment())
+            }
+        } else {
+            val seed = generateMnemonicAndSeed(null)
+            val now = getTimestampInMilliseconds()
 
-        val seed = generateMnemonic()
-        val now = getTimestampInMilliseconds()
-
-        seed.first?.let { firstSeed ->
-            val xPub = generateXPub(firstSeed, now, network)
-            val sig = signMs(firstSeed, now, network)
-            ownerSeed = firstSeed
-
-            if (xPub != null) {
-                var invite: RunReturn? = null
+            seed?.let { firstSeed ->
+                var invite: ParsedInvite? = null
+                ownerSeed = firstSeed
 
                 if (inviteCode != null) {
-                    invite = processNewInvite(ownerSeed!!, now, getCurrentUserState(), inviteCode!!)
-                    _mixerIp = invite?.lspHost
+                    invite = parseInvite(inviteCode!!)
+
+                    val hostAndPubKey = invite.initialTribe?.let { extractTribeServerAndPubkey(it) }
+                    val parts = invite.inviterContactInfo?.split("_")
+                    val okKey = parts?.getOrNull(0)?.toLightningNodePubKey()
+                    val routeHint =
+                        "${parts?.getOrNull(1)}_${parts?.getOrNull(2)}".toLightningRouteHint()
+
+                    // add contact alias
+                    inviterContact = NewContact(
+                        null,
+                        okKey,
+                        routeHint,
+                        null,
+                        false,
+                        null,
+                        invite.code,
+                        null,
+                        null,
+                    )
+                    _mixerIp = invite.lspHost
+                    tribeServer = hostAndPubKey?.first ?: TEST_V2_TRIBES_SERVER
+                    inviteInitialTribe = invite.initialTribe
+
+                    network = if (isProductionServer()) {
+                        MAINNET_NETWORK
+                    } else {
+                        REGTEST_NETWORK
+                    }
                 }
 
-                connectToMQTT(mixerIp!!, xPub, now, sig, invite)
-            } else {
-                notifyListeners {
-                    onConnectManagerError(ConnectManagerError.GenerateXPubError)
+                val xPub = generateXPub(firstSeed, now, network)
+                val sig = signMs(firstSeed, now, network)
+
+                if (xPub != null) {
+                    connectToMQTT(mixerIp!!, xPub, now, sig)
                 }
+//                notifyListeners {
+//                    onConnectManagerError(ConnectManagerError.GenerateXPubError)
+//                }
+            }
+        }
+    }
+
+    override fun restoreAccount(defaultTribe: String?, tribeHost: String?, mixerServerIp: String?) {
+        val restoreMnemonic = restoreMnemonicWords?.joinToString(" ")
+        val seed = generateMnemonicAndSeed(restoreMnemonic)
+        val now = getTimestampInMilliseconds()
+
+        seed?.let { firstSeed ->
+            ownerSeed = firstSeed
+            _mixerIp = mixerServerIp ?: TEST_V2_SERVER_IP
+            tribeServer = tribeHost ?: TEST_V2_TRIBES_SERVER
+
+            network = if (isProductionServer()) {
+                MAINNET_NETWORK
+            } else {
+                REGTEST_NETWORK
+            }
+
+            val xPub = generateXPub(firstSeed, now, network)
+            val sig = signMs(firstSeed, now, network)
+
+            if (xPub != null) {
+                connectToMQTT(mixerIp!!, xPub, now, sig)
             }
         }
     }
@@ -129,12 +212,31 @@ class ConnectManagerImpl: ConnectManager()
         this.restoreMnemonicWords = words
     }
 
+    override fun setNetworkType(isTestEnvironment: Boolean) {
+        if (isTestEnvironment) {
+            this.network = REGTEST_NETWORK
+        } else {
+            this.network = MAINNET_NETWORK
+        }
+    }
+
+    private fun isProductionServer(): Boolean {
+        val ip = mixerIp ?: return false
+        val port = ip.substringAfterLast(":").toIntOrNull() ?: return false
+        return port != TEST_SERVER_PORT
+    }
+
+    private fun isProductionEnvironment(): Boolean {
+        return network != REGTEST_NETWORK
+    }
+
+
     @OptIn(ExperimentalUnsignedTypes::class)
-    private fun generateMnemonic(): Pair<String?, WalletMnemonic?> {
+    private fun generateMnemonicAndSeed(restoreMnemonic: String?): String? {
         var seed: String? = null
 
         // Check if is account restoration
-        val mnemonic = if (!restoreMnemonicWords.isNullOrEmpty()) {
+        val mnemonic = if (!restoreMnemonic.isNullOrEmpty()) {
             restoreMnemonicWords!!.joinToString(" ").toWalletMnemonic()
         } else {
             try {
@@ -159,10 +261,11 @@ class ConnectManagerImpl: ConnectManager()
                 notifyListeners {
                     onMnemonicWords(words)
                 }
-            } catch (e: Exception) {}
+            } catch (e: Exception) {
+            }
         }
 
-        return Pair(seed, mnemonic)
+        return seed
     }
 
     private fun generateXPub(seed: String, time: String, network: String): String? {
@@ -197,6 +300,17 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
+    private fun parseNewInvite(inviteQr: String): ParsedInvite? {
+        return try {
+            parseInvite(inviteQr)
+        } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.ProcessInviteError)
+            }
+            null
+        }
+    }
+
     override fun createContact(
         contact: NewContact
     ) {
@@ -209,9 +323,9 @@ class ConnectManagerImpl: ConnectManager()
                 getCurrentUserState(),
                 contact.lightningNodePubKey?.value!!,
                 contact.lightningRouteHint?.value!!,
-                ownerInfoStateFlow.value?.alias ?: "",
+                ownerInfoStateFlow.value.alias ?: "",
                 ownerInfoStateFlow.value?.picture ?: "",
-                3000.toULong(),
+                5000.toULong(),
                 contact.inviteCode,
                 contact.contactAlias?.value
             )
@@ -225,6 +339,10 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
+    override fun deleteContact(pubKey: String) {
+        removeKeysFromUserState(listOf(pubKey))
+    }
+
     // MQTT Connection Management
 
     override fun initializeMqttAndSubscribe(
@@ -234,9 +352,16 @@ class ConnectManagerImpl: ConnectManager()
     ) {
         _mixerIp = serverUri
         walletMnemonic = mnemonicWords
-        _ownerInfoStateFlow.value = ownerInfo
+        network = if (isProductionServer()) MAINNET_NETWORK else REGTEST_NETWORK
 
         if (isConnected()) {
+            _ownerInfoStateFlow.value = OwnerInfo(
+                ownerInfo.alias,
+                ownerInfo.picture,
+                ownerInfoStateFlow.value.userState,
+                ownerInfo.messageLastIndex
+            )
+
             // It's called when invitee first init the dashboard
             if (inviterContact != null) {
                 createContact(inviterContact!!)
@@ -245,13 +370,14 @@ class ConnectManagerImpl: ConnectManager()
 
             if (inviteInitialTribe != null) {
                 notifyListeners {
-                    onInitialTribe(inviteInitialTribe!!)
+                    onInitialTribe(inviteInitialTribe!!, isProductionEnvironment())
                 }
             }
 
             // return always that the mqtt is connected
             return
         }
+        _ownerInfoStateFlow.value = ownerInfo
 
         val seed = try {
             mnemonicToSeed(mnemonicWords.value)
@@ -294,14 +420,33 @@ class ConnectManagerImpl: ConnectManager()
         clientId: String,
         key: String,
         password: String,
-        invite: RunReturn? = null
     ) {
         try {
             mqttClient = MqttAsyncClient(serverURI, clientId, null)
 
+            val sslContext: SSLContext? = if (isProductionEnvironment()) {
+                SSLContext.getInstance("TLS").apply {
+                    val trustAllCerts = arrayOf<X509TrustManager>(object : X509TrustManager {
+                        override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
+                        override fun checkClientTrusted(
+                            chain: Array<X509Certificate>,
+                            authType: String
+                        ) {}
+                        override fun checkServerTrusted(
+                            chain: Array<X509Certificate>,
+                            authType: String
+                        ) {}
+                    })
+                    init(null, trustAllCerts, SecureRandom())
+                }
+            } else {
+                null
+            }
+
             val options = MqttConnectOptions().apply {
                 this.userName = key
                 this.password = password.toCharArray()
+                this.socketFactory = sslContext?.socketFactory
             }
 
             mqttClient?.connect(options, null, object : IMqttActionListener {
@@ -309,11 +454,7 @@ class ConnectManagerImpl: ConnectManager()
                     Log.d("MQTT_MESSAGES", "MQTT CONNECTED!")
                     hasAttemptedReconnect = false
 
-                    if (invite != null) {
-                        handleRunReturn(invite, mqttClient)
-                    } else {
-                        subscribeOwnerMQTT()
-                    }
+                    subscribeOwnerMQTT()
 
                     notifyListeners {
                         onNetworkStatusChange(true)
@@ -333,7 +474,6 @@ class ConnectManagerImpl: ConnectManager()
             })
 
             mqttClient?.setCallback(object : MqttCallback {
-
                 override fun connectionLost(cause: Throwable?) {
                     Log.d("MQTT_MESSAGES", "MQTT DISCONNECTED! $cause ${cause?.message}")
 
@@ -373,7 +513,6 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
-
     private fun handleMessageArrived(topic: String?, message: MqttMessage?) {
         if (topic != null && message?.payload != null) {
             try {
@@ -410,21 +549,18 @@ class ConnectManagerImpl: ConnectManager()
                 val networkSetup = setNetwork(network)
                 handleRunReturn(networkSetup, client)
 
-                // Block height setup and handling
-                val blockSetup = setBlockheight(0.toUInt())
-                handleRunReturn(blockSetup, client)
-
-                // Subscribe to MQTT topic
-                val subtopic = getSubscriptionTopic(
+                // Initial setup and handling
+                val setUp = initialSetup(
                     ownerSeed!!,
                     getTimestampInMilliseconds(),
                     getCurrentUserState(),
+                    UUID.randomUUID().toString(),
+                    inviterContact?.inviteCode
                 )
+                handleRunReturn(setUp, client)
 
                 val qos = IntArray(1) { 1 }
-                client.subscribe(arrayOf(subtopic), qos)
 
-                // Subscribe to tribe management topic
                 val tribeSubtopic = getTribeManagementTopic(
                     ownerSeed!!,
                     getTimestampInMilliseconds(),
@@ -432,22 +568,15 @@ class ConnectManagerImpl: ConnectManager()
                 )
                 client.subscribe(arrayOf(tribeSubtopic), qos)
 
-                // Initial setup and handling
-                val setUp = initialSetup(
-                    ownerSeed!!,
-                    getTimestampInMilliseconds(),
-                    getCurrentUserState()
-                )
-                handleRunReturn(setUp, client)
+                if (ownerInfoStateFlow.value.messageLastIndex != null && restoreMnemonicWords?.isEmpty() == true) {
 
-                if (ownerInfoStateFlow.value != null && restoreMnemonicWords?.isEmpty() == true) {
-
-                    val fetchMessages = fetchMsgs(
+                    val fetchMessages = fetchMsgsBatch(
                         ownerSeed!!,
                         getTimestampInMilliseconds(),
                         getCurrentUserState(),
-                        ownerInfoStateFlow.value?.messageLastIndex?.plus(1)?.toULong() ?: 0.toULong(),
-                        100.toUInt()
+                        ownerInfoStateFlow.value.messageLastIndex?.plus(1)?.toULong() ?: 0.toULong(),
+                        null,
+                        false
                     )
                     handleRunReturn(fetchMessages, mqttClient)
 
@@ -617,7 +746,7 @@ class ConnectManagerImpl: ConnectManager()
                 getCurrentUserState(),
                 _mixerIp!!,
                 convertSatsToMillisats(sats),
-                ownerInfoStateFlow.value?.alias ?: "",
+                ownerInfoStateFlow.value.alias ?: "",
                 "34.229.52.200:8801",
                 "02792ee5b9162f9a00686aaa5d5274e91fd42a141113007797b5c1872d43f78e07"
             )
@@ -678,6 +807,7 @@ class ConnectManagerImpl: ConnectManager()
 
     override fun sendKeySend(pubKey: String, amount: Long) {
         val now = getTimestampInMilliseconds()
+
         try {
             val keySend = uniffi.sphinxrs.keysend(
                 ownerSeed!!,
@@ -824,7 +954,7 @@ class ConnectManagerImpl: ConnectManager()
 
     override fun fetchMessagesOnRestoreAccount(totalHighestIndex: Long?) {
         try {
-            val limit = 250
+            val limit = 100
             val fetchMessages = uniffi.sphinxrs.fetchMsgsBatch(
                 ownerSeed!!,
                 getTimestampInMilliseconds(),
@@ -846,14 +976,15 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
-    override fun fetchFirstMessagesPerKey() {
+    override fun fetchFirstMessagesPerKey(lastMsgIdx: Long) {
         try {
+            val limit = 100
             val fetchFirstMsg = uniffi.sphinxrs.fetchFirstMsgsPerKey(
                 ownerSeed!!,
                 getTimestampInMilliseconds(),
                 getCurrentUserState(),
-                0.toULong(),
-                null,
+                lastMsgIdx.toULong(),
+                limit.toUInt(),
                 false
             )
             handleRunReturn(fetchFirstMsg, mqttClient)
@@ -889,11 +1020,14 @@ class ConnectManagerImpl: ConnectManager()
                 onNetworkStatusChange(false)
             }
 
-            initializeMqttAndSubscribe(
-                mixerIp!!,
-                walletMnemonic!!,
-                ownerInfoStateFlow.value!!,
-            )
+            if (mixerIp != null && walletMnemonic != null && ownerInfoStateFlow.value != null) {
+
+                initializeMqttAndSubscribe(
+                    mixerIp!!,
+                    walletMnemonic!!,
+                    ownerInfoStateFlow.value,
+                )
+            }
 
             Log.d("MQTT_MESSAGES", "onReconnectMqtt")
         }
@@ -1071,12 +1205,45 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
-    private fun handleRunReturn(rr: RunReturn, client: MqttAsyncClient?) {
+    private fun handleRunReturn(
+        rr: RunReturn,
+        client: MqttAsyncClient?,
+        skipSettleTopic: Boolean = false
+    ) {
         if (client != null) {
+
+            rr.settleTopic?.let { settleTopic ->
+                rr.settlePayload?.let { payload ->
+                    client.publish(settleTopic, MqttMessage(payload))
+                    if (!skipSettleTopic) {
+                        settleRunReturn.add(rr)
+                        return
+                    }
+                    Log.d("MQTT_MESSAGES", "=> settleRunReturn $settleTopic")
+                }
+            }
+
+            // Settled
+            rr.settledStatus?.let { settledStatus ->
+                handleSettleStatus(settledStatus)
+                Log.d("MQTT_MESSAGES", "=> settled_status $settledStatus")
+            }
+
             // Set updated state into db
             rr.stateMp?.let {
                 storeUserState(it)
                 Log.d("MQTT_MESSAGES", "=> stateMp $it")
+            }
+
+            rr.stateToDelete.let {
+                removeKeysFromUserState(it)
+                Log.d("MQTT_MESSAGES", "=> stateToDelete $it")
+            }
+
+            rr.subscriptionTopics.forEach { topic ->
+                val qos = IntArray(1) { 1 }
+                client.subscribe(arrayOf(topic), qos)
+                Log.d("MQTT_MESSAGES", "=> subscribed to $topic")
             }
 
             // Publish to topics based on the new array structure
@@ -1119,7 +1286,14 @@ class ConnectManagerImpl: ConnectManager()
 
                     if (tribesToRestore.isNotEmpty()) {
                         notifyListeners {
-                            onRestoreTribes(tribesToRestore)
+                            onRestoreTribes(tribesToRestore, isProductionEnvironment())
+                        }
+                    }
+
+                    if (contactsToRestore.isNotEmpty() || tribesToRestore.isNotEmpty()) {
+                        val highestIndex = rr.msgs.maxByOrNull { it.index?.toLong() ?: 0L }?.index?.toLong()
+                        highestIndex?.let { nnHighestIndex ->
+                            fetchFirstMessagesPerKey(highestIndex.plus(1L))
                         }
                     }
                 }
@@ -1165,10 +1339,19 @@ class ConnectManagerImpl: ConnectManager()
 
                 if (okKey != null && routeHint != null) {
                     notifyListeners {
-                        onOwnerRegistered(okKey, routeHint, isRestoreAccount)
+                        onOwnerRegistered(
+                            okKey,
+                            routeHint,
+                            isRestoreAccount,
+                            getRawMixerIp(),
+                            tribeServer,
+                            isProductionEnvironment()
+                        )
                     }
                 }
                 Log.d("MQTT_MESSAGES", "=> my_contact_info $myContactInfo")
+                Log.d("MQTT_MESSAGES", "=> my_contact_info mixerIp $mixerIp")
+                Log.d("MQTT_MESSAGES", "=> my_contact_info tribeServer $tribeServer")
             }
 
             // Handling new invite created
@@ -1224,14 +1407,6 @@ class ConnectManagerImpl: ConnectManager()
                 Log.d("MQTT_MESSAGES", "=> initialTribe $initialTribe")
             }
 
-            rr.stateToDelete.let {
-                notifyListeners {
-                    onDeleteUserState(it)
-                }
-
-                Log.d("MQTT_MESSAGES", "=> stateToDelete $it")
-            }
-
             // Handling other properties like sentStatus, settledStatus, error, etc.
             rr.error?.let { error ->
                 Log.d("MQTT_MESSAGES", "=> error $error")
@@ -1263,11 +1438,6 @@ class ConnectManagerImpl: ConnectManager()
                 Log.d("MQTT_MESSAGES", "=> sent_status $sentStatus")
             }
 
-            // Settled
-            rr.settledStatus?.let { settledStatus ->
-                Log.d("MQTT_MESSAGES", "=> settled_status $settledStatus")
-            }
-
             rr.lspHost?.let { lspHost ->
                 mixerIp = lspHost
             }
@@ -1294,8 +1464,31 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
+    private fun handleSettleStatus(settledStatus: String?) {
+        settledStatus?.let { status ->
+            try {
+                val data = status.toByteArray(Charsets.UTF_8)
+                val dictionary = JSONObject(String(data))
+                val htlcId = dictionary.getString("htlc_id")
+                val settleStatus = dictionary.getString("status")
+
+                if (settleStatus == COMPLETE_STATUS) {
+                    val rrObject = settleRunReturn.firstOrNull { it.msgs.firstOrNull()?.index == htlcId }
+
+                    rrObject?.let {
+                        handleRunReturn(it, mqttClient, true)
+                    }
+
+                    settleRunReturn = settleRunReturn.filter { it.msgs.firstOrNull()?.index != htlcId } as MutableList<RunReturn>
+                } else { }
+            } catch (e: JSONException) {
+                Log.d("MQTT_MESSAGES", "Error decoding JSON: ${e.message}")
+            }
+        }
+    }
+
      private fun logLongString(tag: String, str: String) {
-        val maxLogSize = 4000 // You can set it to 4000 or any suitable chunk size
+        val maxLogSize = 4000
         for (i in 0..str.length / maxLogSize) {
             val start = i * maxLogSize
             val end = (i + 1) * maxLogSize
@@ -1421,13 +1614,33 @@ class ConnectManagerImpl: ConnectManager()
     }
 
     private fun storeUserStateOnSharedPreferences(newUserState: MutableMap<String, ByteArray>) {
-        val existingUserState = retrieveUserStateMap(ownerInfoStateFlow.value?.userState)
+        val existingUserState = retrieveUserStateMap(ownerInfoStateFlow.value.userState)
         existingUserState.putAll(newUserState)
 
         val encodedString = encodeMapToBase64(existingUserState)
 
         // Update class var
-        _ownerInfoStateFlow.value = ownerInfoStateFlow.value?.copy(
+        _ownerInfoStateFlow.value = ownerInfoStateFlow.value.copy(
+            userState = encodedString
+        )
+
+        // Update SharedPreferences
+        notifyListeners {
+            onUpdateUserState(encodedString)
+        }
+    }
+
+    private fun removeKeysFromUserState(keys: List<String>) {
+        val existingUserState = retrieveUserStateMap(ownerInfoStateFlow.value.userState)
+
+        for (key in keys) {
+            existingUserState.remove(key)
+        }
+
+        val encodedString = encodeMapToBase64(existingUserState)
+
+        // Update class var
+        _ownerInfoStateFlow.value = ownerInfoStateFlow.value.copy(
             userState = encodedString
         )
 
@@ -1446,7 +1659,8 @@ class ConnectManagerImpl: ConnectManager()
     }
 
     private fun getCurrentUserState(): ByteArray {
-        val userStateMap = retrieveUserStateMap(ownerInfoStateFlow.value?.userState)
+        val userStateMap = retrieveUserStateMap(ownerInfoStateFlow.value.userState)
+        Log.d("MQTT_MESSAGES", "getCurrentUserState $userStateMap")
         return MsgPack.encodeToByteArray(MsgPackDynamicSerializer, userStateMap)
     }
 
@@ -1512,6 +1726,12 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
+    private fun extractTribeServerAndPubkey(url: String): Pair<String, String>? {
+        val regex = Regex("https://([^/]+)/tribes/([^/]+)")
+        return regex.find(url)?.groupValues?.takeIf { it.size == 3 }?.let {
+            it[1] to it[2]
+        }
+    }
     private fun isConnected(): Boolean {
         return mqttClient?.isConnected ?: false
     }

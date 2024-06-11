@@ -2,6 +2,7 @@ package chat.sphinx.di
 
 import android.app.Application
 import android.content.Context
+import android.content.SharedPreferences
 import chat.sphinx.concept_crypto_rsa.RSA
 import chat.sphinx.concept_link_preview.LinkPreviewHandler
 import chat.sphinx.concept_meme_input_stream.MemeInputStreamHandler
@@ -331,7 +332,7 @@ object NetworkModule {
 
     @Provides
     fun provideNetworkQueryDiscoverTribesImpl(
-        networkRelayCall: NetworkRelayCall
+        networkRelayCall: NetworkRelayCall,
     ): NetworkQueryDiscoverTribesImpl =
         NetworkQueryDiscoverTribesImpl(networkRelayCall)
 

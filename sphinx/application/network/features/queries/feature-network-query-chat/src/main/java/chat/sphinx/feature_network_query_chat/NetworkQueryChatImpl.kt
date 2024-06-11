@@ -7,18 +7,9 @@ import chat.sphinx.concept_network_relay_call.NetworkRelayCall
 import chat.sphinx.kotlin_response.LoadResponse
 import chat.sphinx.kotlin_response.ResponseError
 import chat.sphinx.wrapper_chat.ChatHost
-import chat.sphinx.wrapper_chat.ChatMuted
-import chat.sphinx.wrapper_chat.NotificationLevel
-import chat.sphinx.wrapper_chat.isTrue
 import chat.sphinx.wrapper_common.chat.ChatUUID
-import chat.sphinx.wrapper_common.dashboard.ChatId
-import chat.sphinx.wrapper_common.dashboard.ContactId
 import chat.sphinx.wrapper_common.feed.FeedUrl
 import chat.sphinx.wrapper_common.lightning.LightningNodePubKey
-import chat.sphinx.wrapper_relay.AuthorizationToken
-import chat.sphinx.wrapper_relay.RequestSignature
-import chat.sphinx.wrapper_relay.RelayUrl
-import chat.sphinx.wrapper_relay.TransportToken
 import kotlinx.coroutines.flow.Flow
 
 class NetworkQueryChatImpl(
@@ -26,16 +17,22 @@ class NetworkQueryChatImpl(
 ): NetworkQueryChat() {
 
     companion object {
-        private const val GET_TRIBE_INFO_URL = "http://%s/tribes/%s"
+        private const val GET_TRIBE_INFO_URL_TEST = "http://%s/tribes/%s"
+        private const val GET_TRIBE_INFO_URL_PRODUCTION = "https://%s/tribes/%s"
         private const val GET_FEED_CONTENT_URL = "https://%s/feed?url=%s&fulltext=true"
     }
 
     override fun getTribeInfo(
         host: ChatHost,
-        tribePubKey: LightningNodePubKey
+        tribePubKey: LightningNodePubKey,
+        isProductionEnvironment: Boolean
     ): Flow<LoadResponse<NewTribeDto, ResponseError>> =
         networkRelayCall.get(
-            url = String.format(GET_TRIBE_INFO_URL, host.value, tribePubKey.value),
+            url = String.format(
+                if (isProductionEnvironment) GET_TRIBE_INFO_URL_PRODUCTION else GET_TRIBE_INFO_URL_TEST,
+                host.value,
+                tribePubKey.value
+            ),
             responseJsonClass = NewTribeDto::class.java,
         )
 

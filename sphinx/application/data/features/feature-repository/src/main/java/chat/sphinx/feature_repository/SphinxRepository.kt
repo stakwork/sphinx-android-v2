@@ -8,7 +8,6 @@ import chat.sphinx.concept_meme_server.MemeServerTokenHandler
 import chat.sphinx.concept_network_query_chat.NetworkQueryChat
 import chat.sphinx.concept_network_query_chat.model.*
 import chat.sphinx.concept_network_query_contact.NetworkQueryContact
-import chat.sphinx.concept_network_query_contact.model.ContactDto
 import chat.sphinx.concept_network_query_contact.model.PostContactDto
 import chat.sphinx.concept_network_query_discover_tribes.NetworkQueryDiscoverTribes
 import chat.sphinx.concept_network_query_feed_search.NetworkQueryFeedSearch
@@ -29,7 +28,7 @@ import chat.sphinx.concept_repository_chat.ChatRepository
 import chat.sphinx.concept_repository_chat.model.AddMember
 import chat.sphinx.concept_repository_chat.model.CreateTribe
 import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
-import chat.sphinx.concept_repository_connect_manager.model.ConnectionManagerState
+import chat.sphinx.concept_repository_connect_manager.model.OwnerRegistrationState
 import chat.sphinx.concept_repository_connect_manager.model.NetworkStatus
 import chat.sphinx.concept_repository_connect_manager.model.RestoreProcessState
 import chat.sphinx.concept_repository_contact.ContactRepository
@@ -58,6 +57,7 @@ import chat.sphinx.example.wrapper_mqtt.NewCreateTribe.Companion.toNewCreateTrib
 import chat.sphinx.example.wrapper_mqtt.NewSentStatus.Companion.toNewSentStatus
 import chat.sphinx.example.wrapper_mqtt.Payment.Companion.toPaymentsList
 import chat.sphinx.example.wrapper_mqtt.TransactionDto
+import chat.sphinx.example.wrapper_mqtt.TribeMembersResponse
 import chat.sphinx.example.wrapper_mqtt.TribeMembersResponse.Companion.toTribeMembersList
 import chat.sphinx.example.wrapper_mqtt.toLspChannelInfo
 import chat.sphinx.feature_repository.mappers.action_track.*
@@ -122,7 +122,6 @@ import chat.sphinx.wrapper_lightning.LightningServiceProvider
 import chat.sphinx.wrapper_lightning.NodeBalance
 import chat.sphinx.wrapper_lightning.NodeBalanceAll
 import chat.sphinx.wrapper_lightning.toWalletMnemonic
-import chat.sphinx.wrapper_meme_server.AuthenticationChallenge
 import chat.sphinx.wrapper_message.*
 import chat.sphinx.wrapper_message.Msg.Companion.toMsg
 import chat.sphinx.wrapper_message.MsgSender.Companion.toMsgSender
@@ -152,7 +151,6 @@ import kotlinx.coroutines.sync.withLock
 import okio.base64.encodeBase64
 import java.io.File
 import java.io.InputStream
-import java.text.ParseException
 import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.collections.LinkedHashMap
@@ -222,7 +220,7 @@ abstract class SphinxRepository(
     /// Connect Manager ///
     //////////////////////
 
-    override val connectionManagerState: MutableStateFlow<ConnectionManagerState?> by lazy {
+    override val connectionManagerState: MutableStateFlow<OwnerRegistrationState?> by lazy {
         MutableStateFlow(null)
     }
 
@@ -242,6 +240,14 @@ abstract class SphinxRepository(
         MutableStateFlow(null)
     }
 
+    override val userStateFlow: MutableStateFlow<String?> by lazy {
+        MutableStateFlow(null)
+    }
+
+    override val tribeMembersState: MutableStateFlow<TribeMembersResponse?> by lazy {
+        MutableStateFlow(null)
+    }
+
     init {
         connectManager.addListener(this)
         memeServerTokenHandler.addListener(this)
@@ -253,17 +259,29 @@ abstract class SphinxRepository(
                 walletDataHandler.persistWalletMnemonic(it)
             }
         }
-        connectionManagerState.value = ConnectionManagerState.MnemonicWords(words)
+        connectionManagerState.value = OwnerRegistrationState.MnemonicWords(words)
     }
 
-    override fun onOwnerRegistered(okKey: String, routeHint: String, isRestoreAccount: Boolean) {
+    override fun onOwnerRegistered(
+        okKey: String,
+        routeHint: String,
+        isRestoreAccount: Boolean,
+        mixerServerIp: String?,
+        tribeServerHost: String?,
+        isProductionEnvironment: Boolean
+    ) {
         applicationScope.launch(mainImmediate) {
             val scid = routeHint.toLightningRouteHint()?.getScid()
 
             if (scid != null && accountOwner.value?.nodePubKey == null) {
                 createOwner(okKey, routeHint, scid)
 
-                connectionManagerState.value = ConnectionManagerState.OwnerRegistered(isRestoreAccount)
+                connectionManagerState.value = OwnerRegistrationState.OwnerRegistered(
+                    isRestoreAccount,
+                    mixerServerIp,
+                    tribeServerHost,
+                    isProductionEnvironment
+                )
                 delay(1000L)
 
                 if (isRestoreAccount) {
@@ -273,7 +291,7 @@ abstract class SphinxRepository(
         }
     }
 
-    override fun connectAndSubscribeToMqtt(userState: String?) {
+    override fun connectAndSubscribeToMqtt(userState: String?, mixerIp: String?) {
         applicationScope.launch(mainImmediate) {
             val queries = coreDB.getSphinxDatabaseQueries()
             val mnemonic = walletDataHandler.retrieveWalletMnemonic()
@@ -287,9 +305,9 @@ abstract class SphinxRepository(
                 lastMessageIndex
             )
 
-            if (mnemonic != null && okKey != null) {
+            if (mnemonic != null && okKey != null && mixerIp != null) {
                 connectManager.initializeMqttAndSubscribe(
-                    "34.229.52.200:1883",
+                    mixerIp,
                     mnemonic,
                     ownerInfo
                 )
@@ -299,8 +317,8 @@ abstract class SphinxRepository(
         }
     }
 
-    override fun createOwnerAccount(lspIp: String) {
-        connectManager.createAccount(lspIp)
+    override fun createOwnerAccount() {
+        connectManager.createAccount()
     }
 
     override fun createContact(contact: NewContact) {
@@ -404,6 +422,10 @@ abstract class SphinxRepository(
 
     override fun setInviteCode(inviteString: String) {
         connectManager.setInviteCode(inviteString)
+    }
+
+    override fun setNetworkType(isTestEnvironment: Boolean) {
+        connectManager.setNetworkType(isTestEnvironment)
     }
 
     override fun setMnemonicWords(words: List<String>?) {
@@ -512,7 +534,7 @@ abstract class SphinxRepository(
             val contact = NewContact(
                 contactAlias = contactInfo.alias?.toContactAlias(),
                 lightningNodePubKey = contactInfo.pubkey.toLightningNodePubKey(),
-                lightningRouteHint = null,
+                lightningRouteHint = contactInfo.route_hint?.toLightningRouteHint(),
                 photoUrl = contactInfo.photo_url?.toPhotoUrl(),
                 confirmed = contactInfo.confirmed,
                 null,
@@ -542,11 +564,12 @@ abstract class SphinxRepository(
                         contact.photoUrl,
                         contact.lightningNodePubKey,
                         ContactStatus.Confirmed,
+                        contact.lightningRouteHint,
                         ContactId(invite.id.value)
                     )
 
                 queries.inviteUpdateStatus(InviteStatus.Complete, invite.id)
-                queries.chatUpdateNameAndStatus(ChatName(contact.contactAlias?.value ?: ""),ChatStatus.Approved, ChatId(contactId.value))
+                queries.chatUpdateNameAndStatus(ChatName(contact.contactAlias?.value ?: "unknown"),ChatStatus.Approved, ChatId(contactId.value))
                 queries.dashboardUpdateConversation(contact.contactAlias?.value, contact.photoUrl, contactId)
 
             } else { }
@@ -606,6 +629,7 @@ abstract class SphinxRepository(
                             // Add
                             MsgSender(
                                 sentTo,
+                                messageSender.route_hint,
                                 messageSender.alias,
                                 messageSender.photo_url,
                                 messageSender.person,
@@ -656,7 +680,7 @@ abstract class SphinxRepository(
                     }
                 }
                 } catch (e: Exception) {
-                    LOG.e(TAG, "onMessageSent: ${e.message}", e)
+                    LOG.e(TAG, "onMessage: ${e.message}", e)
                 }
             }
         }
@@ -697,7 +721,10 @@ abstract class SphinxRepository(
         }
     }
 
-    override fun onRestoreTribes(tribes: List<Pair<String?, Boolean?>>)  {
+    override fun onRestoreTribes(
+        tribes: List<Pair<String?, Boolean?>>,
+        isProductionEnvironment: Boolean
+    )  {
         applicationScope.launch(io) {
 
             val tribeList = tribes.mapNotNull { tribes ->
@@ -714,26 +741,10 @@ abstract class SphinxRepository(
             tribeList.forEach { tribe ->
                 val isAdmin = (tribe.first?.role == 0 && tribe.second == true)
                 tribe.first?.let {
-                    joinTribeOnRestoreAccount(it, isAdmin)
+                    joinTribeOnRestoreAccount(it, isAdmin, isProductionEnvironment)
                 }
             }
             restoreProcessState.value = RestoreProcessState.RestoreMessages
-        }
-    }
-
-    private suspend fun restoreOwnerAliasAndPicture() {
-        val queries = coreDB.getSphinxDatabaseQueries()
-        messageLock.withLock {
-            val ownerMsg = queries.messageGetOwnerInfo().executeAsOneOrNull()
-
-            if (ownerMsg != null) {
-                contactLock.withLock {
-                    queries.contactUpdateOwnerInfo(
-                        ownerMsg.sender_alias?.value?.toContactAlias(),
-                        ownerMsg.sender_pic,
-                    )
-                }
-            }
         }
     }
 
@@ -744,8 +755,7 @@ abstract class SphinxRepository(
                 delay(200L)
                 connectManager.fetchMessagesOnRestoreAccount(nextHighestIndex)
             } else {
-                delay(5000L) // Ensure messages are inserted before restoring owner info
-                restoreOwnerAliasAndPicture()
+
                 // Restore complete
             }
         }
@@ -811,7 +821,7 @@ abstract class SphinxRepository(
         applicationScope.launch(mainImmediate) {
             try {
                 tribeMembers.toTribeMembersList(moshi)?.let { members ->
-                    connectionManagerState.value = ConnectionManagerState.TribeMembersList(members)
+                    tribeMembersState.value = members
                 }
             } catch (e: Exception) {
             }
@@ -831,15 +841,11 @@ abstract class SphinxRepository(
     }
 
     override fun onUpdateUserState(userState: String) {
-        connectionManagerState.value = ConnectionManagerState.UserState(userState)
-    }
-
-    override fun onDeleteUserState(userState: List<String>) {
-        connectionManagerState.value = ConnectionManagerState.DeleteUserState(userState)
+        userStateFlow.value = userState
     }
 
     override fun onSignedChallenge(sign: String) {
-        connectionManagerState.value = ConnectionManagerState.SignedChallenge(sign)
+        connectionManagerState.value = OwnerRegistrationState.SignedChallenge(sign)
     }
 
     override fun onNewBalance(balance: Long) {
@@ -931,6 +937,26 @@ abstract class SphinxRepository(
                 delay(1000L)
                 callback.invoke()
             }
+        }
+    }
+
+    override fun onRestoreAccount(isProductionEnvironment: Boolean) {
+        if (isProductionEnvironment) {
+            applicationScope.launch(mainImmediate) {
+                networkQueryContact.getAccountConfig().collect { loadResponse ->
+                    when (loadResponse) {
+                        is Response.Success -> {
+                            connectManager.restoreAccount(
+                                loadResponse.value.tribe,
+                                loadResponse.value.tribe_host,
+                                loadResponse.value.default_lsp
+                            )
+                        }
+                    }
+                }
+            }
+        } else {
+            connectManager.restoreAccount(null, null, null)
         }
     }
 
@@ -1100,24 +1126,26 @@ abstract class SphinxRepository(
         }
     }
 
-    fun extractUrlParts(url: String): Pair<String, String> {
-        // Regex to remove any protocol
+    fun extractUrlParts(url: String): Pair<String?, String?> {
         val cleanUrl = url.replace(Regex("^[a-zA-Z]+://"), "")
-
-        // Find the first '/' which separates host and path
         val separatorIndex = cleanUrl.indexOf("/")
 
-        // Extract the host and tribePubKey
-        val host = cleanUrl.substring(0, separatorIndex)
-        val tribePubKey = cleanUrl.substring(separatorIndex + 1).split("/").last()
+        if (separatorIndex == -1) return null to null
+        val host = cleanUrl.substring(0, separatorIndex).takeIf { it.isNotEmpty() }
+        val tribePubKey = cleanUrl.substring(separatorIndex + 1).split("/").lastOrNull()?.takeIf { it.isNotEmpty() }
 
         return host to tribePubKey
     }
 
-    override fun onInitialTribe(tribe: String) {
+    override fun onInitialTribe(tribe: String, isProductionEnvironment: Boolean) {
         applicationScope.launch(io) {
             val (host, tribePubKey) = extractUrlParts(tribe)
-            networkQueryChat.getTribeInfo(ChatHost(host), LightningNodePubKey(tribePubKey))
+
+            if (host == null || tribePubKey == null) {
+                return@launch
+            }
+
+            networkQueryChat.getTribeInfo(ChatHost(host), LightningNodePubKey(tribePubKey), isProductionEnvironment)
                 .collect { loadResponse ->
                     when (loadResponse) {
                         is LoadResponse.Loading -> {}
@@ -1200,7 +1228,7 @@ abstract class SphinxRepository(
                 when (restoreProcessState) {
                     is RestoreProcessState.MessagesCounts -> {
                         msgCounts = restoreProcessState.msgsCounts
-                        connectManager.fetchFirstMessagesPerKey()
+                        connectManager.fetchFirstMessagesPerKey(0L)
                     }
                     is RestoreProcessState.RestoreMessages -> {
                         connectManager.fetchMessagesOnRestoreAccount(msgCounts?.total_highest_index)
@@ -1227,8 +1255,8 @@ abstract class SphinxRepository(
         bolt11: Bolt11?
     ) {
         val queries = coreDB.getSphinxDatabaseQueries()
-        val contact = getContactByPubKey(LightningNodePubKey(msgSender.pubkey)).firstOrNull()
-        val chatTribe = getChatByUUID(ChatUUID(msgSender.pubkey)).firstOrNull()
+        val contact = msgSender.pubkey.toLightningNodePubKey()?.let { getContactByPubKey(it).firstOrNull() }
+        val chatTribe = msgSender.pubkey.toChatUUID()?.let { getChatByUUID(it).firstOrNull() }
         var messageMedia: MessageMediaDbo? = null
         val isTribe = contact == null
 
@@ -1280,12 +1308,7 @@ abstract class SphinxRepository(
                 queries.messageDeleteByUUID(msgUuid)
             }
 
-            val senderAlias = if ( msgType == MessageType.GroupAction.MemberApprove ||
-                msgType == MessageType.GroupAction.MemberReject  ||
-                msgType == MessageType.GroupAction.Kick
-            ) {
-                existingMessage?.sender_alias
-            } else msgSender.alias?.toSenderAlias()
+            val senderAlias = msgSender.alias?.toSenderAlias()
 
             val status = when {
                 fromMe && existingMessage?.payment_request != null -> MessageStatus.Pending
@@ -1355,11 +1378,21 @@ abstract class SphinxRepository(
             }
 
             if (!fromMe && contact?.photoUrl?.value != msgSender.photo_url) {
-
                 contact?.id?.let { contactId ->
                     contactLock.withLock {
                         queries.contactUpdatePhotoUrl(
                             msgSender.photo_url?.toPhotoUrl(),
+                            contactId
+                        )
+                    }
+                }
+            }
+
+            if (!fromMe && contact?.alias?.value != msgSender.alias) {
+                contact?.id?.let { contactId ->
+                    contactLock.withLock {
+                        queries.contactUpdateAlias(
+                            msgSender.alias?.toContactAlias(),
                             contactId
                         )
                     }
@@ -1420,11 +1453,15 @@ abstract class SphinxRepository(
         }
     }
 
-    private suspend fun joinTribeOnRestoreAccount(contactInfo: MsgSender, isAdmin: Boolean) {
+    private suspend fun joinTribeOnRestoreAccount(
+        contactInfo: MsgSender,
+        isAdmin: Boolean,
+        isProductionEnvironment: Boolean)
+    {
         val host = contactInfo.host ?: return
 
         withContext(dispatchers.io) {
-            networkQueryChat.getTribeInfo(ChatHost(host), LightningNodePubKey(contactInfo.pubkey))
+            networkQueryChat.getTribeInfo(ChatHost(host), LightningNodePubKey(contactInfo.pubkey), isProductionEnvironment)
                 .collect { loadResponse ->
                     when (loadResponse) {
                         is LoadResponse.Loading -> {}
@@ -2034,7 +2071,7 @@ abstract class SphinxRepository(
         }
 
         if (contact != null) {
-            connectionManagerState.value = ConnectionManagerState.DeleteUserState(listOf(pubKeyToDelete))
+            connectManager.deleteContact(pubKeyToDelete)
 
             contactLock.withLock {
                 queries.transaction {
@@ -4639,7 +4676,7 @@ abstract class SphinxRepository(
         }
     }
 
-    override suspend fun updateTribeInfo(chat: Chat): TribeData? {
+    override suspend fun updateTribeInfo(chat: Chat, isProductionEnvironment: Boolean): TribeData? {
         var owner: Contact? = accountOwner.value
 
         if (owner == null) {
@@ -4667,7 +4704,7 @@ abstract class SphinxRepository(
 
                 val queries = coreDB.getSphinxDatabaseQueries()
 
-                networkQueryChat.getTribeInfo(chatHost, LightningNodePubKey(chatUUID.value))
+                networkQueryChat.getTribeInfo(chatHost, LightningNodePubKey(chatUUID.value), isProductionEnvironment)
                     .collect { loadResponse ->
                         when (loadResponse) {
 

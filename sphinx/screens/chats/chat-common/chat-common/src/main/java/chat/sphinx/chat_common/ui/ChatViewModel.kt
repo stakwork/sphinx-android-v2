@@ -151,6 +151,8 @@ abstract class ChatViewModel<ARGS : NavArgs>(
     companion object {
         const val TAG = "ChatViewModel"
         const val CONFIG_PLACE_HOLDER = "PLACE_HOLDER"
+        const val SERVER_SETTINGS_SHARED_PREFERENCES = "server_ip_settings"
+        const val ENVIRONMENT_TYPE = "environment_type"
     }
 
     protected abstract val args: ARGS
@@ -851,8 +853,13 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
                             } else {
 
+                                val isProductionEnvironment = app.getSharedPreferences(
+                                    SERVER_SETTINGS_SHARED_PREFERENCES,
+                                    Context.MODE_PRIVATE
+                                ).getBoolean(ENVIRONMENT_TYPE, true)
+
                                 val tribePreview =
-                                    linkPreviewHandler.retrieveTribeLinkPreview(link.tribeJoinLink)
+                                    linkPreviewHandler.retrieveTribeLinkPreview(link.tribeJoinLink, isProductionEnvironment)
 
                                 if (tribePreview != null) {
                                     preview =

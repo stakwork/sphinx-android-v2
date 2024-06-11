@@ -2241,14 +2241,12 @@ internal inline fun LayoutMessageHolderBinding.setGroupActionIndicatorLayout(
             MessageType.GroupAction.Leave -> {
                 setGroupActionAnnouncementLayout(groupActionDetails)
             }
-            MessageType.GroupAction.Kick -> {
-                if (!groupActionDetails.isAdminView) {
-                    setGroupActionAnnouncementLayout(groupActionDetails)
-                }
-            }
+            MessageType.GroupAction.Kick,
             MessageType.GroupAction.TribeDelete -> {
                 if (!groupActionDetails.isAdminView) {
                     setGroupActionMemberRemovalLayout(groupActionDetails)
+                } else {
+                    setGroupActionAnnouncementLayout(groupActionDetails)
                 }
             }
             MessageType.GroupAction.MemberApprove -> {
@@ -2314,7 +2312,7 @@ private inline fun LayoutMessageHolderBinding.setGroupActionAnnouncementLayout(
             }
             MessageType.GroupAction.MemberApprove -> {
                 if (groupActionDetails.chatType == ChatType.Tribe) {
-                    root.context.getString(R.string.tribe_welcome_announcement_member_side)
+                    root.context.getString(R.string.tribe_join_announcement, groupActionDetails.subjectName)
                 } else {
                     null
                 }

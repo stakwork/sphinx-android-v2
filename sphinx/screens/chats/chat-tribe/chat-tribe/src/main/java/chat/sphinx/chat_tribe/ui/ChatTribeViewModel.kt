@@ -1,6 +1,7 @@
 package chat.sphinx.chat_tribe.ui
 
 import android.app.Application
+import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import chat.sphinx.camera_view_model_coordinator.request.CameraRequest
@@ -107,13 +108,23 @@ class ChatTribeViewModel @Inject constructor(
     moshi,
     LOG,
 ) {
-
     companion object {
-        private const val TRIBES_DEFAULT_SERVER_URL = "34.229.52.200:8801"
+        private const val TRIBE_SERVER_IP = "tribe_server_ip"
+        const val SERVER_SETTINGS_SHARED_PREFERENCES = "server_ip_settings"
+        const val ENVIRONMENT_TYPE = "environment_type"
     }
 
     override val args: ChatTribeFragmentArgs by savedStateHandle.navArgs()
     override val chatId: ChatId = args.chatId
+
+    private val serverSettingsSharedPreferences = app.getSharedPreferences(
+        SERVER_SETTINGS_SHARED_PREFERENCES,
+        Context.MODE_PRIVATE
+    )
+
+    private val tribeDefaultServerUrl = serverSettingsSharedPreferences.getString(TRIBE_SERVER_IP, null)
+    private val isProductionEnvironment = serverSettingsSharedPreferences.getBoolean(ENVIRONMENT_TYPE, true)
+
     override val contactId: ContactId?
         get() = null
 
@@ -283,7 +294,7 @@ class ChatTribeViewModel @Inject constructor(
                         MoreMenuOptionsViewState.NotOwnTribe
                     }
 
-                chatRepository.updateTribeInfo(chat)?.let { tribeData ->
+                chatRepository.updateTribeInfo(chat, isProductionEnvironment)?.let { tribeData ->
 
                     if (!args.argThreadUUID.isNullOrEmpty()) {
                         _feedDataStateFlow.value = TribeFeedData.Result.NoFeed
@@ -544,7 +555,7 @@ class ChatTribeViewModel @Inject constructor(
     fun navigateToTribeShareScreen() {
         viewModelScope.launch(mainImmediate) {
             val chat = getChat()
-            val shareTribeURL = "sphinx.chat://?action=tribe&uuid=${chat.uuid.value}&host=${TRIBES_DEFAULT_SERVER_URL}"
+            val shareTribeURL = "sphinx.chat://?action=tribe&uuid=${chat.uuid.value}&host=${tribeDefaultServerUrl}"
             (chatNavigator as TribeChatNavigator).toShareTribeScreen(shareTribeURL, app.getString(R.string.qr_code_title))
         }
 

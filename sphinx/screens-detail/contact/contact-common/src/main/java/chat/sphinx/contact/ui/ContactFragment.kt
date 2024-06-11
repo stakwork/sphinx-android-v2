@@ -286,7 +286,7 @@ abstract class ContactFragment<
 
                     buttonQrCode.setOnClickListener {
                         val key = sideEffect.routeHint?.let { routeHint ->
-                            "${sideEffect.pubKey.value}:${routeHint.value}"
+                            "${sideEffect.pubKey.value}_${routeHint.value}"
                         } ?: sideEffect.pubKey.value
                         viewModel.toQrCodeLightningNodePubKey(key)
                     }

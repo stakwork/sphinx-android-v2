@@ -10,10 +10,18 @@ abstract class ConnectManager {
 
     abstract val ownerInfoStateFlow: StateFlow<OwnerInfo?>
 
-    abstract fun createAccount(lspIp: String)
+    abstract fun createAccount()
+    abstract fun restoreAccount(
+        defaultTribe: String?,
+        tribeHost: String?,
+        mixerServerIp: String?
+    )
     abstract fun setInviteCode(inviteString: String)
     abstract fun setMnemonicWords(words: List<String>?)
+    abstract fun setNetworkType(isTestEnvironment: Boolean)
     abstract fun createContact(contact: NewContact)
+    abstract fun deleteContact(pubKey: String)
+
     abstract fun initializeMqttAndSubscribe(
         serverUri: String,
         mnemonicWords: WalletMnemonic,
@@ -105,7 +113,7 @@ abstract class ConnectManager {
     abstract fun removeListener(listener: ConnectManagerListener): Boolean
     abstract fun processChallengeSignature(challenge: String)
     abstract fun fetchMessagesOnRestoreAccount(totalHighestIndex: Long?)
-    abstract fun fetchFirstMessagesPerKey()
+    abstract fun fetchFirstMessagesPerKey(lastMsgIdx: Long)
     abstract fun getAllMessagesCount()
     abstract fun reconnectWithBackoff()
     abstract fun setOwnerDeviceId(deviceId: String)
@@ -115,7 +123,14 @@ abstract class ConnectManager {
 interface ConnectManagerListener {
 
     fun onMnemonicWords(words: String)
-    fun onOwnerRegistered(okKey: String, routeHint: String, isRestoreAccount: Boolean)
+    fun onOwnerRegistered(
+        okKey: String,
+        routeHint: String,
+        isRestoreAccount: Boolean,
+        mixerServerIp: String?,
+        tribeServerHost: String?,
+        isProductionEnvironment: Boolean
+    )
 
     fun onMessage(
         msg: String,
@@ -130,18 +145,18 @@ interface ConnectManagerListener {
     )
 
     fun onRestoreContacts(contacts: List<String?>)
-    fun onRestoreTribes(tribes: List<Pair<String?, Boolean?>>) // Sender, FromMe
+    fun onRestoreTribes(tribes: List<Pair<String?, Boolean?>>, isProductionEnvironment: Boolean) // Sender, FromMe
     fun onRestoreNextPageMessages(highestIndex: Long, limit: Int)
     fun onNewTribeCreated(newTribe: String)
     fun onTribeMembersList(tribeMembers: String)
     fun onMessageTagAndUuid(tag: String?, msgUUID: String, provisionalId: Long)
     fun onUpdateUserState(userState: String)
-    fun onDeleteUserState(userState: List<String>)
     fun onSignedChallenge(sign: String)
     fun onNewBalance(balance: Long)
     fun onPayments(payments: String)
     fun onNetworkStatusChange(isConnected: Boolean)
     fun listenToOwnerCreation(callback: () -> Unit)
+    fun onRestoreAccount(isProductionEnvironment: Boolean)
 
     fun onNewInviteCreated(
         nickname: String,
@@ -155,7 +170,7 @@ interface ConnectManagerListener {
     fun onLastReadMessages(lastReadMessages: String)
     fun onUpdateMutes(mutes: String)
     fun onMessagesCounts(msgsCounts: String)
-    fun onInitialTribe(tribe: String)
+    fun onInitialTribe(tribe: String, isProductionEnvironment: Boolean)
     fun onConnectManagerError(error: ConnectManagerError)
 
 }

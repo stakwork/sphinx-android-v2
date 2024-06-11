@@ -20,9 +20,12 @@ class LinkPreviewHandlerImpl(
            ?.getHtmlPreview(dispatchers, networkClient.getClient())
     }
 
-    override suspend fun retrieveTribeLinkPreview(tribeJoinLink: TribeJoinLink): TribePreviewData? {
+    override suspend fun retrieveTribeLinkPreview(
+        tribeJoinLink: TribeJoinLink,
+        isProductionEnvironment: Boolean
+    ): TribePreviewData? {
         return LinkPreviewCache.getInstance()
             .getTribePreviewDataRetriever(tribeJoinLink)
-            ?.getTribePreview(networkQueryChat)
+            ?.getTribePreview(networkQueryChat, isProductionEnvironment)
     }
 }

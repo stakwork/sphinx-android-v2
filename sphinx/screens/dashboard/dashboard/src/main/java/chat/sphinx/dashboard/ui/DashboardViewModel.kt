@@ -19,7 +19,7 @@ import chat.sphinx.concept_network_query_verify_external.NetworkQueryAuthorizeEx
 import chat.sphinx.concept_repository_actions.ActionsRepository
 import chat.sphinx.concept_repository_chat.ChatRepository
 import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
-import chat.sphinx.concept_repository_connect_manager.model.ConnectionManagerState
+import chat.sphinx.concept_repository_connect_manager.model.OwnerRegistrationState
 import chat.sphinx.concept_repository_connect_manager.model.NetworkStatus
 import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.concept_repository_dashboard_android.RepositoryDashboardAndroid
@@ -51,7 +51,6 @@ import chat.sphinx.scanner_view_model_coordinator.request.ScannerRequest
 import chat.sphinx.scanner_view_model_coordinator.response.ScannerResponse
 import chat.sphinx.wrapper_chat.Chat
 import chat.sphinx.wrapper_chat.isConversation
-import chat.sphinx.wrapper_common.CreateInvoiceLink
 import chat.sphinx.wrapper_common.ExternalAuthorizeLink
 import chat.sphinx.wrapper_common.ExternalRequestLink
 import chat.sphinx.wrapper_common.FeedRecommendationsToggle
@@ -85,7 +84,6 @@ import chat.sphinx.wrapper_common.lightning.toLightningRouteHint
 import chat.sphinx.wrapper_common.lightning.toSat
 import chat.sphinx.wrapper_common.message.SphinxCallLink
 import chat.sphinx.wrapper_common.message.toSphinxCallLink
-import chat.sphinx.wrapper_common.toCreateInvoiceLink
 import chat.sphinx.wrapper_common.toExternalAuthorizeLink
 import chat.sphinx.wrapper_common.toExternalRequestLink
 import chat.sphinx.wrapper_common.toPeopleConnectLink
@@ -105,7 +103,6 @@ import chat.sphinx.wrapper_feed.isNewsletter
 import chat.sphinx.wrapper_feed.isPodcast
 import chat.sphinx.wrapper_feed.isVideo
 import chat.sphinx.wrapper_lightning.NodeBalance
-import chat.sphinx.wrapper_relay.RelayUrl
 import com.squareup.moshi.Moshi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.matthewnelson.android_feature_navigation.util.navArgs
@@ -192,7 +189,9 @@ internal class DashboardViewModel @Inject constructor(
 
     companion object {
         const val USER_STATE_SHARED_PREFERENCES = "user_state_settings"
+        const val SERVER_SETTINGS_SHARED_PREFERENCES = "server_ip_settings"
         const val ONION_STATE_KEY = "onion_state"
+        const val NETWORK_MIXER_IP = "network_mixer_ip"
     }
 
     private val _hideBalanceStateFlow: MutableStateFlow<Int> by lazy {
@@ -207,15 +206,20 @@ internal class DashboardViewModel @Inject constructor(
     private val userStateSharedPreferences: SharedPreferences =
         app.getSharedPreferences(USER_STATE_SHARED_PREFERENCES, Context.MODE_PRIVATE)
 
+    private val serverSettingsSharedPreferences: SharedPreferences =
+        app.getSharedPreferences(SERVER_SETTINGS_SHARED_PREFERENCES, Context.MODE_PRIVATE)
+
     init {
         if (args.updateBackgroundLoginTime) {
             viewModelScope.launch(default) {
                 backgroundLoginHandler.updateLoginTime()
             }
         }
-        connectManagerRepository.connectAndSubscribeToMqtt(getUserState())
+        connectManagerRepository.connectAndSubscribeToMqtt(getUserState(), getNetworkMixerIp())
         setDeviceId()
         collectConnectionState()
+        collectUserState()
+
         collectConnectManagerErrorState()
 
         getHideBalanceState()
@@ -252,13 +256,7 @@ internal class DashboardViewModel @Inject constructor(
         viewModelScope.launch(mainImmediate) {
             connectManagerRepository.connectionManagerState.collect { connectionState ->
                 when (connectionState) {
-                    is ConnectionManagerState.UserState -> {
-                        storeUserState(connectionState.userState)
-                    }
-                    is ConnectionManagerState.DeleteUserState -> {
-                        deleteUserState(connectionState.userState)
-                    }
-                    is ConnectionManagerState.NewInviteCode -> {
+                    is OwnerRegistrationState.NewInviteCode -> {
                         delay(500L)
                         dashboardNavigator.toQRCodeDetail(
                             connectionState.inviteCode,
@@ -266,6 +264,16 @@ internal class DashboardViewModel @Inject constructor(
                         )
                     }
                     else -> {}
+                }
+            }
+        }
+    }
+
+    private fun collectUserState() {
+        viewModelScope.launch(mainImmediate) {
+            connectManagerRepository.userStateFlow.collect { connectionState ->
+                if (connectionState != null) {
+                    storeUserState(connectionState)
                 }
             }
         }
@@ -352,7 +360,6 @@ internal class DashboardViewModel @Inject constructor(
     private fun getUserState(): String? {
         return userStateSharedPreferences.getString(ONION_STATE_KEY, null)
     }
-
     private fun deleteUserState(userStates: List<String>) {
         val editor = userStateSharedPreferences.edit()
 
@@ -361,6 +368,11 @@ internal class DashboardViewModel @Inject constructor(
         }
         editor.apply()
     }
+
+    private fun getNetworkMixerIp(): String? {
+        return serverSettingsSharedPreferences.getString(NETWORK_MIXER_IP, null)
+    }
+
 
     private fun getHideBalanceState() {
         viewModelScope.launch(mainImmediate) {

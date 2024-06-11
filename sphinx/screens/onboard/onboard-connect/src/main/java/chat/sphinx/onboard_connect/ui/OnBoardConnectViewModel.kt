@@ -81,6 +81,7 @@ internal class OnBoardConnectViewModel @Inject constructor(
     companion object {
         const val BITCOIN_NETWORK_REG_TEST = "regtest"
         const val BITCOIN_NETWORK_MAIN_NET = "mainnet"
+        const val BITCOIN = "bitcoin"
     }
 
     val submitButtonViewStateContainer: ViewStateContainer<OnBoardConnectSubmitButtonViewState> by lazy {
@@ -220,8 +221,20 @@ internal class OnBoardConnectViewModel @Inject constructor(
                 }
 
                 if (redemptionCode is RedemptionCode.MnemonicRestoration) {
+                    // create a dialog to select network
                     connectManagerRepository.setMnemonicWords(redemptionCode.mnemonic)
-                    presentLoginModal()
+
+                    submitSideEffect(OnBoardConnectSideEffect.CheckBitcoinNetwork(
+                        regTestCallback = {
+                            connectManagerRepository.setNetworkType(true)
+                        }, mainNetCallback = {
+                            connectManagerRepository.setNetworkType(false)
+                        }, callback = {
+                            viewModelScope.launch(mainImmediate) {
+                                presentLoginModal()
+                            }
+                        })
+                    )
                 }
             }
         } else {

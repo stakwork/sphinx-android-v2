@@ -26,6 +26,7 @@ class NetworkQueryContactImpl(
 
     companion object {
         private const val ENDPOINT_HAS_ADMIN = "/has_admin"
+        private const val ENDPOINT_CONFIG = "https://config.config.sphinx.chat/api/config/bitcoin"
     }
 
     ///////////
@@ -38,5 +39,11 @@ class NetworkQueryContactImpl(
         networkRelayCall.get(
             url = "${url.value}$ENDPOINT_HAS_ADMIN",
             responseJsonClass = HasAdminRelayResponse::class.java,
+        )
+
+    override fun getAccountConfig(): Flow<LoadResponse<AccountConfigV2, ResponseError>> =
+        networkRelayCall.get(
+            ENDPOINT_CONFIG,
+            responseJsonClass = AccountConfigV2::class.java
         )
 }

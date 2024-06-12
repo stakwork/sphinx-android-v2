@@ -11,6 +11,14 @@ import chat.sphinx.wrapper_contact.NewContact
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 
+/**
+ * The ConnectManagerRepository interface is responsible for facilitating communication
+ * between the SphinxRepository and the view models. View models use the methods defined
+ * in this interface, which are implemented in the SphinxRepository, to interact with
+ * the ConnectManager. Additionally, the MutableStateFlow variables in this interface
+ * are collected in the view models to receive values coming from the ConnectManager.
+ */
+
 interface ConnectManagerRepository {
 
     val connectionManagerState: MutableStateFlow<OwnerRegistrationState?>

@@ -6,6 +6,14 @@ import chat.sphinx.wrapper_contact.NewContact
 import chat.sphinx.wrapper_lightning.WalletMnemonic
 import kotlinx.coroutines.flow.StateFlow
 
+/**
+ * The ConnectManager abstract class defines the structure for managing the account,
+ * contacts, messages, tribes, and payments for the Sphinx V2 communication system.
+ * It facilitates the interaction between the SphinxRepository, which handles the actual
+ * data coming from the view models to then communicates with the bindings for key generation,
+ * publishing, and receiving MQTT messages.
+ */
+
 abstract class ConnectManager {
     abstract val ownerInfoStateFlow: StateFlow<OwnerInfo?>
 
@@ -112,6 +120,12 @@ abstract class ConnectManager {
     abstract fun addListener(listener: ConnectManagerListener): Boolean
     abstract fun removeListener(listener: ConnectManagerListener): Boolean
 }
+
+/**
+ * The ConnectManagerListener interface defines callbacks for handling events and data updates.
+ * These callbacks are used to transmit data to the SphinxRepository, ensuring that values
+ * are stored in the database or passed to the ViewModels as needed.
+ */
 
 interface ConnectManagerListener {
 

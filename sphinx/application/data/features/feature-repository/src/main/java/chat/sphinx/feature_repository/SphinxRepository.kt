@@ -1240,7 +1240,6 @@ abstract class SphinxRepository(
         return host to tribePubKey
     }
 
-
     override suspend fun upsertMqttMessage(
         msg: Msg,
         msgSender: MsgSender,
@@ -1524,18 +1523,7 @@ abstract class SphinxRepository(
         }
     }
 
-    ////////////////
-    /// SocketIO ///
-    ////////////////
-    init {
-//        socketIOManager.addListener(this)
-    }
-
     override var updatedContactIds: MutableList<ContactId> = mutableListOf()
-
-    /**
-     * Call is made on [Dispatchers.IO]
-     * */
 
     override fun sendMediaKeyOnPaidPurchase(
         msg: Msg,

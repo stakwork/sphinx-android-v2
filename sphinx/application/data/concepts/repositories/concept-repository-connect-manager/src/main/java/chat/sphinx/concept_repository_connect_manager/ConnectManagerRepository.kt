@@ -21,17 +21,16 @@ interface ConnectManagerRepository {
     val userStateFlow: MutableStateFlow<String?>
     val tribeMembersState: MutableStateFlow<TribeMembersResponse?>
 
-    fun createOwnerAccount()
-    fun createContact(contact: NewContact)
     fun connectAndSubscribeToMqtt(userState: String?, mixerIp: String?) {}
+    fun createOwnerAccount()
+    fun startRestoreProcess()
+    fun createContact(contact: NewContact)
+    fun setInviteCode(inviteString: String)
+    fun setMnemonicWords(words: List<String>?)
+    fun setNetworkType(isTestEnvironment: Boolean)
+    fun setOwnerDeviceId(deviceId: String)
     fun singChallenge(challenge: String)
     fun createInvite(nickname: String, welcomeMessage: String, sats: Long, tribeServerPubKey: String?)
-    fun setInviteCode(inviteString: String)
-    fun setNetworkType(isTestEnvironment: Boolean)
-    fun setMnemonicWords(words: List<String>?)
-    fun setOwnerDeviceId(deviceId: String)
-
-
 
     fun joinTribe(
         tribeHost: String,
@@ -50,12 +49,10 @@ interface ConnectManagerRepository {
         tribeServerPubKey: String,
         tribePubKey: String
     )
-    fun sendKeySend(pubKey: String, amount: Long)
-
     fun getTribeServerPubKey(): String?
+    fun sendKeySend(pubKey: String, amount: Long)
     fun getPayments(lastMessageDate: Long, limit: Int)
     suspend fun getPubKeyByEncryptedChild(child: String): Flow<ChatId?>
     suspend fun updateLspAndOwner(data: String) {}
-    fun startRestoreProcess()
 
 }

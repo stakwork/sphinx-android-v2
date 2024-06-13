@@ -37,6 +37,7 @@ import uniffi.sphinxrs.getDefaultTribeServer
 import uniffi.sphinxrs.getMsgsCounts
 import uniffi.sphinxrs.getMutes
 import uniffi.sphinxrs.getReads
+import uniffi.sphinxrs.getTags
 import uniffi.sphinxrs.getTribeManagementTopic
 import uniffi.sphinxrs.handle
 import uniffi.sphinxrs.initialSetup
@@ -368,7 +369,8 @@ class ConnectManagerImpl: ConnectManager()
                             msg.timestamp?.toLong(),
                             msg.sentTo.orEmpty(),
                             msg.msat?.let { convertMillisatsToSats(it) },
-                            msg.fromMe
+                            msg.fromMe,
+                            msg.tag
                         )
                     }
                 }
@@ -515,6 +517,9 @@ class ConnectManagerImpl: ConnectManager()
             }
             rr.paymentsTotal?.let { paymentsTotal ->
                 Log.d("MQTT_MESSAGES", "=> paymentsTotal $paymentsTotal")
+            }
+            rr.tags?.let { tags ->
+                Log.d("MQTT_MESSAGES", "=> tags $tags")
             }
         } else {
             notifyListeners {
@@ -1162,6 +1167,24 @@ class ConnectManagerImpl: ConnectManager()
                 onConnectManagerError(ConnectManagerError.DeleteMessageError)
             }
             Log.e("MQTT_MESSAGES", "send ${e.message}")
+        }
+    }
+
+    override fun getMessagesStatusByTags(tags: List<String>) {
+        try {
+            val messageStatus = getTags(
+                ownerSeed!!,
+                getTimestampInMilliseconds(),
+                getCurrentUserState(),
+                tags,
+                null
+            )
+            handleRunReturn(messageStatus, mqttClient)
+        } catch (e: Exception) {
+//            notifyListeners {
+//                onConnectManagerError(ConnectManagerError.MessageStatusError)
+//            }
+            Log.e("MQTT_MESSAGES", "getMessagesStatusByTags ${e.message}")
         }
     }
 

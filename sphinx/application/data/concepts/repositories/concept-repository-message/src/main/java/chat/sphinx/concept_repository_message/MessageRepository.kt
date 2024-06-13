@@ -24,6 +24,7 @@ import chat.sphinx.wrapper_message.MessageType
 import chat.sphinx.wrapper_message.Msg
 import chat.sphinx.wrapper_message.MsgSender
 import chat.sphinx.wrapper_message.SenderAlias
+import chat.sphinx.wrapper_message.TagMessage
 import chat.sphinx.wrapper_message.ThreadUUID
 import kotlinx.coroutines.flow.Flow
 
@@ -38,6 +39,8 @@ interface MessageRepository {
 
     fun getMessageById(messageId: MessageId): Flow<Message?>
     fun getMessagesByIds(messagesIds: List<MessageId>): Flow<List<Message?>>
+
+    fun getSentConfirmedMessagesByChatId(chatId: ChatId): Flow<List<Message>>
 
     fun getMessagesByPaymentHashes(paymentHashes: List<LightningPaymentHash>): Flow<List<Message?>>
 
@@ -144,7 +147,8 @@ interface MessageRepository {
         amount: Sat?,
         paymentRequest: LightningPaymentRequest?,
         paymentHash: LightningPaymentHash?,
-        bolt11: Bolt11?
+        bolt11: Bolt11?,
+        tag: TagMessage?
     )
 
     suspend fun deleteMqttMessage(messageUuid: MessageUUID)

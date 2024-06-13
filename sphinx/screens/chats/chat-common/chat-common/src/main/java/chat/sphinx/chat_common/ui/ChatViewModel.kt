@@ -1058,6 +1058,8 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
         var isScrollDownButtonSetup = false
         messagesLoadJob = viewModelScope.launch(mainImmediate) {
+            connectManagerRepository.getTagsByChatId(getChat().id)
+
             if (isThreadChat()) {
                 messageRepository.getAllMessagesToShowByChatId(getChat().id, 0, getThreadUUID()).distinctUntilChanged().collect { messages ->
                     delay(200)

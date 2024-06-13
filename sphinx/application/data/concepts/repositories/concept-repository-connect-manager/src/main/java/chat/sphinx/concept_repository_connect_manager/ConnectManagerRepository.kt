@@ -61,6 +61,7 @@ interface ConnectManagerRepository {
     fun sendKeySend(pubKey: String, amount: Long)
     fun getPayments(lastMessageDate: Long, limit: Int)
     suspend fun getPubKeyByEncryptedChild(child: String): Flow<ChatId?>
+    fun getTagsByChatId(chatId: ChatId)
     suspend fun updateLspAndOwner(data: String) {}
 
 }

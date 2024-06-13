@@ -49,10 +49,7 @@ abstract class ConnectManager {
         tribeServerPubKey: String?
     )
     abstract fun deleteContact(pubKey: String)
-    abstract fun setReadMessage(
-        contactPubKey: String,
-        messageIndex: Long
-    )
+    abstract fun setReadMessage(contactPubKey: String, messageIndex: Long)
     abstract fun getReadMessages()
     abstract fun setMute(muteLevel: Int, contactPubKey: String)
     abstract fun getMutedChats()
@@ -71,11 +68,10 @@ abstract class ConnectManager {
         contactPubKey: String,
         isTribe: Boolean
     )
+    abstract fun getMessagesStatusByTags(tags: List<String>)
 
     // Tribe Management Methods
-    abstract fun createTribe(
-        tribeJson: String
-    )
+    abstract fun createTribe(tribeJson: String)
     abstract fun joinToTribe(
         tribeHost: String,
         tribePubKey: String,
@@ -162,7 +158,8 @@ interface ConnectManagerListener {
         msgTimestamp: Long?,
         sentTo: String,
         amount: Long?,
-        fromMe: Boolean?
+        fromMe: Boolean?,
+        tag: String?
     )
     fun onMessageTagAndUuid(tag: String?, msgUUID: String, provisionalId: Long)
     fun onMessagesCounts(msgsCounts: String)

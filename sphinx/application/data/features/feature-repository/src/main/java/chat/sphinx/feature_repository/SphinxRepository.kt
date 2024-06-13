@@ -457,6 +457,17 @@ abstract class SphinxRepository(
         }
     }.flowOn(io)
 
+    override fun getTagsByChatId(chatId: ChatId) {
+        applicationScope.launch(io) {
+            getSentConfirmedMessagesByChatId(chatId).collect { messages ->
+            if (messages.isNotEmpty()) {
+                val tags = messages.mapNotNull { it.tagMessage?.value }.distinct()
+                connectManager.getMessagesStatusByTags(tags)
+            }
+        }
+        }
+    }
+
     override suspend fun updateLspAndOwner(data: String) {
         val lspChannelInfo = data.toLspChannelInfo(moshi)
         val serverIp = connectManager.retrieveLspIp()
@@ -928,7 +939,8 @@ abstract class SphinxRepository(
         msgTimestamp: Long?,
         sentTo: String,
         amount: Long?,
-        fromMe: Boolean?
+        fromMe: Boolean?,
+        tag: String?
     ) {
         applicationScope.launch(io) {
             try {
@@ -1004,6 +1016,7 @@ abstract class SphinxRepository(
                         val paymentHash = paymentRequest?.let {
                             connectManager.retrievePaymentHash(it.value)?.toLightningPaymentHash()
                         }
+                        val msgTag = tag?.toTagMessage()
 
                         upsertMqttMessage(
                             message,
@@ -1018,7 +1031,8 @@ abstract class SphinxRepository(
                             realAmount,
                             paymentRequest,
                             paymentHash,
-                            bolt11
+                            bolt11,
+                            msgTag
                         )
                     }
                 }
@@ -1253,7 +1267,8 @@ abstract class SphinxRepository(
         amount: Sat?,
         paymentRequest: LightningPaymentRequest?,
         paymentHash: LightningPaymentHash?,
-        bolt11: Bolt11?
+        bolt11: Bolt11?,
+        tag: TagMessage?
     ) {
         val queries = coreDB.getSphinxDatabaseQueries()
         val contact = msgSender.pubkey.toLightningNodePubKey()?.let { getContactByPubKey(it).firstOrNull() }
@@ -1345,7 +1360,7 @@ abstract class SphinxRepository(
                 person = null,
                 threadUUID = existingMessage?.thread_uuid ?: msg.threadUuid?.toThreadUUID(),
                 errorMessage = null,
-                tagMessage = existingMessage?.tag_message,
+                tagMessage = existingMessage?.tag_message ?: tag,
                 isPinned = false,
                 messageContentDecrypted = if (msg.content?.isNotEmpty() == true) MessageContentDecrypted(msg.content!!) else null,
                 messageDecryptionError = false,
@@ -3115,6 +3130,21 @@ abstract class SphinxRepository(
         emitAll(
             coreDB.getSphinxDatabaseQueries()
                 .messageGetMessagesByIds(messagesIds)
+                .asFlow()
+                .mapToList(io)
+                .map { listMessageDbo ->
+                    listMessageDbo.map {
+                        messageDboPresenterMapper.mapFrom(it)
+                    }
+                }
+                .distinctUntilChanged()
+        )
+    }
+
+    override fun getSentConfirmedMessagesByChatId(chatId: ChatId): Flow<List<Message>> = flow {
+        emitAll(
+            coreDB.getSphinxDatabaseQueries()
+                .messageGetSentConfirmedMessages(chatId)
                 .asFlow()
                 .mapToList(io)
                 .map { listMessageDbo ->

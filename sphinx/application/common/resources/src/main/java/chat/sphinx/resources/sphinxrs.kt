@@ -1223,6 +1223,10 @@ data class RunReturn (
     var `subscriptionTopics`: List<String>, 
     var `settleTopic`: String?, 
     var `settlePayload`: ByteArray?, 
+    var `asyncpayTopic`: String?, 
+    var `asyncpayPayload`: ByteArray?, 
+    var `registerTopic`: String?, 
+    var `registerPayload`: ByteArray?, 
     var `topics`: List<String>, 
     var `payloads`: List<ByteArray>, 
     var `stateMp`: ByteArray?, 
@@ -1231,6 +1235,8 @@ data class RunReturn (
     var `myContactInfo`: String?, 
     var `sentStatus`: String?, 
     var `settledStatus`: String?, 
+    var `registerResponse`: String?, 
+    var `asyncpayTag`: String?, 
     var `error`: String?, 
     var `newTribe`: String?, 
     var `tribeMembers`: String?, 
@@ -1261,11 +1267,17 @@ public object FfiConverterTypeRunReturn: FfiConverterRustBuffer<RunReturn> {
             FfiConverterSequenceString.read(buf),
             FfiConverterOptionalString.read(buf),
             FfiConverterOptionalByteArray.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalByteArray.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalByteArray.read(buf),
             FfiConverterSequenceString.read(buf),
             FfiConverterSequenceByteArray.read(buf),
             FfiConverterOptionalByteArray.read(buf),
             FfiConverterSequenceString.read(buf),
             FfiConverterOptionalULong.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
             FfiConverterOptionalString.read(buf),
             FfiConverterOptionalString.read(buf),
             FfiConverterOptionalString.read(buf),
@@ -1296,6 +1308,10 @@ public object FfiConverterTypeRunReturn: FfiConverterRustBuffer<RunReturn> {
             FfiConverterSequenceString.allocationSize(value.`subscriptionTopics`) +
             FfiConverterOptionalString.allocationSize(value.`settleTopic`) +
             FfiConverterOptionalByteArray.allocationSize(value.`settlePayload`) +
+            FfiConverterOptionalString.allocationSize(value.`asyncpayTopic`) +
+            FfiConverterOptionalByteArray.allocationSize(value.`asyncpayPayload`) +
+            FfiConverterOptionalString.allocationSize(value.`registerTopic`) +
+            FfiConverterOptionalByteArray.allocationSize(value.`registerPayload`) +
             FfiConverterSequenceString.allocationSize(value.`topics`) +
             FfiConverterSequenceByteArray.allocationSize(value.`payloads`) +
             FfiConverterOptionalByteArray.allocationSize(value.`stateMp`) +
@@ -1304,6 +1320,8 @@ public object FfiConverterTypeRunReturn: FfiConverterRustBuffer<RunReturn> {
             FfiConverterOptionalString.allocationSize(value.`myContactInfo`) +
             FfiConverterOptionalString.allocationSize(value.`sentStatus`) +
             FfiConverterOptionalString.allocationSize(value.`settledStatus`) +
+            FfiConverterOptionalString.allocationSize(value.`registerResponse`) +
+            FfiConverterOptionalString.allocationSize(value.`asyncpayTag`) +
             FfiConverterOptionalString.allocationSize(value.`error`) +
             FfiConverterOptionalString.allocationSize(value.`newTribe`) +
             FfiConverterOptionalString.allocationSize(value.`tribeMembers`) +
@@ -1330,6 +1348,10 @@ public object FfiConverterTypeRunReturn: FfiConverterRustBuffer<RunReturn> {
             FfiConverterSequenceString.write(value.`subscriptionTopics`, buf)
             FfiConverterOptionalString.write(value.`settleTopic`, buf)
             FfiConverterOptionalByteArray.write(value.`settlePayload`, buf)
+            FfiConverterOptionalString.write(value.`asyncpayTopic`, buf)
+            FfiConverterOptionalByteArray.write(value.`asyncpayPayload`, buf)
+            FfiConverterOptionalString.write(value.`registerTopic`, buf)
+            FfiConverterOptionalByteArray.write(value.`registerPayload`, buf)
             FfiConverterSequenceString.write(value.`topics`, buf)
             FfiConverterSequenceByteArray.write(value.`payloads`, buf)
             FfiConverterOptionalByteArray.write(value.`stateMp`, buf)
@@ -1338,6 +1360,8 @@ public object FfiConverterTypeRunReturn: FfiConverterRustBuffer<RunReturn> {
             FfiConverterOptionalString.write(value.`myContactInfo`, buf)
             FfiConverterOptionalString.write(value.`sentStatus`, buf)
             FfiConverterOptionalString.write(value.`settledStatus`, buf)
+            FfiConverterOptionalString.write(value.`registerResponse`, buf)
+            FfiConverterOptionalString.write(value.`asyncpayTag`, buf)
             FfiConverterOptionalString.write(value.`error`, buf)
             FfiConverterOptionalString.write(value.`newTribe`, buf)
             FfiConverterOptionalString.write(value.`tribeMembers`, buf)

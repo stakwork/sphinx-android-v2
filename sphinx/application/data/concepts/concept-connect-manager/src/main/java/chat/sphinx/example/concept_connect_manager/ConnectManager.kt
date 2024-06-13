@@ -164,6 +164,7 @@ interface ConnectManagerListener {
     fun onMessageTagAndUuid(tag: String?, msgUUID: String, provisionalId: Long)
     fun onMessagesCounts(msgsCounts: String)
     fun onSentStatus(sentStatus: String)
+    fun onMessageTagList(tags: String)
 
     // Tribe Management Callbacks
     fun onNewTribeCreated(newTribe: String)

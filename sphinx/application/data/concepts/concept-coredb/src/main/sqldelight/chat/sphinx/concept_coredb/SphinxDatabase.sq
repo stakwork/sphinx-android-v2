@@ -985,10 +985,16 @@ UPDATE messageDbo
 SET status = :status
 WHERE id = ?;
 
-messageUpdateStatusByTag:
+messageUpdateStatusAndPaymentHashByTag:
 UPDATE messageDbo
 SET status = :status,
     payment_hash = :payment_hash,
+    error_message = :error_message
+WHERE tag_message = ?;
+
+messageUpdateStatusByTag:
+UPDATE messageDbo
+SET status = :status,
     error_message = :error_message
 WHERE tag_message = ?;
 

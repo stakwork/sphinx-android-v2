@@ -519,6 +519,9 @@ class ConnectManagerImpl: ConnectManager()
                 Log.d("MQTT_MESSAGES", "=> paymentsTotal $paymentsTotal")
             }
             rr.tags?.let { tags ->
+                notifyListeners {
+                    onMessageTagList(tags)
+                }
                 Log.d("MQTT_MESSAGES", "=> tags $tags")
             }
         } else {

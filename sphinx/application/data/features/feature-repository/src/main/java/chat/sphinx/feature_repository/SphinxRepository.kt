@@ -56,6 +56,7 @@ import chat.sphinx.example.wrapper_mqtt.MuteLevels.Companion.toMuteLevelsMap
 import chat.sphinx.example.wrapper_mqtt.NewCreateTribe.Companion.toNewCreateTribe
 import chat.sphinx.example.wrapper_mqtt.NewSentStatus.Companion.toNewSentStatus
 import chat.sphinx.example.wrapper_mqtt.Payment.Companion.toPaymentsList
+import chat.sphinx.example.wrapper_mqtt.TagMessageList.Companion.toTagsList
 import chat.sphinx.example.wrapper_mqtt.TransactionDto
 import chat.sphinx.example.wrapper_mqtt.TribeMembersResponse
 import chat.sphinx.example.wrapper_mqtt.TribeMembersResponse.Companion.toTribeMembersList
@@ -1070,19 +1071,38 @@ abstract class SphinxRepository(
             val queries = coreDB.getSphinxDatabaseQueries()
 
             if (newSentStatus.isFailedMessage()) {
-                queries.messageUpdateStatusByTag(
+                queries.messageUpdateStatusAndPaymentHashByTag(
                     MessageStatus.Failed,
                     newSentStatus.payment_hash?.toLightningPaymentHash(),
                     newSentStatus.message?.toErrorMessage(),
                     newSentStatus.tag?.toTagMessage()
                 )
             } else {
-                queries.messageUpdateStatusByTag(
+                queries.messageUpdateStatusAndPaymentHashByTag(
                     MessageStatus.Received,
                     newSentStatus.payment_hash?.toLightningPaymentHash(),
                     newSentStatus.message?.toErrorMessage(),
                     newSentStatus.tag?.toTagMessage()
                 )
+            }
+        }
+    }
+
+    override fun onMessageTagList(tags: String) {
+        applicationScope.launch(io) {
+            val queries = coreDB.getSphinxDatabaseQueries()
+            val tagsList = tags.toTagsList(moshi)
+
+            queries.transaction {
+                tagsList?.forEach { tag ->
+                    tag.status?.toMessageStatus()?.let { messageStatus ->
+                        queries.messageUpdateStatusByTag(
+                            messageStatus,
+                            tag.error?.toErrorMessage(),
+                            tag.tag?.toTagMessage()
+                        )
+                    }
+                }
             }
         }
     }

@@ -64,6 +64,26 @@ inline fun Int?.toMessageStatus(): MessageStatus =
         }
     }
 
+@Suppress("NOTHING_TO_INLINE")
+inline fun String?.toMessageStatus(): MessageStatus =
+    when (this) {
+        null -> {
+            MessageStatus.NoStatus
+        }
+        "PENDING" -> {
+            MessageStatus.Pending
+        }
+        "COMPLETE" -> {
+            MessageStatus.Received
+        }
+        "FAILED" -> {
+            MessageStatus.Failed
+        }
+        else -> {
+            MessageStatus.Confirmed
+        }
+    }
+
 /**
  * Comes off the wire as:
  *  - null (No Status) // returned for message types 5 (Direct Payment) & 6 (Attachment)

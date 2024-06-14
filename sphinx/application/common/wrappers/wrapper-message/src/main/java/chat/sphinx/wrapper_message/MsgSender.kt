@@ -30,6 +30,9 @@ data class MsgSender(
 
         @Throws(JsonDataException::class, IllegalArgumentException::class)
         fun String.toMsgSender(moshi: Moshi): MsgSender {
+            if (this.isEmpty()) {
+                throw IllegalArgumentException("Empty JSON for MsgSender")
+            }
             val adapter = moshi.adapter(MsgSender::class.java)
             return adapter.fromJson(this) ?: throw IllegalArgumentException("Invalid JSON for MsgSender")
         }

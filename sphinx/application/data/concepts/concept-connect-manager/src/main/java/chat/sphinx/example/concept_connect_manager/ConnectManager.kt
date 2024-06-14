@@ -6,10 +6,18 @@ import chat.sphinx.wrapper_contact.NewContact
 import chat.sphinx.wrapper_lightning.WalletMnemonic
 import kotlinx.coroutines.flow.StateFlow
 
-abstract class ConnectManager {
+/**
+ * The ConnectManager abstract class defines the structure for managing the account,
+ * contacts, messages, tribes, and payments for the Sphinx V2 communication system.
+ * It facilitates the interaction between the SphinxRepository, which handles the actual
+ * data coming from the view models to then communicates with the bindings for key generation,
+ * publishing, and receiving MQTT messages.
+ */
 
+abstract class ConnectManager {
     abstract val ownerInfoStateFlow: StateFlow<OwnerInfo?>
 
+    // Account Management Methods
     abstract fun createAccount()
     abstract fun restoreAccount(
         defaultTribe: String?,
@@ -19,14 +27,34 @@ abstract class ConnectManager {
     abstract fun setInviteCode(inviteString: String)
     abstract fun setMnemonicWords(words: List<String>?)
     abstract fun setNetworkType(isTestEnvironment: Boolean)
-    abstract fun createContact(contact: NewContact)
-    abstract fun deleteContact(pubKey: String)
-
+    abstract fun setOwnerDeviceId(deviceId: String)
+    abstract fun processChallengeSignature(challenge: String)
+    abstract fun fetchFirstMessagesPerKey(lastMsgIdx: Long)
+    abstract fun fetchMessagesOnRestoreAccount(totalHighestIndex: Long?)
+    abstract fun getAllMessagesCount()
     abstract fun initializeMqttAndSubscribe(
         serverUri: String,
         mnemonicWords: WalletMnemonic,
         ownerInfo: OwnerInfo
     )
+    abstract fun reconnectWithBackoff()
+    abstract fun retrieveLspIp(): String?
+
+    // Contact Management Methods
+    abstract fun createContact(contact: NewContact)
+    abstract fun createInvite(
+        nickname: String,
+        welcomeMessage: String,
+        sats: Long,
+        tribeServerPubKey: String?
+    )
+    abstract fun deleteContact(pubKey: String)
+    abstract fun setReadMessage(contactPubKey: String, messageIndex: Long)
+    abstract fun getReadMessages()
+    abstract fun setMute(muteLevel: Int, contactPubKey: String)
+    abstract fun getMutedChats()
+
+    // Messaging Methods
     abstract fun sendMessage(
         sphinxMessage: String,
         contactPubKey: String,
@@ -35,13 +63,15 @@ abstract class ConnectManager {
         amount: Long?,
         isTribe: Boolean = false
     )
-
     abstract fun deleteMessage(
         sphinxMessage: String,
         contactPubKey: String,
         isTribe: Boolean
     )
+    abstract fun getMessagesStatusByTags(tags: List<String>)
 
+    // Tribe Management Methods
+    abstract fun createTribe(tribeJson: String)
     abstract fun joinToTribe(
         tribeHost: String,
         tribePubKey: String,
@@ -50,31 +80,20 @@ abstract class ConnectManager {
         userAlias: String,
         priceToJoin: Long
     )
-
-    abstract fun createTribe(
-        tribeJson: String
+    abstract fun retrieveTribeMembersList(
+        tribeServerPubKey: String,
+        tribePubKey: String
     )
+    abstract fun getTribeServerPubKey(): String?
 
-    abstract fun createInvite(
-        nickname: String,
-        welcomeMessage: String,
-        sats: Long,
-        tribeServerPubKey: String?
-    )
-
+    // Invoice and Payment Methods
     abstract fun createInvoice(
         amount: Long,
         memo: String
     ): Pair<String, String>? // invoice, paymentHash
-
     abstract fun sendKeySend(pubKey: String, amount: Long)
-
-    abstract fun getTribeServerPubKey(): String?
-
     abstract fun processInvoicePayment(paymentRequest: String)
-
     abstract fun retrievePaymentHash(paymentRequest: String): String?
-
     abstract fun getPayments(
         lastMsgDate: Long,
         limit: Int,
@@ -83,16 +102,8 @@ abstract class ConnectManager {
         minMsat: Long?, // include only payments above this amount
         reverse: Boolean?
     )
-
     abstract fun getPubKeyFromChildIndex(childIndex: Long): String?
-
     abstract fun getPubKeyByEncryptedChild(child: String): String?
-
-    abstract fun retrieveTribeMembersList(
-        tribeServerPubKey: String,
-        tribePubKey: String
-    )
-
     abstract fun generateMediaToken(
         contactPubKey: String,
         muid: String,
@@ -101,27 +112,21 @@ abstract class ConnectManager {
         amount: Long?
     ): String?
 
-    abstract fun readMessage(
-        contactPubKey: String,
-        messageIndex: Long
-    )
-
-    abstract fun getReadMessages()
-    abstract fun getMutedChats()
-    abstract fun retrieveLspIp(): String?
+    // Listener Methods
     abstract fun addListener(listener: ConnectManagerListener): Boolean
     abstract fun removeListener(listener: ConnectManagerListener): Boolean
-    abstract fun processChallengeSignature(challenge: String)
-    abstract fun fetchMessagesOnRestoreAccount(totalHighestIndex: Long?)
-    abstract fun fetchFirstMessagesPerKey(lastMsgIdx: Long)
-    abstract fun getAllMessagesCount()
-    abstract fun reconnectWithBackoff()
-    abstract fun setOwnerDeviceId(deviceId: String)
-    abstract fun setMute(muteLevel: Int, contactPubKey: String)
 }
+
+/**
+ * The ConnectManagerListener interface defines callbacks for handling events and data updates.
+ * These callbacks are used to transmit data to the SphinxRepository, ensuring that values
+ * are stored in the database or passed to the ViewModels as needed.
+ */
 
 interface ConnectManagerListener {
 
+    // Account Management Callbacks
+    fun onUpdateUserState(userState: String)
     fun onMnemonicWords(words: String)
     fun onOwnerRegistered(
         okKey: String,
@@ -131,7 +136,18 @@ interface ConnectManagerListener {
         tribeServerHost: String?,
         isProductionEnvironment: Boolean
     )
+    fun onRestoreAccount(isProductionEnvironment: Boolean)
+    fun onRestoreContacts(contacts: List<String?>)
+    fun onRestoreTribes(tribes: List<Pair<String?, Boolean?>>, isProductionEnvironment: Boolean) // Sender, FromMe
+    fun onRestoreNextPageMessages(highestIndex: Long, limit: Int)
+    fun onNewBalance(balance: Long)
+    fun onSignedChallenge(sign: String)
+    fun onInitialTribe(tribe: String, isProductionEnvironment: Boolean)
+    fun onLastReadMessages(lastReadMessages: String)
+    fun onUpdateMutes(mutes: String)
+    fun onConnectManagerError(error: ConnectManagerError)
 
+    // Messaging Callbacks
     fun onMessage(
         msg: String,
         msgSender: String,
@@ -141,37 +157,31 @@ interface ConnectManagerListener {
         msgTimestamp: Long?,
         sentTo: String,
         amount: Long?,
-        fromMe: Boolean?
+        fromMe: Boolean?,
+        tag: String?
     )
+    fun onMessageTagAndUuid(tag: String?, msgUUID: String, provisionalId: Long)
+    fun onMessagesCounts(msgsCounts: String)
+    fun onSentStatus(sentStatus: String)
+    fun onMessageTagList(tags: String)
 
-    fun onRestoreContacts(contacts: List<String?>)
-    fun onRestoreTribes(tribes: List<Pair<String?, Boolean?>>, isProductionEnvironment: Boolean) // Sender, FromMe
-    fun onRestoreNextPageMessages(highestIndex: Long, limit: Int)
+    // Tribe Management Callbacks
     fun onNewTribeCreated(newTribe: String)
     fun onTribeMembersList(tribeMembers: String)
-    fun onMessageTagAndUuid(tag: String?, msgUUID: String, provisionalId: Long)
-    fun onUpdateUserState(userState: String)
-    fun onSignedChallenge(sign: String)
-    fun onNewBalance(balance: Long)
+
+    // Invoice and Payment Management Callbacks
     fun onPayments(payments: String)
     fun onNetworkStatusChange(isConnected: Boolean)
-    fun listenToOwnerCreation(callback: () -> Unit)
-    fun onRestoreAccount(isProductionEnvironment: Boolean)
-
     fun onNewInviteCreated(
         nickname: String,
         inviteString: String,
         inviteCode: String,
         sats: Long
     )
+    // Utility
 
-    fun onSentStatus(sentStatus: String)
-
-    fun onLastReadMessages(lastReadMessages: String)
-    fun onUpdateMutes(mutes: String)
-    fun onMessagesCounts(msgsCounts: String)
-    fun onInitialTribe(tribe: String, isProductionEnvironment: Boolean)
-    fun onConnectManagerError(error: ConnectManagerError)
+    fun onPerformDelay(delay: Long, callback: () -> Unit)
+    fun listenToOwnerCreation(callback: () -> Unit)
 
 }
 

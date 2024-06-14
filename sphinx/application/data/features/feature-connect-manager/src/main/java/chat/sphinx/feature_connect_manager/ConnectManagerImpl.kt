@@ -83,7 +83,7 @@ class ConnectManagerImpl: ConnectManager()
     private var inviterContact: NewContact? = null
     private var hasAttemptedReconnect = false
     private var tribeServer: String? = null
-    private var settleRunReturn: MutableList<RunReturn> = mutableListOf()
+    private var delayedRRObjects: MutableList<RunReturn> = mutableListOf()
 
     companion object {
         const val TEST_V2_SERVER_IP = "34.229.52.200:1883"
@@ -268,27 +268,10 @@ class ConnectManagerImpl: ConnectManager()
     private fun handleRunReturn(
         rr: RunReturn,
         client: MqttAsyncClient?,
-        skipSettleTopic: Boolean = false
+        skipSettleTopic: Boolean = false,
+        skipAsyncTopic: Boolean = false
     ) {
         if (client != null) {
-
-            rr.settleTopic?.let { settleTopic ->
-                rr.settlePayload?.let { payload ->
-                    client.publish(settleTopic, MqttMessage(payload))
-                    if (!skipSettleTopic) {
-                        settleRunReturn.add(rr)
-                        return
-                    }
-                    Log.d("MQTT_MESSAGES", "=> settleRunReturn $settleTopic")
-                }
-            }
-
-            // Settled
-            rr.settledStatus?.let { settledStatus ->
-                handleSettleStatus(settledStatus)
-                Log.d("MQTT_MESSAGES", "=> settled_status $settledStatus")
-            }
-
             // Set updated state into db
             rr.stateMp?.let {
                 storeUserState(it)
@@ -305,14 +288,6 @@ class ConnectManagerImpl: ConnectManager()
                 client.subscribe(arrayOf(topic), qos)
                 Log.d("MQTT_MESSAGES", "=> subscribed to $topic")
             }
-
-            // Publish to topics based on the new array structure
-            rr.topics.forEachIndexed { index, topic ->
-                val payload = rr.payloads.getOrElse(index) { ByteArray(0) }
-                client.publish(topic, MqttMessage(payload))
-                Log.d("MQTT_MESSAGES", "=> published to $topic")
-            }
-
             // Set your balance
             rr.newBalance?.let { newBalance ->
                 convertMillisatsToSats(newBalance)?.let { balance ->
@@ -499,6 +474,17 @@ class ConnectManagerImpl: ConnectManager()
                 Log.d("MQTT_MESSAGES", "=> sent_status $sentStatus")
             }
 
+            // Settled
+            rr.settledStatus?.let { settledStatus ->
+                handleSettledStatus(settledStatus)
+                Log.d("MQTT_MESSAGES", "=> settled_status $settledStatus")
+            }
+
+            rr.asyncpayTag?.let { asyncTag ->
+                handleAsyncTag(asyncTag)
+                Log.d("MQTT_MESSAGES", "=> asyncpayTag $asyncTag")
+            }
+
             rr.lspHost?.let { lspHost ->
                 mixerIp = lspHost
             }
@@ -524,9 +510,83 @@ class ConnectManagerImpl: ConnectManager()
                 }
                 Log.d("MQTT_MESSAGES", "=> tags $tags")
             }
+            rr.settleTopic?.let { settleTopic ->
+                rr.settlePayload?.let { payload ->
+                     client.publish(settleTopic, MqttMessage(payload))
+                    if (!skipSettleTopic) {
+                        delayedRRObjects.add(rr)
+                        return
+                    }
+                    Log.d("MQTT_MESSAGES", "=> settleRunReturn $settleTopic")
+                }
+            }
+
+            handleRegisterTopic(client, rr, skipAsyncTopic) { runReturn, callbackSkipAsyncTopic ->
+                rr.asyncpayTopic?.let { asyncpayTopic ->
+                    rr.asyncpayPayload?.let { asyncpayPayload ->
+
+                        client.publish(asyncpayTopic, MqttMessage(asyncpayPayload))
+
+                        if (!callbackSkipAsyncTopic) {
+                            runReturn?.let { delayedRRObjects.add(it) }
+                            Log.d("MQTT_MESSAGES", "=> asyncpayTopic add $runReturn")
+                            return@handleRegisterTopic
+                        }
+                    }
+                }
+            }
+            // Publish to topics based on the new array structure
+            rr.topics.forEachIndexed { index, topic ->
+                val payload = rr.payloads.getOrElse(index) { ByteArray(0) }
+                client.publish(topic, MqttMessage(payload))
+                Log.d("MQTT_MESSAGES", "=> published to $topic")
+            }
+
         } else {
             notifyListeners {
                 onConnectManagerError(ConnectManagerError.MqttClientError)
+            }
+        }
+    }
+    private fun handleRegisterTopic(
+        client: MqttAsyncClient?,
+        rr: RunReturn?,
+        skipAsyncTopic: Boolean,
+        callback: (RunReturn?, Boolean) -> Unit
+    ) {
+        if (rr?.registerTopic != null && rr.registerPayload != null) {
+            val payload = rr.registerPayload
+            client?.publish(rr.registerTopic, MqttMessage(payload))
+            Log.d("MQTT_MESSAGES", "=> registerTopic ${rr.registerTopic}")
+
+            notifyListeners {
+                onPerformDelay(250L){
+                    callback(rr, skipAsyncTopic)
+                    Log.d("MQTT_MESSAGES", "=> delayed performed")
+                }
+            }
+        } else {
+            callback(rr, skipAsyncTopic)
+        }
+    }
+
+    private fun handleAsyncTag(asyncTag: String?) {
+        asyncTag?.let { nnAsyncTag ->
+            val rrObject = delayedRRObjects.firstOrNull {
+                it.msgs.any { msg -> msg.tag == nnAsyncTag }
+            }
+
+            rrObject?.let { rr ->
+                delayedRRObjects = delayedRRObjects.filter { rr ->
+                    rr.msgs.none { msg -> msg.tag == nnAsyncTag }
+                }.toMutableList()
+
+                handleRunReturn(
+                    rr,
+                    mqttClient,
+                    skipSettleTopic = true,
+                    skipAsyncTopic = true
+                )
             }
         }
     }
@@ -1533,7 +1593,7 @@ class ConnectManagerImpl: ConnectManager()
     private fun getTimestampInMilliseconds(): String =
         System.currentTimeMillis().toString()
 
-    private fun handleSettleStatus(settledStatus: String?) {
+    private fun handleSettledStatus(settledStatus: String?) {
         settledStatus?.let { status ->
             try {
                 val data = status.toByteArray(Charsets.UTF_8)
@@ -1542,14 +1602,18 @@ class ConnectManagerImpl: ConnectManager()
                 val settleStatus = dictionary.getString("status")
 
                 if (settleStatus == COMPLETE_STATUS) {
-                    val rrObject = settleRunReturn.firstOrNull { it.msgs.firstOrNull()?.index == htlcId }
+                    val rrObject = delayedRRObjects.firstOrNull { it.msgs.any { msg -> msg.index == htlcId } }
 
-                    rrObject?.let {
-                        handleRunReturn(it, mqttClient, true)
+                    delayedRRObjects = delayedRRObjects.filter { rr ->
+                        rr.msgs.none { msg -> msg.index == htlcId }
+                    }.toMutableList()
+
+                    rrObject?.let { rr ->
+                        handleRunReturn(rr, mqttClient, true)
                     }
-
-                    settleRunReturn = settleRunReturn.filter { it.msgs.firstOrNull()?.index != htlcId } as MutableList<RunReturn>
-                } else { }
+                } else {
+                    // Show toast error
+                }
             } catch (e: JSONException) {
                 Log.d("MQTT_MESSAGES", "Error decoding JSON: ${e.message}")
             }

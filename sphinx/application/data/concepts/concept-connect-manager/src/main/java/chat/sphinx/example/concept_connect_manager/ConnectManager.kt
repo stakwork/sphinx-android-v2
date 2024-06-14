@@ -145,7 +145,6 @@ interface ConnectManagerListener {
     fun onInitialTribe(tribe: String, isProductionEnvironment: Boolean)
     fun onLastReadMessages(lastReadMessages: String)
     fun onUpdateMutes(mutes: String)
-    fun listenToOwnerCreation(callback: () -> Unit)
     fun onConnectManagerError(error: ConnectManagerError)
 
     // Messaging Callbacks
@@ -179,6 +178,11 @@ interface ConnectManagerListener {
         inviteCode: String,
         sats: Long
     )
+    // Utility
+
+    fun onPerformDelay(delay: Long, callback: () -> Unit)
+    fun listenToOwnerCreation(callback: () -> Unit)
+
 }
 
 

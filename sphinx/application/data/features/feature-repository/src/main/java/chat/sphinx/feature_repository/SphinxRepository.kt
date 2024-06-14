@@ -1256,6 +1256,13 @@ abstract class SphinxRepository(
         }
     }
 
+    override fun onPerformDelay(delay: Long, callback: () -> Unit) {
+        applicationScope.launch(mainImmediate) {
+            delay(delay)
+            callback.invoke()
+        }
+    }
+
     private fun reconnectMqtt() {
         applicationScope.launch(mainImmediate) {
             delay(2000L)

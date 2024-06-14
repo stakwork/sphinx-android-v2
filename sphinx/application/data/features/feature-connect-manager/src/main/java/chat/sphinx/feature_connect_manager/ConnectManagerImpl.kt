@@ -283,11 +283,6 @@ class ConnectManagerImpl: ConnectManager()
                 Log.d("MQTT_MESSAGES", "=> stateToDelete $it")
             }
 
-            rr.subscriptionTopics.forEach { topic ->
-                val qos = IntArray(1) { 1 }
-                client.subscribe(arrayOf(topic), qos)
-                Log.d("MQTT_MESSAGES", "=> subscribed to $topic")
-            }
             // Set your balance
             rr.newBalance?.let { newBalance ->
                 convertMillisatsToSats(newBalance)?.let { balance ->
@@ -510,32 +505,38 @@ class ConnectManagerImpl: ConnectManager()
                 }
                 Log.d("MQTT_MESSAGES", "=> tags $tags")
             }
-            rr.settleTopic?.let { settleTopic ->
-                rr.settlePayload?.let { payload ->
-                     client.publish(settleTopic, MqttMessage(payload))
-                    if (!skipSettleTopic) {
+
+            rr.subscriptionTopics.forEach { topic ->
+                val qos = IntArray(1) { 1 }
+                client.subscribe(arrayOf(topic), qos)
+                Log.d("MQTT_MESSAGES", "=> subscribed to $topic")
+            }
+
+            if (!skipSettleTopic) {
+                rr.settleTopic?.let { settleTopic ->
+                    rr.settlePayload?.let { payload ->
+                        client.publish(settleTopic, MqttMessage(payload))
                         delayedRRObjects.add(rr)
+                        Log.d("MQTT_MESSAGES", "=> settleRunReturn $settleTopic")
                         return
                     }
-                    Log.d("MQTT_MESSAGES", "=> settleRunReturn $settleTopic")
                 }
             }
 
             handleRegisterTopic(client, rr, skipAsyncTopic) { runReturn, callbackSkipAsyncTopic ->
-                rr.asyncpayTopic?.let { asyncpayTopic ->
-                    rr.asyncpayPayload?.let { asyncpayPayload ->
+                if (!callbackSkipAsyncTopic) {
+                    rr.asyncpayTopic?.let { asyncPayTopic ->
+                        rr.asyncpayPayload?.let { asyncPayPayload ->
+                            client.publish(asyncPayTopic, MqttMessage(asyncPayPayload))
 
-                        client.publish(asyncpayTopic, MqttMessage(asyncpayPayload))
+                            delayedRRObjects.add(runReturn)
 
-                        if (!callbackSkipAsyncTopic) {
-                            runReturn?.let {
-                                delayedRRObjects.add(it)
-                            }
                             Log.d("MQTT_MESSAGES", "=> asyncpayTopic add $runReturn")
                             return@handleRegisterTopic
                         }
                     }
                 }
+
                 rr.topics.forEachIndexed { index, topic ->
                     val payload = rr.payloads.getOrElse(index) { ByteArray(0) }
                     client.publish(topic, MqttMessage(payload))
@@ -550,13 +551,13 @@ class ConnectManagerImpl: ConnectManager()
     }
     private fun handleRegisterTopic(
         client: MqttAsyncClient?,
-        rr: RunReturn?,
+        rr: RunReturn,
         skipAsyncTopic: Boolean,
-        callback: (RunReturn?, Boolean) -> Unit
+        callback: (RunReturn, Boolean) -> Unit
     ) {
-        if (rr?.registerTopic != null && rr.registerPayload != null) {
-            val payload = rr.registerPayload
-            client?.publish(rr.registerTopic, MqttMessage(payload))
+        if (rr.registerTopic != null && rr.registerPayload != null) {
+            val payload = rr.registerPayload!!
+            client?.publish(rr.registerTopic!!, MqttMessage(payload))
             Log.d("MQTT_MESSAGES", "=> registerTopic ${rr.registerTopic}")
 
             notifyListeners {
@@ -1609,7 +1610,11 @@ class ConnectManagerImpl: ConnectManager()
                     }.toMutableList()
 
                     rrObject?.let { rr ->
-                        handleRunReturn(rr, mqttClient, true)
+                        handleRunReturn(
+                            rr,
+                            mqttClient,
+                            true
+                        )
                     }
                 } else {
                     // Show toast error

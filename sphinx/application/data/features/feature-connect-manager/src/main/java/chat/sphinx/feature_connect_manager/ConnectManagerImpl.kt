@@ -528,20 +528,20 @@ class ConnectManagerImpl: ConnectManager()
                         client.publish(asyncpayTopic, MqttMessage(asyncpayPayload))
 
                         if (!callbackSkipAsyncTopic) {
-                            runReturn?.let { delayedRRObjects.add(it) }
+                            runReturn?.let {
+                                delayedRRObjects.add(it)
+                            }
                             Log.d("MQTT_MESSAGES", "=> asyncpayTopic add $runReturn")
                             return@handleRegisterTopic
                         }
                     }
                 }
+                rr.topics.forEachIndexed { index, topic ->
+                    val payload = rr.payloads.getOrElse(index) { ByteArray(0) }
+                    client.publish(topic, MqttMessage(payload))
+                    Log.d("MQTT_MESSAGES", "=> published to $topic")
+                }
             }
-            // Publish to topics based on the new array structure
-            rr.topics.forEachIndexed { index, topic ->
-                val payload = rr.payloads.getOrElse(index) { ByteArray(0) }
-                client.publish(topic, MqttMessage(payload))
-                Log.d("MQTT_MESSAGES", "=> published to $topic")
-            }
-
         } else {
             notifyListeners {
                 onConnectManagerError(ConnectManagerError.MqttClientError)

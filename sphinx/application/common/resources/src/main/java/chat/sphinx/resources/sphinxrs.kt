@@ -1253,7 +1253,8 @@ data class RunReturn (
     var `payments`: String?, 
     var `paymentsTotal`: ULong?, 
     var `tags`: String?, 
-    var `deletedMsgs`: String?
+    var `deletedMsgs`: String?, 
+    var `newChildIdx`: ULong?
 ) {
     
 }
@@ -1298,6 +1299,7 @@ public object FfiConverterTypeRunReturn: FfiConverterRustBuffer<RunReturn> {
             FfiConverterOptionalULong.read(buf),
             FfiConverterOptionalString.read(buf),
             FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalULong.read(buf),
         )
     }
 
@@ -1338,7 +1340,8 @@ public object FfiConverterTypeRunReturn: FfiConverterRustBuffer<RunReturn> {
             FfiConverterOptionalString.allocationSize(value.`payments`) +
             FfiConverterOptionalULong.allocationSize(value.`paymentsTotal`) +
             FfiConverterOptionalString.allocationSize(value.`tags`) +
-            FfiConverterOptionalString.allocationSize(value.`deletedMsgs`)
+            FfiConverterOptionalString.allocationSize(value.`deletedMsgs`) +
+            FfiConverterOptionalULong.allocationSize(value.`newChildIdx`)
     )
 
     override fun write(value: RunReturn, buf: ByteBuffer) {
@@ -1379,6 +1382,7 @@ public object FfiConverterTypeRunReturn: FfiConverterRustBuffer<RunReturn> {
             FfiConverterOptionalULong.write(value.`paymentsTotal`, buf)
             FfiConverterOptionalString.write(value.`tags`, buf)
             FfiConverterOptionalString.write(value.`deletedMsgs`, buf)
+            FfiConverterOptionalULong.write(value.`newChildIdx`, buf)
     }
 }
 

@@ -6256,7 +6256,7 @@ abstract class SphinxRepository(
                     val tribe = getChatById(chatId).firstOrNull()
 
                     if (tribe != null) {
-                        connectManager.editTribe(tribe.uuid.value, tribeJson)
+                        tribe.ownerPubKey?.value?.let { connectManager.editTribe(it, tribeJson) }
                     }
                 }
             } catch (e: Exception) { }

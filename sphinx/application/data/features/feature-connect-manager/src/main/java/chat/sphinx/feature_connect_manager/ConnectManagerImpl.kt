@@ -1361,7 +1361,7 @@ class ConnectManagerImpl: ConnectManager()
             )
             handleRunReturn(updatedTribe, mqttClient)
         } catch (e:Exception) {
-            // handle update tribe error
+            Log.d("MQTT_MESSAGES", "editTribe ${e.message}")
         }
     }
 

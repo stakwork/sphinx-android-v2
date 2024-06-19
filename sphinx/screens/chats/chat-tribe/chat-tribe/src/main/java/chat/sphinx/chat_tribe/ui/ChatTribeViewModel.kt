@@ -555,7 +555,7 @@ class ChatTribeViewModel @Inject constructor(
     fun navigateToTribeShareScreen() {
         viewModelScope.launch(mainImmediate) {
             val chat = getChat()
-            val shareTribeURL = "sphinx.chat://?action=tribe&uuid=${chat.uuid.value}&host=${tribeDefaultServerUrl}"
+            val shareTribeURL = "sphinx.chat://?action=tribeV2&pubkey=${chat.uuid.value}&host=${tribeDefaultServerUrl}"
             (chatNavigator as TribeChatNavigator).toShareTribeScreen(shareTribeURL, app.getString(R.string.qr_code_title))
         }
 

@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import app.cash.exhaustive.Exhaustive
 import chat.sphinx.concept_network_query_invite.NetworkQueryInvite
 import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
-import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.concept_repository_lightning.LightningRepository
 import chat.sphinx.invite_friend.navigation.InviteFriendNavigator
 import chat.sphinx.kotlin_response.LoadResponse
@@ -38,8 +37,16 @@ internal class InviteFriendViewModel @Inject constructor(
         InviteFriendViewState
         >(dispatchers, InviteFriendViewState.Idle)
 {
+    companion object {
+        const val SERVER_SETTINGS_SHARED_PREFERENCES = "server_ip_settings"
+        const val TRIBE_SERVER_IP = "tribe_server_ip"
+    }
     private suspend fun getAccountBalance(): StateFlow<NodeBalance?> =
         lightningRepository.getAccountBalance()
+
+    private val tribeServerIp: String? =
+        app.getSharedPreferences(SERVER_SETTINGS_SHARED_PREFERENCES, Context.MODE_PRIVATE)
+            .getString(TRIBE_SERVER_IP, null)
 
     init {
         viewModelScope.launch(mainImmediate) {
@@ -82,7 +89,13 @@ internal class InviteFriendViewModel @Inject constructor(
                     updateViewState(InviteFriendViewState.InviteCreationFailed)
                 }
                 balance != null && sats != null && sats != 0L && sats <= balance -> {
-                    connectManagerRepository.createInvite(nickname, welcomeMessage ?: "", sats, null)
+                    connectManagerRepository.createInvite(
+                        nickname,
+                        welcomeMessage ?: "",
+                        sats,
+                        null,
+                        tribeServerIp
+                    )
                     updateViewState(InviteFriendViewState.InviteCreationSucceed)
                 }
                 else -> {

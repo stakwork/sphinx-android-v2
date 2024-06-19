@@ -46,7 +46,8 @@ abstract class ConnectManager {
         nickname: String,
         welcomeMessage: String,
         sats: Long,
-        tribeServerPubKey: String?
+        tribeServerPubKey: String?,
+        tribeServerIp: String?
     )
     abstract fun deleteContact(pubKey: String)
     abstract fun setReadMessage(contactPubKey: String, messageIndex: Long)
@@ -85,6 +86,11 @@ abstract class ConnectManager {
         tribePubKey: String
     )
     abstract fun getTribeServerPubKey(): String?
+
+    abstract fun editTribe(
+        tribeServerPubkey: String,
+        tribeJson: String
+    )
 
     // Invoice and Payment Methods
     abstract fun createInvoice(

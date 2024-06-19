@@ -250,19 +250,8 @@ internal class CreateTribeViewModel @Inject constructor(
             createTribeBuilder.build()?.let {
                 updateViewState(CreateTribeViewState.SavingTribe)
                 saveTribeJob = viewModelScope.launch(mainImmediate) {
-                    if (chatId == null) {
-                        chatRepository.createTribe(it)
-                        navigator.closeDetailScreen()
-                    } else {
-                        when(chatRepository.updateTribe(chatId, it)) {
-                            is Response.Error -> {
-                                submitSideEffect(CreateTribeSideEffect.FailedToUpdateTribe)
-                            }
-                            is Response.Success -> {
-                                navigator.closeDetailScreen()
-                            }
-                        }
-                    }
+                    chatRepository.storeTribe(it,chatId)
+                    navigator.closeDetailScreen()
                 }
             }
         } else {

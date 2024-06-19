@@ -59,12 +59,13 @@ interface ChatRepository {
         page: Int,
         itemsPerPage: Int,
         searchTerm: String? = null,
-        tags: String? = null
+        tags: String? = null,
+        tribeServer: String?
     ): Flow<List<NewTribeDto>>
 
     suspend fun updateTribeInfo(chat: Chat, isProductionEnvironment: Boolean): TribeData?
-    suspend fun createTribe(createTribe: CreateTribe)
-    suspend fun updateTribe(chatId: ChatId, createTribe: CreateTribe): Response<Any, ResponseError>
+    suspend fun storeTribe(createTribe: CreateTribe, chatId: ChatId?)
+    suspend fun updateTribe(chatId: ChatId, createTribe: CreateTribe)
     suspend fun exitAndDeleteTribe(tribe: Chat)
 
     suspend fun pinMessage(

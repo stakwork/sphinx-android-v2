@@ -1,5 +1,6 @@
 package chat.sphinx.tribes_discover.ui
 
+import android.app.Application
 import android.content.Context
 import androidx.lifecycle.viewModelScope
 import chat.sphinx.concept_repository_chat.ChatRepository
@@ -33,6 +34,7 @@ internal class TribesDiscoverViewModel @Inject constructor(
     dispatchers: CoroutineDispatchers,
     val navigator: TribesDiscoverNavigator,
     private val chatRepository: ChatRepository,
+    private val app: Application,
     private val tribesDiscoverViewModelCoordinator: TribesDiscoverViewModelCoordinator
 ): SideEffectViewModel<
     Context,
@@ -40,12 +42,16 @@ internal class TribesDiscoverViewModel @Inject constructor(
     DiscoverTribesViewState,
     >(dispatchers, DiscoverTribesViewState.Loading)
 {
-
     companion object {
-        private const val TRIBES_DEFAULT_SERVER_URL = "34.229.52.200:8801"
+        const val SERVER_SETTINGS_SHARED_PREFERENCES = "server_ip_settings"
+        const val TRIBE_SERVER_IP = "tribe_server_ip"
     }
 
-        val discoverTribesTagsViewStateContainer: ViewStateContainer<DiscoverTribesTagsViewState> by lazy {
+    private val tribeServerIp: String? =
+        app.getSharedPreferences(SERVER_SETTINGS_SHARED_PREFERENCES, Context.MODE_PRIVATE)
+            .getString(TRIBE_SERVER_IP, null)
+
+    val discoverTribesTagsViewStateContainer: ViewStateContainer<DiscoverTribesTagsViewState> by lazy {
         ViewStateContainer(DiscoverTribesTagsViewState.Closed(0))
     }
 
@@ -175,7 +181,8 @@ internal class TribesDiscoverViewModel @Inject constructor(
                 page,
                 itemsPerPage,
                 searchTerm,
-                tags
+                tags,
+                tribeServerIp
             ).collect { discoverTribes ->
 
                 val existingTribes = if (page > 1) {
@@ -232,7 +239,7 @@ internal class TribesDiscoverViewModel @Inject constructor(
                                 ResponseHolder(
                                     requestHolder,
                                     TribesDiscoverResponse(
-                                        "sphinx.chat://?action=tribeV2&pubkey=${pubkey}&host=${TRIBES_DEFAULT_SERVER_URL}"
+                                        "sphinx.chat://?action=tribeV2&pubkey=${pubkey}&host=${tribeServerIp}"
                                     )
                                 )
                             ),

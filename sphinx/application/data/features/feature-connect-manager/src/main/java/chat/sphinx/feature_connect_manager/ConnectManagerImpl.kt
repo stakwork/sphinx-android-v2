@@ -60,6 +60,7 @@ import uniffi.sphinxrs.send
 import uniffi.sphinxrs.setNetwork
 import uniffi.sphinxrs.setPushToken
 import uniffi.sphinxrs.signBytes
+import uniffi.sphinxrs.updateTribe
 import uniffi.sphinxrs.xpubFromSeed
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
@@ -772,7 +773,7 @@ class ConnectManagerImpl: ConnectManager()
                 getCurrentUserState(),
                 totalHighestIndex?.toULong() ?: 0.toULong(),
                 limit.toUInt(),
-                true,
+                    true,
             )
             handleRunReturn(fetchMessages, mqttClient)
 
@@ -1010,7 +1011,8 @@ class ConnectManagerImpl: ConnectManager()
         nickname: String,
         welcomeMessage: String,
         sats: Long,
-        tribeServerPubKey: String?
+        tribeServerPubKey: String?,
+        tribeServerIp: String?
     ) {
         val now = getTimestampInMilliseconds()
 
@@ -1023,7 +1025,7 @@ class ConnectManagerImpl: ConnectManager()
                 _mixerIp!!,
                 convertSatsToMillisats(sats),
                 ownerInfoStateFlow.value.alias ?: "",
-                "34.229.52.200:8801",
+                tribeServerIp,
                 "02792ee5b9162f9a00686aaa5d5274e91fd42a141113007797b5c1872d43f78e07"
             )
 
@@ -1345,6 +1347,21 @@ class ConnectManagerImpl: ConnectManager()
                 onConnectManagerError(ConnectManagerError.ServerPubKeyError)
             }
             null
+        }
+    }
+
+    override fun editTribe(tribeServerPubkey: String, tribeJson: String) {
+        try {
+            val updatedTribe = updateTribe(
+                ownerSeed!!,
+                getTimestampInMilliseconds(),
+                getCurrentUserState(),
+                tribeServerPubkey,
+                tribeJson
+            )
+            handleRunReturn(updatedTribe, mqttClient)
+        } catch (e:Exception) {
+            // handle update tribe error
         }
     }
 

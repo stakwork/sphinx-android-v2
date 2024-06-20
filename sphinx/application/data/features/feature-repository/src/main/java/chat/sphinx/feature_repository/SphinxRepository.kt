@@ -1372,6 +1372,7 @@ abstract class SphinxRepository(
             }
 
             val now = DateTime.nowUTC().toDateTime()
+            val newDate = if (isTribe) date ?: now else timestamp ?: now
 
             val newMessage = NewMessage(
                 id = msgIndex,
@@ -1383,7 +1384,7 @@ abstract class SphinxRepository(
                 amount = bolt11?.getSatsAmount() ?: existingMessage?.amount ?: amount ?: Sat(0L),
                 paymentRequest = existingMessage?.payment_request ?: paymentRequest,
                 paymentHash = existingMessage?.payment_hash ?: msg.paymentHash?.toLightningPaymentHash() ?: paymentHash,
-                date = if (isTribe) date ?: now else timestamp ?: now,
+                date = newDate ,
                 expirationDate = bolt11?.getExpiryTime()?.toDateTime(),
                 messageContent = null,
                 status = status,
@@ -1414,6 +1415,29 @@ abstract class SphinxRepository(
                 thread = null
             )
 
+            if (!fromMe) {
+                contact?.id?.let { contactId ->
+                    val lastMessageDate = getLastMessage().firstOrNull()?.date?.value?.time ?: Long.MIN_VALUE
+                    val newTime = newDate.value.time
+
+                    if (lastMessageDate < newTime) {
+                        contactLock.withLock {
+                            msgSender.photo_url?.takeIf { it.isNotEmpty() && it != contact.photoUrl?.value }?.let {
+                                queries.contactUpdatePhotoUrl(it.toPhotoUrl(), contactId)
+                            }
+                            msgSender.alias?.takeIf { it.isNotEmpty() && it != contact.alias?.value }?.let {
+                                queries.contactUpdateAlias(it.toContactAlias(), contactId)
+                            }
+                        }
+                    }
+                }
+            }
+            if (msgType is MessageType.Payment) {
+                queries.messageUpdateInvoiceAsPaidByPaymentHash(
+                    msg.paymentHash?.toLightningPaymentHash()
+                )
+            }
+
             messageLock.withLock {
                 queries.transaction {
                     upsertNewMessage(newMessage, queries, null)
@@ -1429,36 +1453,6 @@ abstract class SphinxRepository(
 
             chatLock.withLock {
                 queries.chatUpdateSeen(Seen.False, ChatId(chatId))
-            }
-
-            if (!fromMe && contact?.photoUrl?.value != msgSender.photo_url) {
-                contact?.id?.let { contactId ->
-                    contactLock.withLock {
-                        queries.contactUpdatePhotoUrl(
-                            msgSender.photo_url?.toPhotoUrl(),
-                            contactId
-                        )
-                    }
-                }
-            }
-
-            if (!fromMe && contact?.alias?.value != msgSender.alias) {
-                contact?.id?.let { contactId ->
-                    // get the last msg date from the db and if the message that
-                    // contains the new alias is older than this do not update
-                    contactLock.withLock {
-                        queries.contactUpdateAlias(
-                            msgSender.alias?.toContactAlias(),
-                            contactId
-                        )
-                    }
-                }
-            }
-
-            if (msgType is MessageType.Payment) {
-                queries.messageUpdateInvoiceAsPaidByPaymentHash(
-                    msg.paymentHash?.toLightningPaymentHash()
-                )
             }
         }
     }

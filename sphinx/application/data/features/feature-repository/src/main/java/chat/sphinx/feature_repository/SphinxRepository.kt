@@ -1123,13 +1123,13 @@ abstract class SphinxRepository(
         applicationScope.launch(io) {
             val queries = coreDB.getSphinxDatabaseQueries()
             val newCreateTribe = newTribe.toNewCreateTribe(moshi)
-
-            // TribeId is set from LONG.MAX_VALUE and decremented by 1 for each new tribe
-            val tribeId = queries.chatGetLastTribeId().executeAsOneOrNull()?.let { it.MIN?.minus(1) }
-                ?: (Long.MAX_VALUE)
-            val now: String = DateTime.nowUTC()
-
             newCreateTribe.pubkey?.let { tribePubKey ->
+
+                val existingTribe = tribePubKey.toChatUUID()?.let { getChatByUUID(it) }?.firstOrNull()
+                // TribeId is set from LONG.MAX_VALUE and decremented by 1 for each new tribe
+                val tribeId = existingTribe?.id?.value ?: queries.chatGetLastTribeId().executeAsOneOrNull()?.let { it.MIN?.minus(1) }
+                    ?: (Long.MAX_VALUE)
+                val now: String = DateTime.nowUTC()
 
                 val chatTribe = Chat(
                     id = ChatId(tribeId),
@@ -1141,21 +1141,21 @@ abstract class SphinxRepository(
                     contactIds = listOf(ContactId(0), ContactId(tribeId)),
                     isMuted = ChatMuted.False,
                     createdAt = newCreateTribe.created?.toDateTime() ?: now.toDateTime(),
-                    groupKey = null,
-                    host = null,
+                    groupKey = existingTribe?.groupKey,
+                    host = existingTribe?.host,
                     pricePerMessage = newCreateTribe.price_per_message?.let { Sat(it) },
                     escrowAmount = newCreateTribe.escrow_amount?.let { Sat(it) },
                     unlisted = if (newCreateTribe.unlisted == true) ChatUnlisted.True else ChatUnlisted.False,
                     privateTribe = if (newCreateTribe.private == true) ChatPrivate.True else ChatPrivate.False,
                     ownerPubKey = accountOwner.value?.nodePubKey,
                     seen = Seen.False,
-                    metaData = null,
+                    metaData = existingTribe?.metaData,
                     myPhotoUrl = accountOwner.value?.photoUrl,
                     myAlias = ChatAlias(newCreateTribe.owner_alias),
                     pendingContactIds = emptyList(),
-                    latestMessageId = null,
-                    contentSeenAt = null,
-                    pinedMessage = null,
+                    latestMessageId = existingTribe?.latestMessageId,
+                    contentSeenAt = existingTribe?.contentSeenAt,
+                    pinedMessage = existingTribe?.pinedMessage,
                     notify = NotificationLevel.SeeAll
                 )
 
@@ -1444,8 +1444,7 @@ abstract class SphinxRepository(
 
             if (!fromMe && contact?.alias?.value != msgSender.alias) {
                 contact?.id?.let { contactId ->
-
-                    // get the last msg index date and if the massage that
+                    // get the last msg date from the db and if the message that
                     // contains the new alias is older than this do not update
                     contactLock.withLock {
                         queries.contactUpdateAlias(
@@ -4769,7 +4768,6 @@ abstract class SphinxRepository(
                 chatHost.toString().isNotEmpty() &&
                 chatUUID.toString().isNotEmpty()
             ) {
-
                 val queries = coreDB.getSphinxDatabaseQueries()
 
                 networkQueryChat.getTribeInfo(chatHost, LightningNodePubKey(chatUUID.value), isProductionEnvironment)
@@ -4778,12 +4776,17 @@ abstract class SphinxRepository(
 
                             is LoadResponse.Loading -> {}
                             is Response.Error -> {}
-
                             is Response.Success -> {
                                 val tribeDto = loadResponse.value
 
-                                // TODO V2 updateTribeInfo
                                 if (owner?.nodePubKey != chat.ownerPubKey) {
+
+                                    chatLock.withLock {
+                                        queries.transaction {
+                                            updateNewChatTribeData(tribeDto, chat.id, queries)
+                                        }
+                                    }
+
                                 }
                             }
                         }
@@ -6248,15 +6251,15 @@ abstract class SphinxRepository(
                 }
 
                 val ownerAlias = accountOwner.value?.alias?.value ?: "unknown"
-                val tribeJson = createTribe.toNewCreateTribe(ownerAlias, imgUrl).toJson()
 
                 if (chatId == null) {
-                    connectManager.createTribe(tribeJson)
+                    val newTribeJson = createTribe.toNewCreateTribe(ownerAlias, imgUrl, null).toJson()
+                    connectManager.createTribe(newTribeJson)
                 } else {
                     val tribe = getChatById(chatId).firstOrNull()
-
                     if (tribe != null) {
-                        tribe.ownerPubKey?.value?.let { connectManager.editTribe(it, tribeJson) }
+                        val updatedTribeJson = createTribe.toNewCreateTribe(ownerAlias, imgUrl, tribe.uuid.value).toJson()
+                        tribe.ownerPubKey?.value?.let { connectManager.editTribe(updatedTribeJson) }
                     }
                 }
             } catch (e: Exception) { }
@@ -6305,7 +6308,7 @@ abstract class SphinxRepository(
                 val tribe = getChatById(chatId).firstOrNull()
                 // create the tribe json
                 if (tribe != null) {
-                    connectManager.editTribe(tribe.uuid.value, "")
+                    connectManager.editTribe("")
                 }
 
 //                val queries = coreDB.getSphinxDatabaseQueries()

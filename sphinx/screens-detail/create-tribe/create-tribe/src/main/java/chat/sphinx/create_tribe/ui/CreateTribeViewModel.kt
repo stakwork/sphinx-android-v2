@@ -195,7 +195,6 @@ internal class CreateTribeViewModel @Inject constructor(
                     submitSideEffect(CreateTribeSideEffect.FailedToLoadTribe)
                     navigator.closeDetailScreen()
                 }
-
             }
         }
     }

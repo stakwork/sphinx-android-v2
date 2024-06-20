@@ -1350,16 +1350,21 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
-    override fun editTribe(tribeServerPubkey: String, tribeJson: String) {
+    override fun editTribe(tribeJson: String) {
+        val tribeServerPubkey = getTribeServerPubKey()
         try {
-            val updatedTribe = updateTribe(
-                ownerSeed!!,
-                getTimestampInMilliseconds(),
-                getCurrentUserState(),
-                tribeServerPubkey,
-                tribeJson
-            )
-            handleRunReturn(updatedTribe, mqttClient)
+            val updatedTribe = tribeServerPubkey?.let {
+                updateTribe(
+                    ownerSeed!!,
+                    getTimestampInMilliseconds(),
+                    getCurrentUserState(),
+                    it,
+                    tribeJson
+                )
+            }
+            if (updatedTribe != null) {
+                handleRunReturn(updatedTribe, mqttClient)
+            }
         } catch (e:Exception) {
             Log.d("MQTT_MESSAGES", "editTribe ${e.message}")
         }

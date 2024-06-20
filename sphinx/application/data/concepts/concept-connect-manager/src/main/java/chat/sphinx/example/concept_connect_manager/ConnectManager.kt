@@ -88,7 +88,6 @@ abstract class ConnectManager {
     abstract fun getTribeServerPubKey(): String?
 
     abstract fun editTribe(
-        tribeServerPubkey: String,
         tribeJson: String
     )
 

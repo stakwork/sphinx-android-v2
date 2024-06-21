@@ -296,6 +296,8 @@ abstract class SphinxRepository(
                         connectManager.fetchFirstMessagesPerKey(0L)
                     }
                     is RestoreProcessState.RestoreMessages -> {
+                        // Delay to ensure the contacts have been restored before fetching messages
+                        delay(500L)
                         connectManager.fetchMessagesOnRestoreAccount(msgCounts?.total_highest_index)
                     }
                     else -> {}
@@ -1372,7 +1374,7 @@ abstract class SphinxRepository(
             }
 
             val now = DateTime.nowUTC().toDateTime()
-            val newDate = if (isTribe) date ?: now else timestamp ?: now
+            val messageDate = if (isTribe) date ?: now else timestamp ?: now
 
             val newMessage = NewMessage(
                 id = msgIndex,
@@ -1384,7 +1386,7 @@ abstract class SphinxRepository(
                 amount = bolt11?.getSatsAmount() ?: existingMessage?.amount ?: amount ?: Sat(0L),
                 paymentRequest = existingMessage?.payment_request ?: paymentRequest,
                 paymentHash = existingMessage?.payment_hash ?: msg.paymentHash?.toLightningPaymentHash() ?: paymentHash,
-                date = newDate ,
+                date = messageDate ,
                 expirationDate = bolt11?.getExpiryTime()?.toDateTime(),
                 messageContent = null,
                 status = status,
@@ -1417,16 +1419,18 @@ abstract class SphinxRepository(
 
             if (!fromMe) {
                 contact?.id?.let { contactId ->
-                    val lastMessageDate = getLastMessage().firstOrNull()?.date?.value?.time ?: Long.MIN_VALUE
-                    val newTime = newDate.value.time
+                    val lastMessageIndex = getLastMessage().firstOrNull()?.id?.value
+                    val newMessageIndex = msgIndex.value
 
-                    if (lastMessageDate < newTime) {
-                        contactLock.withLock {
-                            msgSender.photo_url?.takeIf { it.isNotEmpty() && it != contact.photoUrl?.value }?.let {
-                                queries.contactUpdatePhotoUrl(it.toPhotoUrl(), contactId)
-                            }
-                            msgSender.alias?.takeIf { it.isNotEmpty() && it != contact.alias?.value }?.let {
-                                queries.contactUpdateAlias(it.toContactAlias(), contactId)
+                    if (lastMessageIndex != null) {
+                        if (lastMessageIndex < newMessageIndex) {
+                            contactLock.withLock {
+                                msgSender.photo_url?.takeIf { it.isNotEmpty() && it != contact.photoUrl?.value }?.let {
+                                    queries.contactUpdatePhotoUrl(it.toPhotoUrl(), contactId)
+                                }
+                                msgSender.alias?.takeIf { it.isNotEmpty() && it != contact.alias?.value }?.let {
+                                    queries.contactUpdateAlias(it.toContactAlias(), contactId)
+                                }
                             }
                         }
                     }

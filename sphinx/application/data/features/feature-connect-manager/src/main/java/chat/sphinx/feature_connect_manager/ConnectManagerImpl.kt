@@ -32,6 +32,7 @@ import uniffi.sphinxrs.ParsedInvite
 import uniffi.sphinxrs.RunReturn
 import uniffi.sphinxrs.addContact
 import uniffi.sphinxrs.codeFromInvite
+import uniffi.sphinxrs.deleteMsgs
 import uniffi.sphinxrs.fetchMsgsBatch
 import uniffi.sphinxrs.getDefaultTribeServer
 import uniffi.sphinxrs.getMsgsCounts
@@ -1233,6 +1234,26 @@ class ConnectManagerImpl: ConnectManager()
                 onConnectManagerError(ConnectManagerError.DeleteMessageError)
             }
             Log.e("MQTT_MESSAGES", "send ${e.message}")
+        }
+    }
+
+    override fun deleteContactMessages(contactPubKey: String, messageIndexList: List<Long>) {
+        val now = getTimestampInMilliseconds()
+
+        try {
+            val deleteMessages = deleteMsgs(
+                ownerSeed!!,
+                now,
+                getCurrentUserState(),
+                contactPubKey,
+                messageIndexList.map { it.toULong() }
+            )
+            handleRunReturn(deleteMessages, mqttClient)
+        } catch (e: Exception) {
+//            notifyListeners {
+//                onConnectManagerError(ConnectManagerError.DeleteContactMessagesError)
+//            }
+            Log.e("MQTT_MESSAGES", "deleteContactMessages ${e.message}")
         }
     }
 

@@ -4626,7 +4626,7 @@ abstract class SphinxRepository(
                         mediaToken.value,
                         null,
                         null,
-                        null,
+                        message.uuid?.value,
                         null,
                         null,
                         null

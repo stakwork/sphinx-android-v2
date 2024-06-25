@@ -69,11 +69,15 @@ abstract class ConnectManager {
         contactPubKey: String,
         isTribe: Boolean
     )
-
     abstract fun deleteContactMessages(
         contactPubKey: String,
         messageIndexList: List<Long>,
     )
+
+    abstract fun deletePubKeyMessages(
+        contactPubKey: String
+    )
+
     abstract fun getMessagesStatusByTags(tags: List<String>)
 
     // Tribe Management Methods

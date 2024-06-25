@@ -966,12 +966,6 @@ abstract class SphinxRepository(
                             deleteMqttMessage(replyUuid)
                         }
                     }
-                    is MessageType.ContactKeyConfirmation -> {
-                        saveNewContactRegistered(msgSender)
-                    }
-                    is MessageType.ContactKey -> {
-                        saveNewContactRegistered(msgSender)
-                    }
                     is MessageType.ContactKeyRecord -> {
                         // Handled on onRestoreContacts
                     }
@@ -1009,13 +1003,21 @@ abstract class SphinxRepository(
                             )
                         }
 
-                        if (messageType is MessageType.Purchase.Processing) {
-                            amount?.toSat()?.let { paidAmount ->
-                                sendMediaKeyOnPaidPurchase(
-                                    message,
-                                    contactInfo,
-                                    paidAmount
-                                )
+                        when (messageType) {
+                            is MessageType.Purchase.Processing -> {
+                                amount?.toSat()?.let { paidAmount ->
+                                    sendMediaKeyOnPaidPurchase(
+                                        message,
+                                        contactInfo,
+                                        paidAmount
+                                    )
+                                }
+                            }
+                            is MessageType.ContactKeyConfirmation -> {
+                                saveNewContactRegistered(msgSender)
+                            }
+                            is MessageType.ContactKey -> {
+                                saveNewContactRegistered(msgSender)
                             }
                         }
 
@@ -1331,10 +1333,10 @@ abstract class SphinxRepository(
             }
 
             val existingMessage = queries.messageGetByUUID(msgUuid).executeAsOneOrNull()
+            val messageId = existingMessage?.id
 
-            if (fromMe) {
-                val messageId = existingMessage?.id
-                val existingMessageMedia = messageId?.let {
+            if (fromMe && messageId?.value != null && messageId.value < 0) {
+                val existingMessageMedia = messageId.let {
                     queries.messageMediaGetById(it).executeAsOneOrNull()
                 }?.copy(id = msgIndex)
 
@@ -2116,6 +2118,11 @@ abstract class SphinxRepository(
         if (contact != null) {
             connectManager.deleteContact(pubKeyToDelete)
 
+            //delete all messages
+            contact.id.value.toChatId()?.let { chatId ->
+                contact.node_pub_key?.value?.let { pubKey -> deleteAllMessages(pubKey, chatId) }
+            }
+
             contactLock.withLock {
                 queries.transaction {
                     deleteContactById(contactId, queries)
@@ -2127,12 +2134,10 @@ abstract class SphinxRepository(
                     deleteChatById(contactId.value.toChatId(), queries, null)
                 }
             }
-
         }
 
         var deleteContactResponse: Response<Any, ResponseError> = Response.Success(Any())
 
-        // TODO V2 deleteContact
         return deleteContactResponse
     }
 
@@ -3179,6 +3184,16 @@ abstract class SphinxRepository(
         )
     }
 
+    override fun messageGetOkKeysByChatId(chatId: ChatId): Flow<List<MessageId>> = flow {
+        emitAll(
+            coreDB.getSphinxDatabaseQueries()
+                .messageGetOkKeysByChatId(chatId)
+                .asFlow()
+                .mapToList(io)
+                .distinctUntilChanged()
+        )
+    }
+
     override fun getSentConfirmedMessagesByChatId(chatId: ChatId): Flow<List<Message>> = flow {
         emitAll(
             coreDB.getSphinxDatabaseQueries()
@@ -3984,6 +3999,14 @@ abstract class SphinxRepository(
                     isTribe
                 )
             }
+        }
+    }
+
+    override suspend fun deleteAllMessages(pubKey: String, chatId: ChatId) {
+        val messagesIds = messageGetOkKeysByChatId(chatId).firstOrNull()
+        if (messagesIds != null) {
+            connectManager.deleteContactMessages(pubKey, messagesIds.map { it.value })
+            connectManager.deletePubKeyMessages(pubKey)
         }
     }
 

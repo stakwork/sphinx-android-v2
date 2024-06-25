@@ -88,7 +88,7 @@ class ConnectManagerImpl: ConnectManager()
     private var delayedRRObjects: MutableList<RunReturn> = mutableListOf()
 
     companion object {
-        const val TEST_V2_SERVER_IP = "34.229.52.200:1883"
+        const val TEST_V2_SERVER_IP = "75.101.247.127:1883"
         const val TEST_V2_TRIBES_SERVER = "34.229.52.200:8801"
         const val REGTEST_NETWORK = "regtest"
         const val MAINNET_NETWORK = "bitcoin"
@@ -1238,22 +1238,37 @@ class ConnectManagerImpl: ConnectManager()
     }
 
     override fun deleteContactMessages(contactPubKey: String, messageIndexList: List<Long>) {
-        val now = getTimestampInMilliseconds()
-
         try {
-            val deleteMessages = deleteMsgs(
+            val deleteOkKeyMessages = deleteMsgs(
                 ownerSeed!!,
-                now,
+                getTimestampInMilliseconds(),
                 getCurrentUserState(),
-                contactPubKey,
+                null,
                 messageIndexList.map { it.toULong() }
             )
-            handleRunReturn(deleteMessages, mqttClient)
+            handleRunReturn(deleteOkKeyMessages, mqttClient)
         } catch (e: Exception) {
 //            notifyListeners {
 //                onConnectManagerError(ConnectManagerError.DeleteContactMessagesError)
 //            }
             Log.e("MQTT_MESSAGES", "deleteContactMessages ${e.message}")
+        }
+    }
+
+    override fun deletePubKeyMessages(contactPubKey: String) {
+        try {
+            val deletePubKeyMsgs = deleteMsgs(
+                ownerSeed!!,
+                getTimestampInMilliseconds(),
+                getCurrentUserState(),
+                contactPubKey,
+                null
+            )
+            handleRunReturn(deletePubKeyMsgs, mqttClient)
+        }
+        catch (e: Exception) {
+            val except = e
+            Log.e("MQTT_MESSAGES", "deletePubKeyMessages ${e.message}")
         }
     }
 

@@ -1267,7 +1267,6 @@ class ConnectManagerImpl: ConnectManager()
             handleRunReturn(deletePubKeyMsgs, mqttClient)
         }
         catch (e: Exception) {
-            val except = e
             Log.e("MQTT_MESSAGES", "deletePubKeyMessages ${e.message}")
         }
     }

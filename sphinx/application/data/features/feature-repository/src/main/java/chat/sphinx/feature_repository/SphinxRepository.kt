@@ -2116,8 +2116,6 @@ abstract class SphinxRepository(
         }
 
         if (contact != null) {
-            connectManager.deleteContact(pubKeyToDelete)
-
             //delete all messages
             contact.id.value.toChatId()?.let { chatId ->
                 contact.node_pub_key?.value?.let { pubKey -> deleteAllMessages(pubKey, chatId) }
@@ -2134,6 +2132,7 @@ abstract class SphinxRepository(
                     deleteChatById(contactId.value.toChatId(), queries, null)
                 }
             }
+            connectManager.deleteContact(pubKeyToDelete)
         }
 
         var deleteContactResponse: Response<Any, ResponseError> = Response.Success(Any())

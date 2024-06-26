@@ -97,7 +97,7 @@ interface MessageRepository {
 
     suspend fun deleteMessage(message: Message)
 
-    suspend fun deleteAllMessages(pubKey: String, chatId: ChatId)
+    suspend fun deleteAllMessagesAndPubKey(pubKey: String, chatId: ChatId)
 
     suspend fun getPaymentTemplates() : Response<List<PaymentTemplate>, ResponseError>
 

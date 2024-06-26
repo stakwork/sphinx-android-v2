@@ -512,6 +512,8 @@ abstract class SphinxRepository(
             ).toJson(moshi)
 
             tribe.uuid.value.let { pubKey ->
+                deleteAllMessagesAndPubKey(pubKey, tribe.id)
+
                 connectManager.sendMessage(
                     newMessage,
                     pubKey,
@@ -2118,7 +2120,7 @@ abstract class SphinxRepository(
         if (contact != null) {
             //delete all messages
             contact.id.value.toChatId()?.let { chatId ->
-                contact.node_pub_key?.value?.let { pubKey -> deleteAllMessages(pubKey, chatId) }
+                contact.node_pub_key?.value?.let { pubKey -> deleteAllMessagesAndPubKey(pubKey, chatId) }
             }
 
             contactLock.withLock {
@@ -4001,10 +4003,10 @@ abstract class SphinxRepository(
         }
     }
 
-    override suspend fun deleteAllMessages(pubKey: String, chatId: ChatId) {
+    override suspend fun deleteAllMessagesAndPubKey(pubKey: String, chatId: ChatId) {
         val messagesIds = messageGetOkKeysByChatId(chatId).firstOrNull()
         if (messagesIds != null) {
-            connectManager.deleteContactMessages(pubKey, messagesIds.map { it.value })
+            connectManager.deleteContactMessages(messagesIds.map { it.value })
             connectManager.deletePubKeyMessages(pubKey)
         }
     }

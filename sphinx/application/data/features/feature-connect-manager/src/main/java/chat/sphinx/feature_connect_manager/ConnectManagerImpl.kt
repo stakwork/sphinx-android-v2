@@ -1237,7 +1237,7 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
-    override fun deleteContactMessages(contactPubKey: String, messageIndexList: List<Long>) {
+    override fun deleteContactMessages(messageIndexList: List<Long>) {
         try {
             val deleteOkKeyMessages = deleteMsgs(
                 ownerSeed!!,

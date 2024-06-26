@@ -70,7 +70,6 @@ abstract class ConnectManager {
         isTribe: Boolean
     )
     abstract fun deleteContactMessages(
-        contactPubKey: String,
         messageIndexList: List<Long>,
     )
 

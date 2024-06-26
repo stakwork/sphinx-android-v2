@@ -43,7 +43,8 @@ interface ConnectManagerRepository {
         welcomeMessage: String,
         sats: Long,
         tribeServerPubKey: String?,
-        tribeServerIp: String?
+        tribeServerIp: String?,
+        mixerIp: String?
     )
 
     fun joinTribe(

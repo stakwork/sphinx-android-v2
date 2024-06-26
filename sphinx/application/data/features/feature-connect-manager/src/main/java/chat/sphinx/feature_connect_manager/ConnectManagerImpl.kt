@@ -89,7 +89,7 @@ class ConnectManagerImpl: ConnectManager()
 
     companion object {
         const val TEST_V2_SERVER_IP = "75.101.247.127:1883"
-        const val TEST_V2_TRIBES_SERVER = "34.229.52.200:8801"
+        const val TEST_V2_TRIBES_SERVER = "75.101.247.127:8801"
         const val REGTEST_NETWORK = "regtest"
         const val MAINNET_NETWORK = "bitcoin"
         const val TEST_SERVER_PORT =  1883
@@ -1013,7 +1013,8 @@ class ConnectManagerImpl: ConnectManager()
         welcomeMessage: String,
         sats: Long,
         tribeServerPubKey: String?,
-        tribeServerIp: String?
+        tribeServerIp: String?,
+        mixerIp: String?
     ) {
         val now = getTimestampInMilliseconds()
 
@@ -1023,10 +1024,10 @@ class ConnectManagerImpl: ConnectManager()
                 ownerSeed!!,
                 now,
                 getCurrentUserState(),
-                _mixerIp!!,
+                mixerIp ?: TEST_V2_SERVER_IP,
                 convertSatsToMillisats(sats),
                 ownerInfoStateFlow.value.alias ?: "",
-                tribeServerIp,
+                tribeServerIp ?: TEST_V2_TRIBES_SERVER,
                 "02792ee5b9162f9a00686aaa5d5274e91fd42a141113007797b5c1872d43f78e07"
             )
 

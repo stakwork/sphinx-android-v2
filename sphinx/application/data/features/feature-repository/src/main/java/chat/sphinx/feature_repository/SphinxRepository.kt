@@ -338,7 +338,8 @@ abstract class SphinxRepository(
         welcomeMessage: String,
         sats: Long,
         tribeServerPubKey: String?,
-        tribeServerIp: String?
+        tribeServerIp: String?,
+        mixerIp: String?
     ) {
         applicationScope.launch(io) {
             connectManager.createInvite(
@@ -346,7 +347,8 @@ abstract class SphinxRepository(
                 welcomeMessage,
                 sats,
                 tribeServerPubKey,
-                tribeServerIp
+                tribeServerIp,
+                mixerIp
             )
         }
     }

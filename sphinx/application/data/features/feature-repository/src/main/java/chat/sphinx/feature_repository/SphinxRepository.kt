@@ -621,7 +621,8 @@ abstract class SphinxRepository(
         isRestoreAccount: Boolean,
         mixerServerIp: String?,
         tribeServerHost: String?,
-        isProductionEnvironment: Boolean
+        isProductionEnvironment: Boolean,
+        routerUrl: String?
     ) {
         applicationScope.launch(mainImmediate) {
             val scid = routeHint.toLightningRouteHint()?.getScid()
@@ -633,7 +634,8 @@ abstract class SphinxRepository(
                     isRestoreAccount,
                     mixerServerIp,
                     tribeServerHost,
-                    isProductionEnvironment
+                    isProductionEnvironment,
+                    routerUrl
                 )
                 delay(1000L)
 
@@ -645,22 +647,19 @@ abstract class SphinxRepository(
     }
 
     override fun onRestoreAccount(isProductionEnvironment: Boolean) {
-        if (isProductionEnvironment) {
-            applicationScope.launch(mainImmediate) {
-                networkQueryContact.getAccountConfig().collect { loadResponse ->
-                    when (loadResponse) {
-                        is Response.Success -> {
-                            connectManager.restoreAccount(
-                                loadResponse.value.tribe,
-                                loadResponse.value.tribe_host,
-                                loadResponse.value.default_lsp
-                            )
-                        }
+        applicationScope.launch(mainImmediate) {
+            networkQueryContact.getAccountConfig(isProductionEnvironment).collect { loadResponse ->
+                when (loadResponse) {
+                    is Response.Success -> {
+                        connectManager.restoreAccount(
+                            loadResponse.value.tribe,
+                            loadResponse.value.tribe_host,
+                            loadResponse.value.default_lsp,
+                            loadResponse.value.router
+                        )
                     }
                 }
             }
-        } else {
-            connectManager.restoreAccount(null, null, null)
         }
     }
 

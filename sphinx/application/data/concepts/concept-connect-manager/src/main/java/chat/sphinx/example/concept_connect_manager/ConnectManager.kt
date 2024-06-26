@@ -22,7 +22,8 @@ abstract class ConnectManager {
     abstract fun restoreAccount(
         defaultTribe: String?,
         tribeHost: String?,
-        mixerServerIp: String?
+        mixerServerIp: String?,
+        routerUrl: String?
     )
     abstract fun setInviteCode(inviteString: String)
     abstract fun setMnemonicWords(words: List<String>?)
@@ -148,7 +149,8 @@ interface ConnectManagerListener {
         isRestoreAccount: Boolean,
         mixerServerIp: String?,
         tribeServerHost: String?,
-        isProductionEnvironment: Boolean
+        isProductionEnvironment: Boolean,
+        routerUrl: String?
     )
     fun onRestoreAccount(isProductionEnvironment: Boolean)
     fun onRestoreContacts(contacts: List<String?>)

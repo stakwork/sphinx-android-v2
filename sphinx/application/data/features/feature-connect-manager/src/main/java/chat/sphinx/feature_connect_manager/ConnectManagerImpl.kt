@@ -85,6 +85,7 @@ class ConnectManagerImpl: ConnectManager()
     private var inviterContact: NewContact? = null
     private var hasAttemptedReconnect = false
     private var tribeServer: String? = null
+    private var router: String? = null
     private var delayedRRObjects: MutableList<RunReturn> = mutableListOf()
 
     companion object {
@@ -378,7 +379,8 @@ class ConnectManagerImpl: ConnectManager()
                             isRestoreAccount,
                             getRawMixerIp(),
                             tribeServer,
-                            isProductionEnvironment()
+                            isProductionEnvironment(),
+                            router
                         )
                     }
                 }
@@ -655,7 +657,12 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
-    override fun restoreAccount(defaultTribe: String?, tribeHost: String?, mixerServerIp: String?) {
+    override fun restoreAccount(
+        defaultTribe: String?,
+        tribeHost: String?,
+        mixerServerIp: String?,
+        routerUrl: String?
+    ) {
         val restoreMnemonic = restoreMnemonicWords?.joinToString(" ")
         val seed = generateMnemonicAndSeed(restoreMnemonic)
         val now = getTimestampInMilliseconds()
@@ -664,6 +671,7 @@ class ConnectManagerImpl: ConnectManager()
             ownerSeed = firstSeed
             _mixerIp = mixerServerIp ?: TEST_V2_SERVER_IP
             tribeServer = tribeHost ?: TEST_V2_TRIBES_SERVER
+            router = routerUrl
 
             network = if (isProductionServer()) {
                 MAINNET_NETWORK

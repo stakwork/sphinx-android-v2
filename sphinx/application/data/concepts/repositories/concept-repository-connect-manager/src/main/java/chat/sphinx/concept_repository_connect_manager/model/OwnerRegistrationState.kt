@@ -6,7 +6,8 @@ sealed class OwnerRegistrationState {
         val isRestoreAccount: Boolean,
         val mixerServerIp: String?,
         val tirbeServerHost: String?,
-        val isProductionEnvironment: Boolean
+        val isProductionEnvironment: Boolean,
+        val routerUrl: String?,
     ) : OwnerRegistrationState()
     data class MnemonicWords(val words: String): OwnerRegistrationState()
     data class SignedChallenge(val authToken: String): OwnerRegistrationState()

@@ -16,5 +16,5 @@ abstract class NetworkQueryContact {
         url: RelayUrl
     ): Flow<LoadResponse<Any, ResponseError>>
 
-    abstract fun getAccountConfig(): Flow<LoadResponse<AccountConfigV2, ResponseError>>
+    abstract fun getAccountConfig(isProductionEnvironment: Boolean): Flow<LoadResponse<AccountConfigV2, ResponseError>>
 }

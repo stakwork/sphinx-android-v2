@@ -305,6 +305,7 @@
     <string name="connect_manager_fetch_first_message_error">Error fetching the first message.</string>
     <string name="connect_manager_message_count_error">Error message count.</string>
     <string name="connect_manager_set_device_id_error">Error setting device ID.</string>
+    <string name="connect_manager_set_router_url">Error setting router url.</string>
     <string name="connect_manager_media_token_error">Error obtaining media token.</string>
     <string name="connect_manager_read_message_error">Error reading message.</string>
     <string name="connect_manager_get_read_messages_error">Error retrieving read messages.</string>

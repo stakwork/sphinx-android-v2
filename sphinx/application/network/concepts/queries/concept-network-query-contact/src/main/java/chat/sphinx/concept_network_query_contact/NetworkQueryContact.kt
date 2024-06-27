@@ -16,5 +16,11 @@ abstract class NetworkQueryContact {
         url: RelayUrl
     ): Flow<LoadResponse<Any, ResponseError>>
 
-    abstract fun getAccountConfig(isProductionEnvironment: Boolean): Flow<LoadResponse<AccountConfigV2, ResponseError>>
+    abstract fun getAccountConfig(isProductionEnvironment: Boolean): Flow<LoadResponse<AccountConfigV2Response, ResponseError>>
+
+    abstract fun getNodes(
+        routerUrl: String
+    ): Flow<LoadResponse<NodeResponse, ResponseError>>
+
+
 }

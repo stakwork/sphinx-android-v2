@@ -223,20 +223,21 @@ internal class OnBoardConnectingViewModel @Inject constructor(
 
     private fun fetchRouterUrl(isProductionEnvironment: Boolean) {
         viewModelScope.launch(mainImmediate) {
-            viewModelScope.launch(mainImmediate) {
-                networkQueryContact.getAccountConfig(isProductionEnvironment).collect { loadResponse ->
-                    when (loadResponse) {
-                        is Response.Success -> {
-                            storeRouterUrl(loadResponse.value.router)
-                            delay(100L)
-                            navigator.toOnBoardNameScreen()
-                        }
-                        is Response.Error -> {
-                            submitSideEffect(OnBoardConnectingSideEffect.Notify(
-                                app.getString(R.string.connect_manager_set_router_url))
+            networkQueryContact.getAccountConfig(isProductionEnvironment).collect { loadResponse ->
+                when (loadResponse) {
+                    is Response.Success -> {
+                        storeRouterUrl(loadResponse.value.router)
+                        delay(100L)
+                        navigator.toOnBoardNameScreen()
+                    }
+
+                    is Response.Error -> {
+                        submitSideEffect(
+                            OnBoardConnectingSideEffect.Notify(
+                                app.getString(R.string.connect_manager_set_router_url)
                             )
-                            navigator.toOnBoardNameScreen()
-                        }
+                        )
+                        navigator.toOnBoardNameScreen()
                     }
                 }
             }

@@ -17,6 +17,8 @@ class NetworkQueryContactImpl(
         private const val ENDPOINT_HAS_ADMIN = "/has_admin"
         private const val ENDPOINT_PRODUCTION_CONFIG = "https://config.config.sphinx.chat/api/config/bitcoin"
         private const val ENDPOINT_TEST_CONFIG = "https://config.config.sphinx.chat/api/config/regtest"
+
+        private const val ENDPOINT_GET_NODES = "/api/node"
     }
 
     ///////////
@@ -31,9 +33,16 @@ class NetworkQueryContactImpl(
             responseJsonClass = HasAdminRelayResponse::class.java,
         )
 
-    override fun getAccountConfig(isProductionEnvironment: Boolean): Flow<LoadResponse<AccountConfigV2, ResponseError>> =
+    override fun getAccountConfig(isProductionEnvironment: Boolean): Flow<LoadResponse<AccountConfigV2Response, ResponseError>> =
         networkRelayCall.get(
             if (isProductionEnvironment) ENDPOINT_PRODUCTION_CONFIG else ENDPOINT_TEST_CONFIG,
-            responseJsonClass = AccountConfigV2::class.java
+            responseJsonClass = AccountConfigV2Response::class.java
         )
+
+    override fun getNodes(routerUrl: String): Flow<LoadResponse<NodeResponse, ResponseError>> =
+        networkRelayCall.get(
+            url = routerUrl + ENDPOINT_GET_NODES,
+            responseJsonClass = NodeResponse::class.java,
+        )
+
 }

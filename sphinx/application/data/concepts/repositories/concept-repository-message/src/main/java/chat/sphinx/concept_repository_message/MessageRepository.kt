@@ -38,7 +38,10 @@ interface MessageRepository {
     fun searchMessagesBy(chatId: ChatId, term: String): Flow<List<Message>>
 
     fun getMessageById(messageId: MessageId): Flow<Message?>
+
     fun getMessagesByIds(messagesIds: List<MessageId>): Flow<List<Message?>>
+
+    fun messageGetOkKeysByChatId(chatId: ChatId): Flow<List<MessageId>>
 
     fun getSentConfirmedMessagesByChatId(chatId: ChatId): Flow<List<Message>>
 
@@ -93,6 +96,8 @@ interface MessageRepository {
     )
 
     suspend fun deleteMessage(message: Message)
+
+    suspend fun deleteAllMessagesAndPubKey(pubKey: String, chatId: ChatId)
 
     suspend fun getPaymentTemplates() : Response<List<PaymentTemplate>, ResponseError>
 

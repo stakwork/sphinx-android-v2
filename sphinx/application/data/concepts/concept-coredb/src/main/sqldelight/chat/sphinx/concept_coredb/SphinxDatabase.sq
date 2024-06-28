@@ -874,6 +874,12 @@ WHERE id = (
     WHERE chat_id < 9999 AND sender = 0
 );
 
+messageGetOkKeysByChatId:
+SELECT id
+FROM messageDbo
+WHERE chat_id = :chat_id
+  AND type IN (2, 3, 5, 6, 10, 11, 29);
+
 messageGetAllToShowByChatIdWithLimit:
 SELECT *
 FROM messageDbo

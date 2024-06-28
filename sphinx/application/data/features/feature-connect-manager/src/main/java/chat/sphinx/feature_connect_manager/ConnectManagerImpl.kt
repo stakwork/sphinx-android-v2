@@ -32,6 +32,7 @@ import uniffi.sphinxrs.ParsedInvite
 import uniffi.sphinxrs.RunReturn
 import uniffi.sphinxrs.addContact
 import uniffi.sphinxrs.codeFromInvite
+import uniffi.sphinxrs.deleteMsgs
 import uniffi.sphinxrs.fetchMsgsBatch
 import uniffi.sphinxrs.getDefaultTribeServer
 import uniffi.sphinxrs.getMsgsCounts
@@ -60,6 +61,7 @@ import uniffi.sphinxrs.send
 import uniffi.sphinxrs.setNetwork
 import uniffi.sphinxrs.setPushToken
 import uniffi.sphinxrs.signBytes
+import uniffi.sphinxrs.updateTribe
 import uniffi.sphinxrs.xpubFromSeed
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
@@ -86,8 +88,8 @@ class ConnectManagerImpl: ConnectManager()
     private var delayedRRObjects: MutableList<RunReturn> = mutableListOf()
 
     companion object {
-        const val TEST_V2_SERVER_IP = "34.229.52.200:1883"
-        const val TEST_V2_TRIBES_SERVER = "34.229.52.200:8801"
+        const val TEST_V2_SERVER_IP = "75.101.247.127:1883"
+        const val TEST_V2_TRIBES_SERVER = "75.101.247.127:8801"
         const val REGTEST_NETWORK = "regtest"
         const val MAINNET_NETWORK = "bitcoin"
         const val TEST_SERVER_PORT =  1883
@@ -772,7 +774,7 @@ class ConnectManagerImpl: ConnectManager()
                 getCurrentUserState(),
                 totalHighestIndex?.toULong() ?: 0.toULong(),
                 limit.toUInt(),
-                true,
+                    true,
             )
             handleRunReturn(fetchMessages, mqttClient)
 
@@ -1010,7 +1012,9 @@ class ConnectManagerImpl: ConnectManager()
         nickname: String,
         welcomeMessage: String,
         sats: Long,
-        tribeServerPubKey: String?
+        tribeServerPubKey: String?,
+        tribeServerIp: String?,
+        mixerIp: String?
     ) {
         val now = getTimestampInMilliseconds()
 
@@ -1020,10 +1024,10 @@ class ConnectManagerImpl: ConnectManager()
                 ownerSeed!!,
                 now,
                 getCurrentUserState(),
-                _mixerIp!!,
+                mixerIp ?: TEST_V2_SERVER_IP,
                 convertSatsToMillisats(sats),
                 ownerInfoStateFlow.value.alias ?: "",
-                "34.229.52.200:8801",
+                tribeServerIp ?: TEST_V2_TRIBES_SERVER,
                 "02792ee5b9162f9a00686aaa5d5274e91fd42a141113007797b5c1872d43f78e07"
             )
 
@@ -1234,6 +1238,40 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
+    override fun deleteContactMessages(messageIndexList: List<Long>) {
+        try {
+            val deleteOkKeyMessages = deleteMsgs(
+                ownerSeed!!,
+                getTimestampInMilliseconds(),
+                getCurrentUserState(),
+                null,
+                messageIndexList.map { it.toULong() }
+            )
+            handleRunReturn(deleteOkKeyMessages, mqttClient)
+        } catch (e: Exception) {
+//            notifyListeners {
+//                onConnectManagerError(ConnectManagerError.DeleteContactMessagesError)
+//            }
+            Log.e("MQTT_MESSAGES", "deleteContactMessages ${e.message}")
+        }
+    }
+
+    override fun deletePubKeyMessages(contactPubKey: String) {
+        try {
+            val deletePubKeyMsgs = deleteMsgs(
+                ownerSeed!!,
+                getTimestampInMilliseconds(),
+                getCurrentUserState(),
+                contactPubKey,
+                null
+            )
+            handleRunReturn(deletePubKeyMsgs, mqttClient)
+        }
+        catch (e: Exception) {
+            Log.e("MQTT_MESSAGES", "deletePubKeyMessages ${e.message}")
+        }
+    }
+
     override fun getMessagesStatusByTags(tags: List<String>) {
         try {
             val messageStatus = getTags(
@@ -1345,6 +1383,26 @@ class ConnectManagerImpl: ConnectManager()
                 onConnectManagerError(ConnectManagerError.ServerPubKeyError)
             }
             null
+        }
+    }
+
+    override fun editTribe(tribeJson: String) {
+        val tribeServerPubkey = getTribeServerPubKey()
+        try {
+            val updatedTribe = tribeServerPubkey?.let {
+                updateTribe(
+                    ownerSeed!!,
+                    getTimestampInMilliseconds(),
+                    getCurrentUserState(),
+                    it,
+                    tribeJson
+                )
+            }
+            if (updatedTribe != null) {
+                handleRunReturn(updatedTribe, mqttClient)
+            }
+        } catch (e:Exception) {
+            Log.d("MQTT_MESSAGES", "editTribe ${e.message}")
         }
     }
 

@@ -10,7 +10,6 @@ import chat.sphinx.wrapper_common.feed.toFeedUrl
 import chat.sphinx.wrapper_chat.toAppUrl
 import chat.sphinx.wrapper_common.feed.FeedType
 import chat.sphinx.wrapper_common.feed.toFeedType
-import chat.sphinx.wrapper_common.lightning.LightningRouteHint
 import java.io.File
 
 class CreateTribe private constructor(
@@ -246,9 +245,9 @@ class CreateTribe private constructor(
         )
     }
 
-    fun toNewCreateTribe(ownerAlias: String, image: String?): NewCreateTribe {
+    fun toNewCreateTribe(ownerAlias: String, image: String?, tribePubKey: String?): NewCreateTribe {
         return NewCreateTribe(
-            pubkey = null,
+            pubkey = tribePubKey,
             route_hint = null,
             name = this.name,
             description = this.description,

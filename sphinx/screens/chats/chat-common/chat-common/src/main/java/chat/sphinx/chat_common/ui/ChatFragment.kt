@@ -9,6 +9,8 @@ import android.graphics.pdf.PdfRenderer
 import android.os.Bundle
 import android.os.ParcelFileDescriptor
 import android.text.Editable
+import android.text.InputFilter
+import android.text.Spanned
 import android.text.TextWatcher
 import android.util.Log
 import android.view.View
@@ -358,6 +360,29 @@ abstract class ChatFragment<
 
         footerBinding.apply {
             insetterActivity.addNavigationBarPadding(root)
+
+            editTextChatFooter.filters = arrayOf<InputFilter>(object : InputFilter {
+                override fun filter(
+                    source: CharSequence,
+                    start: Int,
+                    end: Int,
+                    dest: Spanned,
+                    dstart: Int,
+                    dend: Int
+                ): CharSequence {
+                    val currentText = dest.toString()
+                    val proposedText = currentText.substring(0, dstart) + source.subSequence(start, end) + currentText.substring(dend)
+
+                    return if (proposedText.toByteArray().size > 594) {
+                        // If the proposed text exceeds the limit, return an empty string to prevent the change
+                        ""
+                    } else {
+                        // If the proposed text does not exceed the limit, allow the change
+                        source.subSequence(start, end)
+
+                    }
+                }
+            })
 
             textViewChatFooterSend.setOnClickListener {
                 lifecycleScope.launch(viewModel.mainImmediate) {

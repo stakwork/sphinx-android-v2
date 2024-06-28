@@ -57,6 +57,8 @@ abstract class ConnectManager {
     abstract fun setMute(muteLevel: Int, contactPubKey: String)
     abstract fun getMutedChats()
 
+    abstract fun addNodesFromResponse(nodesJson: String)
+
     // Messaging Methods
     abstract fun sendMessage(
         sphinxMessage: String,
@@ -161,6 +163,7 @@ interface ConnectManagerListener {
     fun onInitialTribe(tribe: String, isProductionEnvironment: Boolean)
     fun onLastReadMessages(lastReadMessages: String)
     fun onUpdateMutes(mutes: String)
+    fun onGetNodes()
     fun onConnectManagerError(error: ConnectManagerError)
 
     // Messaging Callbacks

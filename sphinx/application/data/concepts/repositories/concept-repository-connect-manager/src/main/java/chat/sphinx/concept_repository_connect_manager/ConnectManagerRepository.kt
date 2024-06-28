@@ -70,5 +70,6 @@ interface ConnectManagerRepository {
     suspend fun getPubKeyByEncryptedChild(child: String): Flow<ChatId?>
     fun getTagsByChatId(chatId: ChatId)
     suspend fun updateLspAndOwner(data: String) {}
+    fun requestNodes(nodeUrl: String)
 
 }

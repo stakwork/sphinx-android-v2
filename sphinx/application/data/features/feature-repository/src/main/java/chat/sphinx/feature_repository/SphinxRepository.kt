@@ -490,6 +490,19 @@ abstract class SphinxRepository(
         }
     }
 
+    override fun requestNodes(nodeUrl: String) {
+        applicationScope.launch(mainImmediate) {
+            networkQueryContact.getNodes(nodeUrl).collect { loadResponse ->
+                when (loadResponse) {
+                    is Response.Success -> {
+                        val nodes = loadResponse.value
+                        connectManager.addNodesFromResponse(nodes)
+                    }
+                }
+            }
+        }
+    }
+
     override suspend fun exitAndDeleteTribe(tribe: Chat) {
         val queries = coreDB.getSphinxDatabaseQueries()
         applicationScope.launch(io) {
@@ -925,6 +938,10 @@ abstract class SphinxRepository(
                 }
             }
         }
+    }
+
+    override fun onGetNodes() {
+        connectionManagerState.value = OwnerRegistrationState.GetNodes
     }
 
     override fun listenToOwnerCreation(callback: () -> Unit) {

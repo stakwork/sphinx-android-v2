@@ -31,6 +31,7 @@ import org.json.JSONObject
 import uniffi.sphinxrs.ParsedInvite
 import uniffi.sphinxrs.RunReturn
 import uniffi.sphinxrs.addContact
+import uniffi.sphinxrs.addNode
 import uniffi.sphinxrs.codeFromInvite
 import uniffi.sphinxrs.deleteMsgs
 import uniffi.sphinxrs.fetchMsgsBatch
@@ -258,6 +259,10 @@ class ConnectManagerImpl: ConnectManager()
 
                     getReadMessages()
                     getMutedChats()
+
+                    notifyListeners {
+                        onGetNodes()
+                    }
                 }
             }
         } catch (e: Exception) {
@@ -1132,6 +1137,20 @@ class ConnectManagerImpl: ConnectManager()
             handleRunReturn(mutedChats, mqttClient)
         } catch (e: Exception) {
             Log.e("MQTT_MESSAGES", "getMutedChats ${e.message}")
+        }
+    }
+
+    override fun addNodesFromResponse(nodesJson: String) {
+        try {
+          val addNodes = addNode(
+              nodesJson
+          )
+            handleRunReturn(addNodes, mqttClient)
+        } catch (e: Exception) {
+//            notifyListeners {
+//                onConnectManagerError(ConnectManagerError.AddNodesError)
+//            }
+            Log.e("MQTT_MESSAGES", "addNodesFromResponse ${e.message}")
         }
     }
 

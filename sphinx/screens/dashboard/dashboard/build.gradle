@@ -69,7 +69,6 @@ dependencies {
     implementation project(path: ':sphinx:application:data:concepts:repositories:concept-repository-lightning')
     implementation project(path: ':sphinx:application:data:concepts:repositories:concept-repository-connect-manager')
 
-
     api project(path: ':sphinx:service:concepts:concept-service-media-player')
 
     implementation deps.androidx.swipeRefreshLayout

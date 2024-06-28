@@ -20,7 +20,6 @@ abstract class NetworkQueryContact {
 
     abstract fun getNodes(
         routerUrl: String
-    ): Flow<LoadResponse<NodeResponse, ResponseError>>
-
+    ): Flow<LoadResponse<String, ResponseError>>
 
 }

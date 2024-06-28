@@ -150,6 +150,63 @@ class NetworkRelayCallImpl(
         }
     }
 
+    override fun getRawJson(
+        url: String,
+        headers: Map<String, String>?,
+        useExtendedNetworkCallClient: Boolean
+    ): Flow<LoadResponse<String, ResponseError>> = flow {
+
+        emit(LoadResponse.Loading)
+
+        try {
+            val requestBuilder = buildRequest(url, headers)
+
+            val client = if (useExtendedNetworkCallClient) {
+                extendedClientLock.withLock {
+                    extendedNetworkCallClient ?: networkClient.getClient().newBuilder()
+                        .connectTimeout(120, TimeUnit.SECONDS)
+                        .readTimeout(45, TimeUnit.SECONDS)
+                        .writeTimeout(45, TimeUnit.SECONDS)
+                        .build()
+                        .also { extendedNetworkCallClient = it }
+                }
+            } else {
+                networkClient.getClient()
+            }
+
+            val networkResponse = withContext(io) {
+                client.newCall(requestBuilder.build()).execute()
+            }
+
+            val body = networkResponse.body ?: throw NullPointerException(
+                """
+                NetworkResponse.body returned null
+                NetworkResponse: $networkResponse
+            """.trimIndent()
+            )
+
+            if (!networkResponse.isSuccessful) {
+                val response = try {
+                    moshi.adapter(NetworkRelayErrorResponseDto::class.java).fromJson(body.source())
+                } catch (e: Exception) {
+                    body.close()
+                    throw IOException(networkResponse.toString())
+                }
+
+                body.close()
+                throw IOException(response?.error ?: networkResponse.toString())
+            }
+
+            val rawJson = withContext(default) {
+                body.string()
+            }
+
+            emit(Response.Success(rawJson))
+        } catch (e: Exception) {
+            emit(handleException(LOG, GET, url, e))
+        }
+    }
+
     override fun <T: Any, V: Any> put(
         url: String,
         responseJsonClass: Class<T>,

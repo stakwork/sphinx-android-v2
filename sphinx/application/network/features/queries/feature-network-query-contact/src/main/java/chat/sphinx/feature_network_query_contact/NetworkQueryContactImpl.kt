@@ -19,6 +19,7 @@ class NetworkQueryContactImpl(
         private const val ENDPOINT_TEST_CONFIG = "https://config.config.sphinx.chat/api/config/regtest"
 
         private const val ENDPOINT_GET_NODES = "/api/node"
+        private const val PROTOCOL_HTTPS = "https://"
     }
 
     ///////////
@@ -39,10 +40,9 @@ class NetworkQueryContactImpl(
             responseJsonClass = AccountConfigV2Response::class.java
         )
 
-    override fun getNodes(routerUrl: String): Flow<LoadResponse<NodeResponse, ResponseError>> =
-        networkRelayCall.get(
-            url = routerUrl + ENDPOINT_GET_NODES,
-            responseJsonClass = NodeResponse::class.java,
+    override fun getNodes(routerUrl: String): Flow<LoadResponse<String, ResponseError>> =
+        networkRelayCall.getRawJson(
+            url = PROTOCOL_HTTPS +  routerUrl + ENDPOINT_GET_NODES
         )
 
 }

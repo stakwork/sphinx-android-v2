@@ -147,7 +147,6 @@ internal class DashboardViewModel @Inject constructor(
     private val chatRepository: ChatRepository,
     private val feedRepository: FeedRepository,
     private val actionsRepository: ActionsRepository,
-    private val lightningRepository: LightningRepository,
 
     private val networkQueryAuthorizeExternal: NetworkQueryAuthorizeExternal,
     private val networkQueryPeople: NetworkQueryPeople,
@@ -192,6 +191,7 @@ internal class DashboardViewModel @Inject constructor(
         const val SERVER_SETTINGS_SHARED_PREFERENCES = "server_ip_settings"
         const val ONION_STATE_KEY = "onion_state"
         const val NETWORK_MIXER_IP = "network_mixer_ip"
+        const val ROUTER_URL= "router_url"
     }
 
     private val _hideBalanceStateFlow: MutableStateFlow<Int> by lazy {
@@ -262,6 +262,13 @@ internal class DashboardViewModel @Inject constructor(
                             connectionState.inviteCode,
                             app.getString(R.string.dashboard_invite_code_screen),
                         )
+                    }
+                    is OwnerRegistrationState.GetNodes -> {
+                        val routerUrl = serverSettingsSharedPreferences.getString(ROUTER_URL, null)
+                        if (routerUrl != null) {
+                            connectManagerRepository.requestNodes(routerUrl)
+                        }
+
                     }
                     else -> {}
                 }
@@ -359,14 +366,6 @@ internal class DashboardViewModel @Inject constructor(
 
     private fun getUserState(): String? {
         return userStateSharedPreferences.getString(ONION_STATE_KEY, null)
-    }
-    private fun deleteUserState(userStates: List<String>) {
-        val editor = userStateSharedPreferences.edit()
-
-        for (state in userStates) {
-            editor.remove(state)
-        }
-        editor.apply()
     }
 
     private fun getNetworkMixerIp(): String? {

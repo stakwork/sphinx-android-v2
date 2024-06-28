@@ -9,3 +9,9 @@
 ## Version 1.0.0-alpha03 (2021-06-14)
 - Fixes for contacts addition and key exchange
 - Other fixes and improvements
+
+## Version 1.0.0-alpha04 (2021-06-28)
+- Adds ability to delete contact
+- Improves tribe exit and delete
+- Adds paid messages
+- Other fixes and improvements

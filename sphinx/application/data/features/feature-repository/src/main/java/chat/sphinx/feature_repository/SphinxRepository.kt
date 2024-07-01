@@ -4476,18 +4476,10 @@ abstract class SphinxRepository(
         return response ?: Response.Error(ResponseError("Failed to pay invoice"))
     }
 
-    override suspend fun payNewPaymentRequest(message: Message) {
+    override suspend fun payNewPaymentRequest(paymentRequest: LightningPaymentRequest?) {
         applicationScope.launch(mainImmediate) {
-            val queries = coreDB.getSphinxDatabaseQueries()
-            val contact = getContactById(ContactId(message.chatId.value)).firstOrNull()
-
-            val currentProvisionalId: MessageId? = withContext(io) {
-                queries.messageGetLowestProvisionalMessageId().executeAsOneOrNull()
-            }
-            val provisionalId = MessageId((currentProvisionalId?.value ?: 0L) - 1)
-
-            message.paymentRequest?.value?.let {
-                connectManager.processInvoicePayment(it)
+            paymentRequest?.value?.let {
+                connectManager.processContactInvoicePayment(it)
             }
         }
     }

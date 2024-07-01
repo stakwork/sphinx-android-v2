@@ -1483,7 +1483,7 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
-    override fun processInvoicePayment(paymentRequest: String) {
+    override fun processContactInvoicePayment(paymentRequest: String) {
         val now = getTimestampInMilliseconds()
 
         try {

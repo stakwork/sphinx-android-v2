@@ -105,7 +105,7 @@ abstract class ConnectManager {
         memo: String
     ): Pair<String, String>? // invoice, paymentHash
     abstract fun sendKeySend(pubKey: String, amount: Long)
-    abstract fun processInvoicePayment(paymentRequest: String)
+    abstract fun processContactInvoicePayment(paymentRequest: String)
     abstract fun retrievePaymentHash(paymentRequest: String): String?
     abstract fun getPayments(
         lastMsgDate: Long,

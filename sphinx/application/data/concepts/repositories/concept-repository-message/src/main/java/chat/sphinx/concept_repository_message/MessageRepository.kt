@@ -111,8 +111,6 @@ interface MessageRepository {
 
     suspend fun payPaymentRequest(message: Message) : Response<Any, ResponseError>
 
-    suspend fun payNewPaymentRequest(message: Message)
-
     suspend fun sendNewPaymentRequest(
         requestPayment: SendPaymentRequest
     )

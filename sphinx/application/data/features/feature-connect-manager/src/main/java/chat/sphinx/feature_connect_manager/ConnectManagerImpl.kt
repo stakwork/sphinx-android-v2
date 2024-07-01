@@ -1006,7 +1006,7 @@ class ConnectManagerImpl: ConnectManager()
                 contact.lightningNodePubKey?.value!!,
                 contact.lightningRouteHint?.value!!,
                 ownerInfoStateFlow.value.alias ?: "",
-                ownerInfoStateFlow.value?.picture ?: "",
+                ownerInfoStateFlow.value.picture ?: "",
                 5000.toULong(),
                 contact.inviteCode,
                 contact.contactAlias?.value
@@ -1142,9 +1142,9 @@ class ConnectManagerImpl: ConnectManager()
 
     override fun addNodesFromResponse(nodesJson: String) {
         try {
-          val addNodes = addNode(
-              nodesJson
-          )
+            val addNodes = addNode(
+                nodesJson
+            )
             handleRunReturn(addNodes, mqttClient)
         } catch (e: Exception) {
 //            notifyListeners {
@@ -1165,8 +1165,8 @@ class ConnectManagerImpl: ConnectManager()
                     ownerSeed ?: "",
                     getTimestampInMilliseconds(),
                     getCurrentUserState(),
-                    ownerInfoStateFlow.value?.alias ?: "",
-                    ownerInfoStateFlow.value?.picture ?: ""
+                    ownerInfoStateFlow.value.alias ?: "",
+                    ownerInfoStateFlow.value.picture ?: ""
                 )
 
                 mqttClient?.let { client ->
@@ -1209,8 +1209,8 @@ class ConnectManagerImpl: ConnectManager()
                 messageType.toUByte(),
                 sphinxMessage,
                 getCurrentUserState(),
-                ownerInfoStateFlow.value?.alias ?: "",
-                ownerInfoStateFlow.value?.picture ?: "",
+                ownerInfoStateFlow.value.alias ?: "",
+                ownerInfoStateFlow.value.picture ?: "",
                 convertSatsToMillisats(nnAmount),
                 isTribe
             )
@@ -1250,8 +1250,8 @@ class ConnectManagerImpl: ConnectManager()
                 17.toUByte(), // Fix this hardcoded value
                 sphinxMessage,
                 getCurrentUserState(),
-                ownerInfoStateFlow.value?.alias ?: "",
-                ownerInfoStateFlow.value?.picture ?: "",
+                ownerInfoStateFlow.value.alias ?: "",
+                ownerInfoStateFlow.value.picture ?: "",
                 convertSatsToMillisats(nnAmount),
                 isTribe
             )
@@ -1492,8 +1492,8 @@ class ConnectManagerImpl: ConnectManager()
                 now,
                 getCurrentUserState(),
                 paymentRequest,
-                ownerInfoStateFlow.value?.alias ?: "",
-                ownerInfoStateFlow.value?.picture ?: "",
+                ownerInfoStateFlow.value.alias ?: "",
+                ownerInfoStateFlow.value.picture ?: "",
                 false // not implemented on tribes yet
             )
             handleRunReturn(processInvoice, mqttClient)

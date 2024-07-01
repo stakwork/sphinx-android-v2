@@ -56,7 +56,6 @@ abstract class ConnectManager {
     abstract fun getReadMessages()
     abstract fun setMute(muteLevel: Int, contactPubKey: String)
     abstract fun getMutedChats()
-
     abstract fun addNodesFromResponse(nodesJson: String)
 
     // Messaging Methods
@@ -76,11 +75,9 @@ abstract class ConnectManager {
     abstract fun deleteContactMessages(
         messageIndexList: List<Long>,
     )
-
     abstract fun deletePubKeyMessages(
         contactPubKey: String
     )
-
     abstract fun getMessagesStatusByTags(tags: List<String>)
 
     // Tribe Management Methods
@@ -98,7 +95,6 @@ abstract class ConnectManager {
         tribePubKey: String
     )
     abstract fun getTribeServerPubKey(): String?
-
     abstract fun editTribe(
         tribeJson: String
     )

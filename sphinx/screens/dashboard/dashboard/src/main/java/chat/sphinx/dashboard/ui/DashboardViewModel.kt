@@ -116,6 +116,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -667,9 +668,13 @@ internal class DashboardViewModel @Inject constructor(
     private suspend fun handleContactLink(pubKey: LightningNodePubKey, routeHint: LightningRouteHint?) {
         scannedNodeAddress.value = Pair(pubKey, routeHint)
 
-        contactRepository.getContactByPubKey(pubKey).firstOrNull()?.let { _ ->
-            navBarNavigator.toPaymentSendDetail(pubKey, routeHint, null)
-        } ?: scannerMenuHandler.viewStateContainer.updateViewState(MenuBottomViewState.Open)
+        contactRepository.getContactByPubKey(pubKey).collect { contact ->
+            if (contact != null) {
+                navBarNavigator.toPaymentSendDetail(pubKey, contact.routeHint, contact.id)
+            } else {
+                scannerMenuHandler.viewStateContainer.updateViewState(MenuBottomViewState.Open)
+            }
+        }
     }
 
     private suspend fun goToContactChat(contact: Contact) {

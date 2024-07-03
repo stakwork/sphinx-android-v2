@@ -6,6 +6,7 @@ import chat.sphinx.concept_network_relay_call.NetworkRelayCall
 import chat.sphinx.feature_network_query_contact.model.*
 import chat.sphinx.kotlin_response.LoadResponse
 import chat.sphinx.kotlin_response.ResponseError
+import chat.sphinx.wrapper_common.lightning.LightningNodePubKey
 import chat.sphinx.wrapper_relay.RelayUrl
 import kotlinx.coroutines.flow.Flow
 
@@ -17,6 +18,7 @@ class NetworkQueryContactImpl(
         private const val ENDPOINT_HAS_ADMIN = "/has_admin"
         private const val ENDPOINT_PRODUCTION_CONFIG = "https://config.config.sphinx.chat/api/config/bitcoin"
         private const val ENDPOINT_TEST_CONFIG = "https://config.config.sphinx.chat/api/config/regtest"
+        private const val ENDPOINT_ROUTE = "/api/route?pubkey=%s&msat=%s"
 
         private const val ENDPOINT_GET_NODES = "/api/node"
         private const val PROTOCOL_HTTPS = "https://"
@@ -44,5 +46,17 @@ class NetworkQueryContactImpl(
         networkRelayCall.getRawJson(
             url = PROTOCOL_HTTPS +  routerUrl + ENDPOINT_GET_NODES
         )
+
+    override fun getRoutingNodes(
+        routerUrl: String,
+        lightningNodePubKey: LightningNodePubKey,
+        milliSats: Long
+    ): Flow<LoadResponse<String, ResponseError>> {
+        val url = PROTOCOL_HTTPS + routerUrl + ENDPOINT_ROUTE.format(lightningNodePubKey.value, milliSats)
+
+        return networkRelayCall.getRawJson(
+            url = url
+        )
+    }
 
 }

@@ -33,6 +33,7 @@ import uniffi.sphinxrs.RunReturn
 import uniffi.sphinxrs.addContact
 import uniffi.sphinxrs.addNode
 import uniffi.sphinxrs.codeFromInvite
+import uniffi.sphinxrs.concatRoute
 import uniffi.sphinxrs.deleteMsgs
 import uniffi.sphinxrs.fetchMsgsBatch
 import uniffi.sphinxrs.getDefaultTribeServer
@@ -54,6 +55,8 @@ import uniffi.sphinxrs.mnemonicFromEntropy
 import uniffi.sphinxrs.mnemonicToSeed
 import uniffi.sphinxrs.mute
 import uniffi.sphinxrs.parseInvite
+import uniffi.sphinxrs.parseInvoice
+import uniffi.sphinxrs.payInvoice
 import uniffi.sphinxrs.paymentHashFromInvoice
 import uniffi.sphinxrs.processInvite
 import uniffi.sphinxrs.read
@@ -1154,6 +1157,24 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
+    override fun concatNodesFromResponse(
+        nodesJson: String,
+        routerPubKey: String,
+        amount: Long
+    ) {
+        try {
+            val concatNodes = concatRoute(
+                getCurrentUserState(),
+                nodesJson,
+                routerPubKey,
+                amount.toULong()
+            )
+            handleRunReturn(concatNodes, mqttClient)
+        } catch (e: Exception) {
+            Log.e("MQTT_MESSAGES", "concatNodesFromResponse ${e.message}")
+        }
+    }
+
     // Messaging Methods
 
     private fun handleMessageArrived(topic: String?, message: MqttMessage?) {
@@ -1505,6 +1526,24 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
+    override fun processInvoicePayment(
+        paymentRequest: String,
+        amount: Long
+    ) {
+        try {
+            val invoice = payInvoice(
+                ownerSeed!!,
+                getTimestampInMilliseconds(),
+                getCurrentUserState(),
+                paymentRequest,
+                amount.toULong()
+            )
+            handleRunReturn(invoice, mqttClient)
+        } catch (e: Exception) {
+            Log.e("MQTT_MESSAGES", "processInvoicePayment ${e.message}")
+        }
+    }
+
     override fun retrievePaymentHash(paymentRequest: String): String? {
         return try {
             paymentHashFromInvoice(paymentRequest)
@@ -1633,6 +1672,14 @@ class ConnectManagerImpl: ConnectManager()
                 onConnectManagerError(ConnectManagerError.MediaTokenError)
             }
             Log.d("MQTT_MESSAGES", "Error to generate media token $e")
+            null
+        }
+    }
+
+    override fun getInvoiceInfo(invoice: String): String? {
+        return try {
+            parseInvoice(invoice)
+        } catch (e: Exception) {
             null
         }
     }

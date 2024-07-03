@@ -57,6 +57,11 @@ abstract class ConnectManager {
     abstract fun setMute(muteLevel: Int, contactPubKey: String)
     abstract fun getMutedChats()
     abstract fun addNodesFromResponse(nodesJson: String)
+    abstract fun concatNodesFromResponse(
+        nodesJson: String,
+        routerPubKey: String,
+        amount: Long
+    )
 
     // Messaging Methods
     abstract fun sendMessage(
@@ -106,6 +111,10 @@ abstract class ConnectManager {
     ): Pair<String, String>? // invoice, paymentHash
     abstract fun sendKeySend(pubKey: String, amount: Long)
     abstract fun processContactInvoicePayment(paymentRequest: String)
+    abstract fun processInvoicePayment(
+        paymentRequest: String,
+        amount: Long,
+    )
     abstract fun retrievePaymentHash(paymentRequest: String): String?
     abstract fun getPayments(
         lastMsgDate: Long,
@@ -124,6 +133,8 @@ abstract class ConnectManager {
         metaData: String?,
         amount: Long?
     ): String?
+
+    abstract fun getInvoiceInfo(invoice: String): String?
 
     // Listener Methods
     abstract fun addListener(listener: ConnectManagerListener): Boolean

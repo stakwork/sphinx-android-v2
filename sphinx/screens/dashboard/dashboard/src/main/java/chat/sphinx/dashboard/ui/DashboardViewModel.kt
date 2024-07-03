@@ -9,7 +9,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import app.cash.exhaustive.Exhaustive
 import chat.sphinx.concept_background_login.BackgroundLoginHandler
-import chat.sphinx.concept_network_query_crypter.NetworkQueryCrypter
+import chat.sphinx.concept_network_query_contact.NetworkQueryContact
 import chat.sphinx.concept_network_query_people.NetworkQueryPeople
 import chat.sphinx.concept_network_query_people.model.isClaimOnLiquidPath
 import chat.sphinx.concept_network_query_people.model.isDeleteMethod
@@ -39,6 +39,8 @@ import chat.sphinx.dashboard.ui.viewstates.DashboardMotionViewState
 import chat.sphinx.dashboard.ui.viewstates.DashboardTabsViewState
 import chat.sphinx.dashboard.ui.viewstates.DeepLinkPopupViewState
 import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
+import chat.sphinx.example.wrapper_mqtt.InvoiceBolt11
+import chat.sphinx.example.wrapper_mqtt.InvoiceBolt11.Companion.toInvoiceBolt11
 import chat.sphinx.kotlin_response.LoadResponse
 import chat.sphinx.kotlin_response.Response
 import chat.sphinx.logger.SphinxLogger
@@ -68,11 +70,11 @@ import chat.sphinx.wrapper_common.feed.toFeedItemLink
 import chat.sphinx.wrapper_common.isValidExternalAuthorizeLink
 import chat.sphinx.wrapper_common.isValidExternalRequestLink
 import chat.sphinx.wrapper_common.isValidPeopleConnectLink
-import chat.sphinx.wrapper_common.lightning.Bolt11
 import chat.sphinx.wrapper_common.lightning.LightningNodePubKey
 import chat.sphinx.wrapper_common.lightning.LightningPaymentRequest
 import chat.sphinx.wrapper_common.lightning.LightningRouteHint
 import chat.sphinx.wrapper_common.lightning.Sat
+import chat.sphinx.wrapper_common.lightning.getLspPubKey
 import chat.sphinx.wrapper_common.lightning.isValidLightningNodeLink
 import chat.sphinx.wrapper_common.lightning.isValidLightningNodePubKey
 import chat.sphinx.wrapper_common.lightning.isValidLightningPaymentRequest
@@ -121,6 +123,7 @@ import kotlinx.coroutines.withContext
 import org.jitsi.meet.sdk.JitsiMeetActivity
 import org.jitsi.meet.sdk.JitsiMeetConferenceOptions
 import org.jitsi.meet.sdk.JitsiMeetUserInfo
+import org.json.JSONObject
 import javax.inject.Inject
 
 
@@ -150,7 +153,7 @@ internal class DashboardViewModel @Inject constructor(
     private val networkQueryAuthorizeExternal: NetworkQueryAuthorizeExternal,
     private val networkQueryPeople: NetworkQueryPeople,
     private val pushNotificationRegistrar: PushNotificationRegistrar,
-    private val networkQueryCrypter: NetworkQueryCrypter,
+    private val networkQueryContact: NetworkQueryContact,
 
     private val walletDataHandler: WalletDataHandler,
 
@@ -267,7 +270,6 @@ internal class DashboardViewModel @Inject constructor(
                         if (routerUrl != null) {
                             connectManagerRepository.requestNodes(routerUrl)
                         }
-
                     }
                     else -> {}
                 }
@@ -592,8 +594,8 @@ internal class DashboardViewModel @Inject constructor(
                     }
                 } ?: code.toLightningPaymentRequestOrNull()?.let { lightningPaymentRequest ->
                     try {
-                        val bolt11 = Bolt11.decode(lightningPaymentRequest)
-                        val amount = bolt11.getSatsAmount()
+                        val bolt11 = connectManagerRepository.getInvoiceInfo(lightningPaymentRequest.value)?.toInvoiceBolt11(moshi)
+                        val amount = bolt11?.getSatsAmount()
 
                         if (amount != null) {
                             submitSideEffect(
@@ -601,7 +603,7 @@ internal class DashboardViewModel @Inject constructor(
                                     amount.value,
                                     bolt11.getMemo()
                                 ) {
-                                    payLightningPaymentRequest(lightningPaymentRequest)
+                                    processLightningPaymentRequest(lightningPaymentRequest, bolt11)
                                 }
                             )
                         } else {
@@ -1216,9 +1218,76 @@ internal class DashboardViewModel @Inject constructor(
         return owner
     }
 
-    private fun payLightningPaymentRequest(lightningPaymentRequest: LightningPaymentRequest) {
-        viewModelScope.launch(mainImmediate) {
-            connectManagerRepository.payNewPaymentRequest(lightningPaymentRequest)
+    private var payInvoiceJob: Job? = null
+
+    private fun processLightningPaymentRequest(
+        lightningPaymentRequest: LightningPaymentRequest,
+        invoiceBolt11: InvoiceBolt11
+    ) {
+        if (payInvoiceJob?.isActive == true) {
+            return
+        }
+
+        payInvoiceJob = viewModelScope.launch(mainImmediate) {
+            val balance = getAccountBalance().firstOrNull() ?: return@launch
+
+            val invoiceAmount = invoiceBolt11.getSatsAmount()?.value
+            if (invoiceAmount != null && invoiceAmount > balance.balance.value) {
+                submitSideEffect(ChatListSideEffect.Notify(app.getString(R.string.balance_too_low)))
+                return@launch
+            }
+
+            val invoicePayeePubKey = invoiceBolt11.getPubKey()
+            val invoiceAmountMilisat = invoiceBolt11.getMilliSatsAmount()?.value
+
+            if (invoicePayeePubKey == null || invoiceAmountMilisat == null) {
+                 submitSideEffect(ChatListSideEffect.Notify(app.getString(R.string.invalid_invoice)))
+                return@launch
+            }
+
+            val contact = contactRepository.getContactByPubKey(invoicePayeePubKey).firstOrNull()
+            val contactLspPubKey = contact?.routeHint?.getLspPubKey()
+            val ownerLsp = getOwner().routeHint?.getLspPubKey()
+
+            if (contact == null || (contactLspPubKey != null && contactLspPubKey != ownerLsp)) {
+                val routerUrl = serverSettingsSharedPreferences.getString(ROUTER_URL, null)
+                    if (routerUrl == null) {
+                        submitSideEffect(ChatListSideEffect.Notify(app.getString(R.string.router_url_not_found)))
+                        return@launch
+                    }
+                networkQueryContact.getRoutingNodes(
+                    routerUrl,
+                    invoicePayeePubKey,
+                    invoiceAmountMilisat
+                ).collect { response ->
+                    when (response) {
+                        is LoadResponse.Loading -> {}
+                        is Response.Error -> {
+                            submitSideEffect(ChatListSideEffect.Notify(app.getString(R.string.error_getting_route)))
+                        }
+                        is Response.Success -> {
+                            if (response.value.isNotEmpty()) {
+                                val jsonObject = JSONObject(response.value)
+                                val routerPubKey = jsonObject.getString("pubkey")
+
+                                connectManagerRepository.payInvoice(
+                                    lightningPaymentRequest,
+                                    response.value,
+                                    routerPubKey,
+                                    invoiceAmountMilisat
+                                )
+                            }
+                        }
+                    }
+                }
+            } else {
+                connectManagerRepository.payInvoice(
+                    lightningPaymentRequest,
+                    null,
+                    null,
+                    invoiceAmountMilisat
+                )
+            }
         }
     }
 

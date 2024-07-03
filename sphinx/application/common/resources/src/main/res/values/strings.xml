@@ -165,6 +165,10 @@
     <string name="balance_too_low">Balance too low</string>
     <string name="boost_amount_too_low">Boost amount must be greater than 0</string>
 
+    <string name="invalid_invoice">Invalid invoice</string>
+    <string name="router_url_not_found">Router URL not found</string>
+    <string name="error_getting_route">Error getting route</string>
+
     <string name="tribe_member_profile_send_sats">Send Sats</string>
     <string name="tribe_member_profile_earn_badges" translatable="false">Earn Badges</string>
     <string name="tribe_member_profile_on_chain" translatable="false">ON-CHAIN</string>

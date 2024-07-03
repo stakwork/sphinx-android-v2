@@ -503,6 +503,10 @@ abstract class SphinxRepository(
         }
     }
 
+    override fun getInvoiceInfo(invoice: String): String? {
+        return connectManager.getInvoiceInfo(invoice)
+    }
+
     override suspend fun exitAndDeleteTribe(tribe: Chat) {
         val queries = coreDB.getSphinxDatabaseQueries()
         applicationScope.launch(io) {
@@ -4476,12 +4480,33 @@ abstract class SphinxRepository(
         return response ?: Response.Error(ResponseError("Failed to pay invoice"))
     }
 
-    override suspend fun payNewPaymentRequest(paymentRequest: LightningPaymentRequest?) {
+    override suspend fun payContactPaymentRequest(
+        paymentRequest: LightningPaymentRequest?
+    ) {
         applicationScope.launch(mainImmediate) {
             paymentRequest?.value?.let {
                 connectManager.processContactInvoicePayment(it)
             }
         }
+    }
+
+    override suspend fun payInvoice(
+        paymentRequest: LightningPaymentRequest,
+        endHops: String?,
+        routerPubKey: String?,
+        amount: Long
+    ) {
+        if (endHops?.isNotEmpty() == true && routerPubKey != null) {
+            connectManager.concatNodesFromResponse(
+                endHops,
+                routerPubKey,
+                amount
+            )
+        }
+        connectManager.processInvoicePayment(
+            paymentRequest.value,
+            amount
+        )
     }
 
     override suspend fun sendNewPaymentRequest(requestPayment: SendPaymentRequest) {

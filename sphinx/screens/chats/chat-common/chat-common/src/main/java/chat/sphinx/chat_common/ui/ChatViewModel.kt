@@ -2385,7 +2385,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                             ChatSideEffect.Notify(app.getString(R.string.balance_too_low))
                         )
                     } else {
-                        connectManagerRepository.payNewPaymentRequest(message.paymentRequest)
+                        connectManagerRepository.payContactPaymentRequest(message.paymentRequest)
                     }
                 }
             }

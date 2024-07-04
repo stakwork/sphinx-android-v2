@@ -66,7 +66,6 @@ interface ConnectManagerRepository {
         tribePubKey: String
     )
     fun getTribeServerPubKey(): String?
-    fun sendKeySend(pubKey: String, amount: Long)
     fun getPayments(lastMessageDate: Long, limit: Int)
     suspend fun getPubKeyByEncryptedChild(child: String): Flow<ChatId?>
     fun getTagsByChatId(chatId: ChatId)
@@ -75,7 +74,13 @@ interface ConnectManagerRepository {
         paymentRequest: LightningPaymentRequest,
         endHops: String?,
         routerPubKey: String?,
-        amount: Long
+        milliSatAmount: Long
+    )
+    suspend fun sendKeySend(
+        pubKey: String,
+        endHops: String?,
+        milliSatAmount: Long,
+        routerPubKey: String?
     )
     suspend fun updateLspAndOwner(data: String) {}
     fun requestNodes(nodeUrl: String)

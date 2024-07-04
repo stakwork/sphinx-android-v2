@@ -113,7 +113,7 @@ abstract class ConnectManager {
     abstract fun processContactInvoicePayment(paymentRequest: String)
     abstract fun processInvoicePayment(
         paymentRequest: String,
-        amount: Long,
+        milliSatAmount: Long,
     )
     abstract fun retrievePaymentHash(paymentRequest: String): String?
     abstract fun getPayments(

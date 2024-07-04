@@ -105,12 +105,6 @@ interface MessageRepository {
         sendPayment: SendPayment?
     ): Response<Any, ResponseError>
 
-    suspend fun sendPaymentRequest(
-        requestPayment: SendPaymentRequest
-    ): Response<Any, ResponseError>
-
-    suspend fun payPaymentRequest(message: Message) : Response<Any, ResponseError>
-
     suspend fun sendNewPaymentRequest(
         requestPayment: SendPaymentRequest
     )

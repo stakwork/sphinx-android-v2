@@ -1,8 +1,11 @@
 package chat.sphinx.payment_send.ui
 
 import android.app.Application
+import android.content.Context
+import android.content.SharedPreferences
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import chat.sphinx.concept_network_query_contact.NetworkQueryContact
 import chat.sphinx.concept_repository_chat.ChatRepository
 import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
 import chat.sphinx.concept_repository_contact.ContactRepository
@@ -10,6 +13,7 @@ import chat.sphinx.concept_repository_lightning.LightningRepository
 import chat.sphinx.concept_repository_message.MessageRepository
 import chat.sphinx.concept_repository_message.model.SendPayment
 import chat.sphinx.concept_view_model_coordinator.ViewModelCoordinator
+import chat.sphinx.kotlin_response.LoadResponse
 import chat.sphinx.kotlin_response.Response
 import chat.sphinx.kotlin_response.exception
 import chat.sphinx.payment_common.ui.PaymentSideEffect
@@ -33,6 +37,7 @@ import io.matthewnelson.concept_coroutines.CoroutineDispatchers
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
+import org.json.JSONArray
 import javax.inject.Inject
 
 internal inline val PaymentSendFragmentArgs.chatId: ChatId?
@@ -67,6 +72,7 @@ internal class PaymentSendViewModel @Inject constructor(
     private val messageRepository: MessageRepository,
     private val chatRepository: ChatRepository,
     private val connectManagerRepository: ConnectManagerRepository,
+    private val networkQueryContact: NetworkQueryContact,
     private val scannerCoordinator: ViewModelCoordinator<ScannerRequest, ScannerResponse>
 ): PaymentViewModel<PaymentSendFragmentArgs, PaymentSendViewState>(
     dispatchers,
@@ -77,6 +83,16 @@ internal class PaymentSendViewModel @Inject constructor(
     PaymentSendViewState.Idle
 )
 {
+    companion object {
+        const val SERVER_SETTINGS_SHARED_PREFERENCES = "server_ip_settings"
+        const val ROUTER_URL= "router_url"
+        const val ROUTER_PUBKEY= "router_pubkey"
+        private const val MAXIMUM_SEND_SAT_AMOUNT = 9_999_999
+    }
+
+    private val serverSettingsSharedPreferences: SharedPreferences =
+        app.getSharedPreferences(SERVER_SETTINGS_SHARED_PREFERENCES, Context.MODE_PRIVATE)
+
     private val sendPaymentBuilder = SendPayment.Builder()
 
     override val args: PaymentSendFragmentArgs by savedStateHandle.navArgs()
@@ -85,7 +101,6 @@ internal class PaymentSendViewModel @Inject constructor(
     override val messageUUID: MessageUUID? = args.messageUUID
     override val lightningNodePubKey: LightningNodePubKey? = args.argLightningNodePubKey.toLightningNodePubKey()
     override val routeHint: LightningRouteHint? = args.argLightningRouteHint.toLightningRouteHint()
-
 
     private suspend fun getAccountBalance(): StateFlow<NodeBalance?> =
         lightningRepository.getAccountBalance()
@@ -108,10 +123,24 @@ internal class PaymentSendViewModel @Inject constructor(
     }
 
     fun sendPayment(message: String? = null) {
-        args.messageUUID?.let { messageUUID ->
-            sendTribeDirectPayment(message, messageUUID)
-        } ?: run {
-            sendContactPayment(message)
+        viewModelScope.launch {
+            args.messageUUID?.let { messageUUID ->
+                sendTribeDirectPayment(message, messageUUID)
+            } ?: run {
+                lightningNodePubKey?.value?.toLightningNodePubKey()?.let { pubKey ->
+                    val contact = contactRepository.getContactByPubKey(
+                        pubKey
+                    ).firstOrNull()
+                    val contactLspPubKey = contact?.routeHint?.getLspPubKey()
+                    val ownerLsp = contactRepository.accountOwner.value?.routeHint?.getLspPubKey()
+
+                    if (contact == null || (contactLspPubKey != null && contactLspPubKey != ownerLsp)) {
+                        sendKeySend(pubKey)
+                    } else {
+                        sendContactPayment(message)
+                    }
+                }
+            }
         }
     }
 
@@ -135,37 +164,64 @@ internal class PaymentSendViewModel @Inject constructor(
         }
     }
 
-    private fun sendContactPayment(message: String? = null) {
+    private suspend fun sendContactPayment(message: String? = null) {
         sendPaymentBuilder.setChatId(args.chatId)
         sendPaymentBuilder.setContactId(args.contactId)
         sendPaymentBuilder.setText(message)
         sendPaymentBuilder.setDestinationKey(lightningNodePubKey)
         sendPaymentBuilder.setRouteHint(routeHint)
 
-        if (sendPaymentBuilder.isContactPayment) {
-            viewModelScope.launch {
-                paymentSendNavigator.toPaymentTemplateDetail(
-                    args.contactId,
-                    args.chatId,
-                    Sat(sendPaymentBuilder.paymentAmount),
-                    message ?: "",
-                )
-            }
-        } else if (sendPaymentBuilder.isKeySendPayment) {
-            viewModelScope.launch(mainImmediate) {
-                submitSideEffect(
-                    PaymentSideEffect.AlertConfirmPaymentSend(
-                        sendPaymentBuilder.paymentAmount,
-                        lightningNodePubKey?.value ?: ""
-                    ) {
-                        connectManagerRepository.sendKeySend(
-                            lightningNodePubKey?.value ?: "",
-                            sendPaymentBuilder.paymentAmount
-                        )
+        paymentSendNavigator.toPaymentTemplateDetail(
+            args.contactId,
+            args.chatId,
+            Sat(sendPaymentBuilder.paymentAmount),
+            message ?: "",
+        )
+    }
+
+    private suspend fun sendKeySend(pubKey: LightningNodePubKey) {
+        submitSideEffect(
+            PaymentSideEffect.AlertConfirmPaymentSend(
+                sendPaymentBuilder.paymentAmount,
+                lightningNodePubKey?.value ?: ""
+            ) {
+                viewModelScope.launch {
+                    val routerUrl = serverSettingsSharedPreferences.getString(ROUTER_URL, null)
+                    if (routerUrl != null) {
+                        networkQueryContact.getRoutingNodes(
+                            routerUrl,
+                            pubKey,
+                            convertToMilliSat(sendPaymentBuilder.paymentAmount)
+                        ).collect { response ->
+                            when (response) {
+                                is LoadResponse.Loading -> {}
+                                is Response.Error -> {}
+                                is Response.Success -> {
+                                    val routerPubKey = serverSettingsSharedPreferences
+                                        .getString(ROUTER_PUBKEY, null)
+
+                                    if (isJsonResponseEmpty(response.value)) {
+                                        connectManagerRepository.sendKeySend(
+                                            pubKey.value,
+                                            null,
+                                            sendPaymentBuilder.paymentAmount,
+                                            null
+                                        )
+                                    } else {
+                                        connectManagerRepository.sendKeySend(
+                                            pubKey.value,
+                                            response.value,
+                                            sendPaymentBuilder.paymentAmount,
+                                            routerPubKey
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
-                )
+                }
             }
-        }
+        )
     }
 
     private fun sendPayment() {
@@ -242,8 +298,17 @@ internal class PaymentSendViewModel @Inject constructor(
         }
     }
 
-    companion object {
-        private const val MAXIMUM_SEND_SAT_AMOUNT = 9_999_999
+    private fun convertToMilliSat(amount: Long): Long {
+        return amount * 1000
+    }
+
+    private fun isJsonResponseEmpty(response: String): Boolean {
+        return try {
+            val jsonArray = JSONArray(response)
+            jsonArray.length() == 0
+        } catch (e: Exception) {
+            true
+        }
     }
 
 }

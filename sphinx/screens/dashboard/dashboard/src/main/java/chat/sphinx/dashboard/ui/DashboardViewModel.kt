@@ -194,6 +194,7 @@ internal class DashboardViewModel @Inject constructor(
         const val ONION_STATE_KEY = "onion_state"
         const val NETWORK_MIXER_IP = "network_mixer_ip"
         const val ROUTER_URL= "router_url"
+        const val ROUTER_PUBKEY= "router_pubkey"
     }
 
     private val _hideBalanceStateFlow: MutableStateFlow<Int> by lazy {
@@ -268,6 +269,7 @@ internal class DashboardViewModel @Inject constructor(
                     is OwnerRegistrationState.GetNodes -> {
                         val routerUrl = serverSettingsSharedPreferences.getString(ROUTER_URL, null)
                         if (routerUrl != null) {
+                            storeRouterPubKey(routerUrl)
                             connectManagerRepository.requestNodes(routerUrl)
                         }
                     }
@@ -1218,8 +1220,19 @@ internal class DashboardViewModel @Inject constructor(
         return owner
     }
 
-    private var payInvoiceJob: Job? = null
+    private fun storeRouterPubKey(routerUrl: String){
+        try {
+            val jsonObject = JSONObject(routerUrl)
+            val routerPubKey = jsonObject.getString("pubkey")
 
+            val editor = serverSettingsSharedPreferences.edit()
+
+            editor.putString(ROUTER_PUBKEY, routerPubKey)
+            editor.apply()
+        } catch (e: Exception) { }
+    }
+
+    private var payInvoiceJob: Job? = null
     private fun processLightningPaymentRequest(
         lightningPaymentRequest: LightningPaymentRequest,
         invoiceBolt11: InvoiceBolt11
@@ -1238,9 +1251,9 @@ internal class DashboardViewModel @Inject constructor(
             }
 
             val invoicePayeePubKey = invoiceBolt11.getPubKey()
-            val invoiceAmountMilisat = invoiceBolt11.getMilliSatsAmount()?.value
+            val invoiceAmountMilliSat = invoiceBolt11.getMilliSatsAmount()?.value
 
-            if (invoicePayeePubKey == null || invoiceAmountMilisat == null) {
+            if (invoicePayeePubKey == null || invoiceAmountMilliSat == null) {
                  submitSideEffect(ChatListSideEffect.Notify(app.getString(R.string.invalid_invoice)))
                 return@launch
             }
@@ -1251,14 +1264,16 @@ internal class DashboardViewModel @Inject constructor(
 
             if (contact == null || (contactLspPubKey != null && contactLspPubKey != ownerLsp)) {
                 val routerUrl = serverSettingsSharedPreferences.getString(ROUTER_URL, null)
-                    if (routerUrl == null) {
-                        submitSideEffect(ChatListSideEffect.Notify(app.getString(R.string.router_url_not_found)))
-                        return@launch
-                    }
+
+                if (routerUrl == null) {
+                    submitSideEffect(ChatListSideEffect.Notify(app.getString(R.string.router_url_not_found)))
+                    return@launch
+                }
+
                 networkQueryContact.getRoutingNodes(
                     routerUrl,
                     invoicePayeePubKey,
-                    invoiceAmountMilisat
+                    invoiceAmountMilliSat
                 ).collect { response ->
                     when (response) {
                         is LoadResponse.Loading -> {}
@@ -1266,16 +1281,19 @@ internal class DashboardViewModel @Inject constructor(
                             submitSideEffect(ChatListSideEffect.Notify(app.getString(R.string.error_getting_route)))
                         }
                         is Response.Success -> {
-                            if (response.value.isNotEmpty()) {
-                                val jsonObject = JSONObject(response.value)
-                                val routerPubKey = jsonObject.getString("pubkey")
+                            try {
+                                val routerPubKey = serverSettingsSharedPreferences
+                                    .getString(ROUTER_PUBKEY, null)
+                                    ?: "true"
 
                                 connectManagerRepository.payInvoice(
                                     lightningPaymentRequest,
                                     response.value,
                                     routerPubKey,
-                                    invoiceAmountMilisat
+                                    invoiceAmountMilliSat
                                 )
+                            } catch (e: Exception) {
+                                submitSideEffect(ChatListSideEffect.Notify(app.getString(R.string.error_getting_route)))
                             }
                         }
                     }
@@ -1285,7 +1303,7 @@ internal class DashboardViewModel @Inject constructor(
                     lightningPaymentRequest,
                     null,
                     null,
-                    invoiceAmountMilisat
+                    invoiceAmountMilliSat
                 )
             }
         }

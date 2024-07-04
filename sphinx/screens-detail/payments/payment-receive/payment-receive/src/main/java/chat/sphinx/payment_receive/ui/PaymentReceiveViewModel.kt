@@ -146,23 +146,6 @@ internal class PaymentReceiveViewModel @Inject constructor(
 
                 messageRepository.sendNewPaymentRequest(requestPayment)
                 navigator.closeDetailScreen()
-
-//                updateViewState(PaymentReceiveViewState.ProcessingRequest)
-//
-//                val response = messageRepository.sendPaymentRequest(requestPayment)
-//
-//                @Exhaustive
-//                when (response) {
-//                    is Response.Error -> {
-//                        submitSideEffect(
-//                            PaymentSideEffect.Notify(app.getString(R.string.failed_to_request_payment))
-//                        )
-//                        refreshViewState()
-//                    }
-//                    is Response.Success -> {
-//                        navigator.closeDetailScreen()
-//                    }
-//                }
             } else {
                 submitSideEffect(PaymentSideEffect.Notify("Failed to request payment"))
             }

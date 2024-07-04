@@ -433,10 +433,6 @@ abstract class SphinxRepository(
         return connectManager.getTribeServerPubKey()
     }
 
-    override fun sendKeySend(pubKey: String, amount: Long) {
-        connectManager.sendKeySend(pubKey, amount)
-    }
-
     override fun getPayments(lastMessageDate: Long, limit: Int) {
         connectManager.getPayments(
             lastMessageDate,
@@ -4375,111 +4371,6 @@ abstract class SphinxRepository(
         }
     }
 
-    override suspend fun sendPaymentRequest(requestPayment: SendPaymentRequest): Response<Any, ResponseError> {
-        var response: Response<Any, ResponseError>? = null
-
-        applicationScope.launch(mainImmediate) {
-            val queries = coreDB.getSphinxDatabaseQueries()
-
-            val contact: ContactDbo? = requestPayment.contactId?.let {
-                withContext(io) {
-                    queries.contactGetById(it).executeAsOneOrNull()
-                }
-            }
-
-            val owner: Contact? = accountOwner.value
-                ?: let {
-                    // TODO: Handle this better...
-                    var owner: Contact? = null
-                    try {
-                        accountOwner.collect {
-                            if (it != null) {
-                                owner = it
-                                throw Exception()
-                            }
-                        }
-                    } catch (e: Exception) {
-                    }
-                    delay(25L)
-                    owner
-                }
-
-            if (owner == null) {
-                response = Response.Error(
-                    ResponseError("Owner cannot be null")
-                )
-                return@launch
-            }
-
-            var encryptedMemo: MessageContent? = null
-            var encryptedRemoteMemo: MessageContent? = null
-
-            requestPayment.memo?.let { msgText ->
-                encryptedMemo = owner
-                    .rsaPublicKey
-                    ?.let { pubKey ->
-                        val encResponse = rsa.encrypt(
-                            pubKey,
-                            UnencryptedString(msgText),
-                            formatOutput = false,
-                            dispatcher = default,
-                        )
-
-                        @Exhaustive
-                        when (encResponse) {
-                            is Response.Error -> {
-                                LOG.e(TAG, encResponse.message, encResponse.exception)
-                                null
-                            }
-                            is Response.Success -> {
-                                MessageContent(encResponse.value.value)
-                            }
-                        }
-                    }
-
-                contact?.let { contact ->
-                    encryptedRemoteMemo = contact
-                        .public_key
-                        ?.let { pubKey ->
-                            val encResponse = rsa.encrypt(
-                                pubKey,
-                                UnencryptedString(msgText),
-                                formatOutput = false,
-                                dispatcher = default,
-                            )
-
-                            @Exhaustive
-                            when (encResponse) {
-                                is Response.Error -> {
-                                    LOG.e(TAG, encResponse.message, encResponse.exception)
-                                    null
-                                }
-                                is Response.Success -> {
-                                    MessageContent(encResponse.value.value)
-                                }
-                            }
-                        }
-                }
-            }
-
-        }.join()
-
-        return response ?: Response.Error(ResponseError("Failed to send payment request"))
-    }
-
-    override suspend fun payPaymentRequest(message: Message): Response<Any, ResponseError> {
-        var response: Response<Any, ResponseError>? = null
-
-        message.paymentRequest?.let { lightningPaymentRequest ->
-            applicationScope.launch(mainImmediate) {
-                val queries = coreDB.getSphinxDatabaseQueries()
-
-            }.join()
-        }
-
-        return response ?: Response.Error(ResponseError("Failed to pay invoice"))
-    }
-
     override suspend fun payContactPaymentRequest(
         paymentRequest: LightningPaymentRequest?
     ) {
@@ -4494,18 +4385,37 @@ abstract class SphinxRepository(
         paymentRequest: LightningPaymentRequest,
         endHops: String?,
         routerPubKey: String?,
-        amount: Long
+        milliSatAmount: Long
     ) {
         if (endHops?.isNotEmpty() == true && routerPubKey != null) {
             connectManager.concatNodesFromResponse(
                 endHops,
                 routerPubKey,
-                amount
+                milliSatAmount
             )
         }
         connectManager.processInvoicePayment(
             paymentRequest.value,
-            amount
+            milliSatAmount
+        )
+    }
+
+    override suspend fun sendKeySend(
+        pubKey: String,
+        endHops: String?,
+        milliSatAmount: Long,
+        routerPubKey: String?
+    ) {
+        if (endHops?.isNotEmpty() == true && routerPubKey != null) {
+            connectManager.concatNodesFromResponse(
+                endHops,
+                routerPubKey,
+                milliSatAmount
+            )
+        }
+        connectManager.sendKeySend(
+            pubKey,
+            milliSatAmount
         )
     }
 

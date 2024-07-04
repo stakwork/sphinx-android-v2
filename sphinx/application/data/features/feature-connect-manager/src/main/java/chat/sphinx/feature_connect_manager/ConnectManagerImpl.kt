@@ -1528,7 +1528,7 @@ class ConnectManagerImpl: ConnectManager()
 
     override fun processInvoicePayment(
         paymentRequest: String,
-        amount: Long
+        milliSatAmount: Long
     ) {
         try {
             val invoice = payInvoice(
@@ -1536,7 +1536,7 @@ class ConnectManagerImpl: ConnectManager()
                 getTimestampInMilliseconds(),
                 getCurrentUserState(),
                 paymentRequest,
-                amount.toULong()
+                milliSatAmount.toULong()
             )
             handleRunReturn(invoice, mqttClient)
         } catch (e: Exception) {

@@ -126,17 +126,22 @@ internal class PaymentSendViewModel @Inject constructor(
             args.messageUUID?.let { messageUUID ->
                 sendTribeDirectPayment(message, messageUUID)
             } ?: run {
-                lightningNodePubKey?.value?.toLightningNodePubKey()?.let { pubKey ->
-                    val contact = contactRepository.getContactByPubKey(
-                        pubKey
-                    ).firstOrNull()
-                    val contactLspPubKey = contact?.routeHint?.getLspPubKey()
-                    val ownerLsp = contactRepository.accountOwner.value?.routeHint?.getLspPubKey()
+                if (args.chatId != null) {
+                    sendContactPayment(message)
+                } else {
+                    lightningNodePubKey?.value?.toLightningNodePubKey()?.let { pubKey ->
+                        val contact = contactRepository.getContactByPubKey(
+                            pubKey
+                        ).firstOrNull()
+                        val contactLspPubKey = contact?.routeHint?.getLspPubKey()
+                        val ownerLsp =
+                            contactRepository.accountOwner.value?.routeHint?.getLspPubKey()
 
-                    if (contact == null || (contactLspPubKey != null && contactLspPubKey != ownerLsp)) {
-                        sendKeySend(pubKey)
-                    } else {
-                        sendContactPayment(message)
+                        if (contact == null || (contactLspPubKey != null && contactLspPubKey != ownerLsp)) {
+                            sendKeySend(pubKey)
+                        } else {
+                            sendContactPayment(message)
+                        }
                     }
                 }
             }
@@ -218,6 +223,7 @@ internal class PaymentSendViewModel @Inject constructor(
                                             routerPubKey
                                         )
                                     }
+                                    navigator.closeDetailScreen()
                                 }
                             }
                         }
@@ -225,41 +231,6 @@ internal class PaymentSendViewModel @Inject constructor(
                 }
             }
         )
-    }
-
-    private fun sendPayment() {
-        viewStateContainer.updateViewState(PaymentSendViewState.ProcessingPayment)
-
-        viewModelScope.launch(mainImmediate) {
-            val sendPayment = sendPaymentBuilder.build()
-
-            when (val response = messageRepository.sendPayment(sendPayment)) {
-                is Response.Error -> {
-                    submitSideEffect(
-                        PaymentSideEffect.Notify(
-                            String.format(
-                                app.getString(R.string.error_payment_message),
-                                response.exception?.message ?: response.cause.message
-                            )
-                        )
-                    )
-                    viewStateContainer.updateViewState(PaymentSendViewState.PaymentFailed)
-                }
-                is Response.Success -> {
-                    val successMessage = app.getString(
-                        R.string.payment_sent,
-                        sendPayment?.amount ?: 0,
-                        sendPayment?.destinationKey?.value ?: "Unknown"
-                    )
-
-                    submitSideEffect(
-                        PaymentSideEffect.Notify(successMessage)
-                    )
-
-                    navigator.closeDetailScreen()
-                }
-            }
-        }
     }
 
     override fun updateAmount(amountString: String) {

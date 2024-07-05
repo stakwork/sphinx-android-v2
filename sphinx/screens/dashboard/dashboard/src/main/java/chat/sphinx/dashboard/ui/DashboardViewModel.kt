@@ -674,13 +674,12 @@ internal class DashboardViewModel @Inject constructor(
 
     private suspend fun handleContactLink(pubKey: LightningNodePubKey, routeHint: LightningRouteHint?) {
         scannedNodeAddress.value = Pair(pubKey, routeHint)
+        val contact = contactRepository.getContactByPubKey(pubKey).firstOrNull()
 
-        contactRepository.getContactByPubKey(pubKey).collect { contact ->
-            if (contact != null) {
-                navBarNavigator.toPaymentSendDetail(pubKey, contact.routeHint, contact.id)
-            } else {
-                scannerMenuHandler.viewStateContainer.updateViewState(MenuBottomViewState.Open)
-            }
+        if (contact != null) {
+            navBarNavigator.toPaymentSendDetail(pubKey, contact.routeHint, contact.id)
+        } else {
+            scannerMenuHandler.viewStateContainer.updateViewState(MenuBottomViewState.Open)
         }
     }
 

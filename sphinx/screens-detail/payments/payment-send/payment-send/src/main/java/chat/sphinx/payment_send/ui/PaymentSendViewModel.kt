@@ -117,7 +117,6 @@ internal class PaymentSendViewModel @Inject constructor(
                         message.senderPic
                     )
                 } ?: PaymentSendViewState.KeySendPayment
-
             )
         }
     }
@@ -195,7 +194,11 @@ internal class PaymentSendViewModel @Inject constructor(
                         ).collect { response ->
                             when (response) {
                                 is LoadResponse.Loading -> {}
-                                is Response.Error -> {}
+                                is Response.Error -> {
+                                    submitSideEffect(PaymentSideEffect.Notify(
+                                        app.getString(R.string.error_payment_empty_router)
+                                    ))
+                                }
                                 is Response.Success -> {
                                     val routerPubKey = serverSettingsSharedPreferences
                                         .getString(ROUTER_PUBKEY, null)

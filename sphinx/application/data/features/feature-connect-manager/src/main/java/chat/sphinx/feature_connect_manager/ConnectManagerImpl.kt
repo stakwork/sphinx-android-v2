@@ -1171,6 +1171,9 @@ class ConnectManagerImpl: ConnectManager()
             )
             handleRunReturn(concatNodes, mqttClient)
         } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.ConcatNodesError)
+            }
             Log.e("MQTT_MESSAGES", "concatNodesFromResponse ${e.message}")
         }
     }
@@ -1540,6 +1543,9 @@ class ConnectManagerImpl: ConnectManager()
             )
             handleRunReturn(invoice, mqttClient)
         } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.PayInvoiceError)
+            }
             Log.e("MQTT_MESSAGES", "processInvoicePayment ${e.message}")
         }
     }

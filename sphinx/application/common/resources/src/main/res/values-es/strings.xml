@@ -36,6 +36,7 @@
     <string name="payment_request">Solicitud de Pago</string>
     <string name="error_payment_message">Error de pago: %s </string>
     <string name="failed_to_request_payment">La solicitud de pago falló</string>
+    <string name="error_payment_empty_router">Router URL vacia</string>
     <!-- Tribe Member error messages -->
     <string name="failed_to_approve_member">No se ha podido aprobar la solicitud</string>
     <string name="failed_to_reject_member">No se ha podido denegar la solicitud</string>
@@ -181,6 +182,7 @@
     <string name="connect_manager_create_invoice_error">Error al crear factura.</string>
     <string name="connect_manager_server_pubkey_error">Error al obtener la clave pública del servidor.</string>
     <string name="connect_manager_pay_contact_invoice_error">Error al pagar factura de contacto.</string>
+    <string name="connect_manager_pay_invoice_error">Error al pagar factura.</string>
     <string name="connect_manager_payment_hash_error">Error al generar hash de pago.</string>
     <string name="connect_manager_list_tribe_members_error">Error al listar miembros de la tribu.</string>
     <string name="connect_manager_fetch_message_error">Error al recuperar mensaje.</string>

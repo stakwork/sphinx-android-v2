@@ -37,6 +37,7 @@
     <string name="payment_request">送金をリクエスト</string>
     <string name="error_payment_message">支払いエラー: %s </string>
     <string name="failed_to_request_payment">送金をリクエストできませんでした</string>
+    <string name="error_payment_empty_router">Empty Router URL</string>
     <string name="failed_to_approve_member">メンバーを承認できませんでした</string>
     <string name="failed_to_reject_member">メンバーを拒否できませんでした</string>
 
@@ -180,6 +181,7 @@
     <string name="connect_manager_create_invoice_error">Error creating invoice.</string>
     <string name="connect_manager_server_pubkey_error">Error fetching server public key.</string>
     <string name="connect_manager_pay_contact_invoice_error">Error paying contact invoice.</string>
+    <string name="connect_manager_pay_invoice_error">Error paying invoice.</string>
     <string name="connect_manager_payment_hash_error">Error generating payment hash.</string>
     <string name="connect_manager_list_tribe_members_error">Error listing tribe members.</string>
     <string name="connect_manager_fetch_message_error">Error fetching message.</string>

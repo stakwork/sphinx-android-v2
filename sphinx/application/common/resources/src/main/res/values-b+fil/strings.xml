@@ -97,6 +97,7 @@
     <string name="payment_request">Kahilingan sa Pagbabayad</string>
     <string name="amount_n_sats">Halaga: %d sats</string>
     <string name="failed_to_request_payment">Nabigo ang kahilingan sa pagbabayad</string>
+    <string name="error_payment_empty_router">Empty Router URL</string>
     <string name="failed_to_approve_member">Nabigo sa pag-apruba ng miyembro</string>
     <string name="failed_to_reject_member">Nabigo sa pagtanggi ng miyembro</string>
     <string name="newsletter_article">ARTIKULO NG NEWSLETTER</string>
@@ -250,6 +251,7 @@
     <string name="connect_manager_create_invoice_error">Error creating invoice.</string>
     <string name="connect_manager_server_pubkey_error">Error fetching server public key.</string>
     <string name="connect_manager_pay_contact_invoice_error">Error paying contact invoice.</string>
+    <string name="connect_manager_pay_invoice_error">Error paying invoice.</string>
     <string name="connect_manager_payment_hash_error">Error generating payment hash.</string>
     <string name="connect_manager_list_tribe_members_error">Error listing tribe members.</string>
     <string name="connect_manager_fetch_message_error">Error fetching message.</string>

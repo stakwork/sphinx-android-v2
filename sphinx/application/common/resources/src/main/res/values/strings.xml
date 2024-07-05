@@ -117,6 +117,7 @@
     <string name="error_payment_message">Payment error: %s </string>
     <string name="amount_n_sats">Amount: %d sats</string>
     <string name="failed_to_request_payment">Failed to request payment</string>
+    <string name="error_payment_empty_router">Empty Router URL</string>
 
     <string name="failed_to_approve_member">Failed to approve member</string>
     <string name="failed_to_reject_member">Failed to reject member</string>
@@ -300,9 +301,11 @@
     <string name="connect_manager_join_tribe_error">Error joining tribe.</string>
     <string name="connect_manager_create_tribe_error">Error creating tribe.</string>
     <string name="connect_manager_create_invite_error">Error creating invite.</string>
+    <string name="connect_manager_concat_nodes_error" translatable="false">Concat nodes error.</string>
     <string name="connect_manager_create_invoice_error">Error creating invoice.</string>
     <string name="connect_manager_server_pubkey_error">Error fetching server public key.</string>
     <string name="connect_manager_pay_contact_invoice_error">Error paying contact invoice.</string>
+    <string name="connect_manager_pay_invoice_error">Error paying invoice.</string>
     <string name="connect_manager_payment_hash_error">Error generating payment hash.</string>
     <string name="connect_manager_list_tribe_members_error">Error listing tribe members.</string>
     <string name="connect_manager_fetch_message_error">Error fetching message.</string>

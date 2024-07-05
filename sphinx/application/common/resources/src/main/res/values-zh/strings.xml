@@ -36,6 +36,7 @@
     <string name="payment_request">收款帳單</string>
     <string name="error_payment_message">支付錯誤：%s </string>
     <string name="failed_to_request_payment">無法收款</string>
+    <string name="error_payment_empty_router">Empty Router URL</string>
     <string name="failed_to_approve_member">接受會員失敗</string>
     <string name="failed_to_reject_member">拒絕會員失敗</string>
 
@@ -179,6 +180,7 @@
     <string name="connect_manager_create_invoice_error">Error creating invoice.</string>
     <string name="connect_manager_server_pubkey_error">Error fetching server public key.</string>
     <string name="connect_manager_pay_contact_invoice_error">Error paying contact invoice.</string>
+    <string name="connect_manager_pay_invoice_error">Error paying invoice.</string>
     <string name="connect_manager_payment_hash_error">Error generating payment hash.</string>
     <string name="connect_manager_list_tribe_members_error">Error listing tribe members.</string>
     <string name="connect_manager_fetch_message_error">Error fetching message.</string>

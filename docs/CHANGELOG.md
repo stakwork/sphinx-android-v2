@@ -15,3 +15,8 @@
 - Improves tribe exit and delete
 - Adds paid messages
 - Other fixes and improvements
+
+## Version 1.0.0-alpha05 (2021-07-08)
+- Adds ability to edit tribe
+- Adds routing logic
+- Adds ability to send key-sends and pay invoices outside of a chat

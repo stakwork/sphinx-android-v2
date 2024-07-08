@@ -3,7 +3,7 @@
 /*************************/
 ext.versions = [
     'buildTools': "30.0.3",
-    'compileSdk': 33,
+    'compileSdk': 34,
     'minSdk': 23,
     'androidGradle': '7.4.2',
     'arch': '2.1.0',
@@ -21,7 +21,7 @@ ext.versions = [
     'okhttp'     : '4.10.0',
     'sqlDelight' : '1.5.4',
     'toplAndroid': '2.1.2',
-    'targetSdk'  : 33
+    'targetSdk'  : 34
 ]
 
 /**

@@ -6,6 +6,7 @@ import android.content.SharedPreferences
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import chat.sphinx.concept_crypto_rsa.RSA
+import chat.sphinx.concept_network_query_contact.NetworkQueryContact
 import chat.sphinx.concept_network_query_contact.model.GenerateTokenResponse
 import chat.sphinx.concept_network_query_invite.NetworkQueryInvite
 import chat.sphinx.concept_network_query_invite.model.RedeemInviteDto
@@ -111,10 +112,9 @@ internal class OnBoardConnectingViewModel @Inject constructor(
     val navigator: OnBoardConnectingNavigator,
     private val keyRestore: KeyRestore,
     private val walletDataHandler: WalletDataHandler,
-    private val relayDataHandler: RelayDataHandler,
-    private val torManager: TorManager,
     private val networkQueryInvite: NetworkQueryInvite,
     private val onBoardStepHandler: OnBoardStepHandler,
+    private val networkQueryContact: NetworkQueryContact,
     private val connectManagerRepository: ConnectManagerRepository,
     val moshi: Moshi,
     private val rsa: RSA,
@@ -144,6 +144,7 @@ internal class OnBoardConnectingViewModel @Inject constructor(
         const val NETWORK_MIXER_IP = "network_mixer_ip"
         const val TRIBE_SERVER_IP = "tribe_server_ip"
         const val ENVIRONMENT_TYPE = "environment_type"
+        const val ROUTER_URL= "router_url"
     }
 
     init {
@@ -211,6 +212,36 @@ internal class OnBoardConnectingViewModel @Inject constructor(
 
         editor.putBoolean(ENVIRONMENT_TYPE, state)
         editor.apply()
+    }
+
+    private fun storeRouterUrl(state: String?) {
+        val editor = serverSettingsSharedPreferences.edit()
+
+        editor.putString(ROUTER_URL, state)
+        editor.apply()
+    }
+
+    private fun fetchRouterUrl(isProductionEnvironment: Boolean) {
+        viewModelScope.launch(mainImmediate) {
+            networkQueryContact.getAccountConfig(isProductionEnvironment).collect { loadResponse ->
+                when (loadResponse) {
+                    is Response.Success -> {
+                        storeRouterUrl(loadResponse.value.router)
+                        delay(100L)
+                        navigator.toOnBoardNameScreen()
+                    }
+
+                    is Response.Error -> {
+                        submitSideEffect(
+                            OnBoardConnectingSideEffect.Notify(
+                                app.getString(R.string.connect_manager_set_router_url)
+                            )
+                        )
+                        navigator.toOnBoardNameScreen()
+                    }
+                }
+            }
+        }
     }
 
     private var decryptionJob: Job? = null
@@ -401,8 +432,13 @@ internal class OnBoardConnectingViewModel @Inject constructor(
                         connectionState.tirbeServerHost?.let { storeTribeServerIp(it) }
                         storeEnvironmentType(connectionState.isProductionEnvironment)
 
-                        delay(100L)
-                        navigator.toOnBoardNameScreen()
+                        if (connectionState.routerUrl?.isNotEmpty() == true) {
+                            storeRouterUrl(connectionState.routerUrl)
+                            delay(100L)
+                            navigator.toOnBoardNameScreen()
+                        } else {
+                            fetchRouterUrl(connectionState.isProductionEnvironment)
+                        }
                     }
                     else -> {}
                 }

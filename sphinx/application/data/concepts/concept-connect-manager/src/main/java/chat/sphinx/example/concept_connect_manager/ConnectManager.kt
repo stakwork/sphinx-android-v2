@@ -22,7 +22,8 @@ abstract class ConnectManager {
     abstract fun restoreAccount(
         defaultTribe: String?,
         tribeHost: String?,
-        mixerServerIp: String?
+        mixerServerIp: String?,
+        routerUrl: String?
     )
     abstract fun setInviteCode(inviteString: String)
     abstract fun setMnemonicWords(words: List<String>?)
@@ -55,6 +56,12 @@ abstract class ConnectManager {
     abstract fun getReadMessages()
     abstract fun setMute(muteLevel: Int, contactPubKey: String)
     abstract fun getMutedChats()
+    abstract fun addNodesFromResponse(nodesJson: String)
+    abstract fun concatNodesFromResponse(
+        nodesJson: String,
+        routerPubKey: String,
+        amount: Long
+    )
 
     // Messaging Methods
     abstract fun sendMessage(
@@ -73,11 +80,9 @@ abstract class ConnectManager {
     abstract fun deleteContactMessages(
         messageIndexList: List<Long>,
     )
-
     abstract fun deletePubKeyMessages(
         contactPubKey: String
     )
-
     abstract fun getMessagesStatusByTags(tags: List<String>)
 
     // Tribe Management Methods
@@ -95,7 +100,6 @@ abstract class ConnectManager {
         tribePubKey: String
     )
     abstract fun getTribeServerPubKey(): String?
-
     abstract fun editTribe(
         tribeJson: String
     )
@@ -106,7 +110,11 @@ abstract class ConnectManager {
         memo: String
     ): Pair<String, String>? // invoice, paymentHash
     abstract fun sendKeySend(pubKey: String, amount: Long)
-    abstract fun processInvoicePayment(paymentRequest: String)
+    abstract fun processContactInvoicePayment(paymentRequest: String)
+    abstract fun processInvoicePayment(
+        paymentRequest: String,
+        milliSatAmount: Long,
+    )
     abstract fun retrievePaymentHash(paymentRequest: String): String?
     abstract fun getPayments(
         lastMsgDate: Long,
@@ -125,6 +133,8 @@ abstract class ConnectManager {
         metaData: String?,
         amount: Long?
     ): String?
+
+    abstract fun getInvoiceInfo(invoice: String): String?
 
     // Listener Methods
     abstract fun addListener(listener: ConnectManagerListener): Boolean
@@ -148,7 +158,8 @@ interface ConnectManagerListener {
         isRestoreAccount: Boolean,
         mixerServerIp: String?,
         tribeServerHost: String?,
-        isProductionEnvironment: Boolean
+        isProductionEnvironment: Boolean,
+        routerUrl: String?
     )
     fun onRestoreAccount(isProductionEnvironment: Boolean)
     fun onRestoreContacts(contacts: List<String?>)
@@ -159,6 +170,7 @@ interface ConnectManagerListener {
     fun onInitialTribe(tribe: String, isProductionEnvironment: Boolean)
     fun onLastReadMessages(lastReadMessages: String)
     fun onUpdateMutes(mutes: String)
+    fun onGetNodes()
     fun onConnectManagerError(error: ConnectManagerError)
 
     // Messaging Callbacks

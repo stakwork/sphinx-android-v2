@@ -433,10 +433,6 @@ abstract class SphinxRepository(
         return connectManager.getTribeServerPubKey()
     }
 
-    override fun sendKeySend(pubKey: String, amount: Long) {
-        connectManager.sendKeySend(pubKey, amount)
-    }
-
     override fun getPayments(lastMessageDate: Long, limit: Int) {
         connectManager.getPayments(
             lastMessageDate,
@@ -488,6 +484,23 @@ abstract class SphinxRepository(
                 )
             )
         }
+    }
+
+    override fun requestNodes(nodeUrl: String) {
+        applicationScope.launch(mainImmediate) {
+            networkQueryContact.getNodes(nodeUrl).collect { loadResponse ->
+                when (loadResponse) {
+                    is Response.Success -> {
+                        val nodes = loadResponse.value
+                        connectManager.addNodesFromResponse(nodes)
+                    }
+                }
+            }
+        }
+    }
+
+    override fun getInvoiceInfo(invoice: String): String? {
+        return connectManager.getInvoiceInfo(invoice)
     }
 
     override suspend fun exitAndDeleteTribe(tribe: Chat) {
@@ -621,7 +634,8 @@ abstract class SphinxRepository(
         isRestoreAccount: Boolean,
         mixerServerIp: String?,
         tribeServerHost: String?,
-        isProductionEnvironment: Boolean
+        isProductionEnvironment: Boolean,
+        routerUrl: String?
     ) {
         applicationScope.launch(mainImmediate) {
             val scid = routeHint.toLightningRouteHint()?.getScid()
@@ -633,7 +647,8 @@ abstract class SphinxRepository(
                     isRestoreAccount,
                     mixerServerIp,
                     tribeServerHost,
-                    isProductionEnvironment
+                    isProductionEnvironment,
+                    routerUrl
                 )
                 delay(1000L)
 
@@ -645,22 +660,19 @@ abstract class SphinxRepository(
     }
 
     override fun onRestoreAccount(isProductionEnvironment: Boolean) {
-        if (isProductionEnvironment) {
-            applicationScope.launch(mainImmediate) {
-                networkQueryContact.getAccountConfig().collect { loadResponse ->
-                    when (loadResponse) {
-                        is Response.Success -> {
-                            connectManager.restoreAccount(
-                                loadResponse.value.tribe,
-                                loadResponse.value.tribe_host,
-                                loadResponse.value.default_lsp
-                            )
-                        }
+        applicationScope.launch(mainImmediate) {
+            networkQueryContact.getAccountConfig(isProductionEnvironment).collect { loadResponse ->
+                when (loadResponse) {
+                    is Response.Success -> {
+                        connectManager.restoreAccount(
+                            loadResponse.value.tribe,
+                            loadResponse.value.tribe_host,
+                            loadResponse.value.default_lsp,
+                            loadResponse.value.router
+                        )
                     }
                 }
             }
-        } else {
-            connectManager.restoreAccount(null, null, null)
         }
     }
 
@@ -926,6 +938,10 @@ abstract class SphinxRepository(
                 }
             }
         }
+    }
+
+    override fun onGetNodes() {
+        connectionManagerState.value = OwnerRegistrationState.GetNodes
     }
 
     override fun listenToOwnerCreation(callback: () -> Unit) {
@@ -4355,125 +4371,52 @@ abstract class SphinxRepository(
         }
     }
 
-    override suspend fun sendPaymentRequest(requestPayment: SendPaymentRequest): Response<Any, ResponseError> {
-        var response: Response<Any, ResponseError>? = null
-
+    override suspend fun payContactPaymentRequest(
+        paymentRequest: LightningPaymentRequest?
+    ) {
         applicationScope.launch(mainImmediate) {
-            val queries = coreDB.getSphinxDatabaseQueries()
-
-            val contact: ContactDbo? = requestPayment.contactId?.let {
-                withContext(io) {
-                    queries.contactGetById(it).executeAsOneOrNull()
-                }
-            }
-
-            val owner: Contact? = accountOwner.value
-                ?: let {
-                    // TODO: Handle this better...
-                    var owner: Contact? = null
-                    try {
-                        accountOwner.collect {
-                            if (it != null) {
-                                owner = it
-                                throw Exception()
-                            }
-                        }
-                    } catch (e: Exception) {
-                    }
-                    delay(25L)
-                    owner
-                }
-
-            if (owner == null) {
-                response = Response.Error(
-                    ResponseError("Owner cannot be null")
-                )
-                return@launch
-            }
-
-            var encryptedMemo: MessageContent? = null
-            var encryptedRemoteMemo: MessageContent? = null
-
-            requestPayment.memo?.let { msgText ->
-                encryptedMemo = owner
-                    .rsaPublicKey
-                    ?.let { pubKey ->
-                        val encResponse = rsa.encrypt(
-                            pubKey,
-                            UnencryptedString(msgText),
-                            formatOutput = false,
-                            dispatcher = default,
-                        )
-
-                        @Exhaustive
-                        when (encResponse) {
-                            is Response.Error -> {
-                                LOG.e(TAG, encResponse.message, encResponse.exception)
-                                null
-                            }
-                            is Response.Success -> {
-                                MessageContent(encResponse.value.value)
-                            }
-                        }
-                    }
-
-                contact?.let { contact ->
-                    encryptedRemoteMemo = contact
-                        .public_key
-                        ?.let { pubKey ->
-                            val encResponse = rsa.encrypt(
-                                pubKey,
-                                UnencryptedString(msgText),
-                                formatOutput = false,
-                                dispatcher = default,
-                            )
-
-                            @Exhaustive
-                            when (encResponse) {
-                                is Response.Error -> {
-                                    LOG.e(TAG, encResponse.message, encResponse.exception)
-                                    null
-                                }
-                                is Response.Success -> {
-                                    MessageContent(encResponse.value.value)
-                                }
-                            }
-                        }
-                }
-            }
-
-        }.join()
-
-        return response ?: Response.Error(ResponseError("Failed to send payment request"))
-    }
-
-    override suspend fun payPaymentRequest(message: Message): Response<Any, ResponseError> {
-        var response: Response<Any, ResponseError>? = null
-
-        message.paymentRequest?.let { lightningPaymentRequest ->
-            applicationScope.launch(mainImmediate) {
-                val queries = coreDB.getSphinxDatabaseQueries()
-
-            }.join()
-        }
-
-        return response ?: Response.Error(ResponseError("Failed to pay invoice"))
-    }
-
-    override suspend fun payNewPaymentRequest(message: Message) {
-        applicationScope.launch(mainImmediate) {
-            val queries = coreDB.getSphinxDatabaseQueries()
-            val contact = getContactById(ContactId(message.chatId.value)).firstOrNull()
-
-            val currentProvisionalId: MessageId? = withContext(io) {
-                queries.messageGetLowestProvisionalMessageId().executeAsOneOrNull()
-            }
-            val provisionalId = MessageId((currentProvisionalId?.value ?: 0L) - 1)
-
-            message.paymentRequest?.value?.let {
-                connectManager.processInvoicePayment(it)
+            paymentRequest?.value?.let {
+                connectManager.processContactInvoicePayment(it)
             }
         }
+    }
+
+    override suspend fun payInvoice(
+        paymentRequest: LightningPaymentRequest,
+        endHops: String?,
+        routerPubKey: String?,
+        milliSatAmount: Long
+    ) {
+        if (endHops?.isNotEmpty() == true && routerPubKey != null) {
+            connectManager.concatNodesFromResponse(
+                endHops,
+                routerPubKey,
+                milliSatAmount
+            )
+        }
+        connectManager.processInvoicePayment(
+            paymentRequest.value,
+            milliSatAmount
+        )
+    }
+
+    override suspend fun sendKeySend(
+        pubKey: String,
+        endHops: String?,
+        milliSatAmount: Long,
+        routerPubKey: String?
+    ) {
+        if (endHops?.isNotEmpty() == true && routerPubKey != null) {
+            connectManager.concatNodesFromResponse(
+                endHops,
+                routerPubKey,
+                milliSatAmount
+            )
+        }
+        connectManager.sendKeySend(
+            pubKey,
+            milliSatAmount
+        )
     }
 
     override suspend fun sendNewPaymentRequest(requestPayment: SendPaymentRequest) {

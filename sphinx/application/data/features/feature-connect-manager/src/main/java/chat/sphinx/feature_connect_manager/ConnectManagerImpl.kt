@@ -31,7 +31,9 @@ import org.json.JSONObject
 import uniffi.sphinxrs.ParsedInvite
 import uniffi.sphinxrs.RunReturn
 import uniffi.sphinxrs.addContact
+import uniffi.sphinxrs.addNode
 import uniffi.sphinxrs.codeFromInvite
+import uniffi.sphinxrs.concatRoute
 import uniffi.sphinxrs.deleteMsgs
 import uniffi.sphinxrs.fetchMsgsBatch
 import uniffi.sphinxrs.getDefaultTribeServer
@@ -53,6 +55,8 @@ import uniffi.sphinxrs.mnemonicFromEntropy
 import uniffi.sphinxrs.mnemonicToSeed
 import uniffi.sphinxrs.mute
 import uniffi.sphinxrs.parseInvite
+import uniffi.sphinxrs.parseInvoice
+import uniffi.sphinxrs.payInvoice
 import uniffi.sphinxrs.paymentHashFromInvoice
 import uniffi.sphinxrs.processInvite
 import uniffi.sphinxrs.read
@@ -85,6 +89,7 @@ class ConnectManagerImpl: ConnectManager()
     private var inviterContact: NewContact? = null
     private var hasAttemptedReconnect = false
     private var tribeServer: String? = null
+    private var router: String? = null
     private var delayedRRObjects: MutableList<RunReturn> = mutableListOf()
 
     companion object {
@@ -257,6 +262,10 @@ class ConnectManagerImpl: ConnectManager()
 
                     getReadMessages()
                     getMutedChats()
+
+                    notifyListeners {
+                        onGetNodes()
+                    }
                 }
             }
         } catch (e: Exception) {
@@ -378,7 +387,8 @@ class ConnectManagerImpl: ConnectManager()
                             isRestoreAccount,
                             getRawMixerIp(),
                             tribeServer,
-                            isProductionEnvironment()
+                            isProductionEnvironment(),
+                            router
                         )
                     }
                 }
@@ -655,7 +665,12 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
-    override fun restoreAccount(defaultTribe: String?, tribeHost: String?, mixerServerIp: String?) {
+    override fun restoreAccount(
+        defaultTribe: String?,
+        tribeHost: String?,
+        mixerServerIp: String?,
+        routerUrl: String?
+    ) {
         val restoreMnemonic = restoreMnemonicWords?.joinToString(" ")
         val seed = generateMnemonicAndSeed(restoreMnemonic)
         val now = getTimestampInMilliseconds()
@@ -664,6 +679,7 @@ class ConnectManagerImpl: ConnectManager()
             ownerSeed = firstSeed
             _mixerIp = mixerServerIp ?: TEST_V2_SERVER_IP
             tribeServer = tribeHost ?: TEST_V2_TRIBES_SERVER
+            router = routerUrl
 
             network = if (isProductionServer()) {
                 MAINNET_NETWORK
@@ -993,7 +1009,7 @@ class ConnectManagerImpl: ConnectManager()
                 contact.lightningNodePubKey?.value!!,
                 contact.lightningRouteHint?.value!!,
                 ownerInfoStateFlow.value.alias ?: "",
-                ownerInfoStateFlow.value?.picture ?: "",
+                ownerInfoStateFlow.value.picture ?: "",
                 5000.toULong(),
                 contact.inviteCode,
                 contact.contactAlias?.value
@@ -1127,6 +1143,41 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
+    override fun addNodesFromResponse(nodesJson: String) {
+        try {
+            val addNodes = addNode(
+                nodesJson
+            )
+            handleRunReturn(addNodes, mqttClient)
+        } catch (e: Exception) {
+//            notifyListeners {
+//                onConnectManagerError(ConnectManagerError.AddNodesError)
+//            }
+            Log.e("MQTT_MESSAGES", "addNodesFromResponse ${e.message}")
+        }
+    }
+
+    override fun concatNodesFromResponse(
+        nodesJson: String,
+        routerPubKey: String,
+        amount: Long
+    ) {
+        try {
+            val concatNodes = concatRoute(
+                getCurrentUserState(),
+                nodesJson,
+                routerPubKey,
+                amount.toULong()
+            )
+            handleRunReturn(concatNodes, mqttClient)
+        } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.ConcatNodesError)
+            }
+            Log.e("MQTT_MESSAGES", "concatNodesFromResponse ${e.message}")
+        }
+    }
+
     // Messaging Methods
 
     private fun handleMessageArrived(topic: String?, message: MqttMessage?) {
@@ -1138,8 +1189,8 @@ class ConnectManagerImpl: ConnectManager()
                     ownerSeed ?: "",
                     getTimestampInMilliseconds(),
                     getCurrentUserState(),
-                    ownerInfoStateFlow.value?.alias ?: "",
-                    ownerInfoStateFlow.value?.picture ?: ""
+                    ownerInfoStateFlow.value.alias ?: "",
+                    ownerInfoStateFlow.value.picture ?: ""
                 )
 
                 mqttClient?.let { client ->
@@ -1182,8 +1233,8 @@ class ConnectManagerImpl: ConnectManager()
                 messageType.toUByte(),
                 sphinxMessage,
                 getCurrentUserState(),
-                ownerInfoStateFlow.value?.alias ?: "",
-                ownerInfoStateFlow.value?.picture ?: "",
+                ownerInfoStateFlow.value.alias ?: "",
+                ownerInfoStateFlow.value.picture ?: "",
                 convertSatsToMillisats(nnAmount),
                 isTribe
             )
@@ -1223,8 +1274,8 @@ class ConnectManagerImpl: ConnectManager()
                 17.toUByte(), // Fix this hardcoded value
                 sphinxMessage,
                 getCurrentUserState(),
-                ownerInfoStateFlow.value?.alias ?: "",
-                ownerInfoStateFlow.value?.picture ?: "",
+                ownerInfoStateFlow.value.alias ?: "",
+                ownerInfoStateFlow.value.picture ?: "",
                 convertSatsToMillisats(nnAmount),
                 isTribe
             )
@@ -1456,7 +1507,7 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
-    override fun processInvoicePayment(paymentRequest: String) {
+    override fun processContactInvoicePayment(paymentRequest: String) {
         val now = getTimestampInMilliseconds()
 
         try {
@@ -1465,14 +1516,35 @@ class ConnectManagerImpl: ConnectManager()
                 now,
                 getCurrentUserState(),
                 paymentRequest,
-                ownerInfoStateFlow.value?.alias ?: "",
-                ownerInfoStateFlow.value?.picture ?: "",
+                ownerInfoStateFlow.value.alias ?: "",
+                ownerInfoStateFlow.value.picture ?: "",
                 false // not implemented on tribes yet
             )
             handleRunReturn(processInvoice, mqttClient)
         } catch (e: Exception) {
             notifyListeners {
                 onConnectManagerError(ConnectManagerError.PayContactInvoiceError)
+            }
+            Log.e("MQTT_MESSAGES", "processInvoicePayment ${e.message}")
+        }
+    }
+
+    override fun processInvoicePayment(
+        paymentRequest: String,
+        milliSatAmount: Long
+    ) {
+        try {
+            val invoice = payInvoice(
+                ownerSeed!!,
+                getTimestampInMilliseconds(),
+                getCurrentUserState(),
+                paymentRequest,
+                milliSatAmount.toULong()
+            )
+            handleRunReturn(invoice, mqttClient)
+        } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.PayInvoiceError)
             }
             Log.e("MQTT_MESSAGES", "processInvoicePayment ${e.message}")
         }
@@ -1606,6 +1678,14 @@ class ConnectManagerImpl: ConnectManager()
                 onConnectManagerError(ConnectManagerError.MediaTokenError)
             }
             Log.d("MQTT_MESSAGES", "Error to generate media token $e")
+            null
+        }
+    }
+
+    override fun getInvoiceInfo(invoice: String): String? {
+        return try {
+            parseInvoice(invoice)
+        } catch (e: Exception) {
             null
         }
     }

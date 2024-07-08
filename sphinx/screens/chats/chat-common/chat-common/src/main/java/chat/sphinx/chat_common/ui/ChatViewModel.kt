@@ -1016,6 +1016,11 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                             app.getString(R.string.connect_manager_pay_contact_invoice_error))
                         )
                     }
+                    is ConnectManagerError.PayInvoiceError -> {
+                        submitSideEffect(ChatSideEffect.Notify(
+                            app.getString(R.string.connect_manager_pay_invoice_error))
+                        )
+                    }
                     is ConnectManagerError.PaymentHashError -> {
                         submitSideEffect(ChatSideEffect.Notify(
                             app.getString(R.string.connect_manager_payment_hash_error))
@@ -2385,7 +2390,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                             ChatSideEffect.Notify(app.getString(R.string.balance_too_low))
                         )
                     } else {
-                        messageRepository.payNewPaymentRequest(message)
+                        connectManagerRepository.payContactPaymentRequest(message.paymentRequest)
                     }
                 }
             }

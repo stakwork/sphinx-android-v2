@@ -9,7 +9,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import app.cash.exhaustive.Exhaustive
 import chat.sphinx.concept_background_login.BackgroundLoginHandler
-import chat.sphinx.concept_network_query_crypter.NetworkQueryCrypter
+import chat.sphinx.concept_network_query_contact.NetworkQueryContact
 import chat.sphinx.concept_network_query_people.NetworkQueryPeople
 import chat.sphinx.concept_network_query_people.model.isClaimOnLiquidPath
 import chat.sphinx.concept_network_query_people.model.isDeleteMethod
@@ -24,7 +24,6 @@ import chat.sphinx.concept_repository_connect_manager.model.NetworkStatus
 import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.concept_repository_dashboard_android.RepositoryDashboardAndroid
 import chat.sphinx.concept_repository_feed.FeedRepository
-import chat.sphinx.concept_repository_lightning.LightningRepository
 import chat.sphinx.concept_service_media.MediaPlayerServiceController
 import chat.sphinx.concept_service_notification.PushNotificationRegistrar
 import chat.sphinx.concept_signer_manager.SignerManager
@@ -40,6 +39,8 @@ import chat.sphinx.dashboard.ui.viewstates.DashboardMotionViewState
 import chat.sphinx.dashboard.ui.viewstates.DashboardTabsViewState
 import chat.sphinx.dashboard.ui.viewstates.DeepLinkPopupViewState
 import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
+import chat.sphinx.example.wrapper_mqtt.InvoiceBolt11
+import chat.sphinx.example.wrapper_mqtt.InvoiceBolt11.Companion.toInvoiceBolt11
 import chat.sphinx.kotlin_response.LoadResponse
 import chat.sphinx.kotlin_response.Response
 import chat.sphinx.logger.SphinxLogger
@@ -69,11 +70,11 @@ import chat.sphinx.wrapper_common.feed.toFeedItemLink
 import chat.sphinx.wrapper_common.isValidExternalAuthorizeLink
 import chat.sphinx.wrapper_common.isValidExternalRequestLink
 import chat.sphinx.wrapper_common.isValidPeopleConnectLink
-import chat.sphinx.wrapper_common.lightning.Bolt11
 import chat.sphinx.wrapper_common.lightning.LightningNodePubKey
 import chat.sphinx.wrapper_common.lightning.LightningPaymentRequest
 import chat.sphinx.wrapper_common.lightning.LightningRouteHint
 import chat.sphinx.wrapper_common.lightning.Sat
+import chat.sphinx.wrapper_common.lightning.getLspPubKey
 import chat.sphinx.wrapper_common.lightning.isValidLightningNodeLink
 import chat.sphinx.wrapper_common.lightning.isValidLightningNodePubKey
 import chat.sphinx.wrapper_common.lightning.isValidLightningPaymentRequest
@@ -122,6 +123,7 @@ import kotlinx.coroutines.withContext
 import org.jitsi.meet.sdk.JitsiMeetActivity
 import org.jitsi.meet.sdk.JitsiMeetConferenceOptions
 import org.jitsi.meet.sdk.JitsiMeetUserInfo
+import org.json.JSONObject
 import javax.inject.Inject
 
 
@@ -147,12 +149,11 @@ internal class DashboardViewModel @Inject constructor(
     private val chatRepository: ChatRepository,
     private val feedRepository: FeedRepository,
     private val actionsRepository: ActionsRepository,
-    private val lightningRepository: LightningRepository,
 
     private val networkQueryAuthorizeExternal: NetworkQueryAuthorizeExternal,
     private val networkQueryPeople: NetworkQueryPeople,
     private val pushNotificationRegistrar: PushNotificationRegistrar,
-    private val networkQueryCrypter: NetworkQueryCrypter,
+    private val networkQueryContact: NetworkQueryContact,
 
     private val walletDataHandler: WalletDataHandler,
 
@@ -192,6 +193,8 @@ internal class DashboardViewModel @Inject constructor(
         const val SERVER_SETTINGS_SHARED_PREFERENCES = "server_ip_settings"
         const val ONION_STATE_KEY = "onion_state"
         const val NETWORK_MIXER_IP = "network_mixer_ip"
+        const val ROUTER_URL= "router_url"
+        const val ROUTER_PUBKEY= "router_pubkey"
     }
 
     private val _hideBalanceStateFlow: MutableStateFlow<Int> by lazy {
@@ -263,6 +266,13 @@ internal class DashboardViewModel @Inject constructor(
                             app.getString(R.string.dashboard_invite_code_screen),
                         )
                     }
+                    is OwnerRegistrationState.GetNodes -> {
+                        val routerUrl = serverSettingsSharedPreferences.getString(ROUTER_URL, null)
+                        if (routerUrl != null) {
+                            storeRouterPubKey(routerUrl)
+                            connectManagerRepository.requestNodes(routerUrl)
+                        }
+                    }
                     else -> {}
                 }
             }
@@ -318,6 +328,11 @@ internal class DashboardViewModel @Inject constructor(
                             app.getString(R.string.connect_manager_create_invite_error))
                         )
                     }
+                    is ConnectManagerError.ConcatNodesError -> {
+                        submitSideEffect(ChatListSideEffect.Notify(
+                            app.getString(R.string.connect_manager_concat_nodes_error))
+                        )
+                    }
                     is ConnectManagerError.CreateInvoiceError -> {
                         submitSideEffect(ChatListSideEffect.Notify(
                             app.getString(R.string.connect_manager_create_invoice_error))
@@ -359,14 +374,6 @@ internal class DashboardViewModel @Inject constructor(
 
     private fun getUserState(): String? {
         return userStateSharedPreferences.getString(ONION_STATE_KEY, null)
-    }
-    private fun deleteUserState(userStates: List<String>) {
-        val editor = userStateSharedPreferences.edit()
-
-        for (state in userStates) {
-            editor.remove(state)
-        }
-        editor.apply()
     }
 
     private fun getNetworkMixerIp(): String? {
@@ -594,8 +601,8 @@ internal class DashboardViewModel @Inject constructor(
                     }
                 } ?: code.toLightningPaymentRequestOrNull()?.let { lightningPaymentRequest ->
                     try {
-                        val bolt11 = Bolt11.decode(lightningPaymentRequest)
-                        val amount = bolt11.getSatsAmount()
+                        val bolt11 = connectManagerRepository.getInvoiceInfo(lightningPaymentRequest.value)?.toInvoiceBolt11(moshi)
+                        val amount = bolt11?.getSatsAmount()
 
                         if (amount != null) {
                             submitSideEffect(
@@ -603,7 +610,7 @@ internal class DashboardViewModel @Inject constructor(
                                     amount.value,
                                     bolt11.getMemo()
                                 ) {
-                                    payLightningPaymentRequest(lightningPaymentRequest)
+                                    processLightningPaymentRequest(lightningPaymentRequest, bolt11)
                                 }
                             )
                         } else {
@@ -667,10 +674,13 @@ internal class DashboardViewModel @Inject constructor(
 
     private suspend fun handleContactLink(pubKey: LightningNodePubKey, routeHint: LightningRouteHint?) {
         scannedNodeAddress.value = Pair(pubKey, routeHint)
+        val contact = contactRepository.getContactByPubKey(pubKey).firstOrNull()
 
-        contactRepository.getContactByPubKey(pubKey).firstOrNull()?.let { _ ->
-            navBarNavigator.toPaymentSendDetail(pubKey, routeHint, null)
-        } ?: scannerMenuHandler.viewStateContainer.updateViewState(MenuBottomViewState.Open)
+        if (contact != null) {
+            navBarNavigator.toPaymentSendDetail(pubKey, contact.routeHint, contact.id)
+        } else {
+            scannerMenuHandler.viewStateContainer.updateViewState(MenuBottomViewState.Open)
+        }
     }
 
     private suspend fun goToContactChat(contact: Contact) {
@@ -1214,8 +1224,93 @@ internal class DashboardViewModel @Inject constructor(
         return owner
     }
 
-    private fun payLightningPaymentRequest(lightningPaymentRequest: LightningPaymentRequest) {
-        viewModelScope.launch(mainImmediate) {}
+    private fun storeRouterPubKey(routerUrl: String){
+        try {
+            val jsonObject = JSONObject(routerUrl)
+            val routerPubKey = jsonObject.getString("pubkey")
+
+            val editor = serverSettingsSharedPreferences.edit()
+
+            editor.putString(ROUTER_PUBKEY, routerPubKey)
+            editor.apply()
+        } catch (e: Exception) { }
+    }
+
+    private var payInvoiceJob: Job? = null
+    private fun processLightningPaymentRequest(
+        lightningPaymentRequest: LightningPaymentRequest,
+        invoiceBolt11: InvoiceBolt11
+    ) {
+        if (payInvoiceJob?.isActive == true) {
+            return
+        }
+
+        payInvoiceJob = viewModelScope.launch(mainImmediate) {
+            val balance = getAccountBalance().firstOrNull() ?: return@launch
+
+            val invoiceAmount = invoiceBolt11.getSatsAmount()?.value
+            if (invoiceAmount != null && invoiceAmount > balance.balance.value) {
+                submitSideEffect(ChatListSideEffect.Notify(app.getString(R.string.balance_too_low)))
+                return@launch
+            }
+
+            val invoicePayeePubKey = invoiceBolt11.getPubKey()
+            val invoiceAmountMilliSat = invoiceBolt11.getMilliSatsAmount()?.value
+
+            if (invoicePayeePubKey == null || invoiceAmountMilliSat == null) {
+                 submitSideEffect(ChatListSideEffect.Notify(app.getString(R.string.invalid_invoice)))
+                return@launch
+            }
+
+            val contact = contactRepository.getContactByPubKey(invoicePayeePubKey).firstOrNull()
+            val contactLspPubKey = contact?.routeHint?.getLspPubKey()
+            val ownerLsp = getOwner().routeHint?.getLspPubKey()
+
+            if (contact == null || (contactLspPubKey != null && contactLspPubKey != ownerLsp)) {
+                val routerUrl = serverSettingsSharedPreferences.getString(ROUTER_URL, null)
+
+                if (routerUrl == null) {
+                    submitSideEffect(ChatListSideEffect.Notify(app.getString(R.string.router_url_not_found)))
+                    return@launch
+                }
+
+                networkQueryContact.getRoutingNodes(
+                    routerUrl,
+                    invoicePayeePubKey,
+                    invoiceAmountMilliSat
+                ).collect { response ->
+                    when (response) {
+                        is LoadResponse.Loading -> {}
+                        is Response.Error -> {
+                            submitSideEffect(ChatListSideEffect.Notify(app.getString(R.string.error_getting_route)))
+                        }
+                        is Response.Success -> {
+                            try {
+                                val routerPubKey = serverSettingsSharedPreferences
+                                    .getString(ROUTER_PUBKEY, null)
+                                    ?: "true"
+
+                                connectManagerRepository.payInvoice(
+                                    lightningPaymentRequest,
+                                    response.value,
+                                    routerPubKey,
+                                    invoiceAmountMilliSat
+                                )
+                            } catch (e: Exception) {
+                                submitSideEffect(ChatListSideEffect.Notify(app.getString(R.string.error_getting_route)))
+                            }
+                        }
+                    }
+                }
+            } else {
+                connectManagerRepository.payInvoice(
+                    lightningPaymentRequest,
+                    null,
+                    null,
+                    invoiceAmountMilliSat
+                )
+            }
+        }
     }
 
     private val _restoreProgressStateFlow: MutableStateFlow<RestoreProgressViewState?> by lazy {

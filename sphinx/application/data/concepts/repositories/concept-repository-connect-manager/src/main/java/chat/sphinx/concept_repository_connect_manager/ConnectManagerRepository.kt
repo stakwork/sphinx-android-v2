@@ -7,6 +7,7 @@ import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
 import chat.sphinx.example.wrapper_mqtt.TransactionDto
 import chat.sphinx.example.wrapper_mqtt.TribeMembersResponse
 import chat.sphinx.wrapper_common.dashboard.ChatId
+import chat.sphinx.wrapper_common.lightning.LightningPaymentRequest
 import chat.sphinx.wrapper_contact.NewContact
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -65,10 +66,24 @@ interface ConnectManagerRepository {
         tribePubKey: String
     )
     fun getTribeServerPubKey(): String?
-    fun sendKeySend(pubKey: String, amount: Long)
     fun getPayments(lastMessageDate: Long, limit: Int)
     suspend fun getPubKeyByEncryptedChild(child: String): Flow<ChatId?>
     fun getTagsByChatId(chatId: ChatId)
+    suspend fun payContactPaymentRequest(paymentRequest: LightningPaymentRequest?)
+    suspend fun payInvoice(
+        paymentRequest: LightningPaymentRequest,
+        endHops: String?,
+        routerPubKey: String?,
+        milliSatAmount: Long
+    )
+    suspend fun sendKeySend(
+        pubKey: String,
+        endHops: String?,
+        milliSatAmount: Long,
+        routerPubKey: String?
+    )
     suspend fun updateLspAndOwner(data: String) {}
+    fun requestNodes(nodeUrl: String)
+    fun getInvoiceInfo(invoice: String): String?
 
 }

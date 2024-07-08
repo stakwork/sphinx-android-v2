@@ -36,6 +36,7 @@
     <string name="payment_request">Solicitud de Pago</string>
     <string name="error_payment_message">Error de pago: %s </string>
     <string name="failed_to_request_payment">La solicitud de pago falló</string>
+    <string name="error_payment_empty_router">Router URL vacia</string>
     <!-- Tribe Member error messages -->
     <string name="failed_to_approve_member">No se ha podido aprobar la solicitud</string>
     <string name="failed_to_reject_member">No se ha podido denegar la solicitud</string>
@@ -64,6 +65,9 @@
 
     <string name="balance_too_low">Balance demasiado bajo</string>
     <string name="boost_amount_too_low">El monto del Boost debe ser mayor a 0</string>
+    <string name="invalid_invoice_es">Factura inválida</string>
+    <string name="router_url_not_found_es">URL del enrutador no encontrada</string>
+    <string name="error_getting_route_es">Error al obtener la ruta</string>
 
     <string name="tribe_member_profile_send_sats">Enviar Sats</string>
     <string name="tribe_member_profile_price_to_meet">Monto para conectar:</string>
@@ -178,12 +182,14 @@
     <string name="connect_manager_create_invoice_error">Error al crear factura.</string>
     <string name="connect_manager_server_pubkey_error">Error al obtener la clave pública del servidor.</string>
     <string name="connect_manager_pay_contact_invoice_error">Error al pagar factura de contacto.</string>
+    <string name="connect_manager_pay_invoice_error">Error al pagar factura.</string>
     <string name="connect_manager_payment_hash_error">Error al generar hash de pago.</string>
     <string name="connect_manager_list_tribe_members_error">Error al listar miembros de la tribu.</string>
     <string name="connect_manager_fetch_message_error">Error al recuperar mensaje.</string>
     <string name="connect_manager_fetch_first_message_error">Error al recuperar el primer mensaje.</string>
     <string name="connect_manager_message_count_error">Error en el conteo de mensajes.</string>
     <string name="connect_manager_set_device_id_error">Error al establecer ID de dispositivo.</string>
+    <string name="connect_manager_set_router_url">Error al establecer router url.</string>
     <string name="connect_manager_media_token_error">Error al obtener media token.</string>
     <string name="connect_manager_read_message_error">Error al leer mensaje.</string>
     <string name="connect_manager_get_read_messages_error">Error al recuperar mensajes leídos.</string>

@@ -59,6 +59,18 @@ abstract class NetworkCall {
     ): Flow<LoadResponse<List<T>, ResponseError>>
 
     /**
+     * GET raw JSON response
+     *
+     * @param [url] the url
+     * @param [headers] any headers that need to be added to the request
+     * */
+    abstract fun getRawJson(
+        url: String,
+        headers: Map<String, String>? = null,
+        useExtendedNetworkCallClient: Boolean = false
+    ): Flow<LoadResponse<String, ResponseError>>
+
+    /**
      * PUT
      *
      * @param [responseJsonClass] the class to serialize the response json into

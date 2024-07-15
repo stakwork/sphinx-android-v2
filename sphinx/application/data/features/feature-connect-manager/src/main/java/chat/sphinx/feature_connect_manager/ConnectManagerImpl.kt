@@ -265,9 +265,9 @@ class ConnectManagerImpl: ConnectManager()
                     )
                     handleRunReturn(fetchMessages, mqttClient)
 
-                    getReadMessages()
-                    getMutedChats()
-                    getPings()
+//                    getReadMessages()
+//                    getMutedChats()
+//                    getPings()
 
                     notifyListeners {
                         onGetNodes()
@@ -286,7 +286,8 @@ class ConnectManagerImpl: ConnectManager()
         rr: RunReturn,
         client: MqttAsyncClient?,
         skipSettleTopic: Boolean = false,
-        skipAsyncTopic: Boolean = false
+        skipAsyncTopic: Boolean = false,
+        topic: String? = null
     ) {
         if (client != null) {
             // Set updated state into db
@@ -364,6 +365,15 @@ class ConnectManagerImpl: ConnectManager()
                         )
                     }
                 }
+            }
+
+            if (topic?.contains("/batch") == true) {
+                ///Call next page of restore
+
+                ///Should be called when fetch messages finishes last page of process
+                getReadMessages()
+                getMutedChats()
+                getPings()
             }
 
             // Handling new tribe and tribe members
@@ -799,6 +809,7 @@ class ConnectManagerImpl: ConnectManager()
     override fun fetchMessagesOnRestoreAccount(totalHighestIndex: Long?) {
         try {
             val limit = 100
+
             val fetchMessages = uniffi.sphinxrs.fetchMsgsBatch(
                 ownerSeed!!,
                 getTimestampInMilliseconds(),
@@ -934,6 +945,7 @@ class ConnectManagerImpl: ConnectManager()
     private fun getPings() {
         try {
             readyForPing = true
+
             val pings = fetchPings(
                 ownerSeed!!,
                 getTimestampInMilliseconds(),
@@ -1230,7 +1242,11 @@ class ConnectManagerImpl: ConnectManager()
                 )
 
                 mqttClient?.let { client ->
-                    handleRunReturn(runReturn, client)
+                    handleRunReturn(
+                        runReturn,
+                        client,
+                        topic = topic
+                    )
                 }
 
                 Log.d("MQTT_MESSAGES", " this is handle ${runReturn}")

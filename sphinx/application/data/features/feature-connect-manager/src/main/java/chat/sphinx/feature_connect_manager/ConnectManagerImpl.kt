@@ -28,6 +28,7 @@ import org.eclipse.paho.client.mqttv3.MqttException
 import org.eclipse.paho.client.mqttv3.MqttMessage
 import org.json.JSONException
 import org.json.JSONObject
+import uniffi.sphinxrs.Msg
 import uniffi.sphinxrs.ParsedInvite
 import uniffi.sphinxrs.RunReturn
 import uniffi.sphinxrs.addContact
@@ -36,6 +37,7 @@ import uniffi.sphinxrs.codeFromInvite
 import uniffi.sphinxrs.concatRoute
 import uniffi.sphinxrs.deleteMsgs
 import uniffi.sphinxrs.fetchMsgsBatch
+import uniffi.sphinxrs.fetchPings
 import uniffi.sphinxrs.getDefaultTribeServer
 import uniffi.sphinxrs.getMsgsCounts
 import uniffi.sphinxrs.getMutes
@@ -58,6 +60,7 @@ import uniffi.sphinxrs.parseInvite
 import uniffi.sphinxrs.parseInvoice
 import uniffi.sphinxrs.payInvoice
 import uniffi.sphinxrs.paymentHashFromInvoice
+import uniffi.sphinxrs.pingDone
 import uniffi.sphinxrs.processInvite
 import uniffi.sphinxrs.read
 import uniffi.sphinxrs.rootSignMs
@@ -90,6 +93,8 @@ class ConnectManagerImpl: ConnectManager()
     private var hasAttemptedReconnect = false
     private var tribeServer: String? = null
     private var router: String? = null
+    private val pingsMap = mutableMapOf<String, Long>()
+    private var readyForPing: Boolean = false
     private var delayedRRObjects: MutableList<RunReturn> = mutableListOf()
 
     companion object {
@@ -262,6 +267,7 @@ class ConnectManagerImpl: ConnectManager()
 
                     getReadMessages()
                     getMutedChats()
+                    getPings()
 
                     notifyListeners {
                         onGetNodes()
@@ -306,7 +312,9 @@ class ConnectManagerImpl: ConnectManager()
 
             // Process each message in the new msgs array
             if (rr.msgs.isNotEmpty()) {
+                handlePingDone(rr.msgs)
 
+                // Restore contacts and tribes
                 if (restoreMnemonicWords?.isNotEmpty() == true) {
 
                     val contactsToRestore = rr.msgs.filter {
@@ -339,6 +347,7 @@ class ConnectManagerImpl: ConnectManager()
                     }
                 }
 
+                // Handle new messages
                 rr.msgs.forEach { msg ->
                     notifyListeners {
                         onMessage(
@@ -501,6 +510,12 @@ class ConnectManagerImpl: ConnectManager()
                     onUpdateMutes(muteLevels)
                 }
                 Log.d("MQTT_MESSAGES", "=> muteLevels $muteLevels")
+            }
+            rr.ping?.let { ping ->
+                if (ping.isNotEmpty()) {
+                    handlePing(ping)
+                    Log.d("MQTT_MESSAGES", "=> ping $ping")
+                }
             }
             rr.payments?.let { payments ->
                 notifyListeners {
@@ -916,6 +931,23 @@ class ConnectManagerImpl: ConnectManager()
         return mixerIp
     }
 
+    private fun getPings() {
+        try {
+            readyForPing = true
+            val pings = fetchPings(
+                ownerSeed!!,
+                getTimestampInMilliseconds(),
+                getCurrentUserState()
+            )
+            handleRunReturn(pings, mqttClient)
+        } catch (e: Exception) {
+//            notifyListeners {
+//                onConnectManagerError(ConnectManagerError.FetchPingsError)
+//            }
+            Log.e("MQTT_MESSAGES", "getPings ${e.message}")
+        }
+    }
+
     @OptIn(ExperimentalUnsignedTypes::class)
     private fun generateMnemonicAndSeed(restoreMnemonic: String?): String? {
         var seed: String? = null
@@ -1181,6 +1213,10 @@ class ConnectManagerImpl: ConnectManager()
     // Messaging Methods
 
     private fun handleMessageArrived(topic: String?, message: MqttMessage?) {
+        if (!readyForPing && topic?.contains("ping") == true) {
+            return
+        }
+
         if (topic != null && message?.payload != null) {
             try {
                 val runReturn = handle(
@@ -1911,6 +1947,37 @@ class ConnectManagerImpl: ConnectManager()
     }
     private fun isConnected(): Boolean {
         return mqttClient?.isConnected ?: false
+    }
+
+    private fun handlePing(ping: String) {
+        val parts = ping.split(":")
+        if (parts.size == 2) {
+            val paymentHash = parts[0]
+            val timestamp = parts[1].toLong()
+            pingsMap[paymentHash] = timestamp
+        } else {
+            Log.d("MQTT_MESSAGE", "Invalid ping format")
+        }
+    }
+
+    private fun handlePingDone(msgs: List<Msg>) {
+        msgs.filter { it.paymentHash?.isNotEmpty() == true }
+            .mapNotNull { it.paymentHash }
+            .forEach { paymentHash ->
+                pingsMap[paymentHash]?.let { timestamp ->
+                    try {
+                        val pingDone = pingDone(
+                            ownerSeed!!,
+                            getTimestampInMilliseconds(),
+                            getCurrentUserState(),
+                            timestamp.toULong()
+                        )
+                        handleRunReturn(pingDone, mqttClient)
+                    } catch (e: Exception) {
+                        Log.d("MQTT_MESSAGES", "Error calling ping done")
+                    }
+                }
+            }
     }
 
     // Listener Methods

@@ -265,13 +265,13 @@ class ConnectManagerImpl: ConnectManager()
                     )
                     handleRunReturn(fetchMessages, mqttClient)
 
-//                    getReadMessages()
-//                    getMutedChats()
-//                    getPings()
-
                     notifyListeners {
                         onGetNodes()
                     }
+                }
+
+                if (ownerInfoStateFlow.value.messageLastIndex == null) {
+                    getPings()
                 }
             }
         } catch (e: Exception) {

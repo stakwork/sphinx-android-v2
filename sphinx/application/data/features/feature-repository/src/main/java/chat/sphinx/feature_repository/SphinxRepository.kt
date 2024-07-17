@@ -297,7 +297,7 @@ abstract class SphinxRepository(
                     }
                     is RestoreProcessState.RestoreMessages -> {
                         // Delay to ensure the contacts have been restored before fetching messages
-                        delay(500L)
+                        delay(100L)
                         connectManager.fetchMessagesOnRestoreAccount(msgCounts?.total_highest_index)
                     }
                     else -> {}

@@ -1,6 +1,7 @@
 package chat.sphinx.example.concept_connect_manager
 
 import chat.sphinx.example.concept_connect_manager.model.OwnerInfo
+import chat.sphinx.example.concept_connect_manager.model.RestoreState
 import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
 import chat.sphinx.wrapper_contact.NewContact
 import chat.sphinx.wrapper_lightning.WalletMnemonic
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.StateFlow
 
 abstract class ConnectManager {
     abstract val ownerInfoStateFlow: StateFlow<OwnerInfo?>
+    abstract val restoreStateFlow: StateFlow<RestoreState?>
 
     // Account Management Methods
     abstract fun createAccount()

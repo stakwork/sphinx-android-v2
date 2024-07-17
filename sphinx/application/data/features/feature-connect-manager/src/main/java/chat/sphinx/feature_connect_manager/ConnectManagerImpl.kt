@@ -5,6 +5,7 @@ import android.util.Log
 import chat.sphinx.example.concept_connect_manager.ConnectManager
 import chat.sphinx.example.concept_connect_manager.ConnectManagerListener
 import chat.sphinx.example.concept_connect_manager.model.OwnerInfo
+import chat.sphinx.example.concept_connect_manager.model.RestoreState
 import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
 import chat.sphinx.example.wrapper_mqtt.NewInvite
 import chat.sphinx.wrapper_common.lightning.toLightningNodePubKey
@@ -105,7 +106,8 @@ class ConnectManagerImpl: ConnectManager()
         const val TEST_SERVER_PORT =  1883
         const val PROD_SERVER_PORT = 8883
         const val COMPLETE_STATUS = "COMPLETE"
-        const val MSG_BATCH_LIMIT = 2
+        const val MSG_BATCH_LIMIT = 100
+        const val MSG_FIRST_PER_KEY_LIMIT = 10
     }
 
     private val _ownerInfoStateFlow: MutableStateFlow<OwnerInfo> by lazy {
@@ -118,6 +120,12 @@ class ConnectManagerImpl: ConnectManager()
     }
     override val ownerInfoStateFlow: StateFlow<OwnerInfo>
         get() = _ownerInfoStateFlow.asStateFlow()
+
+    private val _restoreStateFlow: MutableStateFlow<RestoreState?> by lazy {
+        MutableStateFlow(null)
+    }
+    override val restoreStateFlow: StateFlow<RestoreState?>
+        get() = _restoreStateFlow.asStateFlow()
 
     private var mixerIp: String?
         get() = _mixerIp?.let {
@@ -307,32 +315,6 @@ class ConnectManagerImpl: ConnectManager()
             if (rr.msgs.isNotEmpty()) {
                 handlePingDone(rr.msgs)
 
-                // Restore contacts and tribes
-                if (isRestoreAccount()) {
-
-                    val contactsToRestore = rr.msgs.filter {
-                        it.type?.toInt() == 33 || it.type?.toInt() == 11 || it.type?.toInt() == 10
-                    }.map { it.sender }.distinct()
-
-                    if (contactsToRestore.isNotEmpty()) {
-                        notifyListeners {
-                            onRestoreContacts(contactsToRestore)
-                        }
-                    }
-
-                    val tribesToRestore = rr.msgs.filter {
-                        it.type?.toInt() == 20 || it.type?.toInt() == 14
-                    }.map {
-                        Pair(it.sender, it.fromMe)
-                    }
-
-                    if (tribesToRestore.isNotEmpty()) {
-                        notifyListeners {
-                            onRestoreTribes(tribesToRestore, isProductionEnvironment())
-                        }
-                    }
-                }
-
                 // Handle new messages
                 rr.msgs.forEach { msg ->
                     notifyListeners {
@@ -354,37 +336,72 @@ class ConnectManagerImpl: ConnectManager()
 
             if (topic?.contains("/batch") == true) {
 
-                // When Restore Contact Step and rr.msgs.isEmpty() the state will change to Restore Message Step and call notifyListeners { onRestoreMessages() }
-                // When Restore Message Step and rr.msgs.isEmpty() the state will change RestoreFinihed
+                if (rr.msgs.isEmpty() && restoreStateFlow.value is RestoreState.RestoringContacts) {
+                    Log.d("RESTORE_PROCESS", "=> RestoreContacts Finished")
+                    notifyListeners { onRestoreMessages() }
+                }
 
-                if (rr.msgs.isEmpty()) {
+                if (rr.msgs.isEmpty() && restoreStateFlow.value is RestoreState.RestoringMessages) {
+                    Log.d("RESTORE_PROCESS", "=> RestoreFinished!!")
+                    _restoreStateFlow.value = RestoreState.RestoreFinished
+                }
+
+                if (rr.msgs.isEmpty() && restoreStateFlow.value == null ||
+                    restoreStateFlow.value is RestoreState.RestoreFinished
+                ) {
                     getReadMessages()
                     getMutedChats()
                     getPings()
+                    Log.d("RESTORE_PROCESS", "=> GET PING, MUTE AND READ ARE CALLED!")
                 } else {
-                    // this will be a when evaluating a restore state
                     if (isRestoreAccount()) {
+                        // Restore contacts and tribes
+                        if (restoreStateFlow.value is RestoreState.RestoringContacts) {
 
-                        // Restore Contact Step
-                        if (true) {
+                            val contactsToRestore = rr.msgs.filter {
+                                it.type?.toInt() == 33 || it.type?.toInt() == 11 || it.type?.toInt() == 10
+                            }.map { it.sender }.distinct()
+
+                            if (contactsToRestore.isNotEmpty()) {
+                                notifyListeners {
+                                    onRestoreContacts(contactsToRestore)
+                                }
+                            }
+
+                            val tribesToRestore = rr.msgs.filter {
+                                it.type?.toInt() == 20 || it.type?.toInt() == 14
+                            }.map {
+                                Pair(it.sender, it.fromMe)
+                            }
+
+                            if (tribesToRestore.isNotEmpty()) {
+                                notifyListeners {
+                                    onRestoreTribes(tribesToRestore, isProductionEnvironment())
+                                }
+                            }
+
                             val highestIndex = rr.msgs.maxByOrNull { it.index?.toLong() ?: 0L }?.index?.toLong()
                             highestIndex?.let { nnHighestIndex ->
                                 fetchFirstMessagesPerKey(nnHighestIndex.plus(1L))
                             }
+                            Log.d("RESTORE_PROCESS", "=> RestoreContacts Step $highestIndex")
                         }
                         // Restore Message Step
-                        if (false) {
+                        if (restoreStateFlow.value is RestoreState.RestoringMessages) {
                             val minIndex = rr.msgs.minByOrNull { it.index?.toLong() ?: 0L }?.index?.toULong()
                             minIndex?.let { nnMinIndex ->
                                 fetchMessagesOnRestoreAccount(nnMinIndex.minus(1u).toLong())
                             }
+                            Log.d("RESTORE_PROCESS", "=> RestoreMessages Step $minIndex")
                         }
                     } else {
+                        // Fetch messages when connected to mqtt
                         val highestIndexReceived = rr.msgs.maxByOrNull { it.index?.toLong() ?: 0L }?.index?.toULong()
 
-                        highestIndexReceived?.let { nnhighestIndexReceived ->
-                            fetchMessagesWithPagination(nnhighestIndexReceived)
+                        highestIndexReceived?.let { nnHighestIndexReceived ->
+                            fetchMessagesWithPagination(nnHighestIndexReceived)
                         }
+                        Log.d("RESTORE_PROCESS", "=> FetchMessagesWithPagination $highestIndexReceived")
                     }
                 }
             }
@@ -811,8 +828,10 @@ class ConnectManagerImpl: ConnectManager()
 
     override fun fetchFirstMessagesPerKey(lastMsgIdx: Long) {
         try {
-            // if the lastMsgIdx is 0, set restore state to Contact Step
-            val limit = 100
+            if (lastMsgIdx == 0L) {
+                _restoreStateFlow.value = RestoreState.RestoringContacts
+            }
+            val limit = MSG_FIRST_PER_KEY_LIMIT
             val fetchFirstMsg = uniffi.sphinxrs.fetchFirstMsgsPerKey(
                 ownerSeed!!,
                 getTimestampInMilliseconds(),
@@ -832,16 +851,20 @@ class ConnectManagerImpl: ConnectManager()
 
     override fun fetchMessagesOnRestoreAccount(totalHighestIndex: Long?) {
         try {
-            // Updates the Restore Message Step state with the max index (total of messages) and every iteration
-            // will have less until restore all messages (use this values to create a percentage)
-            val limit = 100
+            if (restoreStateFlow.value !is RestoreState.RestoringMessages) {
+                _restoreStateFlow.value = RestoreState.RestoringMessages(totalHighestIndex ?: 0, totalHighestIndex ?: 0)
+            } else {
+                _restoreStateFlow.value = (restoreStateFlow.value as RestoreState.RestoringMessages).copy(
+                    lastIndexFetch = totalHighestIndex ?: 0
+                )
+            }
 
             val fetchMessages = fetchMsgsBatch(
                 ownerSeed!!,
                 getTimestampInMilliseconds(),
                 getCurrentUserState(),
                 totalHighestIndex?.toULong() ?: 0.toULong(),
-                limit.toUInt(),
+                MSG_BATCH_LIMIT.toUInt(),
                     true,
             )
             handleRunReturn(fetchMessages, mqttClient)

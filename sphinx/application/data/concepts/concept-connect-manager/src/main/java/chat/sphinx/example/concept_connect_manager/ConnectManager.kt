@@ -62,6 +62,10 @@ abstract class ConnectManager {
         routerPubKey: String,
         amount: Long
     )
+    abstract fun fetchMessagesOnAppInit(
+        lastMsgIdx: Long?,
+        reverse: Boolean
+    )
 
     // Messaging Methods
     abstract fun sendMessage(
@@ -163,8 +167,9 @@ interface ConnectManagerListener {
     )
     fun onRestoreAccount(isProductionEnvironment: Boolean)
     fun onRestoreContacts(contacts: List<String?>)
+    fun onRestoreMessages()
     fun onRestoreTribes(tribes: List<Pair<String?, Boolean?>>, isProductionEnvironment: Boolean) // Sender, FromMe
-    fun onRestoreNextPageMessages(highestIndex: Long, limit: Int)
+//    fun onRestoreNextPageMessages(highestIndex: Long, limit: Int)
     fun onNewBalance(balance: Long)
     fun onSignedChallenge(sign: String)
     fun onInitialTribe(tribe: String, isProductionEnvironment: Boolean)

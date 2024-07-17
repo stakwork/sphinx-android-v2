@@ -221,9 +221,10 @@ internal class OnBoardConnectViewModel @Inject constructor(
                 }
 
                 if (redemptionCode is RedemptionCode.MnemonicRestoration) {
-                    // create a dialog to select network
+                    // set mnemonic words
                     connectManagerRepository.setMnemonicWords(redemptionCode.mnemonic)
 
+                    // set network type
                     submitSideEffect(OnBoardConnectSideEffect.CheckBitcoinNetwork(
                         regTestCallback = {
                             connectManagerRepository.setNetworkType(true)

@@ -707,9 +707,11 @@ abstract class SphinxRepository(
                 delay(100L)
                 createNewContact(newContact)
             }
-
-            restoreProcessState.value = RestoreProcessState.RestoreMessages
         }
+    }
+
+    override fun onRestoreMessages() {
+        restoreProcessState.value = RestoreProcessState.RestoreMessages
     }
 
     override fun onRestoreTribes(
@@ -734,21 +736,20 @@ abstract class SphinxRepository(
                     joinTribeOnRestoreAccount(it, isAdmin, isProductionEnvironment)
                 }
             }
-            restoreProcessState.value = RestoreProcessState.RestoreMessages
         }
     }
 
-    override fun onRestoreNextPageMessages(highestIndex: Long, limit: Int) {
-        applicationScope.launch(io) {
-            val nextHighestIndex = highestIndex.minus(limit)
-            if (nextHighestIndex > 0) {
-                delay(200L)
-                connectManager.fetchMessagesOnRestoreAccount(nextHighestIndex)
-            } else {
-                // Restore complete
-            }
-        }
-    }
+//    override fun onRestoreNextPageMessages(highestIndex: Long, limit: Int) {
+//        applicationScope.launch(io) {
+//            val nextHighestIndex = highestIndex.minus(limit)
+//            if (nextHighestIndex > 0) {
+//                delay(200L)
+//                connectManager.fetchMessagesOnRestoreAccount(nextHighestIndex)
+//            } else {
+//                // Restore complete
+//            }
+//        }
+//    }
 
     override fun onNewBalance(balance: Long) {
         applicationScope.launch(io) {

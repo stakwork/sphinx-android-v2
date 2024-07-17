@@ -105,6 +105,7 @@ class ConnectManagerImpl: ConnectManager()
         const val TEST_SERVER_PORT =  1883
         const val PROD_SERVER_PORT = 8883
         const val COMPLETE_STATUS = "COMPLETE"
+        const val MSG_BATCH_LIMIT = 2
     }
 
     private val _ownerInfoStateFlow: MutableStateFlow<OwnerInfo> by lazy {
@@ -253,25 +254,16 @@ class ConnectManagerImpl: ConnectManager()
                 )
                 client.subscribe(arrayOf(tribeSubtopic), qos)
 
-                if (ownerInfoStateFlow.value.messageLastIndex != null && restoreMnemonicWords?.isEmpty() == true) {
+                if (ownerInfoStateFlow.value.messageLastIndex != null && !isRestoreAccount()) {
+                    val msgLastIndex = ownerInfoStateFlow.value.messageLastIndex?.plus(1)
 
-                    val fetchMessages = fetchMsgsBatch(
-                        ownerSeed!!,
-                        getTimestampInMilliseconds(),
-                        getCurrentUserState(),
-                        ownerInfoStateFlow.value.messageLastIndex?.plus(1)?.toULong() ?: 0.toULong(),
-                        null,
+                    fetchMessagesOnAppInit(
+                        msgLastIndex ?: 0,
                         false
                     )
-                    handleRunReturn(fetchMessages, mqttClient)
-
                     notifyListeners {
                         onGetNodes()
                     }
-                }
-
-                if (ownerInfoStateFlow.value.messageLastIndex == null) {
-                    getPings()
                 }
             }
         } catch (e: Exception) {
@@ -316,7 +308,7 @@ class ConnectManagerImpl: ConnectManager()
                 handlePingDone(rr.msgs)
 
                 // Restore contacts and tribes
-                if (restoreMnemonicWords?.isNotEmpty() == true) {
+                if (isRestoreAccount()) {
 
                     val contactsToRestore = rr.msgs.filter {
                         it.type?.toInt() == 33 || it.type?.toInt() == 11 || it.type?.toInt() == 10
@@ -337,13 +329,6 @@ class ConnectManagerImpl: ConnectManager()
                     if (tribesToRestore.isNotEmpty()) {
                         notifyListeners {
                             onRestoreTribes(tribesToRestore, isProductionEnvironment())
-                        }
-                    }
-
-                    if (contactsToRestore.isNotEmpty() || tribesToRestore.isNotEmpty()) {
-                        val highestIndex = rr.msgs.maxByOrNull { it.index?.toLong() ?: 0L }?.index?.toLong()
-                        highestIndex?.let { nnHighestIndex ->
-                            fetchFirstMessagesPerKey(highestIndex.plus(1L))
                         }
                     }
                 }
@@ -368,12 +353,40 @@ class ConnectManagerImpl: ConnectManager()
             }
 
             if (topic?.contains("/batch") == true) {
-                ///Call next page of restore
 
-                ///Should be called when fetch messages finishes last page of process
-                getReadMessages()
-                getMutedChats()
-                getPings()
+                // When Restore Contact Step and rr.msgs.isEmpty() the state will change to Restore Message Step and call notifyListeners { onRestoreMessages() }
+                // When Restore Message Step and rr.msgs.isEmpty() the state will change RestoreFinihed
+
+                if (rr.msgs.isEmpty()) {
+                    getReadMessages()
+                    getMutedChats()
+                    getPings()
+                } else {
+                    // this will be a when evaluating a restore state
+                    if (isRestoreAccount()) {
+
+                        // Restore Contact Step
+                        if (true) {
+                            val highestIndex = rr.msgs.maxByOrNull { it.index?.toLong() ?: 0L }?.index?.toLong()
+                            highestIndex?.let { nnHighestIndex ->
+                                fetchFirstMessagesPerKey(nnHighestIndex.plus(1L))
+                            }
+                        }
+                        // Restore Message Step
+                        if (false) {
+                            val minIndex = rr.msgs.minByOrNull { it.index?.toLong() ?: 0L }?.index?.toULong()
+                            minIndex?.let { nnMinIndex ->
+                                fetchMessagesOnRestoreAccount(nnMinIndex.minus(1u).toLong())
+                            }
+                        }
+                    } else {
+                        val highestIndexReceived = rr.msgs.maxByOrNull { it.index?.toLong() ?: 0L }?.index?.toULong()
+
+                        highestIndexReceived?.let { nnhighestIndexReceived ->
+                            fetchMessagesWithPagination(nnhighestIndexReceived)
+                        }
+                    }
+                }
             }
 
             // Handling new tribe and tribe members
@@ -396,14 +409,13 @@ class ConnectManagerImpl: ConnectManager()
                 val parts = myContactInfo.split("_", limit = 2)
                 val okKey = parts.getOrNull(0)
                 val routeHint = parts.getOrNull(1)
-                val isRestoreAccount = restoreMnemonicWords?.isNotEmpty() == true
 
                 if (okKey != null && routeHint != null) {
                     notifyListeners {
                         onOwnerRegistered(
                             okKey,
                             routeHint,
-                            isRestoreAccount,
+                            isRestoreAccount(),
                             getRawMixerIp(),
                             tribeServer,
                             isProductionEnvironment(),
@@ -586,6 +598,18 @@ class ConnectManagerImpl: ConnectManager()
             }
         }
     }
+
+    private fun fetchMessagesWithPagination(
+        serverHighestIndexRecevied: ULong,
+    ) {
+        val newHighestIndex = serverHighestIndexRecevied.plus(1u)
+
+        fetchMessagesOnAppInit(
+            newHighestIndex.toLong(),
+            false
+        )
+    }
+
     private fun handleRegisterTopic(
         client: MqttAsyncClient?,
         rr: RunReturn,
@@ -629,10 +653,9 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
-
     // Account Management Methods
     override fun createAccount() {
-        if (!restoreMnemonicWords.isNullOrEmpty()) {
+        if (isRestoreAccount()) {
             notifyListeners {
                 onRestoreAccount(isProductionEnvironment())
             }
@@ -788,6 +811,7 @@ class ConnectManagerImpl: ConnectManager()
 
     override fun fetchFirstMessagesPerKey(lastMsgIdx: Long) {
         try {
+            // if the lastMsgIdx is 0, set restore state to Contact Step
             val limit = 100
             val fetchFirstMsg = uniffi.sphinxrs.fetchFirstMsgsPerKey(
                 ownerSeed!!,
@@ -808,9 +832,11 @@ class ConnectManagerImpl: ConnectManager()
 
     override fun fetchMessagesOnRestoreAccount(totalHighestIndex: Long?) {
         try {
+            // Updates the Restore Message Step state with the max index (total of messages) and every iteration
+            // will have less until restore all messages (use this values to create a percentage)
             val limit = 100
 
-            val fetchMessages = uniffi.sphinxrs.fetchMsgsBatch(
+            val fetchMessages = fetchMsgsBatch(
                 ownerSeed!!,
                 getTimestampInMilliseconds(),
                 getCurrentUserState(),
@@ -819,10 +845,6 @@ class ConnectManagerImpl: ConnectManager()
                     true,
             )
             handleRunReturn(fetchMessages, mqttClient)
-
-            notifyListeners {
-                onRestoreNextPageMessages(totalHighestIndex ?: 0, limit)
-            }
         } catch (e: Exception) {
             notifyListeners {
                 onConnectManagerError(ConnectManagerError.FetchMessageError)
@@ -1219,6 +1241,29 @@ class ConnectManagerImpl: ConnectManager()
                 onConnectManagerError(ConnectManagerError.ConcatNodesError)
             }
             Log.e("MQTT_MESSAGES", "concatNodesFromResponse ${e.message}")
+        }
+    }
+
+    override fun fetchMessagesOnAppInit(
+        lastMsgIdx: Long?,
+        reverse: Boolean
+    ) {
+        try {
+            val fetchMessages = fetchMsgsBatch(
+                ownerSeed!!,
+                getTimestampInMilliseconds(),
+                getCurrentUserState(),
+                lastMsgIdx?.toULong() ?: 0.toULong(),
+                MSG_BATCH_LIMIT.toUInt(),
+                reverse
+            )
+            handleRunReturn(fetchMessages, mqttClient)
+
+        } catch (e: Exception) {
+//            notifyListeners {
+//                onConnectManagerError(ConnectManagerError.FetchMessageError)
+//            }
+            Log.e("MQTT_MESSAGES", "fetchMessagesOnAppInit ${e.message}")
         }
     }
 
@@ -2012,6 +2057,7 @@ class ConnectManagerImpl: ConnectManager()
             action(listener)
         }
     }
+    private fun isRestoreAccount(): Boolean = restoreMnemonicWords?.isNotEmpty() == true
 
     private inner class SynchronizedListenerHolder {
         private val listeners: LinkedHashSet<ConnectManagerListener> = LinkedHashSet()

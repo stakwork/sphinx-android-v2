@@ -293,7 +293,7 @@ abstract class SphinxRepository(
                 when (restoreProcessState) {
                     is RestoreProcessState.MessagesCounts -> {
                         msgCounts = restoreProcessState.msgsCounts
-                        connectManager.fetchFirstMessagesPerKey(0L)
+                        connectManager.fetchFirstMessagesPerKey(0L, restoreProcessState.msgsCounts.first_for_each_scid)
                     }
                     is RestoreProcessState.RestoreMessages -> {
                         // Delay to ensure the contacts have been restored before fetching messages

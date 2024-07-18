@@ -78,6 +78,7 @@ import java.util.UUID
 import javax.net.ssl.SSLContext
 import javax.net.ssl.X509TrustManager
 import kotlin.math.min
+import kotlin.math.roundToInt
 
 class ConnectManagerImpl: ConnectManager()
 {
@@ -98,6 +99,17 @@ class ConnectManagerImpl: ConnectManager()
     private var readyForPing: Boolean = false
     private var delayedRRObjects: MutableList<RunReturn> = mutableListOf()
 
+
+    // RESTORE PROGRESS
+
+    private var progressPercentage: Int = 0
+    private var contactsRestoredAmount: Int = 0
+    private var totalContactsKey: Int = 0
+    private var totalMessages: Int = 0
+    private var restoredMessagesAmount: Int = 0
+    private val fixedContactPercentage = 20
+    private val fixedMessagesPercentage = 80
+
     companion object {
         const val TEST_V2_SERVER_IP = "75.101.247.127:1883"
         const val TEST_V2_TRIBES_SERVER = "75.101.247.127:8801"
@@ -106,7 +118,7 @@ class ConnectManagerImpl: ConnectManager()
         const val TEST_SERVER_PORT =  1883
         const val PROD_SERVER_PORT = 8883
         const val COMPLETE_STATUS = "COMPLETE"
-        const val MSG_BATCH_LIMIT = 100
+        const val MSG_BATCH_LIMIT = 25
         const val MSG_FIRST_PER_KEY_LIMIT = 10
     }
 
@@ -338,11 +350,13 @@ class ConnectManagerImpl: ConnectManager()
 
                 if (rr.msgs.isEmpty() && restoreStateFlow.value is RestoreState.RestoringContacts) {
                     Log.d("RESTORE_PROCESS", "=> RestoreContacts Finished")
+                    contactsRestoredAmount = totalContactsKey
                     notifyListeners { onRestoreMessages() }
                 }
 
                 if (rr.msgs.isEmpty() && restoreStateFlow.value is RestoreState.RestoringMessages) {
                     Log.d("RESTORE_PROCESS", "=> RestoreFinished!!")
+                    restoredMessagesAmount = totalMessages
                     _restoreStateFlow.value = RestoreState.RestoreFinished
                 }
 
@@ -382,14 +396,17 @@ class ConnectManagerImpl: ConnectManager()
 
                             val highestIndex = rr.msgs.maxByOrNull { it.index?.toLong() ?: 0L }?.index?.toLong()
                             highestIndex?.let { nnHighestIndex ->
-                                fetchFirstMessagesPerKey(nnHighestIndex.plus(1L))
+                                calculateContactRestore()
+                                fetchFirstMessagesPerKey(nnHighestIndex.plus(1L),null)
                             }
                             Log.d("RESTORE_PROCESS", "=> RestoreContacts Step $highestIndex")
+                            Log.d("RESTORE_PROCESS", "=> contactsRestoredAmount $contactsRestoredAmount / $totalContactsKey")
                         }
                         // Restore Message Step
                         if (restoreStateFlow.value is RestoreState.RestoringMessages) {
                             val minIndex = rr.msgs.minByOrNull { it.index?.toLong() ?: 0L }?.index?.toULong()
                             minIndex?.let { nnMinIndex ->
+                                calculateMessageRestore()
                                 fetchMessagesOnRestoreAccount(nnMinIndex.minus(1u).toLong())
                             }
                             Log.d("RESTORE_PROCESS", "=> RestoreMessages Step $minIndex")
@@ -826,10 +843,11 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
-    override fun fetchFirstMessagesPerKey(lastMsgIdx: Long) {
+    override fun fetchFirstMessagesPerKey(lastMsgIdx: Long, firstForEachScid: Long?) {
         try {
             if (lastMsgIdx == 0L) {
                 _restoreStateFlow.value = RestoreState.RestoringContacts
+                setContactKeyTotal(firstForEachScid)
             }
             val limit = MSG_FIRST_PER_KEY_LIMIT
             val fetchFirstMsg = uniffi.sphinxrs.fetchFirstMsgsPerKey(
@@ -852,11 +870,8 @@ class ConnectManagerImpl: ConnectManager()
     override fun fetchMessagesOnRestoreAccount(totalHighestIndex: Long?) {
         try {
             if (restoreStateFlow.value !is RestoreState.RestoringMessages) {
-                _restoreStateFlow.value = RestoreState.RestoringMessages(totalHighestIndex ?: 0, totalHighestIndex ?: 0)
-            } else {
-                _restoreStateFlow.value = (restoreStateFlow.value as RestoreState.RestoringMessages).copy(
-                    lastIndexFetch = totalHighestIndex ?: 0
-                )
+                _restoreStateFlow.value = RestoreState.RestoringMessages
+                setMessagesTotal(totalHighestIndex)
             }
 
             val fetchMessages = fetchMsgsBatch(
@@ -2107,5 +2122,51 @@ class ConnectManagerImpl: ConnectManager()
             }
         }
     }
+
+    // Restore Progress
+
+    private fun setContactKeyTotal(firstForEachScid: Long?) {
+        firstForEachScid?.let {
+            totalContactsKey = it.toInt()
+        }
+    }
+
+    private fun setMessagesTotal(totalHighestIndex: Long?) {
+        totalHighestIndex?.let {
+            totalMessages = it.toInt()
+        }
+    }
+
+    private fun calculateContactRestore() {
+        try {
+            val newAmountOfContacts = contactsRestoredAmount.plus(MSG_FIRST_PER_KEY_LIMIT)
+            if (newAmountOfContacts <= totalContactsKey) {
+                contactsRestoredAmount = newAmountOfContacts
+                progressPercentage = ((contactsRestoredAmount.toDouble() / totalContactsKey.toDouble()) * fixedContactPercentage.toDouble()).roundToInt()
+            } else {
+                contactsRestoredAmount = totalContactsKey
+                progressPercentage = fixedContactPercentage
+            }
+            Log.d("RESTORE_PROCESS", "calculateContactRestore $progressPercentage" )
+        } catch (e: Exception) {
+            Log.e("RESTORE_PROCESS", "calculateContactRestore ${e.message}")
+        }
+    }
+
+    private fun calculateMessageRestore() {
+        try {
+            val restoredMsgs = restoredMessagesAmount.plus(MSG_BATCH_LIMIT)
+            if (restoredMsgs >= totalMessages){
+                progressPercentage = 100
+            } else {
+                restoredMessagesAmount = restoredMsgs
+                progressPercentage = (fixedContactPercentage + ((restoredMsgs.toDouble()/ totalMessages.toDouble())) * fixedMessagesPercentage.toDouble()).roundToInt()
+            }
+            Log.d("RESTORE_PROCESS", "calculateMessagesRestore $progressPercentage")
+        } catch (e: Exception) {
+            Log.e("RESTORE_PROCESS", "calculateMessageRestore ${e.message}")
+        }
+    }
+
 
 }

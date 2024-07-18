@@ -107,8 +107,8 @@ class ConnectManagerImpl: ConnectManager()
         const val TEST_SERVER_PORT =  1883
         const val PROD_SERVER_PORT = 8883
         const val COMPLETE_STATUS = "COMPLETE"
-        const val MSG_BATCH_LIMIT = 25
-        const val MSG_FIRST_PER_KEY_LIMIT = 10
+        const val MSG_BATCH_LIMIT = 100
+        const val MSG_FIRST_PER_KEY_LIMIT = 100
     }
 
     private val _ownerInfoStateFlow: MutableStateFlow<OwnerInfo> by lazy {

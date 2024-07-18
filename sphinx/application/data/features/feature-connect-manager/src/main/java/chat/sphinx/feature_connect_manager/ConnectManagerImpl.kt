@@ -99,17 +99,6 @@ class ConnectManagerImpl: ConnectManager()
     private var readyForPing: Boolean = false
     private var delayedRRObjects: MutableList<RunReturn> = mutableListOf()
 
-
-    // RESTORE PROGRESS
-
-    private var progressPercentage: Int = 0
-    private var contactsRestoredAmount: Int = 0
-    private var totalContactsKey: Int = 0
-    private var totalMessages: Int = 0
-    private var restoredMessagesAmount: Int = 0
-    private val fixedContactPercentage = 20
-    private val fixedMessagesPercentage = 80
-
     companion object {
         const val TEST_V2_SERVER_IP = "75.101.247.127:1883"
         const val TEST_V2_TRIBES_SERVER = "75.101.247.127:8801"
@@ -350,13 +339,14 @@ class ConnectManagerImpl: ConnectManager()
 
                 if (rr.msgs.isEmpty() && restoreStateFlow.value is RestoreState.RestoringContacts) {
                     Log.d("RESTORE_PROCESS", "=> RestoreContacts Finished")
-                    contactsRestoredAmount = totalContactsKey
+
+                    notifyListeners { onRestoreProgress(fixedContactPercentage) }
                     notifyListeners { onRestoreMessages() }
                 }
 
                 if (rr.msgs.isEmpty() && restoreStateFlow.value is RestoreState.RestoringMessages) {
                     Log.d("RESTORE_PROCESS", "=> RestoreFinished!!")
-                    restoredMessagesAmount = totalMessages
+                    notifyListeners { onRestoreProgress(fixedContactPercentage + fixedMessagesPercentage) }
                     _restoreStateFlow.value = RestoreState.RestoreFinished
                 }
 
@@ -2125,6 +2115,14 @@ class ConnectManagerImpl: ConnectManager()
 
     // Restore Progress
 
+    private var progressPercentage: Int = 0
+    private var contactsRestoredAmount: Int = 0
+    private var totalContactsKey: Int = 0
+    private var totalMessages: Int = 0
+    private var restoredMessagesAmount: Int = 0
+    private val fixedContactPercentage = 10
+    private val fixedMessagesPercentage = 90
+
     private fun setContactKeyTotal(firstForEachScid: Long?) {
         firstForEachScid?.let {
             totalContactsKey = it.toInt()
@@ -2147,6 +2145,9 @@ class ConnectManagerImpl: ConnectManager()
                 contactsRestoredAmount = totalContactsKey
                 progressPercentage = fixedContactPercentage
             }
+            notifyListeners {
+                onRestoreProgress(progressPercentage)
+            }
             Log.d("RESTORE_PROCESS", "calculateContactRestore $progressPercentage" )
         } catch (e: Exception) {
             Log.e("RESTORE_PROCESS", "calculateContactRestore ${e.message}")
@@ -2161,6 +2162,9 @@ class ConnectManagerImpl: ConnectManager()
             } else {
                 restoredMessagesAmount = restoredMsgs
                 progressPercentage = (fixedContactPercentage + ((restoredMsgs.toDouble()/ totalMessages.toDouble())) * fixedMessagesPercentage.toDouble()).roundToInt()
+            }
+            notifyListeners {
+                onRestoreProgress(progressPercentage)
             }
             Log.d("RESTORE_PROCESS", "calculateMessagesRestore $progressPercentage")
         } catch (e: Exception) {

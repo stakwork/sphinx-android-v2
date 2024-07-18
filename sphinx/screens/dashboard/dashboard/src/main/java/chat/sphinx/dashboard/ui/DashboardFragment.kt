@@ -90,6 +90,7 @@ internal class DashboardFragment : MotionLayoutFragment<
     }
 
     var timeTrackerStart: Long = 0
+    private var isRestoreCancelled = false
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -364,6 +365,8 @@ internal class DashboardFragment : MotionLayoutFragment<
     private fun setupRestorePopup() {
         binding.layoutDashboardRestore.layoutDashboardRestoreProgress.apply {
             buttonStopRestore.setOnClickListener {
+                binding.layoutDashboardRestore.root.gone
+                isRestoreCancelled = true
                 viewModel.cancelRestore()
             }
         }
@@ -606,15 +609,20 @@ internal class DashboardFragment : MotionLayoutFragment<
         onStopSupervisor.scope.launch(viewModel.mainImmediate) {
             viewModel.restoreProgressStateFlow.collect { response ->
                 binding.layoutDashboardRestore.apply {
-                    if (response != null) {
+                    if (response != null && response < 100 && !isRestoreCancelled) {
                         layoutDashboardRestoreProgress.apply {
-                            val progressString = "${response.progress}%"
+                            val progressString = "${response}%"
+                            val label = if (response <= 10) {
+                                R.string.dashboard_restore_progress_contacts
+                            } else {
+                                R.string.dashboard_restore_progress_messages
+                            }
 
-                            textViewRestoreProgress.text = getString(response.progressLabel, progressString)
-                            progressBarRestore.progress = response.progress
-                            buttonStopRestore.isEnabled = response.continueButtonEnabled
+                            textViewRestoreProgress.text = getString(label, progressString)
+                            progressBarRestore.progress = response
+                            buttonStopRestore.isEnabled = true
                             buttonStopRestore.backgroundTintList =
-                                if (response.continueButtonEnabled) ContextCompat.getColorStateList(root.context, R.color.primaryBlue)
+                                if (true) ContextCompat.getColorStateList(root.context, R.color.primaryBlue)
                                 else ContextCompat.getColorStateList(root.context, R.color.secondaryTextInverted)
                         }
                         root.visible

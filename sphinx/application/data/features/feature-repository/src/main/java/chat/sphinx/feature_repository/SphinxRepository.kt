@@ -249,6 +249,10 @@ abstract class SphinxRepository(
         MutableStateFlow(null)
     }
 
+    override val restoreProgress: MutableStateFlow<Int?> by lazy {
+        MutableStateFlow(null)
+    }
+
     init {
         connectManager.addListener(this)
         memeServerTokenHandler.addListener(this)
@@ -962,6 +966,10 @@ abstract class SphinxRepository(
 
     override fun onConnectManagerError(error: ConnectManagerError) {
         connectManagerErrorState.value = error
+    }
+
+    override fun onRestoreProgress(progress: Int) {
+        restoreProgress.value = progress
     }
 
     // Messaging Callbacks

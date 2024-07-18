@@ -179,6 +179,7 @@ interface ConnectManagerListener {
     fun onUpdateMutes(mutes: String)
     fun onGetNodes()
     fun onConnectManagerError(error: ConnectManagerError)
+    fun onRestoreProgress(progress: Int)
 
     // Messaging Callbacks
     fun onMessage(

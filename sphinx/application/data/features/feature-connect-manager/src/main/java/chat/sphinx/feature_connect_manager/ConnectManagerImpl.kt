@@ -337,27 +337,30 @@ class ConnectManagerImpl: ConnectManager()
 
             if (topic?.contains("/batch") == true) {
 
-                if (rr.msgs.isEmpty() && restoreStateFlow.value is RestoreState.RestoringContacts) {
-                    Log.d("RESTORE_PROCESS", "=> RestoreContacts Finished")
+                if (rr.msgs.isEmpty()) {
+                    ///Restore phase or fetching messages finished. Go to next phase or end process
+                    if (restoreStateFlow.value is RestoreState.RestoringContacts) {
+                        Log.d("RESTORE_PROCESS", "=> RestoreContacts Finished")
 
-                    notifyListeners { onRestoreProgress(fixedContactPercentage) }
-                    notifyListeners { onRestoreMessages() }
-                }
+                        notifyListeners { onRestoreProgress(fixedContactPercentage) }
+                        notifyListeners { onRestoreMessages() }
+                    }
 
-                if (rr.msgs.isEmpty() && restoreStateFlow.value is RestoreState.RestoringMessages) {
-                    Log.d("RESTORE_PROCESS", "=> RestoreFinished!!")
-                    notifyListeners { onRestoreProgress(fixedContactPercentage + fixedMessagesPercentage) }
-                    _restoreStateFlow.value = RestoreState.RestoreFinished
-                }
+                    if (restoreStateFlow.value is RestoreState.RestoringMessages || restoreStateFlow.value == null) {
+                        Log.d("RESTORE_PROCESS", "=> RestoreFinished!!")
 
-                if (rr.msgs.isEmpty() && restoreStateFlow.value == null ||
-                    restoreStateFlow.value is RestoreState.RestoreFinished
-                ) {
-                    getReadMessages()
-                    getMutedChats()
-                    getPings()
-                    Log.d("RESTORE_PROCESS", "=> GET PING, MUTE AND READ ARE CALLED!")
+                        if (restoreStateFlow.value is RestoreState.RestoringMessages) {
+                            notifyListeners { onRestoreProgress(fixedContactPercentage + fixedMessagesPercentage) }
+                            _restoreStateFlow.value = RestoreState.RestoreFinished
+                        }
+
+                        getReadMessages()
+                        getMutedChats()
+                        getPings()
+                        Log.d("RESTORE_PROCESS", "=> GET PING, MUTE AND READ ARE CALLED!")
+                    }
                 } else {
+                    ///Restore phase or fetching messages page. Go to next page
                     if (isRestoreAccount()) {
                         // Restore contacts and tribes
                         if (restoreStateFlow.value is RestoreState.RestoringContacts) {

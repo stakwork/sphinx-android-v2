@@ -5,6 +5,7 @@ import android.util.Log
 import chat.sphinx.example.concept_connect_manager.ConnectManager
 import chat.sphinx.example.concept_connect_manager.ConnectManagerListener
 import chat.sphinx.example.concept_connect_manager.model.OwnerInfo
+import chat.sphinx.example.concept_connect_manager.model.RestoreProgress
 import chat.sphinx.example.concept_connect_manager.model.RestoreState
 import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
 import chat.sphinx.example.wrapper_mqtt.NewInvite
@@ -98,6 +99,7 @@ class ConnectManagerImpl: ConnectManager()
     private val pingsMap = mutableMapOf<String, Long>()
     private var readyForPing: Boolean = false
     private var delayedRRObjects: MutableList<RunReturn> = mutableListOf()
+    private val restoreProgress = RestoreProgress()
 
     companion object {
         const val TEST_V2_SERVER_IP = "75.101.247.127:1883"
@@ -340,24 +342,21 @@ class ConnectManagerImpl: ConnectManager()
                 if (rr.msgs.isEmpty()) {
                     ///Restore phase or fetching messages finished. Go to next phase or end process
                     if (restoreStateFlow.value is RestoreState.RestoringContacts) {
-                        Log.d("RESTORE_PROCESS", "=> RestoreContacts Finished")
 
-                        notifyListeners { onRestoreProgress(fixedContactPercentage) }
+                        notifyListeners { onRestoreProgress(restoreProgress.fixedContactPercentage) }
                         notifyListeners { onRestoreMessages() }
                     }
 
                     if (restoreStateFlow.value is RestoreState.RestoringMessages || restoreStateFlow.value == null) {
-                        Log.d("RESTORE_PROCESS", "=> RestoreFinished!!")
 
                         if (restoreStateFlow.value is RestoreState.RestoringMessages) {
-                            notifyListeners { onRestoreProgress(fixedContactPercentage + fixedMessagesPercentage) }
+                            notifyListeners { onRestoreProgress(restoreProgress.fixedContactPercentage + restoreProgress.fixedMessagesPercentage) }
                             _restoreStateFlow.value = RestoreState.RestoreFinished
                         }
 
                         getReadMessages()
                         getMutedChats()
                         getPings()
-                        Log.d("RESTORE_PROCESS", "=> GET PING, MUTE AND READ ARE CALLED!")
                     }
                 } else {
                     ///Restore phase or fetching messages page. Go to next page
@@ -393,7 +392,6 @@ class ConnectManagerImpl: ConnectManager()
                                 fetchFirstMessagesPerKey(nnHighestIndex.plus(1L),null)
                             }
                             Log.d("RESTORE_PROCESS", "=> RestoreContacts Step $highestIndex")
-                            Log.d("RESTORE_PROCESS", "=> contactsRestoredAmount $contactsRestoredAmount / $totalContactsKey")
                         }
                         // Restore Message Step
                         if (restoreStateFlow.value is RestoreState.RestoringMessages) {
@@ -2116,64 +2114,47 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
-    // Restore Progress
-
-    private var progressPercentage: Int = 0
-    private var contactsRestoredAmount: Int = 0
-    private var totalContactsKey: Int = 0
-    private var totalMessages: Int = 0
-    private var restoredMessagesAmount: Int = 0
-    private val fixedContactPercentage = 10
-    private val fixedMessagesPercentage = 90
-
     private fun setContactKeyTotal(firstForEachScid: Long?) {
         firstForEachScid?.let {
-            totalContactsKey = it.toInt()
+            restoreProgress.totalContactsKey = it.toInt()
         }
     }
 
     private fun setMessagesTotal(totalHighestIndex: Long?) {
         totalHighestIndex?.let {
-            totalMessages = it.toInt()
+            restoreProgress.totalMessages = it.toInt()
         }
     }
 
     private fun calculateContactRestore() {
-        try {
-            val newAmountOfContacts = contactsRestoredAmount.plus(MSG_FIRST_PER_KEY_LIMIT)
-            if (newAmountOfContacts <= totalContactsKey) {
-                contactsRestoredAmount = newAmountOfContacts
-                progressPercentage = ((contactsRestoredAmount.toDouble() / totalContactsKey.toDouble()) * fixedContactPercentage.toDouble()).roundToInt()
-            } else {
-                contactsRestoredAmount = totalContactsKey
-                progressPercentage = fixedContactPercentage
-            }
-            notifyListeners {
-                onRestoreProgress(progressPercentage)
-            }
-            Log.d("RESTORE_PROCESS", "calculateContactRestore $progressPercentage" )
-        } catch (e: Exception) {
-            Log.e("RESTORE_PROCESS", "calculateContactRestore ${e.message}")
+    try {
+        val newAmountOfContacts = restoreProgress.contactsRestoredAmount.plus(MSG_FIRST_PER_KEY_LIMIT)
+        if (newAmountOfContacts <= restoreProgress.totalContactsKey) {
+            restoreProgress.contactsRestoredAmount = newAmountOfContacts
+            restoreProgress.progressPercentage = ((restoreProgress.contactsRestoredAmount.toDouble() / restoreProgress.totalContactsKey.toDouble()) * restoreProgress.fixedContactPercentage.toDouble()).roundToInt()
+        } else {
+            restoreProgress.contactsRestoredAmount = restoreProgress.totalContactsKey
+            restoreProgress.progressPercentage = restoreProgress.fixedContactPercentage
         }
-    }
+        notifyListeners {
+            onRestoreProgress(restoreProgress.progressPercentage)
+        }
+    } catch (e: Exception) { }
+}
 
     private fun calculateMessageRestore() {
         try {
-            val restoredMsgs = restoredMessagesAmount.plus(MSG_BATCH_LIMIT)
-            if (restoredMsgs >= totalMessages){
-                progressPercentage = 100
+            val restoredMsgs = restoreProgress.restoredMessagesAmount.plus(MSG_BATCH_LIMIT)
+            if (restoredMsgs >= restoreProgress.totalMessages) {
+                restoreProgress.progressPercentage = 100
             } else {
-                restoredMessagesAmount = restoredMsgs
-                progressPercentage = (fixedContactPercentage + ((restoredMsgs.toDouble()/ totalMessages.toDouble())) * fixedMessagesPercentage.toDouble()).roundToInt()
+                restoreProgress.restoredMessagesAmount = restoredMsgs
+                restoreProgress.progressPercentage = (restoreProgress.fixedContactPercentage + ((restoredMsgs.toDouble() / restoreProgress.totalMessages.toDouble())) * restoreProgress.fixedMessagesPercentage.toDouble()).roundToInt()
             }
             notifyListeners {
-                onRestoreProgress(progressPercentage)
+                onRestoreProgress(restoreProgress.progressPercentage)
             }
-            Log.d("RESTORE_PROCESS", "calculateMessagesRestore $progressPercentage")
         } catch (e: Exception) {
-            Log.e("RESTORE_PROCESS", "calculateMessageRestore ${e.message}")
         }
     }
-
-
 }

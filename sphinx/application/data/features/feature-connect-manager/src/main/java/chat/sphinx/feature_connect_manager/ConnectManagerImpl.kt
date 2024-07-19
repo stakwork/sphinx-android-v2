@@ -508,7 +508,7 @@ class ConnectManagerImpl: ConnectManager()
 
             // Handling other properties like sentStatus, settledStatus, error, etc.
             rr.error?.let { error ->
-                Log.d("MQTT_MESSAGES", "=> error $error")
+                handleError(error)
             }
 
             // Sent
@@ -2041,10 +2041,18 @@ class ConnectManagerImpl: ConnectManager()
 
     private fun handlePing(ping: String) {
         val parts = ping.split(":")
-        if (parts.size == 2) {
+        if (parts.size > 1) {
             val paymentHash = parts[0]
             val timestamp = parts[1].toLong()
-            pingsMap[paymentHash] = timestamp
+
+            if (paymentHash != "_") {
+                pingsMap[paymentHash] = timestamp
+            }
+
+            if (parts.size > 2) {
+                val tag = parts[2]
+                pingsMap[tag] = timestamp
+            }
         } else {
             Log.d("MQTT_MESSAGE", "Invalid ping format")
         }
@@ -2063,11 +2071,45 @@ class ConnectManagerImpl: ConnectManager()
                             timestamp.toULong()
                         )
                         handleRunReturn(pingDone, mqttClient)
+                        removeFromPingsMapWith(paymentHash)
                     } catch (e: Exception) {
                         Log.d("MQTT_MESSAGES", "Error calling ping done")
                     }
                 }
             }
+    }
+
+    private fun handleError(error: String) {
+        Log.d("MQTT_MESSAGES", "=> error $error")
+
+        if (error.contains("async pay not found")) {
+            pingsMap.keys.forEach { tag ->
+                if (error.contains(tag)) {
+                    pingsMap[tag]?.let { timestamp ->
+                        try {
+                            val pingDone = pingDone(
+                                ownerSeed!!,
+                                getTimestampInMilliseconds(),
+                                getCurrentUserState(),
+                                timestamp.toULong()
+                            )
+                            handleRunReturn(pingDone, mqttClient)
+                            removeFromPingsMapWith(tag)
+                        } catch (e: Exception) {
+                            Log.d("MQTT_MESSAGES", "Error calling ping done")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun removeFromPingsMapWith(key: String) {
+        pingsMap[key]?.let { timestamp ->
+            pingsMap.filter { it.value == timestamp }.forEach { mapEntry ->
+                pingsMap.remove(mapEntry.key)
+            }
+        }
     }
 
     // Listener Methods

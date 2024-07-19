@@ -1,6 +1,7 @@
 package chat.sphinx.example.concept_connect_manager
 
 import chat.sphinx.example.concept_connect_manager.model.OwnerInfo
+import chat.sphinx.example.concept_connect_manager.model.RestoreState
 import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
 import chat.sphinx.wrapper_contact.NewContact
 import chat.sphinx.wrapper_lightning.WalletMnemonic
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.StateFlow
 
 abstract class ConnectManager {
     abstract val ownerInfoStateFlow: StateFlow<OwnerInfo?>
+    abstract val restoreStateFlow: StateFlow<RestoreState?>
 
     // Account Management Methods
     abstract fun createAccount()
@@ -30,7 +32,7 @@ abstract class ConnectManager {
     abstract fun setNetworkType(isTestEnvironment: Boolean)
     abstract fun setOwnerDeviceId(deviceId: String)
     abstract fun processChallengeSignature(challenge: String)
-    abstract fun fetchFirstMessagesPerKey(lastMsgIdx: Long)
+    abstract fun fetchFirstMessagesPerKey(lastMsgIdx: Long, firstForEachScid: Long?)
     abstract fun fetchMessagesOnRestoreAccount(totalHighestIndex: Long?)
     abstract fun getAllMessagesCount()
     abstract fun initializeMqttAndSubscribe(
@@ -61,6 +63,10 @@ abstract class ConnectManager {
         nodesJson: String,
         routerPubKey: String,
         amount: Long
+    )
+    abstract fun fetchMessagesOnAppInit(
+        lastMsgIdx: Long?,
+        reverse: Boolean
     )
 
     // Messaging Methods
@@ -163,8 +169,9 @@ interface ConnectManagerListener {
     )
     fun onRestoreAccount(isProductionEnvironment: Boolean)
     fun onRestoreContacts(contacts: List<String?>)
+    fun onRestoreMessages()
     fun onRestoreTribes(tribes: List<Pair<String?, Boolean?>>, isProductionEnvironment: Boolean) // Sender, FromMe
-    fun onRestoreNextPageMessages(highestIndex: Long, limit: Int)
+//    fun onRestoreNextPageMessages(highestIndex: Long, limit: Int)
     fun onNewBalance(balance: Long)
     fun onSignedChallenge(sign: String)
     fun onInitialTribe(tribe: String, isProductionEnvironment: Boolean)
@@ -172,6 +179,7 @@ interface ConnectManagerListener {
     fun onUpdateMutes(mutes: String)
     fun onGetNodes()
     fun onConnectManagerError(error: ConnectManagerError)
+    fun onRestoreProgress(progress: Int)
 
     // Messaging Callbacks
     fun onMessage(

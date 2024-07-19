@@ -5,6 +5,8 @@ import android.util.Log
 import chat.sphinx.example.concept_connect_manager.ConnectManager
 import chat.sphinx.example.concept_connect_manager.ConnectManagerListener
 import chat.sphinx.example.concept_connect_manager.model.OwnerInfo
+import chat.sphinx.example.concept_connect_manager.model.RestoreProgress
+import chat.sphinx.example.concept_connect_manager.model.RestoreState
 import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
 import chat.sphinx.example.wrapper_mqtt.NewInvite
 import chat.sphinx.wrapper_common.lightning.toLightningNodePubKey
@@ -28,6 +30,7 @@ import org.eclipse.paho.client.mqttv3.MqttException
 import org.eclipse.paho.client.mqttv3.MqttMessage
 import org.json.JSONException
 import org.json.JSONObject
+import uniffi.sphinxrs.Msg
 import uniffi.sphinxrs.ParsedInvite
 import uniffi.sphinxrs.RunReturn
 import uniffi.sphinxrs.addContact
@@ -36,6 +39,7 @@ import uniffi.sphinxrs.codeFromInvite
 import uniffi.sphinxrs.concatRoute
 import uniffi.sphinxrs.deleteMsgs
 import uniffi.sphinxrs.fetchMsgsBatch
+import uniffi.sphinxrs.fetchPings
 import uniffi.sphinxrs.getDefaultTribeServer
 import uniffi.sphinxrs.getMsgsCounts
 import uniffi.sphinxrs.getMutes
@@ -58,6 +62,7 @@ import uniffi.sphinxrs.parseInvite
 import uniffi.sphinxrs.parseInvoice
 import uniffi.sphinxrs.payInvoice
 import uniffi.sphinxrs.paymentHashFromInvoice
+import uniffi.sphinxrs.pingDone
 import uniffi.sphinxrs.processInvite
 import uniffi.sphinxrs.read
 import uniffi.sphinxrs.rootSignMs
@@ -74,6 +79,7 @@ import java.util.UUID
 import javax.net.ssl.SSLContext
 import javax.net.ssl.X509TrustManager
 import kotlin.math.min
+import kotlin.math.roundToInt
 
 class ConnectManagerImpl: ConnectManager()
 {
@@ -90,7 +96,10 @@ class ConnectManagerImpl: ConnectManager()
     private var hasAttemptedReconnect = false
     private var tribeServer: String? = null
     private var router: String? = null
+    private val pingsMap = mutableMapOf<String, Long>()
+    private var readyForPing: Boolean = false
     private var delayedRRObjects: MutableList<RunReturn> = mutableListOf()
+    private val restoreProgress = RestoreProgress()
 
     companion object {
         const val TEST_V2_SERVER_IP = "75.101.247.127:1883"
@@ -100,6 +109,8 @@ class ConnectManagerImpl: ConnectManager()
         const val TEST_SERVER_PORT =  1883
         const val PROD_SERVER_PORT = 8883
         const val COMPLETE_STATUS = "COMPLETE"
+        const val MSG_BATCH_LIMIT = 100
+        const val MSG_FIRST_PER_KEY_LIMIT = 100
     }
 
     private val _ownerInfoStateFlow: MutableStateFlow<OwnerInfo> by lazy {
@@ -112,6 +123,12 @@ class ConnectManagerImpl: ConnectManager()
     }
     override val ownerInfoStateFlow: StateFlow<OwnerInfo>
         get() = _ownerInfoStateFlow.asStateFlow()
+
+    private val _restoreStateFlow: MutableStateFlow<RestoreState?> by lazy {
+        MutableStateFlow(null)
+    }
+    override val restoreStateFlow: StateFlow<RestoreState?>
+        get() = _restoreStateFlow.asStateFlow()
 
     private var mixerIp: String?
         get() = _mixerIp?.let {
@@ -248,21 +265,13 @@ class ConnectManagerImpl: ConnectManager()
                 )
                 client.subscribe(arrayOf(tribeSubtopic), qos)
 
-                if (ownerInfoStateFlow.value.messageLastIndex != null && restoreMnemonicWords?.isEmpty() == true) {
+                if (ownerInfoStateFlow.value.messageLastIndex != null && !isRestoreAccount()) {
+                    val msgLastIndex = ownerInfoStateFlow.value.messageLastIndex?.plus(1)
 
-                    val fetchMessages = fetchMsgsBatch(
-                        ownerSeed!!,
-                        getTimestampInMilliseconds(),
-                        getCurrentUserState(),
-                        ownerInfoStateFlow.value.messageLastIndex?.plus(1)?.toULong() ?: 0.toULong(),
-                        null,
+                    fetchMessagesOnAppInit(
+                        msgLastIndex ?: 0,
                         false
                     )
-                    handleRunReturn(fetchMessages, mqttClient)
-
-                    getReadMessages()
-                    getMutedChats()
-
                     notifyListeners {
                         onGetNodes()
                     }
@@ -280,7 +289,8 @@ class ConnectManagerImpl: ConnectManager()
         rr: RunReturn,
         client: MqttAsyncClient?,
         skipSettleTopic: Boolean = false,
-        skipAsyncTopic: Boolean = false
+        skipAsyncTopic: Boolean = false,
+        topic: String? = null
     ) {
         if (client != null) {
             // Set updated state into db
@@ -306,39 +316,9 @@ class ConnectManagerImpl: ConnectManager()
 
             // Process each message in the new msgs array
             if (rr.msgs.isNotEmpty()) {
+                handlePingDone(rr.msgs)
 
-                if (restoreMnemonicWords?.isNotEmpty() == true) {
-
-                    val contactsToRestore = rr.msgs.filter {
-                        it.type?.toInt() == 33 || it.type?.toInt() == 11 || it.type?.toInt() == 10
-                    }.map { it.sender }.distinct()
-
-                    if (contactsToRestore.isNotEmpty()) {
-                        notifyListeners {
-                            onRestoreContacts(contactsToRestore)
-                        }
-                    }
-
-                    val tribesToRestore = rr.msgs.filter {
-                        it.type?.toInt() == 20 || it.type?.toInt() == 14
-                    }.map {
-                        Pair(it.sender, it.fromMe)
-                    }
-
-                    if (tribesToRestore.isNotEmpty()) {
-                        notifyListeners {
-                            onRestoreTribes(tribesToRestore, isProductionEnvironment())
-                        }
-                    }
-
-                    if (contactsToRestore.isNotEmpty() || tribesToRestore.isNotEmpty()) {
-                        val highestIndex = rr.msgs.maxByOrNull { it.index?.toLong() ?: 0L }?.index?.toLong()
-                        highestIndex?.let { nnHighestIndex ->
-                            fetchFirstMessagesPerKey(highestIndex.plus(1L))
-                        }
-                    }
-                }
-
+                // Handle new messages
                 rr.msgs.forEach { msg ->
                     notifyListeners {
                         onMessage(
@@ -353,6 +333,83 @@ class ConnectManagerImpl: ConnectManager()
                             msg.fromMe,
                             msg.tag
                         )
+                    }
+                }
+            }
+
+            if (topic?.contains("/batch") == true) {
+
+                if (rr.msgs.isEmpty()) {
+                    ///Restore phase or fetching messages finished. Go to next phase or end process
+                    if (restoreStateFlow.value is RestoreState.RestoringContacts) {
+
+                        notifyListeners { onRestoreProgress(restoreProgress.fixedContactPercentage) }
+                        notifyListeners { onRestoreMessages() }
+                    }
+
+                    if (restoreStateFlow.value is RestoreState.RestoringMessages || restoreStateFlow.value == null) {
+
+                        if (restoreStateFlow.value is RestoreState.RestoringMessages) {
+                            notifyListeners { onRestoreProgress(restoreProgress.fixedContactPercentage + restoreProgress.fixedMessagesPercentage) }
+                            _restoreStateFlow.value = RestoreState.RestoreFinished
+                        }
+
+                        getReadMessages()
+                        getMutedChats()
+                        getPings()
+                    }
+                } else {
+                    ///Restore phase or fetching messages page. Go to next page
+                    if (isRestoreAccount()) {
+                        // Restore contacts and tribes
+                        if (restoreStateFlow.value is RestoreState.RestoringContacts) {
+
+                            val contactsToRestore = rr.msgs.filter {
+                                it.type?.toInt() == 33 || it.type?.toInt() == 11 || it.type?.toInt() == 10
+                            }.map { it.sender }.distinct()
+
+                            if (contactsToRestore.isNotEmpty()) {
+                                notifyListeners {
+                                    onRestoreContacts(contactsToRestore)
+                                }
+                            }
+
+                            val tribesToRestore = rr.msgs.filter {
+                                it.type?.toInt() == 20 || it.type?.toInt() == 14
+                            }.map {
+                                Pair(it.sender, it.fromMe)
+                            }
+
+                            if (tribesToRestore.isNotEmpty()) {
+                                notifyListeners {
+                                    onRestoreTribes(tribesToRestore, isProductionEnvironment())
+                                }
+                            }
+
+                            val highestIndex = rr.msgs.maxByOrNull { it.index?.toLong() ?: 0L }?.index?.toLong()
+                            highestIndex?.let { nnHighestIndex ->
+                                calculateContactRestore()
+                                fetchFirstMessagesPerKey(nnHighestIndex.plus(1L),null)
+                            }
+                            Log.d("RESTORE_PROCESS", "=> RestoreContacts Step $highestIndex")
+                        }
+                        // Restore Message Step
+                        if (restoreStateFlow.value is RestoreState.RestoringMessages) {
+                            val minIndex = rr.msgs.minByOrNull { it.index?.toLong() ?: 0L }?.index?.toULong()
+                            minIndex?.let { nnMinIndex ->
+                                calculateMessageRestore()
+                                fetchMessagesOnRestoreAccount(nnMinIndex.minus(1u).toLong())
+                            }
+                            Log.d("RESTORE_PROCESS", "=> RestoreMessages Step $minIndex")
+                        }
+                    } else {
+                        // Fetch messages when connected to mqtt
+                        val highestIndexReceived = rr.msgs.maxByOrNull { it.index?.toLong() ?: 0L }?.index?.toULong()
+
+                        highestIndexReceived?.let { nnHighestIndexReceived ->
+                            fetchMessagesWithPagination(nnHighestIndexReceived)
+                        }
+                        Log.d("RESTORE_PROCESS", "=> FetchMessagesWithPagination $highestIndexReceived")
                     }
                 }
             }
@@ -377,14 +434,13 @@ class ConnectManagerImpl: ConnectManager()
                 val parts = myContactInfo.split("_", limit = 2)
                 val okKey = parts.getOrNull(0)
                 val routeHint = parts.getOrNull(1)
-                val isRestoreAccount = restoreMnemonicWords?.isNotEmpty() == true
 
                 if (okKey != null && routeHint != null) {
                     notifyListeners {
                         onOwnerRegistered(
                             okKey,
                             routeHint,
-                            isRestoreAccount,
+                            isRestoreAccount(),
                             getRawMixerIp(),
                             tribeServer,
                             isProductionEnvironment(),
@@ -452,7 +508,7 @@ class ConnectManagerImpl: ConnectManager()
 
             // Handling other properties like sentStatus, settledStatus, error, etc.
             rr.error?.let { error ->
-                Log.d("MQTT_MESSAGES", "=> error $error")
+                handleError(error)
             }
 
             // Sent
@@ -501,6 +557,12 @@ class ConnectManagerImpl: ConnectManager()
                     onUpdateMutes(muteLevels)
                 }
                 Log.d("MQTT_MESSAGES", "=> muteLevels $muteLevels")
+            }
+            rr.ping?.let { ping ->
+                if (ping.isNotEmpty()) {
+                    handlePing(ping)
+                    Log.d("MQTT_MESSAGES", "=> ping $ping")
+                }
             }
             rr.payments?.let { payments ->
                 notifyListeners {
@@ -561,6 +623,18 @@ class ConnectManagerImpl: ConnectManager()
             }
         }
     }
+
+    private fun fetchMessagesWithPagination(
+        serverHighestIndexRecevied: ULong,
+    ) {
+        val newHighestIndex = serverHighestIndexRecevied.plus(1u)
+
+        fetchMessagesOnAppInit(
+            newHighestIndex.toLong(),
+            false
+        )
+    }
+
     private fun handleRegisterTopic(
         client: MqttAsyncClient?,
         rr: RunReturn,
@@ -604,10 +678,9 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
-
     // Account Management Methods
     override fun createAccount() {
-        if (!restoreMnemonicWords.isNullOrEmpty()) {
+        if (isRestoreAccount()) {
             notifyListeners {
                 onRestoreAccount(isProductionEnvironment())
             }
@@ -761,9 +834,13 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
-    override fun fetchFirstMessagesPerKey(lastMsgIdx: Long) {
+    override fun fetchFirstMessagesPerKey(lastMsgIdx: Long, firstForEachScid: Long?) {
         try {
-            val limit = 100
+            if (lastMsgIdx == 0L) {
+                _restoreStateFlow.value = RestoreState.RestoringContacts
+                setContactKeyTotal(firstForEachScid)
+            }
+            val limit = MSG_FIRST_PER_KEY_LIMIT
             val fetchFirstMsg = uniffi.sphinxrs.fetchFirstMsgsPerKey(
                 ownerSeed!!,
                 getTimestampInMilliseconds(),
@@ -783,20 +860,20 @@ class ConnectManagerImpl: ConnectManager()
 
     override fun fetchMessagesOnRestoreAccount(totalHighestIndex: Long?) {
         try {
-            val limit = 100
-            val fetchMessages = uniffi.sphinxrs.fetchMsgsBatch(
+            if (restoreStateFlow.value !is RestoreState.RestoringMessages) {
+                _restoreStateFlow.value = RestoreState.RestoringMessages
+                setMessagesTotal(totalHighestIndex)
+            }
+
+            val fetchMessages = fetchMsgsBatch(
                 ownerSeed!!,
                 getTimestampInMilliseconds(),
                 getCurrentUserState(),
                 totalHighestIndex?.toULong() ?: 0.toULong(),
-                limit.toUInt(),
+                MSG_BATCH_LIMIT.toUInt(),
                     true,
             )
             handleRunReturn(fetchMessages, mqttClient)
-
-            notifyListeners {
-                onRestoreNextPageMessages(totalHighestIndex ?: 0, limit)
-            }
         } catch (e: Exception) {
             notifyListeners {
                 onConnectManagerError(ConnectManagerError.FetchMessageError)
@@ -914,6 +991,24 @@ class ConnectManagerImpl: ConnectManager()
 
     override fun retrieveLspIp(): String? {
         return mixerIp
+    }
+
+    private fun getPings() {
+        try {
+            readyForPing = true
+
+            val pings = fetchPings(
+                ownerSeed!!,
+                getTimestampInMilliseconds(),
+                getCurrentUserState()
+            )
+            handleRunReturn(pings, mqttClient)
+        } catch (e: Exception) {
+//            notifyListeners {
+//                onConnectManagerError(ConnectManagerError.FetchPingsError)
+//            }
+            Log.e("MQTT_MESSAGES", "getPings ${e.message}")
+        }
     }
 
     @OptIn(ExperimentalUnsignedTypes::class)
@@ -1178,9 +1273,36 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
+    override fun fetchMessagesOnAppInit(
+        lastMsgIdx: Long?,
+        reverse: Boolean
+    ) {
+        try {
+            val fetchMessages = fetchMsgsBatch(
+                ownerSeed!!,
+                getTimestampInMilliseconds(),
+                getCurrentUserState(),
+                lastMsgIdx?.toULong() ?: 0.toULong(),
+                MSG_BATCH_LIMIT.toUInt(),
+                reverse
+            )
+            handleRunReturn(fetchMessages, mqttClient)
+
+        } catch (e: Exception) {
+//            notifyListeners {
+//                onConnectManagerError(ConnectManagerError.FetchMessageError)
+//            }
+            Log.e("MQTT_MESSAGES", "fetchMessagesOnAppInit ${e.message}")
+        }
+    }
+
     // Messaging Methods
 
     private fun handleMessageArrived(topic: String?, message: MqttMessage?) {
+        if (!readyForPing && topic?.contains("ping") == true) {
+            return
+        }
+
         if (topic != null && message?.payload != null) {
             try {
                 val runReturn = handle(
@@ -1194,7 +1316,11 @@ class ConnectManagerImpl: ConnectManager()
                 )
 
                 mqttClient?.let { client ->
-                    handleRunReturn(runReturn, client)
+                    handleRunReturn(
+                        runReturn,
+                        client,
+                        topic = topic
+                    )
                 }
 
                 Log.d("MQTT_MESSAGES", " this is handle ${runReturn}")
@@ -1913,6 +2039,79 @@ class ConnectManagerImpl: ConnectManager()
         return mqttClient?.isConnected ?: false
     }
 
+    private fun handlePing(ping: String) {
+        val parts = ping.split(":")
+        if (parts.size > 1) {
+            val paymentHash = parts[0]
+            val timestamp = parts[1].toLong()
+
+            if (paymentHash != "_") {
+                pingsMap[paymentHash] = timestamp
+            }
+
+            if (parts.size > 2) {
+                val tag = parts[2]
+                pingsMap[tag] = timestamp
+            }
+        } else {
+            Log.d("MQTT_MESSAGE", "Invalid ping format")
+        }
+    }
+
+    private fun handlePingDone(msgs: List<Msg>) {
+        msgs.filter { it.paymentHash?.isNotEmpty() == true }
+            .mapNotNull { it.paymentHash }
+            .forEach { paymentHash ->
+                pingsMap[paymentHash]?.let { timestamp ->
+                    try {
+                        val pingDone = pingDone(
+                            ownerSeed!!,
+                            getTimestampInMilliseconds(),
+                            getCurrentUserState(),
+                            timestamp.toULong()
+                        )
+                        handleRunReturn(pingDone, mqttClient)
+                        removeFromPingsMapWith(paymentHash)
+                    } catch (e: Exception) {
+                        Log.d("MQTT_MESSAGES", "Error calling ping done")
+                    }
+                }
+            }
+    }
+
+    private fun handleError(error: String) {
+        Log.d("MQTT_MESSAGES", "=> error $error")
+
+        if (error.contains("async pay not found")) {
+            pingsMap.keys.forEach { tag ->
+                if (error.contains(tag)) {
+                    pingsMap[tag]?.let { timestamp ->
+                        try {
+                            val pingDone = pingDone(
+                                ownerSeed!!,
+                                getTimestampInMilliseconds(),
+                                getCurrentUserState(),
+                                timestamp.toULong()
+                            )
+                            handleRunReturn(pingDone, mqttClient)
+                            removeFromPingsMapWith(tag)
+                        } catch (e: Exception) {
+                            Log.d("MQTT_MESSAGES", "Error calling ping done")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun removeFromPingsMapWith(key: String) {
+        pingsMap[key]?.let { timestamp ->
+            pingsMap.filter { it.value == timestamp }.forEach { mapEntry ->
+                pingsMap.remove(mapEntry.key)
+            }
+        }
+    }
+
     // Listener Methods
     private val synchronizedListeners = SynchronizedListenerHolder()
 
@@ -1929,6 +2128,7 @@ class ConnectManagerImpl: ConnectManager()
             action(listener)
         }
     }
+    private fun isRestoreAccount(): Boolean = restoreMnemonicWords?.isNotEmpty() == true
 
     private inner class SynchronizedListenerHolder {
         private val listeners: LinkedHashSet<ConnectManagerListener> = LinkedHashSet()
@@ -1956,4 +2156,47 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
+    private fun setContactKeyTotal(firstForEachScid: Long?) {
+        firstForEachScid?.let {
+            restoreProgress.totalContactsKey = it.toInt()
+        }
+    }
+
+    private fun setMessagesTotal(totalHighestIndex: Long?) {
+        totalHighestIndex?.let {
+            restoreProgress.totalMessages = it.toInt()
+        }
+    }
+
+    private fun calculateContactRestore() {
+    try {
+        val newAmountOfContacts = restoreProgress.contactsRestoredAmount.plus(MSG_FIRST_PER_KEY_LIMIT)
+        if (newAmountOfContacts <= restoreProgress.totalContactsKey) {
+            restoreProgress.contactsRestoredAmount = newAmountOfContacts
+            restoreProgress.progressPercentage = ((restoreProgress.contactsRestoredAmount.toDouble() / restoreProgress.totalContactsKey.toDouble()) * restoreProgress.fixedContactPercentage.toDouble()).roundToInt()
+        } else {
+            restoreProgress.contactsRestoredAmount = restoreProgress.totalContactsKey
+            restoreProgress.progressPercentage = restoreProgress.fixedContactPercentage
+        }
+        notifyListeners {
+            onRestoreProgress(restoreProgress.progressPercentage)
+        }
+    } catch (e: Exception) { }
+}
+
+    private fun calculateMessageRestore() {
+        try {
+            val restoredMsgs = restoreProgress.restoredMessagesAmount.plus(MSG_BATCH_LIMIT)
+            if (restoredMsgs >= restoreProgress.totalMessages) {
+                restoreProgress.progressPercentage = 100
+            } else {
+                restoreProgress.restoredMessagesAmount = restoredMsgs
+                restoreProgress.progressPercentage = (restoreProgress.fixedContactPercentage + ((restoredMsgs.toDouble() / restoreProgress.totalMessages.toDouble())) * restoreProgress.fixedMessagesPercentage.toDouble()).roundToInt()
+            }
+            notifyListeners {
+                onRestoreProgress(restoreProgress.progressPercentage)
+            }
+        } catch (e: Exception) {
+        }
+    }
 }

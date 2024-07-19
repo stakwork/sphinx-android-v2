@@ -249,6 +249,10 @@ abstract class SphinxRepository(
         MutableStateFlow(null)
     }
 
+    override val restoreProgress: MutableStateFlow<Int?> by lazy {
+        MutableStateFlow(null)
+    }
+
     init {
         connectManager.addListener(this)
         memeServerTokenHandler.addListener(this)
@@ -293,11 +297,11 @@ abstract class SphinxRepository(
                 when (restoreProcessState) {
                     is RestoreProcessState.MessagesCounts -> {
                         msgCounts = restoreProcessState.msgsCounts
-                        connectManager.fetchFirstMessagesPerKey(0L)
+                        connectManager.fetchFirstMessagesPerKey(0L, restoreProcessState.msgsCounts.first_for_each_scid)
                     }
                     is RestoreProcessState.RestoreMessages -> {
                         // Delay to ensure the contacts have been restored before fetching messages
-                        delay(500L)
+                        delay(100L)
                         connectManager.fetchMessagesOnRestoreAccount(msgCounts?.total_highest_index)
                     }
                     else -> {}
@@ -707,9 +711,11 @@ abstract class SphinxRepository(
                 delay(100L)
                 createNewContact(newContact)
             }
-
-            restoreProcessState.value = RestoreProcessState.RestoreMessages
         }
+    }
+
+    override fun onRestoreMessages() {
+        restoreProcessState.value = RestoreProcessState.RestoreMessages
     }
 
     override fun onRestoreTribes(
@@ -734,21 +740,20 @@ abstract class SphinxRepository(
                     joinTribeOnRestoreAccount(it, isAdmin, isProductionEnvironment)
                 }
             }
-            restoreProcessState.value = RestoreProcessState.RestoreMessages
         }
     }
 
-    override fun onRestoreNextPageMessages(highestIndex: Long, limit: Int) {
-        applicationScope.launch(io) {
-            val nextHighestIndex = highestIndex.minus(limit)
-            if (nextHighestIndex > 0) {
-                delay(200L)
-                connectManager.fetchMessagesOnRestoreAccount(nextHighestIndex)
-            } else {
-                // Restore complete
-            }
-        }
-    }
+//    override fun onRestoreNextPageMessages(highestIndex: Long, limit: Int) {
+//        applicationScope.launch(io) {
+//            val nextHighestIndex = highestIndex.minus(limit)
+//            if (nextHighestIndex > 0) {
+//                delay(200L)
+//                connectManager.fetchMessagesOnRestoreAccount(nextHighestIndex)
+//            } else {
+//                // Restore complete
+//            }
+//        }
+//    }
 
     override fun onNewBalance(balance: Long) {
         applicationScope.launch(io) {
@@ -961,6 +966,10 @@ abstract class SphinxRepository(
 
     override fun onConnectManagerError(error: ConnectManagerError) {
         connectManagerErrorState.value = error
+    }
+
+    override fun onRestoreProgress(progress: Int) {
+        restoreProgress.value = progress
     }
 
     // Messaging Callbacks

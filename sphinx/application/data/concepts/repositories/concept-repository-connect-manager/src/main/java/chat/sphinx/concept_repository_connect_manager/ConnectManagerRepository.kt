@@ -29,6 +29,7 @@ interface ConnectManagerRepository {
     val transactionDtoState: MutableStateFlow<List<TransactionDto>?>
     val userStateFlow: MutableStateFlow<String?>
     val tribeMembersState: MutableStateFlow<TribeMembersResponse?>
+    val restoreProgress: MutableStateFlow<Int?>
 
     fun connectAndSubscribeToMqtt(userState: String?, mixerIp: String?) {}
     fun createOwnerAccount()

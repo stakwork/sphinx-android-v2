@@ -8,6 +8,7 @@ sealed class OwnerRegistrationState {
         val tirbeServerHost: String?,
         val isProductionEnvironment: Boolean,
         val routerUrl: String?,
+        val defaultTribe: String?
     ) : OwnerRegistrationState()
     data class MnemonicWords(val words: String): OwnerRegistrationState()
     data class SignedChallenge(val authToken: String): OwnerRegistrationState()

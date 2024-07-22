@@ -341,7 +341,7 @@ abstract class SphinxRepository(
         nickname: String,
         welcomeMessage: String,
         sats: Long,
-        tribeServerPubKey: String?,
+        serverDefaultTribe: String?,
         tribeServerIp: String?,
         mixerIp: String?
     ) {
@@ -350,7 +350,7 @@ abstract class SphinxRepository(
                 nickname,
                 welcomeMessage,
                 sats,
-                tribeServerPubKey,
+                serverDefaultTribe,
                 tribeServerIp,
                 mixerIp
             )
@@ -639,7 +639,8 @@ abstract class SphinxRepository(
         mixerServerIp: String?,
         tribeServerHost: String?,
         isProductionEnvironment: Boolean,
-        routerUrl: String?
+        routerUrl: String?,
+        defaultTribe: String?
     ) {
         applicationScope.launch(mainImmediate) {
             val scid = routeHint.toLightningRouteHint()?.getScid()
@@ -652,7 +653,8 @@ abstract class SphinxRepository(
                     mixerServerIp,
                     tribeServerHost,
                     isProductionEnvironment,
-                    routerUrl
+                    routerUrl,
+                    defaultTribe
                 )
                 delay(1000L)
 

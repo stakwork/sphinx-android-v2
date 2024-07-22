@@ -49,7 +49,7 @@ abstract class ConnectManager {
         nickname: String,
         welcomeMessage: String,
         sats: Long,
-        tribeServerPubKey: String?,
+        serverDefaultTribe: String?,
         tribeServerIp: String?,
         mixerIp: String?,
     )
@@ -165,7 +165,8 @@ interface ConnectManagerListener {
         mixerServerIp: String?,
         tribeServerHost: String?,
         isProductionEnvironment: Boolean,
-        routerUrl: String?
+        routerUrl: String?,
+        defaultTribe: String?
     )
     fun onRestoreAccount(isProductionEnvironment: Boolean)
     fun onRestoreContacts(contacts: List<String?>)

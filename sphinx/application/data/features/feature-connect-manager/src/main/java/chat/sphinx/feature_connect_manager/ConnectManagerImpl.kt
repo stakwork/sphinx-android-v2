@@ -95,6 +95,7 @@ class ConnectManagerImpl: ConnectManager()
     private var inviterContact: NewContact? = null
     private var hasAttemptedReconnect = false
     private var tribeServer: String? = null
+    private var serverDefaultTribe: String? = null
     private var router: String? = null
     private val pingsMap = mutableMapOf<String, Long>()
     private var readyForPing: Boolean = false
@@ -444,7 +445,8 @@ class ConnectManagerImpl: ConnectManager()
                             getRawMixerIp(),
                             tribeServer,
                             isProductionEnvironment(),
-                            router
+                            router,
+                            serverDefaultTribe
                         )
                     }
                 }
@@ -753,6 +755,7 @@ class ConnectManagerImpl: ConnectManager()
             _mixerIp = mixerServerIp ?: TEST_V2_SERVER_IP
             tribeServer = tribeHost ?: TEST_V2_TRIBES_SERVER
             router = routerUrl
+            serverDefaultTribe = defaultTribe
 
             network = if (isProductionServer()) {
                 MAINNET_NETWORK
@@ -1123,7 +1126,7 @@ class ConnectManagerImpl: ConnectManager()
         nickname: String,
         welcomeMessage: String,
         sats: Long,
-        tribeServerPubKey: String?,
+        serverDefaultTribe: String?,
         tribeServerIp: String?,
         mixerIp: String?
     ) {
@@ -1138,8 +1141,8 @@ class ConnectManagerImpl: ConnectManager()
                 mixerIp ?: TEST_V2_SERVER_IP,
                 convertSatsToMillisats(sats),
                 ownerInfoStateFlow.value.alias ?: "",
-                tribeServerIp ?: TEST_V2_TRIBES_SERVER,
-                "02792ee5b9162f9a00686aaa5d5274e91fd42a141113007797b5c1872d43f78e07"
+                tribeServerIp,
+                serverDefaultTribe
             )
 
             if (createInvite.newInvite != null) {
@@ -1151,7 +1154,7 @@ class ConnectManagerImpl: ConnectManager()
                     nickname,
                     sats,
                     welcomeMessage,
-                    tribeServerPubKey,
+                    serverDefaultTribe,
                     invite,
                     code,
                     tag

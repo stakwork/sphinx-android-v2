@@ -41,6 +41,7 @@ internal class InviteFriendViewModel @Inject constructor(
         const val SERVER_SETTINGS_SHARED_PREFERENCES = "server_ip_settings"
         const val TRIBE_SERVER_IP = "tribe_server_ip"
         const val NETWORK_MIXER_IP = "network_mixer_ip"
+        const val DEFAULT_TRIBE_KEY = "default_tribe"
     }
     private suspend fun getAccountBalance(): StateFlow<NodeBalance?> =
         lightningRepository.getAccountBalance()
@@ -50,6 +51,9 @@ internal class InviteFriendViewModel @Inject constructor(
 
     private val tribeServerIp: String? = serverSettingsSharedPreferences
         .getString(TRIBE_SERVER_IP, null)
+
+    private val defaultTribe = serverSettingsSharedPreferences
+        .getString(DEFAULT_TRIBE_KEY, null)
 
     private val mixerIp = serverSettingsSharedPreferences
         .getString(NETWORK_MIXER_IP, null)
@@ -88,6 +92,7 @@ internal class InviteFriendViewModel @Inject constructor(
 
         createInviteJob = viewModelScope.launch(mainImmediate) {
             val balance = getAccountBalance().firstOrNull()?.balance?.value
+            val serverDefaultTribe = if (defaultTribe?.isEmpty() == true) null else defaultTribe
 
             when {
                 nickname.isNullOrEmpty() -> {
@@ -99,7 +104,7 @@ internal class InviteFriendViewModel @Inject constructor(
                         nickname,
                         welcomeMessage ?: "",
                         sats,
-                        null,
+                        serverDefaultTribe,
                         tribeServerIp,
                         mixerIp
                     )

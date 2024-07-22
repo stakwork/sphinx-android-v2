@@ -143,6 +143,8 @@ internal class OnBoardConnectingViewModel @Inject constructor(
         const val ONION_STATE_KEY = "onion_state"
         const val NETWORK_MIXER_IP = "network_mixer_ip"
         const val TRIBE_SERVER_IP = "tribe_server_ip"
+        const val DEFAULT_TRIBE_KEY = "default_tribe"
+
         const val ENVIRONMENT_TYPE = "environment_type"
         const val ROUTER_URL= "router_url"
     }
@@ -207,6 +209,13 @@ internal class OnBoardConnectingViewModel @Inject constructor(
         editor.apply()
     }
 
+    private fun storeDefaultTribe(state: String) {
+        val editor = serverSettingsSharedPreferences.edit()
+
+        editor.putString(DEFAULT_TRIBE_KEY, state)
+        editor.apply()
+    }
+
     private fun storeEnvironmentType(state: Boolean) {
         val editor = serverSettingsSharedPreferences.edit()
 
@@ -221,12 +230,17 @@ internal class OnBoardConnectingViewModel @Inject constructor(
         editor.apply()
     }
 
+
     private fun fetchRouterUrl(isProductionEnvironment: Boolean) {
         viewModelScope.launch(mainImmediate) {
             networkQueryContact.getAccountConfig(isProductionEnvironment).collect { loadResponse ->
                 when (loadResponse) {
                     is Response.Success -> {
                         storeRouterUrl(loadResponse.value.router)
+
+                        if (loadResponse.value.tribe.isNotEmpty()) {
+                            storeDefaultTribe(loadResponse.value.tribe)
+                        }
                         delay(100L)
                         navigator.toOnBoardNameScreen()
                     }
@@ -430,6 +444,8 @@ internal class OnBoardConnectingViewModel @Inject constructor(
                     is OwnerRegistrationState.OwnerRegistered -> {
                         connectionState.mixerServerIp?.let { storeNetworkMixerIp(it) }
                         connectionState.tirbeServerHost?.let { storeTribeServerIp(it) }
+                        connectionState.defaultTribe?.let { storeDefaultTribe(it) }
+
                         storeEnvironmentType(connectionState.isProductionEnvironment)
 
                         if (connectionState.routerUrl?.isNotEmpty() == true) {

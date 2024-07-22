@@ -44,7 +44,7 @@ interface ConnectManagerRepository {
         nickname: String,
         welcomeMessage: String,
         sats: Long,
-        tribeServerPubKey: String?,
+        serverDefaultTribe: String?,
         tribeServerIp: String?,
         mixerIp: String?
     )

@@ -20,6 +20,7 @@ class NetworkQueryChatImpl(
         private const val GET_TRIBE_INFO_URL_TEST = "http://%s/tribes/%s"
         private const val GET_TRIBE_INFO_URL_PRODUCTION = "https://%s/tribes/%s"
         private const val GET_FEED_CONTENT_URL = "https://%s/feed?url=%s&fulltext=true"
+        const val TEST_V2_TRIBES_SERVER = "75.101.247.127:8801"
     }
 
     override fun getTribeInfo(
@@ -30,7 +31,7 @@ class NetworkQueryChatImpl(
         networkRelayCall.get(
             url = String.format(
                 if (isProductionEnvironment) GET_TRIBE_INFO_URL_PRODUCTION else GET_TRIBE_INFO_URL_TEST,
-                host.value,
+                if (isProductionEnvironment) host.value else TEST_V2_TRIBES_SERVER,
                 tribePubKey.value
             ),
             responseJsonClass = NewTribeDto::class.java,

@@ -3,14 +3,8 @@ package chat.sphinx.feature_network_query_verify_external
 import chat.sphinx.concept_network_query_verify_external.NetworkQueryAuthorizeExternal
 import chat.sphinx.concept_network_query_verify_external.model.*
 import chat.sphinx.concept_network_relay_call.NetworkRelayCall
-import chat.sphinx.feature_network_query_verify_external.model.SignBase64RelayResponse
-import chat.sphinx.feature_network_query_verify_external.model.VerifyExternalRelayResponse
 import chat.sphinx.kotlin_response.LoadResponse
 import chat.sphinx.kotlin_response.ResponseError
-import chat.sphinx.wrapper_relay.AuthorizationToken
-import chat.sphinx.wrapper_relay.RequestSignature
-import chat.sphinx.wrapper_relay.RelayUrl
-import chat.sphinx.wrapper_relay.TransportToken
 import kotlinx.coroutines.flow.Flow
 
 class NetworkQueryAuthorizeExternalImpl(
@@ -23,6 +17,9 @@ class NetworkQueryAuthorizeExternalImpl(
         private const val ENDPOINT_AUTHORIZE_EXTERNAL = "https://%s/verify/%s?token=%s"
         private const val ENDPOINT_GET_PERSON_INFO = "https://%s/person/%s"
         private const val ENDPOINT_REDEEM_SATS = "https://%s"
+
+        private const val ENDPOINT_SERVER_URL = "https://%s"
+        private const val ENDPOINT_ASK_AUTHENTICATION = "$ENDPOINT_SERVER_URL/ask"
     }
 
     override fun authorizeExternal(
@@ -41,6 +38,12 @@ class NetworkQueryAuthorizeExternalImpl(
             responseJsonClass = Any::class.java,
             requestBodyJsonClass = VerifyExternalInfoDto::class.java,
             requestBody = info,
+        )
+
+    override fun requestNewChallenge(host: String): Flow<LoadResponse<ChallengeExternalDto, ResponseError>> =
+        networkRelayCall.get(
+            url = String.format(ENDPOINT_ASK_AUTHENTICATION, host),
+            responseJsonClass = ChallengeExternalDto::class.java,
         )
 
     override fun redeemSats(

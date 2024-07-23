@@ -69,7 +69,9 @@ import uniffi.sphinxrs.rootSignMs
 import uniffi.sphinxrs.send
 import uniffi.sphinxrs.setNetwork
 import uniffi.sphinxrs.setPushToken
+import uniffi.sphinxrs.signBase64
 import uniffi.sphinxrs.signBytes
+import uniffi.sphinxrs.signedTimestamp
 import uniffi.sphinxrs.updateTribe
 import uniffi.sphinxrs.xpubFromSeed
 import java.security.SecureRandom
@@ -1815,6 +1817,35 @@ class ConnectManagerImpl: ConnectManager()
         return try {
             parseInvoice(invoice)
         } catch (e: Exception) {
+            null
+        }
+    }
+
+    override fun getSignedTimeStamps(): String? {
+        return try {
+            signedTimestamp(
+                ownerSeed!!,
+                0.toULong(),
+                getTimestampInMilliseconds(),
+                network
+            )
+        } catch (e: Exception) {
+            Log.d("MQTT_MESSAGES", "Error to get signed timestamp $e")
+            null
+        }
+    }
+
+    override fun getSignBase64(text: String): String? {
+        return try {
+            signBase64(
+                ownerSeed!!,
+                0.toULong(),
+                getTimestampInMilliseconds(),
+                network,
+                text
+            )
+        } catch (e: Exception) {
+            Log.d("MQTT_MESSAGES", "Error to get sign base64 $e")
             null
         }
     }

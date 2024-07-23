@@ -16,6 +16,7 @@ import chat.sphinx.concept_network_query_people.model.isDeleteMethod
 import chat.sphinx.concept_network_query_people.model.isProfilePath
 import chat.sphinx.concept_network_query_people.model.isSaveMethod
 import chat.sphinx.concept_network_query_verify_external.NetworkQueryAuthorizeExternal
+import chat.sphinx.concept_network_query_verify_external.model.VerifyExternalInfoDto
 import chat.sphinx.concept_repository_actions.ActionsRepository
 import chat.sphinx.concept_repository_chat.ChatRepository
 import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
@@ -63,7 +64,6 @@ import chat.sphinx.wrapper_common.chat.ChatUUID
 import chat.sphinx.wrapper_common.chat.PushNotificationLink
 import chat.sphinx.wrapper_common.chat.toPushNotificationLink
 import chat.sphinx.wrapper_common.dashboard.ChatId
-import chat.sphinx.wrapper_common.dashboard.RestoreProgressViewState
 import chat.sphinx.wrapper_common.dashboard.toChatId
 import chat.sphinx.wrapper_common.feed.FeedItemLink
 import chat.sphinx.wrapper_common.feed.toFeedItemLink
@@ -117,6 +117,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -927,22 +928,10 @@ internal class DashboardViewModel @Inject constructor(
                     DeepLinkPopupViewState.ExternalAuthorizePopupProcessing
                 )
 
+                val token = connectManagerRepository.getSignedTimeStamps()
 
-//                when (response) {
-//                    is Response.Error -> {
-//                        submitSideEffect(
-//                            ChatListSideEffect.Notify(response.cause.message)
-//                        )
-//                    }
-//                    is Response.Success -> {
-//                        val i = Intent(Intent.ACTION_VIEW)
-//                        i.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-//                        i.data = Uri.parse(
-//                            "https://${viewState.link.host}?challenge=${viewState.link.challenge}"
-//                        )
-//                        app.startActivity(i)
-//                    }
-//                }
+                authorize(viewState.link.host, viewState.link.challenge, token)
+
             } else if (viewState is DeepLinkPopupViewState.StakworkAuthorizePopup) {
                 deepLinkPopupViewStateContainer.updateViewState(
                     DeepLinkPopupViewState.ExternalAuthorizePopupProcessing
@@ -978,6 +967,48 @@ internal class DashboardViewModel @Inject constructor(
             deepLinkPopupViewStateContainer.updateViewState(
                 DeepLinkPopupViewState.PopupDismissed
             )
+        }
+    }
+
+    private suspend fun requestNewTokenAndAuthorize(host: String, challenge: String) {
+        networkQueryAuthorizeExternal.requestNewChallenge(host).collect { loadResponse ->
+            if (loadResponse is Response.Success) {
+                val token = connectManagerRepository.getSignedTimeStamps() ?: return@collect
+                authorize(host, challenge, token)
+            }
+        }
+    }
+
+    private suspend fun authorize(host: String, challenge: String, token: String?) {
+        val sig = connectManagerRepository.getSignBase64(challenge)
+        val owner = getOwner()
+
+        val info = VerifyExternalInfoDto(
+            owner.nodePubKey?.value,
+            owner.alias?.value,
+            owner.photoUrl?.value,
+            owner.routeHint?.value,
+            0L,
+            sig,
+        )
+
+        if (token != null) {
+            networkQueryAuthorizeExternal.authorizeExternal(
+                host,
+                challenge,
+                token,
+                info
+            ).collect { loadResponse ->
+                when(loadResponse) {
+                    is LoadResponse.Loading -> {}
+                    is Response.Error -> {
+                        requestNewTokenAndAuthorize(host, challenge)
+                    }
+                    is Response.Success -> {
+                        // server response
+                    }
+                }
+            }
         }
     }
 

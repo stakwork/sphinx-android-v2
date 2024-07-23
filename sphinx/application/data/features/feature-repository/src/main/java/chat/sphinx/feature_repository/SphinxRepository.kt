@@ -507,6 +507,14 @@ abstract class SphinxRepository(
         return connectManager.getInvoiceInfo(invoice)
     }
 
+    override fun getSignedTimeStamps(): String? {
+        return connectManager.getSignedTimeStamps()
+    }
+
+    override fun getSignBase64(text: String): String? {
+        return connectManager.getSignBase64(text)
+    }
+
     override suspend fun exitAndDeleteTribe(tribe: Chat) {
         val queries = coreDB.getSphinxDatabaseQueries()
         applicationScope.launch(io) {

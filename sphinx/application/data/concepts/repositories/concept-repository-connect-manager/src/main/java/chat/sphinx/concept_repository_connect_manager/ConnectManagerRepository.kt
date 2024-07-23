@@ -87,4 +87,6 @@ interface ConnectManagerRepository {
     fun requestNodes(nodeUrl: String)
     fun getInvoiceInfo(invoice: String): String?
 
+    fun getSignedTimeStamps(): String?
+    fun getSignBase64(text: String): String?
 }

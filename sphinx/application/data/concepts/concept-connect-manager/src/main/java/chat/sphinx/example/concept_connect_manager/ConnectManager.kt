@@ -139,8 +139,11 @@ abstract class ConnectManager {
         metaData: String?,
         amount: Long?
     ): String?
-
     abstract fun getInvoiceInfo(invoice: String): String?
+
+    // Utility Methods
+    abstract fun getSignedTimeStamps(): String?
+    abstract fun getSignBase64(text: String): String?
 
     // Listener Methods
     abstract fun addListener(listener: ConnectManagerListener): Boolean

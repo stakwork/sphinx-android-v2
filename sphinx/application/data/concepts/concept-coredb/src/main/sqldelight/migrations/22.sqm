@@ -1,0 +1,22 @@
+import chat.sphinx.wrapper_common.DateTime;
+import chat.sphinx.wrapper_common.lightning.LightningPaymentRequest;
+import chat.sphinx.wrapper_common.lsp.LspIdentifier;
+import chat.sphinx.wrapper_common.lsp.LspIssuer;
+import chat.sphinx.wrapper_common.lsp.LspMetaData;
+import chat.sphinx.wrapper_common.lsp.LspPaths;
+import chat.sphinx.wrapper_common.lsp.LspPreImage;
+import chat.sphinx.wrapper_common.lsp.LspStatus;
+import chat.sphinx.wrapper_common.lsp.Macaroon;
+
+
+CREATE TABLE lspDbo (
+    id                TEXT          AS LspIdentifier NOT NULL PRIMARY KEY,
+    macaroon          TEXT          AS Macaroon NOT NULL,
+    payment_request   TEXT          AS LightningPaymentRequest,
+    issuer            TEXT          AS LspIssuer,
+    meta_data         TEXT          AS LspMetaData,
+    paths             TEXT          AS LspPaths,
+    preimage          TEXT          AS LspPreImage,
+    status            INTEGER       AS LspStatus NOT NULL,
+    created_at        INTEGER       AS DateTime NOT NULL
+)

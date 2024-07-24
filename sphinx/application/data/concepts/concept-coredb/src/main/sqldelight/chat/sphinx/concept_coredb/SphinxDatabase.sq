@@ -37,6 +37,14 @@ import chat.sphinx.wrapper_common.lightning.LightningRouteHint;
 import chat.sphinx.wrapper_common.lightning.Sat;
 import chat.sphinx.wrapper_common.lightning.ServerIp;
 import chat.sphinx.wrapper_common.lightning.ShortChannelId;
+import chat.sphinx.wrapper_common.lsp.LspIdentifier;
+import chat.sphinx.wrapper_common.lsp.LspIssuer;
+import chat.sphinx.wrapper_common.lsp.LspMetaData;
+import chat.sphinx.wrapper_common.lsp.LspPaths;
+import chat.sphinx.wrapper_common.lsp.LspPaymentRequest;
+import chat.sphinx.wrapper_common.lsp.LspPreImage;
+import chat.sphinx.wrapper_common.lsp.LspStatus;
+import chat.sphinx.wrapper_common.lsp.Macaroon;
 import chat.sphinx.wrapper_common.message.MessageId;
 import chat.sphinx.wrapper_common.message.MessageUUID;
 import chat.sphinx.wrapper_common.subscription.Cron;
@@ -1945,3 +1953,71 @@ contentEpisodeStatusDeleteByFeedId:
 DELETE
 FROM contentEpisodeStatusDbo
 WHERE feed_id = ?;
+
+CREATE TABLE lspDbo (
+    id                TEXT          AS LspIdentifier NOT NULL PRIMARY KEY,
+    macaroon          TEXT          AS Macaroon NOT NULL,
+    payment_request   TEXT          AS LightningPaymentRequest,
+    issuer            TEXT          AS LspIssuer,
+    meta_data         TEXT          AS LspMetaData,
+    paths             TEXT          AS LspPaths,
+    preimage          TEXT          AS LspPreImage,
+    status            INTEGER       AS LspStatus NOT NULL,
+    created_at        INTEGER       AS DateTime NOT NULL
+);
+
+lspGetById:
+SELECT *
+FROM lspDbo
+WHERE id = ?;
+
+lspUpdateStatus:
+UPDATE lspDbo
+SET status = :status
+WHERE id = ?;
+
+lspUpdateMetaData:
+UPDATE lspDbo
+SET meta_data = :meta_data
+WHERE id = ?;
+
+lspGetAllActive:
+SELECT *
+FROM lspDbo
+WHERE status = 1;
+
+lspUpsert {
+    UPDATE lspDbo
+    SET macaroon = :macaroon,
+        payment_request = :payment_request,
+        issuer = :issuer,
+        meta_data = :meta_data,
+        paths = :paths,
+        preimage = :preimage,
+        status = :status,
+        created_at = :created_at
+    WHERE id = :id;
+
+    INSERT OR IGNORE INTO lspDbo (
+        id,
+        macaroon,
+        payment_request,
+        issuer,
+        meta_data,
+        paths,
+        preimage,
+        status,
+        created_at
+    )
+    VALUES (
+        :id,
+        :macaroon,
+        :payment_request,
+        :issuer,
+        :meta_data,
+        :paths,
+        :preimage,
+        :status,
+        :created_at
+    );
+}

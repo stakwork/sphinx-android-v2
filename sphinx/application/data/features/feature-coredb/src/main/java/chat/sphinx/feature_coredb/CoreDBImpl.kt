@@ -13,6 +13,14 @@ import chat.sphinx.feature_coredb.adapters.contact.*
 import chat.sphinx.feature_coredb.adapters.feed.*
 import chat.sphinx.feature_coredb.adapters.invite.InviteCodeAdapter
 import chat.sphinx.feature_coredb.adapters.invite.InviteStringAdapter
+import chat.sphinx.feature_coredb.adapters.lsp.LspIdentifierAdapter
+import chat.sphinx.feature_coredb.adapters.lsp.LspIssuerAdapter
+import chat.sphinx.feature_coredb.adapters.lsp.LspMetaDataAdapter
+import chat.sphinx.feature_coredb.adapters.lsp.LspPathsAdapter
+import chat.sphinx.feature_coredb.adapters.lsp.LspPaymentRequestAdapter
+import chat.sphinx.feature_coredb.adapters.lsp.LspPreImageAdapter
+import chat.sphinx.feature_coredb.adapters.lsp.LspStatusAdapter
+import chat.sphinx.feature_coredb.adapters.lsp.MacaroonAdapter
 import chat.sphinx.feature_coredb.adapters.media.*
 import chat.sphinx.feature_coredb.adapters.media.FileNameAdapter
 import chat.sphinx.feature_coredb.adapters.media.MediaKeyAdapter
@@ -257,6 +265,17 @@ abstract class CoreDBImpl(private val moshi: Moshi): CoreDB() {
                 serverDboAdapter = ServerDbo.Adapter(
                     ipAdapter = IpAdapter(),
                     pub_keyAdapter = LightningNodePubKeyAdapter.getInstance()
+                ),
+                lspDboAdapter = LspDbo.Adapter(
+                    idAdapter = LspIdentifierAdapter(),
+                    macaroonAdapter = MacaroonAdapter(),
+                    payment_requestAdapter = LightningPaymentRequestAdapter.getInstance(),
+                    issuerAdapter = LspIssuerAdapter(),
+                    meta_dataAdapter = LspMetaDataAdapter(),
+                    pathsAdapter = LspPathsAdapter(),
+                    preimageAdapter = LspPreImageAdapter(),
+                    statusAdapter = LspStatusAdapter(),
+                    created_atAdapter = DateTimeAdapter.getInstance()
                 )
             ).sphinxDatabaseQueries
         }

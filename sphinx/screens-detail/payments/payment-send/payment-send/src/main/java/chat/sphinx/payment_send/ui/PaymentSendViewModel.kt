@@ -218,7 +218,6 @@ internal class PaymentSendViewModel @Inject constructor(
                                             )
                                         )
                                     }
-
                                     is Response.Success -> {
                                         val routerPubKey = serverSettingsSharedPreferences
                                             .getString(ROUTER_PUBKEY, null)

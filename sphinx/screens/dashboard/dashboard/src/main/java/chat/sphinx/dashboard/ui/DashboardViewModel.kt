@@ -117,7 +117,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -1294,11 +1293,10 @@ internal class DashboardViewModel @Inject constructor(
                 return@launch
             }
 
-            val contact = contactRepository.getContactByPubKey(invoicePayeePubKey).firstOrNull()
-            val contactLspPubKey = contact?.routeHint?.getLspPubKey()
+            val payeeLspPubKey = invoiceBolt11.hop_hints?.getOrNull(0)?.substringBefore('_')
             val ownerLsp = getOwner().routeHint?.getLspPubKey()
 
-            if (contact == null || (contactLspPubKey != null && contactLspPubKey != ownerLsp)) {
+            if (payeeLspPubKey != null && payeeLspPubKey != ownerLsp) {
                 val routerUrl = serverSettingsSharedPreferences.getString(ROUTER_URL, null)
 
                 if (routerUrl == null) {

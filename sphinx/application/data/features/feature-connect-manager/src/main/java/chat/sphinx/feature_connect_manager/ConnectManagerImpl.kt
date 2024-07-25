@@ -267,9 +267,10 @@ class ConnectManagerImpl: ConnectManager()
                 )
                 client.subscribe(arrayOf(tribeSubtopic), qos)
 
-                if (ownerInfoStateFlow.value.messageLastIndex != null && !isRestoreAccount()) {
+                if (isRestoreAccount()) {
+                    getAllMessagesCount()
+                } else if (ownerInfoStateFlow.value.messageLastIndex != null) {
                     val msgLastIndex = ownerInfoStateFlow.value.messageLastIndex?.plus(1)
-
                     fetchMessagesOnAppInit(
                         msgLastIndex ?: 0,
                         false
@@ -277,6 +278,8 @@ class ConnectManagerImpl: ConnectManager()
                     notifyListeners {
                         onGetNodes()
                     }
+                } else {
+                    getPings()
                 }
             }
         } catch (e: Exception) {

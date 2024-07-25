@@ -431,10 +431,10 @@ class Bolt11(
     fun getExpiryTime(): Long? {
         tags.forEach { taggedField ->
             if (taggedField is TaggedField.Expiry) {
+                timestampSeconds + taggedField.expirySeconds
                 return taggedField.expirySeconds
             }
         }
         return null // Return null if no expiry tag is found
     }
-
 }

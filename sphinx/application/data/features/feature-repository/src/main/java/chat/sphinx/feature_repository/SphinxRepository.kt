@@ -291,8 +291,7 @@ abstract class SphinxRepository(
     override fun startRestoreProcess() {
         applicationScope.launch(mainImmediate) {
             var msgCounts: MsgsCounts? = null
-            connectManager.getAllMessagesCount()
-
+//            connectManager.getAllMessagesCount()
             restoreProcessState.asStateFlow().collect{ restoreProcessState ->
                 when (restoreProcessState) {
                     is RestoreProcessState.MessagesCounts -> {

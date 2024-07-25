@@ -27,8 +27,7 @@ data class NewCreateTribe(
     val updated: Long?,
     val member_count: Int?,
     val last_active: Long?,
-    val owner_alias: String,
-    val pin: String?
+    val owner_alias: String
 ) {
     fun toJson(): String {
         val moshi = Moshi.Builder()

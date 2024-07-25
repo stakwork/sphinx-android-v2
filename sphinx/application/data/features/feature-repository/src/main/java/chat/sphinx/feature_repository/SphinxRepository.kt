@@ -6239,12 +6239,12 @@ abstract class SphinxRepository(
                 val ownerAlias = accountOwner.value?.alias?.value ?: "unknown"
 
                 if (chatId == null) {
-                    val newTribeJson = createTribe.toNewCreateTribe(ownerAlias, imgUrl, null, null).toJson()
+                    val newTribeJson = createTribe.toNewCreateTribe(ownerAlias, imgUrl, null).toJson()
                     connectManager.createTribe(newTribeJson)
                 } else {
                     val tribe = getChatById(chatId).firstOrNull()
                     if (tribe != null) {
-                        val updatedTribeJson = createTribe.toNewCreateTribe(ownerAlias, imgUrl, tribe.uuid.value, tribe.pinedMessage?.value).toJson()
+                        val updatedTribeJson = createTribe.toNewCreateTribe(ownerAlias, imgUrl, tribe.uuid.value).toJson()
                         tribe.ownerPubKey?.value?.let { connectManager.editTribe(updatedTribeJson) }
                     }
                 }

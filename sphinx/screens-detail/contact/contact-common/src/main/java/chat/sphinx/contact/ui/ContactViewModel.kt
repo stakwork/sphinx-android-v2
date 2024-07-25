@@ -109,12 +109,12 @@ abstract class ContactViewModel<ARGS: NavArgs>(
                 return@launch
             }
 
-            if (lightningNodePubKey.isNullOrEmpty()) {
+            if (lightningNodePubKey.isNullOrEmpty() || lightningNodePubKey.toLightningNodePubKey() == null) {
                 submitSideEffect(ContactSideEffect.Notify.InvalidLightningNodePublicKey)
                 return@launch
             }
 
-            if (!lightningRouteHint.isNullOrEmpty() && lightningRouteHint.toLightningRouteHint() == null) {
+            if (lightningRouteHint.isNullOrEmpty() || lightningRouteHint.toLightningRouteHint() == null) {
                 submitSideEffect(ContactSideEffect.Notify.InvalidRouteHint)
                 return@launch
             }

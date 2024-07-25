@@ -117,6 +117,8 @@ internal class NewContactViewModel @Inject constructor(
                 )
                 connectManagerRepository.createContact(newContact)
                 viewStateContainer.updateViewState(ContactViewState.Saved)
+            } else {
+                submitSideEffect(ContactSideEffect.Notify.FailedToSaveContact)
             }
         }
     }

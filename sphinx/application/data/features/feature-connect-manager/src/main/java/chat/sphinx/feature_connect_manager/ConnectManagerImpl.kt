@@ -221,7 +221,6 @@ class ConnectManagerImpl: ConnectManager()
                                 handleMessageArrived(topic, message)
                             }
                         }
-
                     } else {
                         handleMessageArrived(topic, message)
                     }

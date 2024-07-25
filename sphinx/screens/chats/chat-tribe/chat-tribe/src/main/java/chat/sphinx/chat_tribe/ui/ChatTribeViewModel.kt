@@ -370,7 +370,7 @@ class ChatTribeViewModel @Inject constructor(
 
         viewModelScope.launch(mainImmediate) {
 
-            val response = chatRepository.pinMessage(chatId, message)
+            val response = chatRepository.pinMessage(chatId, message, isProductionEnvironment)
 
             if (response is Response.Success) {
                 showPinMessagePopup(app.getString(R.string.message_pinned))
@@ -389,7 +389,7 @@ class ChatTribeViewModel @Inject constructor(
                     PinMessageBottomViewState.Closed
                 )
 
-                val response = chatRepository.unPinMessage(chatId, nnMessage)
+                val response = chatRepository.unPinMessage(chatId, nnMessage, isProductionEnvironment)
 
                 if (response is Response.Success) {
                     showPinMessagePopup(app.getString(R.string.message_unpinned))

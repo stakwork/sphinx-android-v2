@@ -245,7 +245,7 @@ class CreateTribe private constructor(
         )
     }
 
-    fun toNewCreateTribe(ownerAlias: String, image: String?, tribePubKey: String?): NewCreateTribe {
+    fun toNewCreateTribe(ownerAlias: String, image: String?, tribePubKey: String?, pinMessage: String?): NewCreateTribe {
         return NewCreateTribe(
             pubkey = tribePubKey,
             route_hint = null,
@@ -266,7 +266,8 @@ class CreateTribe private constructor(
             updated = null,
             member_count = null,
             last_active = null,
-            owner_alias = ownerAlias
+            owner_alias = ownerAlias,
+            pin = pinMessage
         )
     }
 }

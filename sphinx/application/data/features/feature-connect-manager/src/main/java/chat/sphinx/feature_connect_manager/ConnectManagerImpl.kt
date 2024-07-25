@@ -1617,7 +1617,7 @@ class ConnectManagerImpl: ConnectManager()
         return null
     }
 
-    override fun sendKeySend(pubKey: String, amount: Long) {
+    override fun sendKeySend(pubKey: String, amount: Long, routeHint: String?) {
         val now = getTimestampInMilliseconds()
 
         try {
@@ -1627,7 +1627,8 @@ class ConnectManagerImpl: ConnectManager()
                 pubKey,
                 getCurrentUserState(),
                 convertSatsToMillisats(amount),
-                null
+                null,
+                routeHint
             )
             handleRunReturn(keySend, mqttClient)
         } catch (e: Exception) {

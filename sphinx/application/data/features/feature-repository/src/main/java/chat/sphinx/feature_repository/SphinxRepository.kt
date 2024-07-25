@@ -4423,7 +4423,8 @@ abstract class SphinxRepository(
         pubKey: String,
         endHops: String?,
         milliSatAmount: Long,
-        routerPubKey: String?
+        routerPubKey: String?,
+        routeHint: String?
     ) {
         if (endHops?.isNotEmpty() == true && routerPubKey != null) {
             connectManager.concatNodesFromResponse(
@@ -4434,7 +4435,8 @@ abstract class SphinxRepository(
         }
         connectManager.sendKeySend(
             pubKey,
-            milliSatAmount
+            milliSatAmount,
+            routeHint
         )
     }
 

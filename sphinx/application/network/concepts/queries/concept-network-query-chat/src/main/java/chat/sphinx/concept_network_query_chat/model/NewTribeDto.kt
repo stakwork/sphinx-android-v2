@@ -2,6 +2,8 @@ package chat.sphinx.concept_network_query_chat.model
 
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import java.io.File
 
 @JsonClass(generateAdapter = true)
@@ -23,7 +25,10 @@ data class NewTribeDto(
     val updated: Long?,
     val member_count: Int?,
     val last_active: Int?,
-    val unique_name: String?
+    val unique_name: String?,
+    val pin: String?,
+    val app_url: String?,
+    val feed_url: String?,
 ) {
 
     var amount: Long? = null
@@ -57,6 +62,13 @@ data class NewTribeDto(
         this.uuid = tribePubKey
     }
 
+    fun toJsonString(): String {
+        val moshi = Moshi.Builder()
+            .add(KotlinJsonAdapterFactory())
+            .build()
+        val jsonAdapter = moshi.adapter(NewTribeDto::class.java)
+        return jsonAdapter.toJson(this)
+    }
 
 }
 

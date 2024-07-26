@@ -184,8 +184,8 @@ inline fun TransactionCallbacks.updateNewChatTribeData(
     val pricePerMessage = 0L.toSat()
     val escrowAmount = 0L.toSat()
     val name = tribe.name.toChatName()
-    val photoUrl = null
-    val pinMessage = null
+    val photoUrl = tribe.img?.toPhotoUrl()
+    val pinMessage = tribe.pin?.toMessageUUID()
 
     queries.chatUpdateTribeData(
         pricePerMessage,

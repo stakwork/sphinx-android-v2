@@ -201,7 +201,7 @@ class MemeServerTokenHandlerImpl(
             var id: AuthenticationId? = null
             var challenge: AuthenticationChallenge? = null
 
-            networkQueryMemeServer.askAuthentication(mediaHost).collect { loadResponse ->
+            networkQueryMemeServer.askMemeAuthentication(mediaHost).collect { loadResponse ->
                 @Exhaustive
                 when (loadResponse) {
                     is LoadResponse.Loading -> {}

@@ -115,7 +115,7 @@ abstract class ConnectManager {
         amount: Long,
         memo: String
     ): Pair<String, String>? // invoice, paymentHash
-    abstract fun sendKeySend(pubKey: String, amount: Long)
+    abstract fun sendKeySend(pubKey: String, amount: Long, routeHint: String?)
     abstract fun processContactInvoicePayment(paymentRequest: String)
     abstract fun processInvoicePayment(
         paymentRequest: String,
@@ -139,8 +139,11 @@ abstract class ConnectManager {
         metaData: String?,
         amount: Long?
     ): String?
-
     abstract fun getInvoiceInfo(invoice: String): String?
+
+    // Utility Methods
+    abstract fun getSignedTimeStamps(): String?
+    abstract fun getSignBase64(text: String): String?
 
     // Listener Methods
     abstract fun addListener(listener: ConnectManagerListener): Boolean

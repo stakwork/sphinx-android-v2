@@ -291,8 +291,7 @@ abstract class SphinxRepository(
     override fun startRestoreProcess() {
         applicationScope.launch(mainImmediate) {
             var msgCounts: MsgsCounts? = null
-            connectManager.getAllMessagesCount()
-
+//            connectManager.getAllMessagesCount()
             restoreProcessState.asStateFlow().collect{ restoreProcessState ->
                 when (restoreProcessState) {
                     is RestoreProcessState.MessagesCounts -> {
@@ -505,6 +504,14 @@ abstract class SphinxRepository(
 
     override fun getInvoiceInfo(invoice: String): String? {
         return connectManager.getInvoiceInfo(invoice)
+    }
+
+    override fun getSignedTimeStamps(): String? {
+        return connectManager.getSignedTimeStamps()
+    }
+
+    override fun getSignBase64(text: String): String? {
+        return connectManager.getSignBase64(text)
     }
 
     override suspend fun exitAndDeleteTribe(tribe: Chat) {
@@ -832,7 +839,7 @@ abstract class SphinxRepository(
                                 pendingContactIds = emptyList(),
                                 latestMessageId = null,
                                 contentSeenAt = null,
-                                pinedMessage = null,
+                                pinedMessage = loadResponse.value.pin?.toMessageUUID(),
                                 notify = NotificationLevel.SeeAll
                             )
 
@@ -1420,7 +1427,7 @@ abstract class SphinxRepository(
                 paymentRequest = existingMessage?.payment_request ?: paymentRequest,
                 paymentHash = existingMessage?.payment_hash ?: msg.paymentHash?.toLightningPaymentHash() ?: paymentHash,
                 date = messageDate ,
-                expirationDate = bolt11?.getExpiryTime()?.toDateTime(),
+                expirationDate = existingMessage?.expiration_date ?: bolt11?.getExpiryTime()?.toDateTime(),
                 messageContent = null,
                 status = status,
                 seen = Seen.False,
@@ -1566,7 +1573,7 @@ abstract class SphinxRepository(
                             val newTribe = Chat(
                                 id = ChatId(tribeId),
                                 uuid = ChatUUID(contactInfo.pubkey),
-                                name = ChatName(loadResponse.value.name ?: "unknown"),
+                                name = ChatName(loadResponse.value.name),
                                 photoUrl = loadResponse.value.img?.toPhotoUrl(),
                                 type = ChatType.Tribe,
                                 status = ChatStatus.Approved,
@@ -1574,7 +1581,7 @@ abstract class SphinxRepository(
                                 isMuted = ChatMuted.False,
                                 createdAt = now.toDateTime(),
                                 groupKey = null,
-                                host = ChatHost(contactInfo.host!!),
+                                host = contactInfo.host?.toChatHost(),
                                 pricePerMessage = loadResponse.value.price_per_message.toSat(),
                                 escrowAmount = loadResponse.value.escrow_amount.toSat(),
                                 unlisted = ChatUnlisted.False,
@@ -1587,7 +1594,7 @@ abstract class SphinxRepository(
                                 pendingContactIds = emptyList(),
                                 latestMessageId = null,
                                 contentSeenAt = null,
-                                pinedMessage = null,
+                                pinedMessage = loadResponse.value.pin?.toMessageUUID(),
                                 notify = NotificationLevel.SeeAll
                             )
 
@@ -4415,7 +4422,8 @@ abstract class SphinxRepository(
         pubKey: String,
         endHops: String?,
         milliSatAmount: Long,
-        routerPubKey: String?
+        routerPubKey: String?,
+        routeHint: String?
     ) {
         if (endHops?.isNotEmpty() == true && routerPubKey != null) {
             connectManager.concatNodesFromResponse(
@@ -4426,7 +4434,8 @@ abstract class SphinxRepository(
         }
         connectManager.sendKeySend(
             pubKey,
-            milliSatAmount
+            milliSatAmount,
+            routeHint
         )
     }
 
@@ -6319,61 +6328,83 @@ abstract class SphinxRepository(
     private suspend fun togglePinMessage(
         chatId: ChatId,
         message: Message,
-        pinMessageDto: PutPinMessageDto,
-        errorMessage: String
+        isUnpinMessage: Boolean,
+        errorMessage: String,
+        isProductionEnvironment: Boolean
     ): Response<Any, ResponseError> {
         var response: Response<Any, ResponseError> = Response.Error(ResponseError(errorMessage))
 
-//        applicationScope.launch(mainImmediate) {
-//            val queries = coreDB.getSphinxDatabaseQueries()
+        applicationScope.launch(mainImmediate) {
+            val tribe = getChatById(chatId).firstOrNull()
+            val host = tribe?.host
+            val pubKey = tribe?.uuid?.value?.toLightningNodePubKey()
 
-//            networkQueryChat.pinMessage(
-//                chatId,
-//                pinMessageDto
-//            ).collect { loadResponse ->
-//                @Exhaustive
-//                when(loadResponse) {
-//                    is LoadResponse.Loading -> {}
-//                    is Response.Error -> {
-//                        response = loadResponse
-//                    }
-//                    is Response.Success -> {
-//                        response = Response.Success(loadResponse)
-//
-//                        chatLock.withLock {
-//                            messageLock.withLock {
-//                                withContext(io) {
-//                                    loadResponse.value?.pin?.toMessageUUID()?.let { messageUUID ->
-//                                        queries.chatUpdatePinMessage(messageUUID, chatId)
-//                                    } ?: run {
-//                                        queries.chatUpdatePinMessage(null, chatId)
-//                                    }
-//
-//                                    //Force Message list update
-//                                    queries.messageUpdateStatus(message.status, message.id)
-//                                }
-//                            }
-//                        }
-//                    }
-//                }
-//            }
-//        }.join()
+            if (host != null && pubKey != null) {
+
+                networkQueryChat.getTribeInfo(host, pubKey, isProductionEnvironment).collect { loadResponse ->
+                    when (loadResponse) {
+                        is LoadResponse.Loading -> {}
+                        is Response.Error -> {
+                            response = loadResponse
+                        }
+                        is Response.Success -> {
+                            val pinUpdatedTribeInfo = if (isUnpinMessage) {
+                                loadResponse.value.copy(pin = null).toJsonString()
+                            } else {
+                                loadResponse.value.copy(pin = message.uuid?.value).toJsonString()
+                            }
+
+                            connectManager.editTribe(pinUpdatedTribeInfo)
+
+                            val queries = coreDB.getSphinxDatabaseQueries()
+                            response = Response.Success(loadResponse)
+
+                            chatLock.withLock {
+                                messageLock.withLock {
+                                    withContext(io) {
+                                        queries.chatUpdatePinMessage(
+                                            if (isUnpinMessage) null else message.uuid,
+                                            chatId
+                                        )
+                                        queries.messageUpdateStatus(message.status, message.id)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }.join()
 
         return response
     }
 
     override suspend fun pinMessage(
         chatId: ChatId,
-        message: Message
+        message: Message,
+        isProductionEnvironment: Boolean
     ): Response<Any, ResponseError> {
-        return togglePinMessage(chatId, message, PutPinMessageDto(message.uuid?.value),"Failed to pin message")
+        return togglePinMessage(
+            chatId,
+            message,
+            false,
+            "Failed to pin message",
+            isProductionEnvironment
+        )
     }
 
     override suspend fun unPinMessage(
         chatId: ChatId,
-        message: Message
+        message: Message,
+        isProductionEnvironment: Boolean
     ): Response<Any, ResponseError> {
-        return togglePinMessage(chatId, message, PutPinMessageDto("_"), "Failed to unpin message")
+        return togglePinMessage(
+            chatId,
+            message,
+            true,
+            "Failed to unpin message",
+            isProductionEnvironment
+        )
     }
 
     override suspend fun processMemberRequest(

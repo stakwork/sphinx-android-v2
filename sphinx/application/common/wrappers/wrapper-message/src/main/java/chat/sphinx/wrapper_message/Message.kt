@@ -43,7 +43,7 @@ inline fun Message.retrieveTextToShow(): String? =
 @Suppress("NOTHING_TO_INLINE")
 inline fun Message.retrieveInvoiceTextToShow(): String? =
     messageContentDecrypted?.let { decrypted ->
-        if (type.isInvoice() && !isExpiredInvoice) {
+        if (type.isInvoice() && !isExpiredInvoice()) {
             return decrypted.value
         }
         return null
@@ -328,14 +328,32 @@ inline val Message.isDirectPayment: Boolean
 inline val Message.isPodcastClip: Boolean
     get() = podcastClip != null
 
-inline val Message.isExpiredInvoice: Boolean
-    get() = type.isInvoice() && !status.isConfirmed() && expirationDate != null && expirationDate!!.time < System.currentTimeMillis()
+//inline val Message.isExpiredInvoice: Boolean
+//    get() = type.isInvoice() && expirationDate != null && expirationDate!!.time < System.currentTimeMillis()
 
 inline val Message.isPaidInvoice: Boolean
     get() = type.isInvoice() && status.isConfirmed()
 
 inline val Message.isFlagged: Boolean
     get() = flagged.isTrue()
+
+fun Message.isExpiredInvoice(): Boolean {
+    val currentTimeMillis = System.currentTimeMillis()
+    val isInvoice = type.isInvoice()
+    val hasExpirationDate = expirationDate != null
+
+    if (hasExpirationDate) {
+        val expirationTimeMillis = expirationDate!!.time
+        // Ensure both timestamps are in milliseconds for accurate comparison
+        val currentTimeInSeconds = currentTimeMillis / 1000
+
+        val isExpired = expirationTimeMillis < currentTimeInSeconds
+        val result = isInvoice && isExpired
+        return result
+    } else {
+        return false
+    }
+}
 
 abstract class Message {
     abstract val id: MessageId

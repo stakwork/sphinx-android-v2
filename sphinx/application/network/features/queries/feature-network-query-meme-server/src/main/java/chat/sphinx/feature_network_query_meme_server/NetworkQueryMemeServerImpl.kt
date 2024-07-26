@@ -55,7 +55,7 @@ class NetworkQueryMemeServerImpl(
         private const val ENDPOINT_TEMPLATES = "$MEME_SERVER_URL/templates"
     }
 
-    override fun askAuthentication(
+    override fun askMemeAuthentication(
         memeServerHost: MediaHost
     ): Flow<LoadResponse<MemeServerAuthenticationDto, ResponseError>> =
         networkRelayCall.get(

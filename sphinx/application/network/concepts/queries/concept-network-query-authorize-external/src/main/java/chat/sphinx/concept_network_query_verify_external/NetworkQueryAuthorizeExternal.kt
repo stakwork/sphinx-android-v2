@@ -3,10 +3,6 @@ package chat.sphinx.concept_network_query_verify_external
 import chat.sphinx.concept_network_query_verify_external.model.*
 import chat.sphinx.kotlin_response.LoadResponse
 import chat.sphinx.kotlin_response.ResponseError
-import chat.sphinx.wrapper_relay.AuthorizationToken
-import chat.sphinx.wrapper_relay.RequestSignature
-import chat.sphinx.wrapper_relay.RelayUrl
-import chat.sphinx.wrapper_relay.TransportToken
 import kotlinx.coroutines.flow.Flow
 
 abstract class NetworkQueryAuthorizeExternal {
@@ -17,6 +13,10 @@ abstract class NetworkQueryAuthorizeExternal {
         token: String,
         info: VerifyExternalInfoDto,
     ): Flow<LoadResponse<Any, ResponseError>>
+
+    abstract fun requestNewChallenge(
+        host: String,
+    ): Flow<LoadResponse<ChallengeExternalDto, ResponseError>>
 
     abstract fun redeemSats(
         host: String,

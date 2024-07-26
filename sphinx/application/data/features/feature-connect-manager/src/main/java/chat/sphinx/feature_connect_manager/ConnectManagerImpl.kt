@@ -69,7 +69,9 @@ import uniffi.sphinxrs.rootSignMs
 import uniffi.sphinxrs.send
 import uniffi.sphinxrs.setNetwork
 import uniffi.sphinxrs.setPushToken
+import uniffi.sphinxrs.signBase64
 import uniffi.sphinxrs.signBytes
+import uniffi.sphinxrs.signedTimestamp
 import uniffi.sphinxrs.updateTribe
 import uniffi.sphinxrs.xpubFromSeed
 import java.security.SecureRandom
@@ -219,7 +221,6 @@ class ConnectManagerImpl: ConnectManager()
                                 handleMessageArrived(topic, message)
                             }
                         }
-
                     } else {
                         handleMessageArrived(topic, message)
                     }
@@ -266,9 +267,10 @@ class ConnectManagerImpl: ConnectManager()
                 )
                 client.subscribe(arrayOf(tribeSubtopic), qos)
 
-                if (ownerInfoStateFlow.value.messageLastIndex != null && !isRestoreAccount()) {
+                if (isRestoreAccount()) {
+                    getAllMessagesCount()
+                } else if (ownerInfoStateFlow.value.messageLastIndex != null) {
                     val msgLastIndex = ownerInfoStateFlow.value.messageLastIndex?.plus(1)
-
                     fetchMessagesOnAppInit(
                         msgLastIndex ?: 0,
                         false
@@ -276,6 +278,8 @@ class ConnectManagerImpl: ConnectManager()
                     notifyListeners {
                         onGetNodes()
                     }
+                } else {
+                    getPings()
                 }
             }
         } catch (e: Exception) {
@@ -1615,7 +1619,7 @@ class ConnectManagerImpl: ConnectManager()
         return null
     }
 
-    override fun sendKeySend(pubKey: String, amount: Long) {
+    override fun sendKeySend(pubKey: String, amount: Long, routeHint: String?) {
         val now = getTimestampInMilliseconds()
 
         try {
@@ -1625,7 +1629,8 @@ class ConnectManagerImpl: ConnectManager()
                 pubKey,
                 getCurrentUserState(),
                 convertSatsToMillisats(amount),
-                null
+                null,
+                routeHint
             )
             handleRunReturn(keySend, mqttClient)
         } catch (e: Exception) {
@@ -1815,6 +1820,35 @@ class ConnectManagerImpl: ConnectManager()
         return try {
             parseInvoice(invoice)
         } catch (e: Exception) {
+            null
+        }
+    }
+
+    override fun getSignedTimeStamps(): String? {
+        return try {
+            signedTimestamp(
+                ownerSeed!!,
+                0.toULong(),
+                getTimestampInMilliseconds(),
+                network
+            )
+        } catch (e: Exception) {
+            Log.d("MQTT_MESSAGES", "Error to get signed timestamp $e")
+            null
+        }
+    }
+
+    override fun getSignBase64(text: String): String? {
+        return try {
+            signBase64(
+                ownerSeed!!,
+                0.toULong(),
+                getTimestampInMilliseconds(),
+                network,
+                text
+            )
+        } catch (e: Exception) {
+            Log.d("MQTT_MESSAGES", "Error to get sign base64 $e")
             null
         }
     }

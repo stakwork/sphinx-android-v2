@@ -70,12 +70,14 @@ interface ChatRepository {
 
     suspend fun pinMessage(
         chatId: ChatId,
-        message: Message
+        message: Message,
+        isProductionEnvironment: Boolean
     ): Response<Any, ResponseError>
 
     suspend fun unPinMessage(
         chatId: ChatId,
-        message: Message
+        message: Message,
+        isProductionEnvironment: Boolean
     ): Response<Any, ResponseError>
 
     suspend fun addTribeMember(addMember: AddMember): Response<Any, ResponseError>

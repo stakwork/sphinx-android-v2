@@ -707,7 +707,7 @@ internal fun LayoutMessageHolderBinding.setBubbleBackground(
             viewState.message?.isPodcastBoost == true -> {
                 root.context.resources.getDimensionPixelSize(R.dimen.message_type_podcast_boost_width)
             }
-            viewState.message?.isExpiredInvoice == true -> {
+            viewState.message?.isExpiredInvoice() == true -> {
                 root.context.resources.getDimensionPixelSize(R.dimen.message_type_expired_invoice_width)
             }
             viewState.message?.isSphinxCallLink == true -> {

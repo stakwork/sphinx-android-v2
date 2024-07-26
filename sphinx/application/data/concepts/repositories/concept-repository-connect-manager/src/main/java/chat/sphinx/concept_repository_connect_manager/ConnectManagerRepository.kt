@@ -81,10 +81,13 @@ interface ConnectManagerRepository {
         pubKey: String,
         endHops: String?,
         milliSatAmount: Long,
-        routerPubKey: String?
+        routerPubKey: String?,
+        routeHint: String?
     )
     suspend fun updateLspAndOwner(data: String) {}
     fun requestNodes(nodeUrl: String)
     fun getInvoiceInfo(invoice: String): String?
 
+    fun getSignedTimeStamps(): String?
+    fun getSignBase64(text: String): String?
 }

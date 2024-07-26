@@ -1,6 +1,5 @@
 package chat.sphinx.example.wrapper_mqtt
 
-import chat.sphinx.wrapper_common.lightning.Bolt11
 import chat.sphinx.wrapper_common.lightning.LightningNodePubKey
 import chat.sphinx.wrapper_common.lightning.Sat
 import chat.sphinx.wrapper_common.lightning.toLightningNodePubKey
@@ -15,9 +14,9 @@ data class InvoiceBolt11(
     val payment_hash: String?,
     val pubkey: String?,
     val description: String?,
-    val expiry: Long?
+    val expiry: Long?,
+    val hop_hints: List<String>?
 ) {
-
     companion object {
         @Throws(JsonDataException::class, IllegalArgumentException::class)
         fun String.toInvoiceBolt11(moshi: Moshi): InvoiceBolt11 {

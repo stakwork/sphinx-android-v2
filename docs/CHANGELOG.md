@@ -1,5 +1,11 @@
 # ChangeLog
 
+## Version 1.0.0-alpha08 (2021-07-26)
+- General fixes and improvements
+- Implements ability to pin/unpin message
+- Adds validation when adding a contact
+- Improves key sends and invoices routing logic
+
 ## Version 1.0.0-alpha07 (2021-07-22)
 - Fixes issues on signup and restore
 

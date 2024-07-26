@@ -134,9 +134,9 @@ internal sealed class MessageHolderViewState(
                 LayoutState.InvoiceExpirationHeader(
                     showExpirationReceivedHeader = !message.isPaidInvoice && this is Received,
                     showExpirationSentHeader = !message.isPaidInvoice && this is Sent,
-                    showExpiredLabel = message.isExpiredInvoice,
-                    showExpiresAtLabel = !message.isExpiredInvoice && !message.isPaidInvoice,
-                    expirationTimestamp = message.expirationDate?.invoiceExpirationTimeFormat(),
+                    showExpiredLabel = message.isExpiredInvoice(),
+                    showExpiresAtLabel = !message.isExpiredInvoice() && !message.isPaidInvoice,
+                    expirationTimestamp = message.expirationDate?.value?.let { it.time * 1000}?.toDateTime()?.invoiceExpirationTimeFormat(),
                 )
             } else {
                 null
@@ -208,10 +208,10 @@ internal sealed class MessageHolderViewState(
                     amount = message.amount,
                     text = message.retrieveInvoiceTextToShow() ?: "",
                     showPaidInvoiceBottomLine = message.isPaidInvoice,
-                    hideBubbleArrows = !message.isExpiredInvoice && !message.isPaidInvoice,
-                    showPayButton = !message.isExpiredInvoice && !message.isPaidInvoice && this is Received,
-                    showDashedBorder = !message.isExpiredInvoice && !message.isPaidInvoice,
-                    showExpiredLayout = message.isExpiredInvoice
+                    hideBubbleArrows = !message.isExpiredInvoice() && !message.isPaidInvoice,
+                    showPayButton = !message.isExpiredInvoice() && !message.isPaidInvoice && this is Received,
+                    showDashedBorder = !message.isExpiredInvoice() && !message.isPaidInvoice,
+                    showExpiredLayout = message.isExpiredInvoice()
                 )
             } else {
                 null

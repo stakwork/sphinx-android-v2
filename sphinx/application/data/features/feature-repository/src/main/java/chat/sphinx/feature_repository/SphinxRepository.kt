@@ -1427,7 +1427,7 @@ abstract class SphinxRepository(
                 paymentRequest = existingMessage?.payment_request ?: paymentRequest,
                 paymentHash = existingMessage?.payment_hash ?: msg.paymentHash?.toLightningPaymentHash() ?: paymentHash,
                 date = messageDate ,
-                expirationDate = bolt11?.getExpiryTime()?.toDateTime(),
+                expirationDate = existingMessage?.expiration_date ?: bolt11?.getExpiryTime()?.toDateTime(),
                 messageContent = null,
                 status = status,
                 seen = Seen.False,

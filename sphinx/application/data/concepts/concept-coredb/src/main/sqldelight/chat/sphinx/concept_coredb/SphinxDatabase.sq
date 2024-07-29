@@ -36,14 +36,12 @@ import chat.sphinx.wrapper_common.lightning.LightningPaymentRequest;
 import chat.sphinx.wrapper_common.lightning.LightningRouteHint;
 import chat.sphinx.wrapper_common.lightning.Sat;
 import chat.sphinx.wrapper_common.lightning.ServerIp;
-import chat.sphinx.wrapper_common.lightning.ShortChannelId;
-import chat.sphinx.wrapper_common.lsp.LspIdentifier;
-import chat.sphinx.wrapper_common.lsp.LspIssuer;
-import chat.sphinx.wrapper_common.lsp.LspMetaData;
-import chat.sphinx.wrapper_common.lsp.LspPaths;
-import chat.sphinx.wrapper_common.lsp.LspPaymentRequest;
-import chat.sphinx.wrapper_common.lsp.LspPreImage;
-import chat.sphinx.wrapper_common.lsp.LspStatus;
+import chat.sphinx.wrapper_common.lsp.LsatIdentifier;
+import chat.sphinx.wrapper_common.lsp.LsatIssuer;
+import chat.sphinx.wrapper_common.lsp.LsatMetaData;
+import chat.sphinx.wrapper_common.lsp.LsatPaths;
+import chat.sphinx.wrapper_common.lsp.LsatPreImage;
+import chat.sphinx.wrapper_common.lsp.LsatStatus;
 import chat.sphinx.wrapper_common.lsp.Macaroon;
 import chat.sphinx.wrapper_common.message.MessageId;
 import chat.sphinx.wrapper_common.message.MessageUUID;
@@ -1954,40 +1952,40 @@ DELETE
 FROM contentEpisodeStatusDbo
 WHERE feed_id = ?;
 
-CREATE TABLE lspDbo (
-    id                TEXT          AS LspIdentifier NOT NULL PRIMARY KEY,
+CREATE TABLE lsatDbo (
+    id                TEXT          AS LsatIdentifier NOT NULL PRIMARY KEY,
     macaroon          TEXT          AS Macaroon NOT NULL,
     payment_request   TEXT          AS LightningPaymentRequest,
-    issuer            TEXT          AS LspIssuer,
-    meta_data         TEXT          AS LspMetaData,
-    paths             TEXT          AS LspPaths,
-    preimage          TEXT          AS LspPreImage,
-    status            INTEGER       AS LspStatus NOT NULL,
+    issuer            TEXT          AS LsatIssuer,
+    meta_data         TEXT          AS LsatMetaData,
+    paths             TEXT          AS LsatPaths,
+    preimage          TEXT          AS LsatPreImage,
+    status            INTEGER       AS LsatStatus NOT NULL,
     created_at        INTEGER       AS DateTime NOT NULL
 );
 
-lspGetById:
+lsatGetById:
 SELECT *
-FROM lspDbo
+FROM lsatDbo
 WHERE id = ?;
 
-lspUpdateStatus:
-UPDATE lspDbo
+lsatUpdateStatus:
+UPDATE lsatDbo
 SET status = :status
 WHERE id = ?;
 
-lspUpdateMetaData:
-UPDATE lspDbo
+lsatUpdateMetaData:
+UPDATE lsatDbo
 SET meta_data = :meta_data
 WHERE id = ?;
 
-lspGetAllActive:
+lsatGetAllActive:
 SELECT *
-FROM lspDbo
+FROM lsatDbo
 WHERE status = 1;
 
-lspUpsert {
-    UPDATE lspDbo
+lsatUpsert {
+    UPDATE lsatDbo
     SET macaroon = :macaroon,
         payment_request = :payment_request,
         issuer = :issuer,
@@ -1998,7 +1996,7 @@ lspUpsert {
         created_at = :created_at
     WHERE id = :id;
 
-    INSERT OR IGNORE INTO lspDbo (
+    INSERT OR IGNORE INTO lsatDbo (
         id,
         macaroon,
         payment_request,

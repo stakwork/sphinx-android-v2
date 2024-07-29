@@ -1,18 +1,18 @@
 package chat.sphinx.wrapper_common.lsp
 
 @Suppress("NOTHING_TO_INLINE")
-inline fun String.toLspIssuer(): LspIssuer? =
+inline fun String.toLsatIdentifier(): LsatIdentifier? =
     try {
-        LspIssuer(this)
+        LsatIdentifier(this)
     } catch (e: IllegalArgumentException) {
         null
     }
 
 @JvmInline
-value class LspIssuer (val value: String) {
+value class LsatIdentifier(val value: String) {
     init {
         require(value.isNotEmpty()) {
-            "LspIssuer cannot be empty"
+            "LspIdentifier cannot be empty"
         }
     }
 }

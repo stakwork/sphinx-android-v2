@@ -1,15 +1,15 @@
 package chat.sphinx.wrapper_common.lsp
 
 @Suppress("NOTHING_TO_INLINE")
-inline fun String.toLspMetaData(): LspMetaData? =
+inline fun String.toLsatMetaData(): LsatMetaData? =
     try {
-        LspMetaData(this)
+        LsatMetaData(this)
     } catch (e: IllegalArgumentException) {
         null
     }
 
 @JvmInline
-value class LspMetaData (val value: String) {
+value class LsatMetaData(val value: String) {
     init {
         require(value.isNotEmpty()) {
             "LspMetaData cannot be empty"

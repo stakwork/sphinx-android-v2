@@ -1,15 +1,15 @@
 package chat.sphinx.wrapper_common.lsp
 
 @Suppress("NOTHING_TO_INLINE")
-inline fun String.toLspPaths(): LspPaths? =
+inline fun String.toLsatPaths(): LsatPaths? =
     try {
-        LspPaths(this)
+        LsatPaths(this)
     } catch (e: IllegalArgumentException) {
         null
     }
 
 @JvmInline
-value class LspPaths(val value: String) {
+value class LsatPaths(val value: String) {
     init {
         require(value.isNotEmpty()) {
             "LspPaths cannot be empty"

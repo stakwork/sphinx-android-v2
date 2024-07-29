@@ -1,23 +1,22 @@
 package chat.sphinx.feature_coredb.adapters.lsp
 
-import chat.sphinx.wrapper_common.DateTime
-import chat.sphinx.wrapper_common.lsp.LspIdentifier
-import chat.sphinx.wrapper_common.lsp.LspIssuer
-import chat.sphinx.wrapper_common.lsp.LspMetaData
-import chat.sphinx.wrapper_common.lsp.LspPaths
+import chat.sphinx.wrapper_common.lsp.LsatIdentifier
+import chat.sphinx.wrapper_common.lsp.LsatIssuer
+import chat.sphinx.wrapper_common.lsp.LsatMetaData
+import chat.sphinx.wrapper_common.lsp.LsatPaths
 import chat.sphinx.wrapper_common.lsp.LspPaymentRequest
-import chat.sphinx.wrapper_common.lsp.LspPreImage
-import chat.sphinx.wrapper_common.lsp.LspStatus
+import chat.sphinx.wrapper_common.lsp.LsatPreImage
+import chat.sphinx.wrapper_common.lsp.LsatStatus
 import chat.sphinx.wrapper_common.lsp.Macaroon
-import chat.sphinx.wrapper_common.lsp.toLspStatus
+import chat.sphinx.wrapper_common.lsp.toLsatStatus
 import com.squareup.sqldelight.ColumnAdapter
 
-internal class LspIdentifierAdapter: ColumnAdapter<LspIdentifier, String> {
-    override fun decode(databaseValue: String): LspIdentifier {
-        return LspIdentifier(databaseValue)
+internal class LsatIdentifierAdapter: ColumnAdapter<LsatIdentifier, String> {
+    override fun decode(databaseValue: String): LsatIdentifier {
+        return LsatIdentifier(databaseValue)
     }
 
-    override fun encode(value: LspIdentifier): String {
+    override fun encode(value: LsatIdentifier): String {
         return value.value
     }
 }
@@ -32,7 +31,7 @@ internal class MacaroonAdapter: ColumnAdapter<Macaroon, String> {
     }
 }
 
-internal class LspPaymentRequestAdapter: ColumnAdapter<LspPaymentRequest, String> {
+internal class LsatPaymentRequestAdapter: ColumnAdapter<LspPaymentRequest, String> {
     override fun decode(databaseValue: String): LspPaymentRequest {
         return LspPaymentRequest(databaseValue)
     }
@@ -42,52 +41,52 @@ internal class LspPaymentRequestAdapter: ColumnAdapter<LspPaymentRequest, String
     }
 }
 
-internal class LspIssuerAdapter: ColumnAdapter<LspIssuer, String> {
-    override fun decode(databaseValue: String): LspIssuer {
-        return LspIssuer(databaseValue)
+internal class LsatIssuerAdapter: ColumnAdapter<LsatIssuer, String> {
+    override fun decode(databaseValue: String): LsatIssuer {
+        return LsatIssuer(databaseValue)
     }
 
-    override fun encode(value: LspIssuer): String {
+    override fun encode(value: LsatIssuer): String {
         return value.value
     }
 }
 
-internal class LspMetaDataAdapter: ColumnAdapter<LspMetaData, String> {
-    override fun decode(databaseValue: String): LspMetaData {
-        return LspMetaData(databaseValue)
+internal class LsatMetaDataAdapter: ColumnAdapter<LsatMetaData, String> {
+    override fun decode(databaseValue: String): LsatMetaData {
+        return LsatMetaData(databaseValue)
     }
 
-    override fun encode(value: LspMetaData): String {
+    override fun encode(value: LsatMetaData): String {
         return value.value
     }
 }
 
-internal class LspPathsAdapter: ColumnAdapter<LspPaths, String> {
-    override fun decode(databaseValue: String): LspPaths {
-        return LspPaths(databaseValue)
+internal class LsatPathsAdapter: ColumnAdapter<LsatPaths, String> {
+    override fun decode(databaseValue: String): LsatPaths {
+        return LsatPaths(databaseValue)
     }
 
-    override fun encode(value: LspPaths): String {
+    override fun encode(value: LsatPaths): String {
         return value.value
     }
 }
 
-internal class LspPreImageAdapter: ColumnAdapter<LspPreImage, String> {
-    override fun decode(databaseValue: String): LspPreImage {
-        return LspPreImage(databaseValue)
+internal class LsatPreImageAdapter: ColumnAdapter<LsatPreImage, String> {
+    override fun decode(databaseValue: String): LsatPreImage {
+        return LsatPreImage(databaseValue)
     }
 
-    override fun encode(value: LspPreImage): String {
+    override fun encode(value: LsatPreImage): String {
         return value.value
     }
 }
 
-internal class LspStatusAdapter: ColumnAdapter<LspStatus, Long> {
-    override fun decode(databaseValue: Long): LspStatus {
-        return databaseValue.toInt().toLspStatus()
+internal class LsatStatusAdapter: ColumnAdapter<LsatStatus, Long> {
+    override fun decode(databaseValue: Long): LsatStatus {
+        return databaseValue.toInt().toLsatStatus()
     }
 
-    override fun encode(value: LspStatus): Long {
+    override fun encode(value: LsatStatus): Long {
         return value.value.toLong()
     }
 }

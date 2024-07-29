@@ -63,7 +63,7 @@ interface ChatRepository {
         tribeServer: String?
     ): Flow<List<NewTribeDto>>
 
-    suspend fun updateTribeInfo(chat: Chat, isProductionEnvironment: Boolean): TribeData?
+    suspend fun updateTribeInfo(chat: Chat, isProductionEnvironment: Boolean): NewTribeDto?
     suspend fun storeTribe(createTribe: CreateTribe, chatId: ChatId?)
     suspend fun updateTribe(chatId: ChatId, createTribe: CreateTribe)
     suspend fun exitAndDeleteTribe(tribe: Chat)

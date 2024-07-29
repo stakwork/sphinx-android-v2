@@ -4730,7 +4730,7 @@ abstract class SphinxRepository(
         }
     }
 
-    override suspend fun updateTribeInfo(chat: Chat, isProductionEnvironment: Boolean): TribeData? {
+    override suspend fun updateTribeInfo(chat: Chat, isProductionEnvironment: Boolean): NewTribeDto? {
         var owner: Contact? = accountOwner.value
 
         if (owner == null) {
@@ -4746,7 +4746,7 @@ abstract class SphinxRepository(
             delay(25L)
         }
 
-        var tribeData: TribeData? = null
+        var tribeData: NewTribeDto? = null
 
         chat.host?.let { chatHost ->
             val chatUUID = chat.uuid
@@ -4764,13 +4764,13 @@ abstract class SphinxRepository(
                             is LoadResponse.Loading -> {}
                             is Response.Error -> {}
                             is Response.Success -> {
-                                val tribeDto = loadResponse.value
+                                tribeData = loadResponse.value
 
                                 if (owner?.nodePubKey != chat.ownerPubKey) {
 
                                     chatLock.withLock {
                                         queries.transaction {
-                                            updateNewChatTribeData(tribeDto, chat.id, queries)
+                                            updateNewChatTribeData(loadResponse.value, chat.id, queries)
                                         }
                                     }
 

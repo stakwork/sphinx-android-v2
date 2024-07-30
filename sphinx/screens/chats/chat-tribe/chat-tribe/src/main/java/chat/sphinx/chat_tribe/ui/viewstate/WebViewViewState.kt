@@ -7,7 +7,8 @@ sealed class WebViewViewState: ViewState<WebViewViewState>() {
 
     object Idle: WebViewViewState()
 
-    data class RequestAuthorization(val amountField: Boolean): WebViewViewState()
+    object RequestAuthorization: WebViewViewState()
+    object SetBudget: WebViewViewState()
     class ChallengeError(val error: String): WebViewViewState()
 
     class SendAuthorization(

@@ -809,7 +809,7 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
-    override fun processChallengeSignature(challenge: String) {
+    override fun processChallengeSignature(challenge: String): String? {
         val signedChallenge = try {
             signBytes(
                 ownerSeed!!,
@@ -838,7 +838,9 @@ class ConnectManagerImpl: ConnectManager()
             notifyListeners {
                 onSignedChallenge(sign)
             }
+            return sign
         }
+        return null
     }
 
     override fun fetchFirstMessagesPerKey(lastMsgIdx: Long, firstForEachScid: Long?) {

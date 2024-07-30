@@ -31,7 +31,7 @@ abstract class ConnectManager {
     abstract fun setMnemonicWords(words: List<String>?)
     abstract fun setNetworkType(isTestEnvironment: Boolean)
     abstract fun setOwnerDeviceId(deviceId: String)
-    abstract fun processChallengeSignature(challenge: String)
+    abstract fun processChallengeSignature(challenge: String): String?
     abstract fun fetchFirstMessagesPerKey(lastMsgIdx: Long, firstForEachScid: Long?)
     abstract fun fetchMessagesOnRestoreAccount(totalHighestIndex: Long?)
     abstract fun getAllMessagesCount()

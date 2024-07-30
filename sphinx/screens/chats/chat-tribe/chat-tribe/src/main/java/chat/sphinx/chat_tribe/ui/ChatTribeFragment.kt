@@ -329,7 +329,13 @@ internal class ChatTribeFragment: ChatFragment<
             (requireActivity() as InsetterActivity).addNavigationBarPadding(layoutConstraintBudget)
 
             buttonAuthorize.setOnClickListener {
-                tribeAppViewModel.processAuthorize()
+                val amount = editTextSatsAmount.text.toString()
+
+                if (amount.isEmpty()) {
+                    tribeAppViewModel.processAuthorize()
+                } else {
+                    tribeAppViewModel.processSetBudget(amount.toLong())
+                }
             }
             textViewDetailScreenClose.setOnClickListener {
                 tribeAppViewModel.hideAuthorizePopup()
@@ -972,15 +978,17 @@ internal class ChatTribeFragment: ChatFragment<
                     is WebViewViewState.RequestAuthorization -> {
                         tribeAppBinding.includeLayoutTribeAppDetails.apply {
                             layoutConstraintAuthorizePopup.visible
-                            if (viewState.amountField) {
-                                textViewWithdraw.visible
-                                editTextSatsAmount.visible
-                                textViewReauthorize.visible
-                            } else {
-                                textViewWithdraw.gone
-                                editTextSatsAmount.gone
-                                textViewReauthorize.gone
-                            }
+                            textViewWithdraw.gone
+                            editTextSatsAmount.gone
+                            textViewReauthorize.gone
+                        }
+                    }
+                    is WebViewViewState.SetBudget -> {
+                        tribeAppBinding.includeLayoutTribeAppDetails.apply {
+                            layoutConstraintAuthorizePopup.visible
+                            textViewWithdraw.visible
+                            editTextSatsAmount.visible
+                            textViewReauthorize.visible
                         }
                     }
                     is WebViewViewState.SendAuthorization -> {

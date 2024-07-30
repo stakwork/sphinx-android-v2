@@ -114,12 +114,6 @@ import chat.sphinx.wrapper_common.lightning.toLightningRouteHint
 import chat.sphinx.wrapper_common.lightning.toSat
 import chat.sphinx.wrapper_common.lsat.Lsat
 import chat.sphinx.wrapper_common.lsat.LsatIssuer
-import chat.sphinx.wrapper_common.lsat.LsatIdentifier
-import chat.sphinx.wrapper_common.lsat.LsatMetaData
-import chat.sphinx.wrapper_common.lsat.LsatPaths
-import chat.sphinx.wrapper_common.lsat.LsatPreImage
-import chat.sphinx.wrapper_common.lsat.LsatStatus
-import chat.sphinx.wrapper_common.lsat.Macaroon
 import chat.sphinx.wrapper_common.message.*
 import chat.sphinx.wrapper_common.payment.PaymentTemplate
 import chat.sphinx.wrapper_contact.*
@@ -341,8 +335,8 @@ abstract class SphinxRepository(
         connectManager.setOwnerDeviceId(deviceId)
     }
 
-    override fun singChallenge(challenge: String) {
-        connectManager.processChallengeSignature(challenge)
+    override fun signChallenge(challenge: String): String? {
+        return connectManager.processChallengeSignature(challenge)
     }
 
     override fun createInvite(

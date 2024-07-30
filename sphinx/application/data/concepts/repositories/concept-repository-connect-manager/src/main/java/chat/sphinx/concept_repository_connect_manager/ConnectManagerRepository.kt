@@ -39,7 +39,7 @@ interface ConnectManagerRepository {
     fun setMnemonicWords(words: List<String>?)
     fun setNetworkType(isTestEnvironment: Boolean)
     fun setOwnerDeviceId(deviceId: String)
-    fun singChallenge(challenge: String)
+    fun signChallenge(challenge: String): String?
     fun createInvite(
         nickname: String,
         welcomeMessage: String,

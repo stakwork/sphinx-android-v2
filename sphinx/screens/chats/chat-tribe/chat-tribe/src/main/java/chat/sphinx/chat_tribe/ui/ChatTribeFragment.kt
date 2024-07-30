@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.Log
 import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.InputMethodManager
@@ -66,7 +67,6 @@ import chat.sphinx.resources.setBackgroundRandomColor
 import chat.sphinx.wrapper_chat.protocolLessUrl
 import chat.sphinx.wrapper_common.lightning.asFormattedString
 import chat.sphinx.wrapper_common.util.getInitials
-import chat.sphinx.wrapper_view.Px
 import dagger.hilt.android.AndroidEntryPoint
 import io.matthewnelson.android_feature_screens.util.gone
 import io.matthewnelson.android_feature_screens.util.goneIfFalse
@@ -76,7 +76,6 @@ import io.matthewnelson.android_feature_viewmodel.submitSideEffect
 import io.matthewnelson.concept_views.viewstate.collect
 import io.matthewnelson.concept_views.viewstate.value
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -330,7 +329,7 @@ internal class ChatTribeFragment: ChatFragment<
             (requireActivity() as InsetterActivity).addNavigationBarPadding(layoutConstraintBudget)
 
             buttonAuthorize.setOnClickListener {
-                tribeAppViewModel.authorizeWebApp(editTextSatsAmount.text.toString())
+                tribeAppViewModel.processAuthorize()
             }
             textViewDetailScreenClose.setOnClickListener {
                 tribeAppViewModel.hideAuthorizePopup()
@@ -388,6 +387,9 @@ internal class ChatTribeFragment: ChatFragment<
     }
     private fun loadWebView(url: String) {
         webView.settings.javaScriptEnabled = true
+        webView.settings.domStorageEnabled = true
+        webView.settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+
         webView.addJavascriptInterface(tribeAppViewModel, "Android")
 
         webView.webViewClient = object : WebViewClient() {
@@ -397,15 +399,18 @@ internal class ChatTribeFragment: ChatFragment<
             ): Boolean {
                 val url = request?.url.toString()
                 view?.loadUrl(url)
-                return super.shouldOverrideUrlLoading(view, request)
+                Log.d("WebView", "shouldOverrideUrlLoading: $url")
+                return true // Changed to true to indicate WebView is handling the URL
             }
 
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                Log.d("WebView", "onPageStarted: $url")
                 super.onPageStarted(view, url, favicon)
             }
 
             override fun onPageFinished(view: WebView?, url: String?) {
                 tribeAppViewModel.didFinishLoadingWebView()
+                Log.d("WebView", "onPageFinished: $url")
                 super.onPageFinished(view, url)
             }
 
@@ -414,6 +419,7 @@ internal class ChatTribeFragment: ChatFragment<
                 request: WebResourceRequest,
                 error: WebResourceError
             ) {
+                Log.d("WebView", "onReceivedError: ${error.description}")
                 tribeAppViewModel.didFinishLoadingWebView()
                 super.onReceivedError(view, request, error)
             }
@@ -428,6 +434,15 @@ internal class ChatTribeFragment: ChatFragment<
                 }
             }
         }
+
+        // Additional error handling for JavaScript
+        webView.webChromeClient = object : WebChromeClient() {
+            override fun onConsoleMessage(consoleMessage: ConsoleMessage?): Boolean {
+                Log.d("WebView", "onConsoleMessage: ${consoleMessage?.message()}")
+                return super.onConsoleMessage(consoleMessage)
+            }
+        }
+
         webView.loadUrl(url)
     }
 
@@ -922,7 +937,7 @@ internal class ChatTribeFragment: ChatFragment<
                         tribeAppBinding.includeLayoutTribeAppDetails.layoutConstraintBudget.gone
                         tribeAppBinding.includeLayoutTribeAppDetails.layoutConstraintProgressBarContainer.visible
 
-                        viewState.appUrl?.let { url ->
+                        viewState.appUrl.let { url ->
                             loadWebView(url.value)
                             tribeAppBinding.includeLayoutTribeAppDetails.textViewWebUrl.text = url.protocolLessUrl
                         }
@@ -955,7 +970,18 @@ internal class ChatTribeFragment: ChatFragment<
                     }
 
                     is WebViewViewState.RequestAuthorization -> {
-                        tribeAppBinding.includeLayoutTribeAppDetails.layoutConstraintAuthorizePopup.visible
+                        tribeAppBinding.includeLayoutTribeAppDetails.apply {
+                            layoutConstraintAuthorizePopup.visible
+                            if (viewState.amountField) {
+                                textViewWithdraw.visible
+                                editTextSatsAmount.visible
+                                textViewReauthorize.visible
+                            } else {
+                                textViewWithdraw.gone
+                                editTextSatsAmount.gone
+                                textViewReauthorize.gone
+                            }
+                        }
                     }
                     is WebViewViewState.SendAuthorization -> {
                         webView.evaluateJavascript(

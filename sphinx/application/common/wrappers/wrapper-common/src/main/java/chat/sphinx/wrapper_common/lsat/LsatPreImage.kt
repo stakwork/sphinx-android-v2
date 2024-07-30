@@ -1,4 +1,4 @@
-package chat.sphinx.wrapper_common.lsp
+package chat.sphinx.wrapper_common.lsat
 
 @Suppress("NOTHING_TO_INLINE")
 inline fun String.toLsatPreImage(): LsatPreImage? =

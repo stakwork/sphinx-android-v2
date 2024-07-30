@@ -43,6 +43,7 @@ dependencies {
     api project(path: ':sphinx:application:network:concepts:queries:concept-network-query-feed-status')
     api project(path: ':sphinx:application:data:concepts:concept-connect-manager')
     api project(path: ':sphinx:application:data:concepts:concept-wallet')
+    api project(path: ':sphinx:application:common:wrappers:wrapper-common')
 
 
 

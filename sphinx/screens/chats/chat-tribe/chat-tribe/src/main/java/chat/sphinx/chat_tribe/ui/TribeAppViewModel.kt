@@ -1,26 +1,26 @@
 package chat.sphinx.chat_tribe.ui
 
 import android.app.Application
+import android.util.Log
 import android.webkit.JavascriptInterface
 import androidx.lifecycle.viewModelScope
-import app.cash.exhaustive.Exhaustive
 import chat.sphinx.chat_tribe.R
 import chat.sphinx.chat_tribe.model.*
 import chat.sphinx.chat_tribe.model.SphinxWebViewDto.Companion.APPLICATION_NAME
 import chat.sphinx.chat_tribe.model.SphinxWebViewDto.Companion.TYPE_AUTHORIZE
 import chat.sphinx.chat_tribe.model.SphinxWebViewDto.Companion.TYPE_KEYSEND
-import chat.sphinx.chat_tribe.model.SphinxWebViewDto.Companion.TYPE_LSAT
+import chat.sphinx.chat_tribe.model.SphinxWebViewDto.Companion.TYPE_GET_LSAT
 import chat.sphinx.chat_tribe.ui.viewstate.WebViewLayoutScreenViewState
 import chat.sphinx.chat_tribe.ui.viewstate.TribeFeedViewState
 import chat.sphinx.chat_tribe.ui.viewstate.WebAppViewState
 import chat.sphinx.chat_tribe.ui.viewstate.WebViewViewState
 import chat.sphinx.concept_network_query_verify_external.NetworkQueryAuthorizeExternal
+import chat.sphinx.concept_repository_chat.ChatRepository
 import chat.sphinx.concept_repository_contact.ContactRepository
-import chat.sphinx.kotlin_response.LoadResponse
-import chat.sphinx.kotlin_response.Response
 import chat.sphinx.wrapper_common.lightning.Bolt11
 import chat.sphinx.wrapper_common.lightning.Sat
 import chat.sphinx.wrapper_common.lightning.toLightningPaymentRequestOrNull
+import chat.sphinx.wrapper_common.lsat.toLsatIssuer
 import com.squareup.moshi.Moshi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.matthewnelson.android_feature_viewmodel.BaseViewModel
@@ -32,7 +32,7 @@ import io.matthewnelson.crypto_common.clazzes.PasswordGenerator
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -41,6 +41,7 @@ internal class TribeAppViewModel @Inject constructor(
     dispatchers: CoroutineDispatchers,
     private val app: Application,
     private val contactRepository: ContactRepository,
+    private val chatRepository: ChatRepository,
     private val moshi: Moshi,
     private val networkQueryAuthorizeExternal: NetworkQueryAuthorizeExternal,
     ) : BaseViewModel<TribeFeedViewState>(dispatchers, TribeFeedViewState.Idle) {
@@ -70,6 +71,8 @@ internal class TribeAppViewModel @Inject constructor(
 
     val budgetStateFlow: StateFlow<Sat>
         get() = _budgetStateFlow.asStateFlow()
+
+    private var password: String? = null
 
     init {
         handleWebAppJson()
@@ -119,12 +122,13 @@ internal class TribeAppViewModel @Inject constructor(
                 when (dto?.type) {
                     TYPE_AUTHORIZE -> {
                         _budgetStateFlow.value = Sat(0)
-                        webViewViewStateContainer.updateViewState(WebViewViewState.RequestAuthorization)
+                        webViewViewStateContainer.updateViewState(WebViewViewState.RequestAuthorization(false))
                     }
-                    TYPE_LSAT -> {
-                        sphinxWebViewDtoStateFlow.value?.paymentRequest?.let {
-                            decodePaymentRequest(it)
-                        }
+                    TYPE_GET_LSAT -> {
+                        processGetLsat()
+//                        sphinxWebViewDtoStateFlow.value?.paymentRequest?.let {
+//                            decodePaymentRequest(it)
+//                        }
                     }
                     TYPE_KEYSEND -> {
                         sendKeySend()
@@ -138,36 +142,33 @@ internal class TribeAppViewModel @Inject constructor(
         webViewViewStateContainer.updateViewState(WebViewViewState.Idle)
     }
 
-    private fun sendAuthorization(amount: Long, pubKey: String, signature: String?) {
-        _budgetStateFlow.value = Sat(amount)
+//
 
-        val password = generatePassword()
-
-        val sendAuth = SendAuth(
-            budget = budgetStateFlow.value.value.toInt(),
-            pubkey = pubKey,
-            type = TYPE_AUTHORIZE,
-            password = password,
-            application = APPLICATION_NAME,
-            signature = signature
-        ).toJson(moshi)
-
-        webViewViewStateContainer.updateViewState(
-            WebViewViewState.SendAuthorization("window.sphinxMessage('$sendAuth')")
-        )
-    }
-
-    fun authorizeWebApp(amountString: String) {
+    fun processAuthorize() {
         hideAuthorizePopup()
-
-        if (amountString.isEmpty()) return
-
-        amountString.toIntOrNull()?.let { amount ->
             contactRepository.accountOwner.value?.nodePubKey?.let { pubKey ->
-                val challenge = sphinxWebViewDtoStateFlow.value?.challenge
+                val webViewDto = sphinxWebViewDtoStateFlow.value
 
-                if (challenge?.isNotEmpty() == false) {
-                    viewModelScope.launch(mainImmediate) {
+                val type = webViewDto?.type
+                val application = webViewDto?.application
+                password = generatePassword()
+
+                if (type == null || application == null) {
+                    // handle error
+                    return
+                }
+
+                val sendAuthorization = SendAuthorization(
+                    type = type,
+                    application = application,
+                    password = password!!,
+                    pubkey = pubKey.value
+                ).toJson(moshi)
+
+                sendAuthorization(sendAuthorization)
+
+//                if (challenge?.isNotEmpty() == false) {
+//                    viewModelScope.launch(mainImmediate) {
 //                        networkQueryAuthorizeExternal.signBase64(challenge)
 //                            .collect { loadResponse ->
 //                                @Exhaustive
@@ -190,13 +191,85 @@ internal class TribeAppViewModel @Inject constructor(
 //                                    }
 //                                }
 //                            }
-                    }
-                } else {
-                    sendAuthorization(amount.toLong(), pubKey.value, null)
-                }
+//                    }
+//                } else {
+//                    sendAuthorization(amount.toLong(), pubKey.value, null)
+//                }
             }
-        }
+//        }
     }
+
+    private fun sendAuthorization(authorization: String) {
+        webViewViewStateContainer.updateViewState(
+            WebViewViewState.SendAuthorization("window.sphinxMessage('$authorization')")
+        )
+    }
+
+    private suspend fun processGetLsat() {
+        val webViewDto = sphinxWebViewDtoStateFlow.value
+        val issuer = webViewDto?.issuer?.toLsatIssuer()
+
+        val lastLsat = if (issuer != null) {
+            chatRepository.getLastLsatByIssuer(issuer).firstOrNull()
+        } else {
+            chatRepository.getLastLsatActive().firstOrNull()
+        }
+
+        val sendGetLsat = if (lastLsat != null) {
+            SendLsat(
+                type = webViewDto?.type ?: "",
+                application = webViewDto?.application ?: "",
+                password = password!!,
+                macaroon = lastLsat.macaroon.value,
+                paymentRequest = lastLsat.paymentRequest?.value,
+                preimage = lastLsat.preimage?.value,
+                identifier = lastLsat.id.value,
+                paths = lastLsat.paths?.value,
+                status = lastLsat.status.value.toString(),
+                success = true
+            ).toJson(moshi)
+        } else {
+            SendLsat(
+                type = webViewDto?.type ?: "",
+                application = webViewDto?.application ?: "",
+                password = password!!,
+                macaroon = null,
+                paymentRequest = null,
+                preimage = null,
+                identifier = null,
+                paths = null,
+                status = null,
+                success = false
+            ).toJson(moshi)
+        }
+
+        webViewViewStateContainer.updateViewState(
+            WebViewViewState.SendMessage(
+                "window.sphinxMessage('$sendGetLsat')",
+                null
+            )
+        )
+    }
+
+
+//        private fun sendAuthorization(amount: Long, pubKey: String, signature: String?) {
+//        _budgetStateFlow.value = Sat(amount)
+//
+//        val password = generatePassword()
+//
+//        val sendAuth = SendAuth(
+//            budget = budgetStateFlow.value.value.toInt(),
+//            pubkey = pubKey,
+//            type = TYPE_AUTHORIZE,
+//            password = password,
+//            application = APPLICATION_NAME,
+//            signature = signature
+//        ).toJson(moshi)
+//
+//        webViewViewStateContainer.updateViewState(
+//            WebViewViewState.SendAuthorization("window.sphinxMessage('$sendAuth')")
+//        )
+//    }
 
     private fun sendKeySend(){
         sphinxWebViewDtoStateFlow.value?.amt?.let { amount ->
@@ -226,7 +299,7 @@ internal class TribeAppViewModel @Inject constructor(
                         viewModelScope.launch(mainImmediate) {}
                     } else {
                         sendMessage(
-                            type = TYPE_LSAT,
+                            type = TYPE_GET_LSAT,
                             success = false,
                             lsat = null,
                             error = app.getString(R.string.side_effect_insufficient_budget)
@@ -236,7 +309,7 @@ internal class TribeAppViewModel @Inject constructor(
 
             } catch (e: Exception) {
                 sendMessage(
-                    type = TYPE_LSAT,
+                    type = TYPE_GET_LSAT,
                     success = false,
                     lsat = null,
                     error = app.getString(R.string.side_effect_error_pay_lsat)
@@ -254,15 +327,15 @@ internal class TribeAppViewModel @Inject constructor(
         val password = generatePassword()
 
         val message = when (type) {
-            TYPE_LSAT -> {
-                SendLsat(
-                    password = password,
-                    budget = budgetStateFlow.value.value.toString(),
-                    type = TYPE_LSAT,
-                    application = APPLICATION_NAME,
-                    lsat = lsat,
-                    success = success
-                ).toJson(moshi)
+            TYPE_GET_LSAT -> {
+//                SendLsat(
+//                    password = password,
+//                    budget = budgetStateFlow.value.value.toString(),
+//                    type = TYPE_LSAT,
+//                    application = APPLICATION_NAME,
+//                    lsat = lsat,
+//                    success = success
+//                ).toJson(moshi)
             }
             TYPE_KEYSEND -> {
                 SendKeySend(
@@ -289,6 +362,7 @@ internal class TribeAppViewModel @Inject constructor(
 
     @JavascriptInterface
     fun receiveMessage(data: String) {
+        Log.d("SphinxWebView", "receiveMessage: $data")
         try {
             _sphinxWebViewDtoStateFlow.value =
                 moshi.adapter(SphinxWebViewDto::class.java).fromJson(data)

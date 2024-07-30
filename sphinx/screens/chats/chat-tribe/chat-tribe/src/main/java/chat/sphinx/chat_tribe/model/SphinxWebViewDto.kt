@@ -11,14 +11,14 @@ data class SphinxWebViewDto(
     val macaroon: String?,
     val issuer: String?,
     val dest: String?,
-    val amt: Int?
+    val amt: Int?,
 
 ) {
     companion object {
         const val APPLICATION_NAME = "Sphinx"
 
         const val TYPE_AUTHORIZE = "AUTHORIZE"
-        const val TYPE_LSAT = "LSAT"
+        const val TYPE_GET_LSAT = "GETLSAT"
         const val TYPE_KEYSEND = "KEYSEND"
     }
 }

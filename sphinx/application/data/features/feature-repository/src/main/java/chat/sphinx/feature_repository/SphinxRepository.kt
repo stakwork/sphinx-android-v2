@@ -70,6 +70,7 @@ import chat.sphinx.feature_repository.mappers.feed.podcast.FeedDboPodcastPresent
 import chat.sphinx.feature_repository.mappers.feed.podcast.FeedItemDboPodcastEpisodePresenterMapper
 import chat.sphinx.feature_repository.mappers.feed.podcast.FeedRecommendationPodcastPresenterMapper
 import chat.sphinx.feature_repository.mappers.invite.InviteDboPresenterMapper
+import chat.sphinx.feature_repository.mappers.lsat.LsatDboPresenterMapper
 import chat.sphinx.feature_repository.mappers.mapListFrom
 import chat.sphinx.feature_repository.mappers.message.MessageDboPresenterMapper
 import chat.sphinx.feature_repository.mappers.subscription.SubscriptionDboPresenterMapper
@@ -111,6 +112,14 @@ import chat.sphinx.wrapper_common.lightning.toLightningPaymentHash
 import chat.sphinx.wrapper_common.lightning.toLightningPaymentRequestOrNull
 import chat.sphinx.wrapper_common.lightning.toLightningRouteHint
 import chat.sphinx.wrapper_common.lightning.toSat
+import chat.sphinx.wrapper_common.lsat.Lsat
+import chat.sphinx.wrapper_common.lsat.LsatIssuer
+import chat.sphinx.wrapper_common.lsat.LsatIdentifier
+import chat.sphinx.wrapper_common.lsat.LsatMetaData
+import chat.sphinx.wrapper_common.lsat.LsatPaths
+import chat.sphinx.wrapper_common.lsat.LsatPreImage
+import chat.sphinx.wrapper_common.lsat.LsatStatus
+import chat.sphinx.wrapper_common.lsat.Macaroon
 import chat.sphinx.wrapper_common.message.*
 import chat.sphinx.wrapper_common.payment.PaymentTemplate
 import chat.sphinx.wrapper_contact.*
@@ -4773,7 +4782,6 @@ abstract class SphinxRepository(
                                             updateNewChatTribeData(loadResponse.value, chat.id, queries)
                                         }
                                     }
-
                                 }
                             }
                         }
@@ -6494,6 +6502,36 @@ abstract class SphinxRepository(
         }.join()
 
         return response
+    }
+
+    private val lsatDboPresenterMapper: LsatDboPresenterMapper by lazy {
+        LsatDboPresenterMapper(dispatchers)
+    }
+
+
+    override suspend fun getLastLsatByIssuer(issuer: LsatIssuer): Flow<Lsat?> = flow {
+        val queries = coreDB.getSphinxDatabaseQueries()
+        emitAll(
+            queries.lsatGetLastActiveByIssuer(issuer)
+                .asFlow()
+                .mapToOneOrNull(io)
+                .map {
+                    it?.let { lsatDboPresenterMapper.mapFrom(it) }
+                }
+                .distinctUntilChanged()
+        )
+    }
+
+
+    override suspend fun getLastLsatActive(): Flow<Lsat?> = flow {
+        val queries = coreDB.getSphinxDatabaseQueries()
+        emitAll(
+            queries.lsatGetLastActive()
+                .asFlow()
+                .mapToOneOrNull(io)
+                .map { it?.let { lsatDboPresenterMapper.mapFrom(it) } }
+                .distinctUntilChanged()
+        )
     }
 
     /***

@@ -1,14 +1,14 @@
 package chat.sphinx.feature_coredb.adapters.lsp
 
-import chat.sphinx.wrapper_common.lsp.LsatIdentifier
-import chat.sphinx.wrapper_common.lsp.LsatIssuer
-import chat.sphinx.wrapper_common.lsp.LsatMetaData
-import chat.sphinx.wrapper_common.lsp.LsatPaths
-import chat.sphinx.wrapper_common.lsp.LspPaymentRequest
-import chat.sphinx.wrapper_common.lsp.LsatPreImage
-import chat.sphinx.wrapper_common.lsp.LsatStatus
-import chat.sphinx.wrapper_common.lsp.Macaroon
-import chat.sphinx.wrapper_common.lsp.toLsatStatus
+import chat.sphinx.wrapper_common.lsat.LsatIdentifier
+import chat.sphinx.wrapper_common.lsat.LsatIssuer
+import chat.sphinx.wrapper_common.lsat.LsatMetaData
+import chat.sphinx.wrapper_common.lsat.LsatPaths
+import chat.sphinx.wrapper_common.lsat.LspPaymentRequest
+import chat.sphinx.wrapper_common.lsat.LsatPreImage
+import chat.sphinx.wrapper_common.lsat.LsatStatus
+import chat.sphinx.wrapper_common.lsat.Macaroon
+import chat.sphinx.wrapper_common.lsat.toLsatStatus
 import com.squareup.sqldelight.ColumnAdapter
 
 internal class LsatIdentifierAdapter: ColumnAdapter<LsatIdentifier, String> {

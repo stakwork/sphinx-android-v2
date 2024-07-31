@@ -9,6 +9,7 @@ import chat.sphinx.chat_tribe.model.SphinxWebViewDto.Companion.APPLICATION_NAME
 import chat.sphinx.chat_tribe.model.SphinxWebViewDto.Companion.TYPE_AUTHORIZE
 import chat.sphinx.chat_tribe.model.SphinxWebViewDto.Companion.TYPE_KEYSEND
 import chat.sphinx.chat_tribe.model.SphinxWebViewDto.Companion.TYPE_GET_LSAT
+import chat.sphinx.chat_tribe.model.SphinxWebViewDto.Companion.TYPE_GET_PERSON_DATA
 import chat.sphinx.chat_tribe.model.SphinxWebViewDto.Companion.TYPE_LSAT
 import chat.sphinx.chat_tribe.model.SphinxWebViewDto.Companion.TYPE_PAYMENT
 import chat.sphinx.chat_tribe.model.SphinxWebViewDto.Companion.TYPE_SET_BUDGET
@@ -158,6 +159,9 @@ internal class TribeAppViewModel @Inject constructor(
                     }
                     TYPE_UPDATE_LSAT -> {
                         processUpdateLsat()
+                    }
+                    TYPE_GET_PERSON_DATA -> {
+                        processGetPersonData()
                     }
                     else -> {}
                 }
@@ -483,6 +487,23 @@ internal class TribeAppViewModel @Inject constructor(
             ).toJson(moshi)
 
             sendWebAppMessage(sendPayment)
+        }
+    }
+
+    private fun processGetPersonData() {
+        val webViewDto = sphinxWebViewDtoStateFlow.value
+
+        contactRepository.accountOwner.value?.let { owner ->
+            val sendPersonData = SendGetPersonData(
+                type = webViewDto?.type ?: "",
+                application = webViewDto?.application ?: "",
+                password = password ?: "",
+                alias = owner.alias?.value ?: "",
+                photoUrl = owner.photoUrl?.value ?: "",
+                publicKey = owner.nodePubKey?.value ?: ""
+            ).toJson(moshi)
+
+            sendWebAppMessage(sendPersonData)
         }
     }
 

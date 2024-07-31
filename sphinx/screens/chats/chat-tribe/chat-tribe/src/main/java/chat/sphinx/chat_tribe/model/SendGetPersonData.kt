@@ -4,24 +4,24 @@ import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
 
 @JsonClass(generateAdapter = true)
-data class SendBudget(
+data class SendGetPersonData(
     val type: String,
     val application: String,
     val password: String,
-    val pubkey: String,
-    val signature: String,
-    val budget: Long,
+    val alias: String,
+    val photoUrl: String,
+    val publicKey: String
 )
 @Throws(AssertionError::class)
-fun SendBudget.toJson(moshi: Moshi): String =
-    moshi.adapter(SendBudget::class.java)
+fun SendGetPersonData.toJson(moshi: Moshi): String =
+    moshi.adapter(SendGetPersonData::class.java)
         .toJson(
-            SendBudget(
+            SendGetPersonData(
                 type,
                 application,
                 password,
-                pubkey,
-                signature,
-                budget
+                alias,
+                photoUrl,
+                publicKey
             )
         )

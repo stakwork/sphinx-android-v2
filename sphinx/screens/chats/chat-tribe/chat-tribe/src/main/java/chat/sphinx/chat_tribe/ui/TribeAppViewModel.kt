@@ -13,6 +13,7 @@ import chat.sphinx.chat_tribe.model.SphinxWebViewDto.Companion.TYPE_GET_LSAT
 import chat.sphinx.chat_tribe.model.SphinxWebViewDto.Companion.TYPE_LSAT
 import chat.sphinx.chat_tribe.model.SphinxWebViewDto.Companion.TYPE_SET_BUDGET
 import chat.sphinx.chat_tribe.model.SphinxWebViewDto.Companion.TYPE_SIGN
+import chat.sphinx.chat_tribe.model.SphinxWebViewDto.Companion.TYPE_UPDATE_LSAT
 import chat.sphinx.chat_tribe.ui.viewstate.WebViewLayoutScreenViewState
 import chat.sphinx.chat_tribe.ui.viewstate.TribeFeedViewState
 import chat.sphinx.chat_tribe.ui.viewstate.WebAppViewState
@@ -32,6 +33,7 @@ import chat.sphinx.wrapper_common.lsat.LsatStatus
 import chat.sphinx.wrapper_common.lsat.toLsatIdentifier
 import chat.sphinx.wrapper_common.lsat.toLsatIssuer
 import chat.sphinx.wrapper_common.lsat.toLsatPreImage
+import chat.sphinx.wrapper_common.lsat.toLsatStatus
 import chat.sphinx.wrapper_common.lsat.toMacaroon
 import chat.sphinx.wrapper_common.toDateTime
 import com.squareup.moshi.Moshi
@@ -135,14 +137,10 @@ internal class TribeAppViewModel @Inject constructor(
             sphinxWebViewDtoStateFlow.collect { dto ->
                 when (dto?.type) {
                     TYPE_AUTHORIZE -> {
-                        _budgetStateFlow.value = Sat(0)
                         webViewViewStateContainer.updateViewState(WebViewViewState.RequestAuthorization)
                     }
                     TYPE_GET_LSAT -> {
                         processGetLsat()
-//                        sphinxWebViewDtoStateFlow.value?.paymentRequest?.let {
-//                            decodePaymentRequest(it)
-//                        }
                     }
                     TYPE_SET_BUDGET -> {
                         webViewViewStateContainer.updateViewState(WebViewViewState.SetBudget)
@@ -156,6 +154,10 @@ internal class TribeAppViewModel @Inject constructor(
                     TYPE_KEYSEND -> {
                         sendKeySend()
                     }
+                    TYPE_UPDATE_LSAT -> {
+                        processUpdateLsat()
+                    }
+                    else -> {}
                 }
             }
         }
@@ -331,7 +333,7 @@ internal class TribeAppViewModel @Inject constructor(
                                     type = webViewDto.type ?: "",
                                     application = webViewDto.application ?: "",
                                     password = password ?: "",
-                                    lsat = "LSAT ${macaroon}:${preimage}",
+                                    lsat = retrieveLsatString(macaroon, preimage),
                                     budget = budget,
                                     success = true,
                                     macaroon = null,
@@ -342,7 +344,7 @@ internal class TribeAppViewModel @Inject constructor(
                                     status = null
                                 ).toJson(moshi)
 
-                                chatRepository.updateLsat(lsatToSave)
+                                chatRepository.upsertLsat(lsatToSave)
                                 connectManagerRepository.clearWebViewPreImage()
 
                                 sendWebAppMessage(sendLsat)
@@ -359,6 +361,36 @@ internal class TribeAppViewModel @Inject constructor(
 
         } else {
             sendFailure(webViewDto, paymentAmount)
+        }
+    }
+
+    private suspend fun processUpdateLsat() {
+        val webViewDto = sphinxWebViewDtoStateFlow.value
+
+        if (webViewDto?.status == LsatStatus.EXPIRED) {
+            val identifier = webViewDto.identifier?.toLsatIdentifier()
+            val lsatOnDb = identifier?.let { chatRepository.getLsatByIdentifier(it).firstOrNull() }
+
+            if (lsatOnDb != null) {
+                chatRepository.updateLsatStatus(identifier, LsatStatus.Expired)
+
+                val updateLsat = SendLsat(
+                    type = webViewDto.type ?: "",
+                    application = webViewDto.application ?: "",
+                    password = password ?: "",
+                    lsat = retrieveLsatString(lsatOnDb.macaroon.value, lsatOnDb.preimage?.value),
+                    success = true,
+                    macaroon = null,
+                    paymentRequest = null,
+                    preimage = null,
+                    identifier = null,
+                    paths = null,
+                    status = null,
+                    budget = null
+                ).toJson(moshi)
+
+                sendWebAppMessage(updateLsat)
+            }
         }
     }
 
@@ -474,5 +506,9 @@ internal class TribeAppViewModel @Inject constructor(
     private fun generatePassword(): String {
         @OptIn(RawPasswordAccess::class)
         return PasswordGenerator(passwordLength = 16).password.value.joinToString("")
+    }
+
+    private fun retrieveLsatString(macaroon: String?, preimage: String?): String {
+        return "LSAT $macaroon:$preimage"
     }
 }

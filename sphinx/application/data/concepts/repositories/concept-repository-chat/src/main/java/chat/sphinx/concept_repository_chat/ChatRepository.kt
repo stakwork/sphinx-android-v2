@@ -13,6 +13,7 @@ import chat.sphinx.wrapper_common.dashboard.ContactId
 import chat.sphinx.wrapper_common.lsat.Lsat
 import chat.sphinx.wrapper_common.lsat.LsatIdentifier
 import chat.sphinx.wrapper_common.lsat.LsatIssuer
+import chat.sphinx.wrapper_common.lsat.LsatStatus
 import chat.sphinx.wrapper_message.Message
 import chat.sphinx.wrapper_podcast.Podcast
 import kotlinx.coroutines.flow.Flow
@@ -89,6 +90,7 @@ interface ChatRepository {
     suspend fun getLastLsatActive(): Flow<Lsat?>
 
     suspend fun getLsatByIdentifier(identifier: LsatIdentifier): Flow<Lsat?>
-    suspend fun updateLsat(lsat: Lsat)
+    suspend fun upsertLsat(lsat: Lsat)
+    suspend fun updateLsatStatus(identifier: LsatIdentifier, status: LsatStatus)
 
 }

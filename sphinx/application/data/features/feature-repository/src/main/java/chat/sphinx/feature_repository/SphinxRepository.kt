@@ -115,6 +115,7 @@ import chat.sphinx.wrapper_common.lightning.toSat
 import chat.sphinx.wrapper_common.lsat.Lsat
 import chat.sphinx.wrapper_common.lsat.LsatIdentifier
 import chat.sphinx.wrapper_common.lsat.LsatIssuer
+import chat.sphinx.wrapper_common.lsat.LsatStatus
 import chat.sphinx.wrapper_common.message.*
 import chat.sphinx.wrapper_common.payment.PaymentTemplate
 import chat.sphinx.wrapper_contact.*
@@ -6575,11 +6576,16 @@ abstract class SphinxRepository(
         )
     }
 
-    override suspend fun updateLsat(lsat: Lsat) {
+    override suspend fun upsertLsat(lsat: Lsat) {
         val queries = coreDB.getSphinxDatabaseQueries()
         queries.transaction {
             upsertLsat(lsat, queries)
         }
+    }
+
+    override suspend fun updateLsatStatus(identifier: LsatIdentifier, status: LsatStatus) {
+        val queries = coreDB.getSphinxDatabaseQueries()
+        queries.lsatUpdateStatus(status, identifier)
     }
 
     /***

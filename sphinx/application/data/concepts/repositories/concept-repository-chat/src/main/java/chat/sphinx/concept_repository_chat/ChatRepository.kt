@@ -11,6 +11,7 @@ import chat.sphinx.wrapper_common.chat.ChatUUID
 import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_common.dashboard.ContactId
 import chat.sphinx.wrapper_common.lsat.Lsat
+import chat.sphinx.wrapper_common.lsat.LsatIdentifier
 import chat.sphinx.wrapper_common.lsat.LsatIssuer
 import chat.sphinx.wrapper_message.Message
 import chat.sphinx.wrapper_podcast.Podcast
@@ -83,6 +84,11 @@ interface ChatRepository {
 
     suspend fun addTribeMember(addMember: AddMember): Response<Any, ResponseError>
 
+    // LSAT related
     suspend fun getLastLsatByIssuer(issuer: LsatIssuer): Flow<Lsat?>
     suspend fun getLastLsatActive(): Flow<Lsat?>
+
+    suspend fun getLsatByIdentifier(identifier: LsatIdentifier): Flow<Lsat?>
+    suspend fun updateLsat(lsat: Lsat)
+
 }

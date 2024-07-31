@@ -113,6 +113,7 @@ import chat.sphinx.wrapper_common.lightning.toLightningPaymentRequestOrNull
 import chat.sphinx.wrapper_common.lightning.toLightningRouteHint
 import chat.sphinx.wrapper_common.lightning.toSat
 import chat.sphinx.wrapper_common.lsat.Lsat
+import chat.sphinx.wrapper_common.lsat.LsatIdentifier
 import chat.sphinx.wrapper_common.lsat.LsatIssuer
 import chat.sphinx.wrapper_common.message.*
 import chat.sphinx.wrapper_common.payment.PaymentTemplate
@@ -253,6 +254,14 @@ abstract class SphinxRepository(
     }
 
     override val restoreProgress: MutableStateFlow<Int?> by lazy {
+        MutableStateFlow(null)
+    }
+
+    override val webViewPaymentHash: MutableStateFlow<String?> by lazy {
+        MutableStateFlow(null)
+    }
+
+    override val webViewPreImage: MutableStateFlow<String?> by lazy {
         MutableStateFlow(null)
     }
 
@@ -515,6 +524,10 @@ abstract class SphinxRepository(
 
     override fun getSignBase64(text: String): String? {
         return connectManager.getSignBase64(text)
+    }
+
+    override fun getIdFromMacaroon(macaroon: String): String? {
+        return connectManager.getIdFromMacaroon(macaroon)
     }
 
     override suspend fun exitAndDeleteTribe(tribe: Chat) {
@@ -1140,6 +1153,12 @@ abstract class SphinxRepository(
                     newSentStatus.message?.toErrorMessage(),
                     newSentStatus.tag?.toTagMessage()
                 )
+
+                // Check if web view payment hash matches
+                if (newSentStatus.payment_hash == webViewPaymentHash.value) {
+                    webViewPreImage.value = newSentStatus.preimage
+                    webViewPaymentHash.value = null
+                }
             }
         }
     }
@@ -4421,6 +4440,19 @@ abstract class SphinxRepository(
         )
     }
 
+    override suspend fun payWebAppInvoice(
+        paymentRequest: String,
+        paymentHash: String,
+        milliSatAmount: Long
+    ) {
+        webViewPaymentHash.value = paymentHash
+
+        connectManager.processInvoicePayment(
+            paymentRequest,
+            milliSatAmount
+        )
+    }
+
     override suspend fun sendKeySend(
         pubKey: String,
         endHops: String?,
@@ -4440,6 +4472,10 @@ abstract class SphinxRepository(
             milliSatAmount,
             routeHint
         )
+    }
+
+    override fun clearWebViewPreImage() {
+        webViewPreImage.value = null
     }
 
     override suspend fun sendNewPaymentRequest(requestPayment: SendPaymentRequest) {
@@ -6526,6 +6562,24 @@ abstract class SphinxRepository(
                 .map { it?.let { lsatDboPresenterMapper.mapFrom(it) } }
                 .distinctUntilChanged()
         )
+    }
+
+    override suspend fun getLsatByIdentifier(identifier: LsatIdentifier): Flow<Lsat?> = flow {
+        val queries = coreDB.getSphinxDatabaseQueries()
+        emitAll(
+            queries.lsatGetById(identifier)
+                .asFlow()
+                .mapToOneOrNull(io)
+                .map { it?.let { lsatDboPresenterMapper.mapFrom(it) } }
+                .distinctUntilChanged()
+        )
+    }
+
+    override suspend fun updateLsat(lsat: Lsat) {
+        val queries = coreDB.getSphinxDatabaseQueries()
+        queries.transaction {
+            upsertLsat(lsat, queries)
+        }
     }
 
     /***

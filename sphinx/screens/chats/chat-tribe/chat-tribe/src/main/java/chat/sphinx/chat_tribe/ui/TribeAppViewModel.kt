@@ -10,6 +10,7 @@ import chat.sphinx.chat_tribe.model.SphinxWebViewDto.Companion.APPLICATION_NAME
 import chat.sphinx.chat_tribe.model.SphinxWebViewDto.Companion.TYPE_AUTHORIZE
 import chat.sphinx.chat_tribe.model.SphinxWebViewDto.Companion.TYPE_KEYSEND
 import chat.sphinx.chat_tribe.model.SphinxWebViewDto.Companion.TYPE_GET_LSAT
+import chat.sphinx.chat_tribe.model.SphinxWebViewDto.Companion.TYPE_LSAT
 import chat.sphinx.chat_tribe.model.SphinxWebViewDto.Companion.TYPE_SET_BUDGET
 import chat.sphinx.chat_tribe.model.SphinxWebViewDto.Companion.TYPE_SIGN
 import chat.sphinx.chat_tribe.ui.viewstate.WebViewLayoutScreenViewState
@@ -20,11 +21,19 @@ import chat.sphinx.concept_network_query_verify_external.NetworkQueryAuthorizeEx
 import chat.sphinx.concept_repository_chat.ChatRepository
 import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
 import chat.sphinx.concept_repository_contact.ContactRepository
+import chat.sphinx.example.wrapper_mqtt.InvoiceBolt11.Companion.toInvoiceBolt11
+import chat.sphinx.wrapper_common.DateTime
 import chat.sphinx.wrapper_common.lightning.Bolt11
 import chat.sphinx.wrapper_common.lightning.Sat
 import chat.sphinx.wrapper_common.lightning.toLightningPaymentRequestOrNull
 import chat.sphinx.wrapper_common.lightning.toSat
+import chat.sphinx.wrapper_common.lsat.Lsat
+import chat.sphinx.wrapper_common.lsat.LsatStatus
+import chat.sphinx.wrapper_common.lsat.toLsatIdentifier
 import chat.sphinx.wrapper_common.lsat.toLsatIssuer
+import chat.sphinx.wrapper_common.lsat.toLsatPreImage
+import chat.sphinx.wrapper_common.lsat.toMacaroon
+import chat.sphinx.wrapper_common.toDateTime
 import com.squareup.moshi.Moshi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.matthewnelson.android_feature_viewmodel.BaseViewModel
@@ -141,6 +150,9 @@ internal class TribeAppViewModel @Inject constructor(
                     TYPE_SIGN -> {
                         processSign()
                     }
+                    TYPE_LSAT -> {
+                        processLsat()
+                    }
                     TYPE_KEYSEND -> {
                         sendKeySend()
                     }
@@ -172,7 +184,7 @@ internal class TribeAppViewModel @Inject constructor(
             val sendAuthorization = SendAuthorization(
                 type = type,
                 application = application,
-                password = password!!,
+                password = password ?: "",
                 pubkey = pubKey.value
             ).toJson(moshi)
 
@@ -201,27 +213,32 @@ internal class TribeAppViewModel @Inject constructor(
             SendLsat(
                 type = webViewDto?.type ?: "",
                 application = webViewDto?.application ?: "",
-                password = password!!,
+                password = password ?: "",
                 macaroon = lastLsat.macaroon.value,
                 paymentRequest = lastLsat.paymentRequest?.value,
                 preimage = lastLsat.preimage?.value,
                 identifier = lastLsat.id.value,
                 paths = lastLsat.paths?.value,
                 status = lastLsat.status.value.toString(),
-                success = true
-            ).toJson(moshi)
+                success = true,
+                budget = null,
+                lsat = null
+
+                ).toJson(moshi)
         } else {
             SendLsat(
                 type = webViewDto?.type ?: "",
                 application = webViewDto?.application ?: "",
-                password = password!!,
+                password = password ?: "",
                 macaroon = null,
                 paymentRequest = null,
                 preimage = null,
                 identifier = null,
                 paths = null,
                 status = null,
-                success = false
+                success = false,
+                budget = null,
+                lsat = null
             ).toJson(moshi)
         }
 
@@ -239,7 +256,7 @@ internal class TribeAppViewModel @Inject constructor(
         val sendBudget = SendBudget(
             type = webViewDto?.type ?: "",
             application = webViewDto?.application ?: "",
-            password = password!!,
+            password = password ?: "",
             pubkey = contactRepository.accountOwner.value?.nodePubKey?.value ?: "",
             signature = signature ?: "",
             budget = amount
@@ -256,12 +273,112 @@ internal class TribeAppViewModel @Inject constructor(
         val sendSign = SendSign(
             type = webViewDto?.type ?: "",
             application = webViewDto?.application ?: "",
-            password = password!!,
+            password = password ?: "",
             signature = signature ?: "",
             success = signature != null
         ).toJson(moshi)
 
         sendWebAppMessage(sendSign)
+    }
+
+    private suspend fun processLsat() {
+        val webViewDto = sphinxWebViewDtoStateFlow.value
+        val macaroon = webViewDto?.macaroon
+        val issuer = webViewDto?.issuer
+
+        val paymentRequest = decodePaymentRequest(webViewDto?.paymentRequest ?: "")
+        val paymentAmount = paymentRequest?.getSatsAmount()
+        val budget = budgetStateFlow.value.value
+
+        val isAmountValid = paymentAmount != null
+        val isBudgetSufficient = budget >= (paymentAmount?.value ?: 0)
+        val areRequiredFieldsPresent = webViewDto?.paymentRequest != null && macaroon != null && issuer != null
+
+        if (isAmountValid && isBudgetSufficient && areRequiredFieldsPresent) {
+            val identifier = macaroon?.let { connectManagerRepository.getIdFromMacaroon(it) }?.toLsatIdentifier()
+
+            identifier?.let { lspIdentifier ->
+                val identifierDbRecord = chatRepository.getLsatByIdentifier(lspIdentifier).firstOrNull()
+
+                if (identifierDbRecord == null) {
+                    val invoice = connectManagerRepository.getInvoiceInfo(webViewDto.paymentRequest ?: "")?.toInvoiceBolt11(moshi)
+                    val invoiceAmount = invoice?.getSatsAmount()?.value
+                    val paymentHash = invoice?.payment_hash
+
+                    if (paymentHash != null && invoiceAmount != null && invoiceAmount <= budget) {
+
+                        connectManagerRepository.payWebAppInvoice(
+                            paymentRequest = webViewDto.paymentRequest ?: "",
+                            paymentHash = paymentHash,
+                            milliSatAmount = invoiceAmount
+                        )
+                        connectManagerRepository.webViewPreImage.collect { preimage ->
+                            if (preimage?.isNotEmpty() == true) {
+
+                                val lsatToSave = Lsat(
+                                    paymentRequest = webViewDto.paymentRequest?.toLightningPaymentRequestOrNull(),
+                                    macaroon = macaroon.toMacaroon()!!,
+                                    issuer = issuer?.toLsatIssuer()!!,
+                                    id = lspIdentifier,
+                                    preimage = preimage.toLsatPreImage(),
+                                    status = LsatStatus.Active,
+                                    createdAt = DateTime.nowUTC().toDateTime(),
+                                    paths = null,
+                                    metaData = null
+                                )
+
+                                val sendLsat = SendLsat(
+                                    type = webViewDto.type ?: "",
+                                    application = webViewDto.application ?: "",
+                                    password = password ?: "",
+                                    lsat = "LSAT ${macaroon}:${preimage}",
+                                    budget = budget,
+                                    success = true,
+                                    macaroon = null,
+                                    paymentRequest = null,
+                                    preimage = null,
+                                    identifier = null,
+                                    paths = null,
+                                    status = null
+                                ).toJson(moshi)
+
+                                chatRepository.updateLsat(lsatToSave)
+                                connectManagerRepository.clearWebViewPreImage()
+
+                                sendWebAppMessage(sendLsat)
+                            }
+                        }
+                    } else {
+                        sendFailure(webViewDto, paymentAmount)
+                    }
+
+                } else {
+                    sendFailure(webViewDto, paymentAmount)
+                }
+            } ?: sendFailure(webViewDto, paymentAmount)
+
+        } else {
+            sendFailure(webViewDto, paymentAmount)
+        }
+    }
+
+    private fun sendFailure(webViewDto: SphinxWebViewDto?, amount: Sat?) {
+        val sendLsat = SendLsat(
+            type = webViewDto?.type ?: "",
+            application = webViewDto?.application ?: "",
+            password = password ?: "",
+            macaroon = null,
+            paymentRequest = null,
+            preimage = null,
+            identifier = null,
+            paths = null,
+            status = null,
+            success = false,
+            budget = amount?.value,
+            lsat = null
+        ).toJson(moshi)
+
+        sendWebAppMessage(sendLsat)
     }
 
     private fun sendWebAppMessage(message: String) {
@@ -273,7 +390,7 @@ internal class TribeAppViewModel @Inject constructor(
         )
     }
 
-    private fun sendKeySend(){
+    private fun sendKeySend() {
         sphinxWebViewDtoStateFlow.value?.amt?.let { amount ->
             sphinxWebViewDtoStateFlow.value?.dest?.let { destination ->
                 if (budgetStateFlow.value.value >= amount) {
@@ -290,34 +407,15 @@ internal class TribeAppViewModel @Inject constructor(
         )
     }
 
-    private fun decodePaymentRequest(paymentRequest: String) {
+    private fun decodePaymentRequest(paymentRequest: String): Bolt11? {
         paymentRequest.toLightningPaymentRequestOrNull()?.let { lightningPaymentRequest ->
             try {
-                val bolt11 = Bolt11.decode(lightningPaymentRequest)
-                val amount = bolt11.getSatsAmount()
-
-                amount?.let { nnAmount ->
-                    if (budgetStateFlow.value.value >= (nnAmount.value)) {
-                        viewModelScope.launch(mainImmediate) {}
-                    } else {
-                        sendMessage(
-                            type = TYPE_GET_LSAT,
-                            success = false,
-                            lsat = null,
-                            error = app.getString(R.string.side_effect_insufficient_budget)
-                        )
-                    }
-                }
-
+                return Bolt11.decode(lightningPaymentRequest)
             } catch (e: Exception) {
-                sendMessage(
-                    type = TYPE_GET_LSAT,
-                    success = false,
-                    lsat = null,
-                    error = app.getString(R.string.side_effect_error_pay_lsat)
-                )
+                return null
             }
         }
+        return null
     }
 
     private fun sendMessage(

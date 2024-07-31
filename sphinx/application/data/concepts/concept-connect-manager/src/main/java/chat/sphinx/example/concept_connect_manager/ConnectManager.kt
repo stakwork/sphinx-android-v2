@@ -144,7 +144,7 @@ abstract class ConnectManager {
     // Utility Methods
     abstract fun getSignedTimeStamps(): String?
     abstract fun getSignBase64(text: String): String?
-
+    abstract fun getIdFromMacaroon(macaroon: String): String?
     // Listener Methods
     abstract fun addListener(listener: ConnectManagerListener): Boolean
     abstract fun removeListener(listener: ConnectManagerListener): Boolean
@@ -220,7 +220,6 @@ interface ConnectManagerListener {
 
     fun onPerformDelay(delay: Long, callback: () -> Unit)
     fun listenToOwnerCreation(callback: () -> Unit)
-
 }
 
 

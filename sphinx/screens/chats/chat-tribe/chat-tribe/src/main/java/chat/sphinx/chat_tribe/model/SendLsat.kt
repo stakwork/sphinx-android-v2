@@ -14,7 +14,9 @@ data class SendLsat(
     val identifier: String?,
     val paths: String?,
     val status: String?,
-    val success: Boolean
+    val success: Boolean,
+    val budget: Long?,
+    val lsat: String?
 )
 
 
@@ -32,6 +34,8 @@ fun SendLsat.toJson(moshi: Moshi): String =
                 identifier,
                 paths,
                 status,
-                success
+                success,
+                budget,
+                lsat
             )
         )

@@ -47,6 +47,7 @@ import uniffi.sphinxrs.getReads
 import uniffi.sphinxrs.getTags
 import uniffi.sphinxrs.getTribeManagementTopic
 import uniffi.sphinxrs.handle
+import uniffi.sphinxrs.idFromMacaroon
 import uniffi.sphinxrs.initialSetup
 import uniffi.sphinxrs.joinTribe
 import uniffi.sphinxrs.listContacts
@@ -1851,6 +1852,15 @@ class ConnectManagerImpl: ConnectManager()
             )
         } catch (e: Exception) {
             Log.d("MQTT_MESSAGES", "Error to get sign base64 $e")
+            null
+        }
+    }
+
+    override fun getIdFromMacaroon(macaroon: String): String? {
+        return try {
+            idFromMacaroon(macaroon)
+        } catch (e: Exception) {
+            Log.d("MQTT_MESSAGES", "Error to get id from macaroon $e")
             null
         }
     }

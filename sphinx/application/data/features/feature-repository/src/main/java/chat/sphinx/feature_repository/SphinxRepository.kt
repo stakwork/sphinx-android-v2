@@ -508,6 +508,7 @@ abstract class SphinxRepository(
                 when (loadResponse) {
                     is Response.Success -> {
                         val nodes = loadResponse.value
+                        connectionManagerState.value = OwnerRegistrationState.StoreRouterPubKey(nodes)
                         connectManager.addNodesFromResponse(nodes)
                     }
                 }
@@ -4426,8 +4427,14 @@ abstract class SphinxRepository(
         paymentRequest: LightningPaymentRequest,
         endHops: String?,
         routerPubKey: String?,
-        milliSatAmount: Long
+        milliSatAmount: Long,
+        paymentHash: String?
     ) {
+        if (paymentHash != null) {
+            webViewPaymentHash.value = paymentHash
+
+        }
+
         if (endHops?.isNotEmpty() == true && routerPubKey != null) {
             connectManager.concatNodesFromResponse(
                 endHops,
@@ -4437,19 +4444,6 @@ abstract class SphinxRepository(
         }
         connectManager.processInvoicePayment(
             paymentRequest.value,
-            milliSatAmount
-        )
-    }
-
-    override suspend fun payWebAppInvoice(
-        paymentRequest: String,
-        paymentHash: String,
-        milliSatAmount: Long
-    ) {
-        webViewPaymentHash.value = paymentHash
-
-        connectManager.processInvoicePayment(
-            paymentRequest,
             milliSatAmount
         )
     }

@@ -270,9 +270,11 @@ internal class DashboardViewModel @Inject constructor(
                     is OwnerRegistrationState.GetNodes -> {
                         val routerUrl = serverSettingsSharedPreferences.getString(ROUTER_URL, null)
                         if (routerUrl != null) {
-                            storeRouterPubKey(routerUrl)
                             connectManagerRepository.requestNodes(routerUrl)
                         }
+                    }
+                    is OwnerRegistrationState.StoreRouterPubKey -> {
+                        storeRouterPubKey(connectionState.nodes)
                     }
                     else -> {}
                 }
@@ -1293,10 +1295,15 @@ internal class DashboardViewModel @Inject constructor(
                 return@launch
             }
 
-            val payeeLspPubKey = invoiceBolt11.hop_hints?.getOrNull(0)?.substringBefore('_')
+            var payeeLspPubKey = invoiceBolt11.hop_hints?.getOrNull(0)?.substringBefore('_')
             val ownerLsp = getOwner().routeHint?.getLspPubKey()
 
-            if (payeeLspPubKey != null && payeeLspPubKey != ownerLsp) {
+            if (payeeLspPubKey == null) {
+                val contact = contactRepository.getContactByPubKey(invoicePayeePubKey).firstOrNull()
+                payeeLspPubKey = contact?.routeHint?.getLspPubKey()
+            }
+
+            if (payeeLspPubKey == null || payeeLspPubKey != ownerLsp) {
                 val routerUrl = serverSettingsSharedPreferences.getString(ROUTER_URL, null)
 
                 if (routerUrl == null) {

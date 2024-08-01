@@ -14,7 +14,7 @@ data class SphinxWebViewDto(
     val amt: Int?,
     val message: String?,
     val identifier: String?,
-    val status: Int?
+    val status: String?
 ) {
     companion object {
         const val APPLICATION_NAME = "Sphinx"

@@ -28,6 +28,7 @@ sealed class LsatStatus {
     companion object {
         const val EXPIRED = 0
         const val ACTIVE = 1
+        const val EXPIRED_STRING = "expired"
     }
 
     abstract val value: Int

@@ -77,13 +77,8 @@ interface ConnectManagerRepository {
         paymentRequest: LightningPaymentRequest,
         endHops: String?,
         routerPubKey: String?,
-        milliSatAmount: Long
-    )
-
-    suspend fun payWebAppInvoice(
-        paymentRequest: String,
-        paymentHash: String,
-        milliSatAmount: Long
+        milliSatAmount: Long,
+        paymentHash: String? = null
     )
     suspend fun sendKeySend(
         pubKey: String,

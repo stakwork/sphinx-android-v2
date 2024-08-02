@@ -31,6 +31,8 @@ import chat.sphinx.kotlin_response.Response
 import chat.sphinx.wrapper_common.DateTime
 import chat.sphinx.wrapper_common.lightning.Bolt11
 import chat.sphinx.wrapper_common.lightning.Sat
+import chat.sphinx.wrapper_common.lightning.getLspPubKey
+import chat.sphinx.wrapper_common.lightning.toLightningNodePubKey
 import chat.sphinx.wrapper_common.lightning.toLightningPaymentRequestOrNull
 import chat.sphinx.wrapper_common.lightning.toSat
 import chat.sphinx.wrapper_common.lsat.Lsat
@@ -69,8 +71,8 @@ internal class TribeAppViewModel @Inject constructor(
 
     companion object {
         const val SERVER_SETTINGS_SHARED_PREFERENCES = "server_ip_settings"
-        const val ROUTER_URL= "router_url"
-        const val ROUTER_PUBKEY= "router_pubkey"
+        const val ROUTER_URL = "router_url"
+        const val ROUTER_PUBKEY = "router_pubkey"
     }
 
     private val _sphinxWebViewDtoStateFlow: MutableStateFlow<SphinxWebViewDto?> by lazy {
@@ -117,23 +119,29 @@ internal class TribeAppViewModel @Inject constructor(
     }
 
     fun toggleWebAppView() {
-        when(webAppViewStateContainer.value) {
+        when (webAppViewStateContainer.value) {
             is WebAppViewState.AppAvailable.WebViewClosed -> {
                 (webAppViewStateContainer.value as? WebAppViewState.AppAvailable.WebViewClosed)?.let {
                     webAppViewStateContainer.updateViewState(
                         WebAppViewState.AppAvailable.WebViewOpen.Loading(it.appUrl)
                     )
-                    webViewLayoutScreenViewStateContainer.updateViewState(WebViewLayoutScreenViewState.Open)
+                    webViewLayoutScreenViewStateContainer.updateViewState(
+                        WebViewLayoutScreenViewState.Open
+                    )
                 }
             }
+
             is WebAppViewState.AppAvailable.WebViewOpen -> {
                 (webAppViewStateContainer.value as? WebAppViewState.AppAvailable.WebViewOpen)?.let {
                     webAppViewStateContainer.updateViewState(
                         WebAppViewState.AppAvailable.WebViewClosed(it.appUrl)
                     )
-                    webViewLayoutScreenViewStateContainer.updateViewState(WebViewLayoutScreenViewState.Closed)
+                    webViewLayoutScreenViewStateContainer.updateViewState(
+                        WebViewLayoutScreenViewState.Closed
+                    )
                 }
             }
+
             is WebAppViewState.NoApp -> {}
         }
     }
@@ -154,30 +162,39 @@ internal class TribeAppViewModel @Inject constructor(
                     TYPE_AUTHORIZE -> {
                         webViewViewStateContainer.updateViewState(WebViewViewState.RequestAuthorization)
                     }
+
                     TYPE_GET_LSAT -> {
                         processGetLsat()
                     }
+
                     TYPE_SET_BUDGET -> {
                         webViewViewStateContainer.updateViewState(WebViewViewState.SetBudget)
                     }
+
                     TYPE_SIGN -> {
                         processSign()
                     }
+
                     TYPE_LSAT -> {
                         processLsat()
                     }
+
                     TYPE_KEYSEND -> {
                         sendKeySend()
                     }
+
                     TYPE_PAYMENT -> {
                         processPayment()
                     }
+
                     TYPE_UPDATE_LSAT -> {
                         processUpdateLsat()
                     }
+
                     TYPE_GET_PERSON_DATA -> {
                         processGetPersonData()
                     }
+
                     else -> {}
                 }
             }
@@ -247,7 +264,7 @@ internal class TribeAppViewModel @Inject constructor(
                 budget = null,
                 lsat = null
 
-                ).toJson(moshi)
+            ).toJson(moshi)
         } else {
             SendLsat(
                 type = webViewDto?.type ?: "",
@@ -315,16 +332,21 @@ internal class TribeAppViewModel @Inject constructor(
 
         val isAmountValid = paymentAmount != null
         val isBudgetSufficient = budget >= (paymentAmount?.value ?: 0)
-        val areRequiredFieldsPresent = webViewDto?.paymentRequest != null && macaroon != null && issuer != null
+        val areRequiredFieldsPresent =
+            webViewDto?.paymentRequest != null && macaroon != null && issuer != null
 
         if (isAmountValid && isBudgetSufficient && areRequiredFieldsPresent) {
-            val identifier = macaroon?.let { connectManagerRepository.getIdFromMacaroon(it) }?.toLsatIdentifier()
+            val identifier =
+                macaroon?.let { connectManagerRepository.getIdFromMacaroon(it) }?.toLsatIdentifier()
 
             identifier?.let { lspIdentifier ->
-                val identifierDbRecord = chatRepository.getLsatByIdentifier(lspIdentifier).firstOrNull()
+                val identifierDbRecord =
+                    chatRepository.getLsatByIdentifier(lspIdentifier).firstOrNull()
 
                 if (identifierDbRecord == null) {
-                    val invoice = connectManagerRepository.getInvoiceInfo(webViewDto.paymentRequest ?: "")?.toInvoiceBolt11(moshi)
+                    val invoice =
+                        connectManagerRepository.getInvoiceInfo(webViewDto.paymentRequest ?: "")
+                            ?.toInvoiceBolt11(moshi)
                     val invoiceAmount = invoice?.getSatsAmount()?.value
                     val invoicePubKey = invoice?.getPubKey()
                     val paymentHash = invoice?.payment_hash
@@ -334,72 +356,137 @@ internal class TribeAppViewModel @Inject constructor(
 
                         if (routerUrl != null) {
                             viewModelScope.launch {
-                                networkQueryContact.getRoutingNodes(
-                                    routerUrl,
-                                    invoicePubKey,
-                                    convertToMilliSat(invoiceAmount)
-                                ).collect { response ->
-                                    when (response) {
-                                        is LoadResponse.Loading -> {}
-                                        is Response.Error -> {}
-                                        is Response.Success -> {
-                                            try {
-                                                val routerPubKey = serverSettingsSharedPreferences
-                                                    .getString(ROUTER_PUBKEY, null)
-                                                    ?: "true"
+                                if (invoice.retrieveLspPubKey() == contactRepository.accountOwner.value?.routeHint?.getLspPubKey()) {
+                                    val nnPaymentRequest =
+                                        webViewDto.paymentRequest?.toLightningPaymentRequestOrNull()
+                                            ?: return@launch
 
-                                                val nnPaymentRequest = webViewDto.paymentRequest?.toLightningPaymentRequestOrNull() ?: return@collect
+                                    connectManagerRepository.payInvoice(
+                                        paymentRequest = nnPaymentRequest,
+                                        null,
+                                        null,
+                                        milliSatAmount = convertToMilliSat(invoiceAmount),
+                                        paymentHash = paymentHash
+                                    )
+                                    connectManagerRepository.webViewPreImage.collect { preimage ->
+                                        if (preimage?.isNotEmpty() == true) {
 
-                                                connectManagerRepository.payInvoice(
-                                                    paymentRequest = nnPaymentRequest,
-                                                    response.value,
-                                                    routerPubKey,
-                                                    milliSatAmount = convertToMilliSat(invoiceAmount),
-                                                    paymentHash = paymentHash
-                                                )
-                                                connectManagerRepository.webViewPreImage.collect { preimage ->
-                                                    if (preimage?.isNotEmpty() == true) {
+                                            val lsatToSave = Lsat(
+                                                paymentRequest = webViewDto.paymentRequest?.toLightningPaymentRequestOrNull(),
+                                                macaroon = macaroon.toMacaroon()!!,
+                                                issuer = issuer?.toLsatIssuer()!!,
+                                                id = lspIdentifier,
+                                                preimage = preimage.toLsatPreImage(),
+                                                status = LsatStatus.Active,
+                                                createdAt = DateTime.nowUTC().toDateTime(),
+                                                paths = null,
+                                                metaData = null
+                                            )
 
-                                                        val lsatToSave = Lsat(
-                                                            paymentRequest = webViewDto.paymentRequest?.toLightningPaymentRequestOrNull(),
-                                                            macaroon = macaroon.toMacaroon()!!,
-                                                            issuer = issuer?.toLsatIssuer()!!,
-                                                            id = lspIdentifier,
-                                                            preimage = preimage.toLsatPreImage(),
-                                                            status = LsatStatus.Active,
-                                                            createdAt = DateTime.nowUTC().toDateTime(),
-                                                            paths = null,
-                                                            metaData = null
-                                                        )
+                                            val sendLsat = SendLsat(
+                                                type = webViewDto.type ?: "",
+                                                application = webViewDto.application ?: "",
+                                                password = password ?: "",
+                                                lsat = retrieveLsatString(
+                                                    macaroon,
+                                                    preimage
+                                                ),
+                                                budget = budget,
+                                                success = true,
+                                                macaroon = null,
+                                                paymentRequest = null,
+                                                preimage = null,
+                                                identifier = null,
+                                                paths = null,
+                                                status = null
+                                            ).toJson(moshi)
 
-                                                        val sendLsat = SendLsat(
-                                                            type = webViewDto.type ?: "",
-                                                            application = webViewDto.application ?: "",
-                                                            password = password ?: "",
-                                                            lsat = retrieveLsatString(macaroon, preimage),
-                                                            budget = budget,
-                                                            success = true,
-                                                            macaroon = null,
-                                                            paymentRequest = null,
-                                                            preimage = null,
-                                                            identifier = null,
-                                                            paths = null,
-                                                            status = null
-                                                        ).toJson(moshi)
+                                            chatRepository.upsertLsat(lsatToSave)
+                                            connectManagerRepository.clearWebViewPreImage()
 
-                                                        chatRepository.upsertLsat(lsatToSave)
-                                                        connectManagerRepository.clearWebViewPreImage()
+                                            sendWebAppMessage(sendLsat)
+                                        }
+                                    }
 
-                                                        sendWebAppMessage(sendLsat)
+                                } else {
+                                    networkQueryContact.getRoutingNodes(
+                                        routerUrl,
+                                        invoicePubKey,
+                                        convertToMilliSat(invoiceAmount)
+                                    ).collect { response ->
+                                        when (response) {
+                                            is LoadResponse.Loading -> {}
+                                            is Response.Error -> {}
+                                            is Response.Success -> {
+                                                try {
+                                                    val routerPubKey =
+                                                        serverSettingsSharedPreferences
+                                                            .getString(ROUTER_PUBKEY, null)
+                                                            ?: "true"
+
+                                                    val nnPaymentRequest =
+                                                        webViewDto.paymentRequest?.toLightningPaymentRequestOrNull()
+                                                            ?: return@collect
+
+                                                    connectManagerRepository.payInvoice(
+                                                        paymentRequest = nnPaymentRequest,
+                                                        response.value,
+                                                        routerPubKey,
+                                                        milliSatAmount = convertToMilliSat(
+                                                            invoiceAmount
+                                                        ),
+                                                        paymentHash = paymentHash
+                                                    )
+                                                    connectManagerRepository.webViewPreImage.collect { preimage ->
+                                                        if (preimage?.isNotEmpty() == true) {
+
+                                                            val lsatToSave = Lsat(
+                                                                paymentRequest = webViewDto.paymentRequest?.toLightningPaymentRequestOrNull(),
+                                                                macaroon = macaroon.toMacaroon()!!,
+                                                                issuer = issuer?.toLsatIssuer()!!,
+                                                                id = lspIdentifier,
+                                                                preimage = preimage.toLsatPreImage(),
+                                                                status = LsatStatus.Active,
+                                                                createdAt = DateTime.nowUTC()
+                                                                    .toDateTime(),
+                                                                paths = null,
+                                                                metaData = null
+                                                            )
+
+                                                            val sendLsat = SendLsat(
+                                                                type = webViewDto.type ?: "",
+                                                                application = webViewDto.application
+                                                                    ?: "",
+                                                                password = password ?: "",
+                                                                lsat = retrieveLsatString(
+                                                                    macaroon,
+                                                                    preimage
+                                                                ),
+                                                                budget = budget,
+                                                                success = true,
+                                                                macaroon = null,
+                                                                paymentRequest = null,
+                                                                preimage = null,
+                                                                identifier = null,
+                                                                paths = null,
+                                                                status = null
+                                                            ).toJson(moshi)
+
+                                                            chatRepository.upsertLsat(lsatToSave)
+                                                            connectManagerRepository.clearWebViewPreImage()
+
+                                                            sendWebAppMessage(sendLsat)
+                                                        }
                                                     }
+                                                } catch (e: Exception) {
+                                                    // Handle exception
                                                 }
-                                            } catch (e: Exception) {
-                                                // Handle exception
                                             }
                                         }
                                     }
                                 }
                             }
+
                         } else {
                             sendLsatFailure(webViewDto, paymentAmount)
                         }
@@ -481,16 +568,74 @@ internal class TribeAppViewModel @Inject constructor(
 
         if (dest != null && amt != null && amt <= budget) {
 
-            connectManagerRepository.sendKeySend(
-                pubKey = dest,
-                endHops = null,
-                milliSatAmount = amt.toLong(),
-                routerPubKey = null,
-                routeHint = null
-            )
+            val keySendPubKey = dest.toLightningNodePubKey()?.let {
+                contactRepository.getContactByPubKey(
+                    it
+                ).firstOrNull()
+            }
+            val keySendLspPubKey = keySendPubKey?.routeHint?.getLspPubKey()
+            val ownerLsp = contactRepository.accountOwner.value?.routeHint?.getLspPubKey()
 
-            // Check for KeySend success to send the message
+            if (ownerLsp == keySendLspPubKey) {
 
+                connectManagerRepository.sendKeySend(
+                    pubKey = dest,
+                    endHops = null,
+                    milliSatAmount = amt.toLong(),
+                    routerPubKey = null,
+                    routeHint = null
+                )
+
+                val sendKeySend = SendKeySend(
+                    type = webViewDto.type,
+                    application = webViewDto.application,
+                    password = password ?: "",
+                    success = true
+                ).toJson(moshi)
+
+                sendWebAppMessage(sendKeySend)
+
+            } else {
+                val routerUrl = serverSettingsSharedPreferences.getString(ROUTER_URL, null)
+                if (routerUrl != null) {
+                    networkQueryContact.getRoutingNodes(
+                        routerUrl,
+                        dest.toLightningNodePubKey()!!,
+                        amt.toLong()
+                    ).collect { response ->
+                        when (response) {
+                            is LoadResponse.Loading -> {}
+                            is Response.Error -> {}
+                            is Response.Success -> {
+                                try {
+                                    val routerPubKey = serverSettingsSharedPreferences
+                                        .getString(ROUTER_PUBKEY, null)
+                                        ?: "true"
+
+                                    connectManagerRepository.sendKeySend(
+                                        pubKey = dest,
+                                        endHops = response.value,
+                                        milliSatAmount = amt.toLong(),
+                                        routerPubKey = routerPubKey,
+                                        routeHint = null
+                                    )
+
+                                    val sendKeySend = SendKeySend(
+                                        type = webViewDto.type,
+                                        application = webViewDto.application,
+                                        password = password ?: "",
+                                        success = true
+                                    ).toJson(moshi)
+
+                                    sendWebAppMessage(sendKeySend)
+
+                                } catch (e: Exception) {
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         } else {
             // Failure
             val sendKeySend = SendKeySend(
@@ -507,22 +652,78 @@ internal class TribeAppViewModel @Inject constructor(
     private suspend fun processPayment() {
         val webViewDto = sphinxWebViewDtoStateFlow.value
         val budget = budgetStateFlow.value.value
-        val paymentRequest = decodePaymentRequest(webViewDto?.paymentRequest ?: "")
-        val paymentAmount = paymentRequest?.getSatsAmount()
+
+        val invoice = connectManagerRepository.getInvoiceInfo(webViewDto?.paymentRequest ?: "")
+            ?.toInvoiceBolt11(moshi)
+        val paymentAmount = invoice?.getSatsAmount()?.value
+        val invoicePubKey = invoice?.getPubKey()
+
         val isAmountValid = paymentAmount != null
-        val isBudgetSufficient = budget >= (paymentAmount?.value ?: 0)
+        val isBudgetSufficient = budget >= (paymentAmount ?: 0)
         val lightningPaymentRequest = webViewDto?.paymentRequest?.toLightningPaymentRequestOrNull()
 
         if (isAmountValid && isBudgetSufficient && lightningPaymentRequest != null) {
-            connectManagerRepository.payInvoice(
-                lightningPaymentRequest,
-                endHops = null,
-                routerPubKey = null,
-                paymentAmount?.value ?: 0
-            )
 
-            // Check for Payment success to send the message
+            if (invoice?.retrieveLspPubKey() == contactRepository.accountOwner.value?.routeHint?.getLspPubKey()) {
+                connectManagerRepository.payInvoice(
+                    lightningPaymentRequest,
+                    endHops = null,
+                    routerPubKey = null,
+                    paymentAmount ?: 0
+                )
 
+                val sendPayment = SendKeySend(
+                    type = webViewDto.type,
+                    application = webViewDto.application,
+                    password = password ?: "",
+                    success = true
+                ).toJson(moshi)
+
+                sendWebAppMessage(sendPayment)
+
+            } else {
+                val routerUrl = serverSettingsSharedPreferences.getString(ROUTER_URL, null)
+                if (invoicePubKey != null && routerUrl != null) {
+                    networkQueryContact.getRoutingNodes(
+                        routerUrl,
+                        invoicePubKey,
+                        paymentAmount ?: 0
+                    ).collect { response ->
+                        when (response) {
+                            is LoadResponse.Loading -> {}
+                            is Response.Error -> {}
+                            is Response.Success -> {
+                                try {
+                                    val routerPubKey = serverSettingsSharedPreferences
+                                        .getString(ROUTER_PUBKEY, null)
+                                        ?: "true"
+
+                                    val nnPaymentRequest =
+                                        webViewDto.paymentRequest.toLightningPaymentRequestOrNull()
+                                            ?: return@collect
+
+                                    connectManagerRepository.payInvoice(
+                                        paymentRequest = nnPaymentRequest,
+                                        response.value,
+                                        routerPubKey,
+                                        milliSatAmount = paymentAmount ?: 0,
+                                    )
+
+                                    val sendPayment = SendKeySend(
+                                        type = webViewDto.type,
+                                        application = webViewDto.application,
+                                        password = password ?: "",
+                                        success = true
+                                    ).toJson(moshi)
+
+                                    sendWebAppMessage(sendPayment)
+
+                                } catch (e: Exception) { }
+                            }
+                        }
+                    }
+                }
+            }
         } else {
             val sendPayment = SendKeySend(
                 type = webViewDto?.type ?: "",
@@ -535,56 +736,58 @@ internal class TribeAppViewModel @Inject constructor(
         }
     }
 
-    private fun processGetPersonData() {
-        val webViewDto = sphinxWebViewDtoStateFlow.value
 
-        contactRepository.accountOwner.value?.let { owner ->
-            val sendPersonData = SendGetPersonData(
-                type = webViewDto?.type ?: "",
-                application = webViewDto?.application ?: "",
-                password = password ?: "",
-                alias = owner.alias?.value ?: "",
-                photoUrl = owner.photoUrl?.value ?: "",
-                publicKey = owner.nodePubKey?.value ?: ""
-            ).toJson(moshi)
+        private fun processGetPersonData() {
+            val webViewDto = sphinxWebViewDtoStateFlow.value
 
-            sendWebAppMessage(sendPersonData)
-        }
-    }
+            contactRepository.accountOwner.value?.let { owner ->
+                val sendPersonData = SendGetPersonData(
+                    type = webViewDto?.type ?: "",
+                    application = webViewDto?.application ?: "",
+                    password = password ?: "",
+                    alias = owner.alias?.value ?: "",
+                    photoUrl = owner.photoUrl?.value ?: "",
+                    publicKey = owner.nodePubKey?.value ?: ""
+                ).toJson(moshi)
 
-    private fun decodePaymentRequest(paymentRequest: String): Bolt11? {
-        paymentRequest.toLightningPaymentRequestOrNull()?.let { lightningPaymentRequest ->
-            try {
-                return Bolt11.decode(lightningPaymentRequest)
-            } catch (e: Exception) {
-                return null
+                sendWebAppMessage(sendPersonData)
             }
         }
-        return null
-    }
 
-    @JavascriptInterface
-    fun receiveMessage(data: String) {
-        Log.d("SphinxWebView", "receiveMessage: $data")
-        try {
-            val dto = moshi.adapter(SphinxWebViewDto::class.java).fromJson(data)
-            Log.d("SphinxWebView", "Parsed DTO: $dto")
-            _sphinxWebViewDtoStateFlow.value = dto
-        } catch (e: java.lang.Exception) {
-            Log.d("SphinxWebView", "Error parsing JSON", e)
-            e.printStackTrace()
+        private fun decodePaymentRequest(paymentRequest: String): Bolt11? {
+            paymentRequest.toLightningPaymentRequestOrNull()?.let { lightningPaymentRequest ->
+                try {
+                    return Bolt11.decode(lightningPaymentRequest)
+                } catch (e: Exception) {
+                    return null
+                }
+            }
+            return null
+        }
+
+        @JavascriptInterface
+        fun receiveMessage(data: String) {
+            Log.d("SphinxWebView", "receiveMessage: $data")
+            try {
+                val dto = moshi.adapter(SphinxWebViewDto::class.java).fromJson(data)
+                Log.d("SphinxWebView", "Parsed DTO: $dto")
+                _sphinxWebViewDtoStateFlow.value = dto
+            } catch (e: java.lang.Exception) {
+                Log.d("SphinxWebView", "Error parsing JSON", e)
+                e.printStackTrace()
+            }
+        }
+
+        private fun generatePassword(): String {
+            @OptIn(RawPasswordAccess::class)
+            return PasswordGenerator(passwordLength = 16).password.value.joinToString("")
+        }
+
+        private fun convertToMilliSat(amount: Long): Long {
+            return amount * 1000
+        }
+
+        private fun retrieveLsatString(macaroon: String?, preimage: String?): String {
+            return "LSAT $macaroon:$preimage"
         }
     }
-
-    private fun generatePassword(): String {
-        @OptIn(RawPasswordAccess::class)
-        return PasswordGenerator(passwordLength = 16).password.value.joinToString("")
-    }
-    private fun convertToMilliSat(amount: Long): Long {
-        return amount * 1000
-    }
-
-    private fun retrieveLsatString(macaroon: String?, preimage: String?): String {
-        return "LSAT $macaroon:$preimage"
-    }
-}

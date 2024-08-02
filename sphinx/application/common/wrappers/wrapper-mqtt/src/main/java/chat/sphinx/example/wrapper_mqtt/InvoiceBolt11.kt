@@ -63,4 +63,7 @@ data class InvoiceBolt11(
         }
         return null
     }
+    fun retrieveLspPubKey(): String? {
+        return hop_hints?.getOrNull(0)?.substringBefore('_')
+    }
 }

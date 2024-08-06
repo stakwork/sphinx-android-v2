@@ -8,6 +8,7 @@ import android.webkit.JavascriptInterface
 import androidx.lifecycle.viewModelScope
 import chat.sphinx.chat_tribe.model.*
 import chat.sphinx.chat_tribe.model.SphinxWebViewDto.Companion.TYPE_AUTHORIZE
+import chat.sphinx.chat_tribe.model.SphinxWebViewDto.Companion.TYPE_GET_BUDGET
 import chat.sphinx.chat_tribe.model.SphinxWebViewDto.Companion.TYPE_KEYSEND
 import chat.sphinx.chat_tribe.model.SphinxWebViewDto.Companion.TYPE_GET_LSAT
 import chat.sphinx.chat_tribe.model.SphinxWebViewDto.Companion.TYPE_GET_PERSON_DATA
@@ -194,7 +195,9 @@ internal class TribeAppViewModel @Inject constructor(
                     TYPE_GET_PERSON_DATA -> {
                         processGetPersonData()
                     }
-
+                    TYPE_GET_BUDGET -> {
+                        processGetBudget()
+                    }
                     else -> {}
                 }
             }
@@ -752,6 +755,19 @@ internal class TribeAppViewModel @Inject constructor(
 
                 sendWebAppMessage(sendPersonData)
             }
+        }
+
+        private fun processGetBudget() {
+        val webViewDto = sphinxWebViewDtoStateFlow.value
+            val sendGetBudget = SendGetBudget(
+                type = webViewDto?.type ?: "",
+                application = webViewDto?.application ?: "",
+                password = password ?: "",
+                budget = budgetStateFlow.value.value,
+                success = true
+            ).toJson(moshi)
+
+            sendWebAppMessage(sendGetBudget)
         }
 
         private fun decodePaymentRequest(paymentRequest: String): Bolt11? {

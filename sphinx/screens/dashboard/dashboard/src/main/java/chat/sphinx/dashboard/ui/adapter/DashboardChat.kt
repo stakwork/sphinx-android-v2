@@ -321,10 +321,6 @@ sealed class DashboardChat {
                 get() = chat.photoUrl ?: contact.photoUrl
 
             override fun getMessageSender(message: Message, context: Context, withColon: Boolean): String {
-                if (isMessageSenderSelf(message)) {
-                    return context.getString(R.string.last_message_description_you) + if (withColon) ": " else ""
-                }
-
                 return contact.alias?.let { alias ->
                     alias.value + if (withColon) ": " else ""
                 } ?: ""
@@ -350,10 +346,6 @@ sealed class DashboardChat {
                 get() = chat.photoUrl
 
             override fun getMessageSender(message: Message, context: Context, withColon: Boolean): String {
-                if (isMessageSenderSelf(message)) {
-                    return context.getString(R.string.last_message_description_you) + if (withColon) ": " else ""
-                }
-
                 return message.senderAlias?.let { alias ->
                     alias.value + if (withColon) ": " else ""
                 } ?: ""

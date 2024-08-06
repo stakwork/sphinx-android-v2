@@ -1082,7 +1082,6 @@ abstract class SphinxRepository(
                         val originalUUID = message.originalUuid?.toMessageUUID()
                         val timestamp = msgTimestamp?.toDateTime()
                         val date = message.date?.toDateTime()
-                        val realAmount = if (fromMe == true) message.amount?.milliSatsToSats() else amount?.toSat()
                         val paymentRequest = message.invoice?.toLightningPaymentRequestOrNull()
                         val bolt11 = paymentRequest?.let { Bolt11.decode(it) }
                         val paymentHash = paymentRequest?.let {
@@ -1096,11 +1095,12 @@ abstract class SphinxRepository(
                             messageType,
                             messageUuid,
                             messageId,
+                            message.amount?.milliSatsToSats(),
                             originalUUID,
                             timestamp,
                             date,
                             fromMe ?: false,
-                            realAmount,
+                            amount?.toSat(),
                             paymentRequest,
                             paymentHash,
                             bolt11,
@@ -1364,11 +1364,12 @@ abstract class SphinxRepository(
         msgType: MessageType,
         msgUuid: MessageUUID,
         msgIndex: MessageId,
+        msgAmount: Sat?,
         originalUuid: MessageUUID?,
         timestamp: DateTime?,
         date: DateTime?,
         fromMe: Boolean,
-        amount: Sat?,
+        realPaymentAmount: Sat?,
         paymentRequest: LightningPaymentRequest?,
         paymentHash: LightningPaymentHash?,
         bolt11: Bolt11?,
@@ -1436,6 +1437,9 @@ abstract class SphinxRepository(
                 !fromMe && existingMessage?.payment_request != null -> MessageStatus.Pending
                 else -> MessageStatus.Received
             }
+
+            val isTribeBoost = isTribe && msgType is MessageType.Boost
+            val amount = if (fromMe || isTribeBoost) msgAmount else realPaymentAmount
 
             val now = DateTime.nowUTC().toDateTime()
             val messageDate = if (isTribe) date ?: now else timestamp ?: now

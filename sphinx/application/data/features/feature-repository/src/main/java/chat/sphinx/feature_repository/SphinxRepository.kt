@@ -1017,11 +1017,6 @@ abstract class SphinxRepository(
                 val messageType = msgType.toMessageType()
 
                 when (messageType) {
-                    is MessageType.Delete -> {
-                        msg.toMsg(moshi).replyUuid?.toMessageUUID()?.let { replyUuid ->
-                            deleteMqttMessage(replyUuid)
-                        }
-                    }
                     is MessageType.ContactKeyRecord -> {
                         // Handled on onRestoreContacts
                     }
@@ -1074,6 +1069,11 @@ abstract class SphinxRepository(
                             }
                             is MessageType.ContactKey -> {
                                 saveNewContactRegistered(msgSender)
+                            }
+                            is MessageType.Delete -> {
+                                msg.toMsg(moshi).replyUuid?.toMessageUUID()?.let { replyUuid ->
+                                    deleteMqttMessage(replyUuid)
+                                }
                             }
                         }
 
@@ -1454,7 +1454,7 @@ abstract class SphinxRepository(
                 amount = bolt11?.getSatsAmount() ?: existingMessage?.amount ?: amount ?: Sat(0L),
                 paymentRequest = existingMessage?.payment_request ?: paymentRequest,
                 paymentHash = existingMessage?.payment_hash ?: msg.paymentHash?.toLightningPaymentHash() ?: paymentHash,
-                date = messageDate ,
+                date = messageDate,
                 expirationDate = existingMessage?.expiration_date ?: bolt11?.getExpiryTime()?.toDateTime(),
                 messageContent = null,
                 status = status,
@@ -1534,6 +1534,17 @@ abstract class SphinxRepository(
 
         messageLock.withLock {
             queries.messageUpdateStatusByUUID(MessageStatus.Deleted, messageUuid)
+        }
+    }
+
+    override suspend fun fetchDeletedMessagesOnDb() {
+        val queries = coreDB.getSphinxDatabaseQueries()
+        val messagesToDelete = getDeletedMessages().firstOrNull()
+
+        if (messagesToDelete != null) {
+            val uuidToDelete = messagesToDelete.map { it.replyUUID?.value?.toMessageUUID() }
+            queries.messageUpdateMessagesStatusByUUIDS(MessageStatus.Deleted, uuidToDelete)
+            // after this line, the messages of type 17 should be deleted on the Db
         }
     }
 
@@ -3263,6 +3274,21 @@ abstract class SphinxRepository(
         emitAll(
             coreDB.getSphinxDatabaseQueries()
                 .messageGetSentConfirmedMessages(chatId)
+                .asFlow()
+                .mapToList(io)
+                .map { listMessageDbo ->
+                    listMessageDbo.map {
+                        messageDboPresenterMapper.mapFrom(it)
+                    }
+                }
+                .distinctUntilChanged()
+        )
+    }
+
+    override fun getDeletedMessages(): Flow<List<Message>> = flow {
+        emitAll(
+            coreDB.getSphinxDatabaseQueries()
+                .messageGetDeletedMessages()
                 .asFlow()
                 .mapToList(io)
                 .map { listMessageDbo ->

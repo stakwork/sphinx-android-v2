@@ -45,6 +45,8 @@ interface MessageRepository {
 
     fun getSentConfirmedMessagesByChatId(chatId: ChatId): Flow<List<Message>>
 
+    fun getDeletedMessages(): Flow<List<Message>>
+
     fun getMessagesByPaymentHashes(paymentHashes: List<LightningPaymentHash>): Flow<List<Message?>>
 
     fun getMaxIdMessage(): Flow<Long?>
@@ -150,4 +152,6 @@ interface MessageRepository {
     )
 
     suspend fun deleteMqttMessage(messageUuid: MessageUUID)
+
+    suspend fun fetchDeletedMessagesOnDb()
 }

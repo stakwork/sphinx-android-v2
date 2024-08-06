@@ -219,6 +219,7 @@
             android:text="@string/web_view_remaining_budget"
             android:textColor="@color/primaryText"
             android:textSize="@dimen/chat_footer_episode_title_text_size"
+            android:visibility="gone"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent" />

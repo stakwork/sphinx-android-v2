@@ -594,15 +594,15 @@ internal class ChatTribeFragment: ChatFragment<
                 }
             }
         }
-
-        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
-            tribeAppViewModel.budgetStateFlow.collect { sats ->
-                tribeAppBinding.includeLayoutTribeAppDetails.textViewRemainingBudget.text =
-                    String.format(getString(R.string.web_view_remaining_budget),
-                    sats.value.toString()
-                )
-            }
-        }
+        // Shows budget lable
+//        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+//            tribeAppViewModel.budgetStateFlow.collect { sats ->
+//                tribeAppBinding.includeLayoutTribeAppDetails.textViewRemainingBudget.text =
+//                    String.format(getString(R.string.web_view_remaining_budget),
+//                    sats.value.toString()
+//                )
+//            }
+//        }
 
         // TODO: Remove hackery (utilized now to update podcast object's sats per minute
         //  value if it's changed from tribe detail screen)

@@ -1,5 +1,10 @@
 # ChangeLog
 
+## Version 1.0.0-alpha09 (2021-08-06)
+- Fixes issues when paying invoices and sending payments
+- Adds support for web apps inside tribes
+- General fixes and improvements
+
 ## Version 1.0.0-alpha08 (2021-07-26)
 - General fixes and improvements
 - Implements ability to pin/unpin message

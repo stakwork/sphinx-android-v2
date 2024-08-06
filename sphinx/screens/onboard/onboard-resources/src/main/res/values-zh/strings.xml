@@ -42,7 +42,7 @@
     <string name="sign_up_name_text_view">姓名</string>
 
     <string name="sphinx_ready_label">"Sphinx\n可以開始用了！"</string>
-    <string name="sphinx_ready_balance_label">"你可以傳送訊息,\n 傳送 %d sats, 或收款 %d sats."</string>
+    <string name="sphinx_ready_balance_label">"You can send messages\n and spend up to %d sats"</string>
     <string name="sphinx_ready_loading_balance">餘額下載中...</string>
     <string name="side_effect_check_admin_failed">Something went wrong while checking admin</string>
 </resources>

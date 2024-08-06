@@ -37,7 +37,7 @@ dependencies {
     implementation project(path: ':sphinx:activity:insetter-activity')
     implementation project(path: ':sphinx:application:data:concepts:repositories:concept-repository-contact')
     implementation project(path: ':sphinx:application:data:concepts:repositories:concept-repository-lightning')
-
+    implementation project(path: ':sphinx:application:data:concepts:repositories:concept-repository-connect-manager')
     implementation project(path: ':sphinx:application:network:concepts:queries:concept-network-query-invite')
 
     api project(path: ':sphinx:screens:onboard:onboard-common')

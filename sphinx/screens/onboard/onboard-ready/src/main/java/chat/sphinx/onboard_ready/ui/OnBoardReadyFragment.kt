@@ -55,18 +55,11 @@ internal class OnBoardReadyFragment: SideEffectFragment<
         binding.balanceTextView.text = getString(R.string.sphinx_ready_loading_balance)
 
         lifecycleScope.launch(viewModel.mainImmediate) {
-            viewModel.getBalances().collect { loadResponse ->
-                @Exhaustive
-                when (loadResponse) {
-                    LoadResponse.Loading -> {}
-                    is Response.Error -> {
-                        viewModel.updateViewState(OnBoardReadyViewState.Error)
-                        viewModel.submitSideEffect(OnBoardReadySideEffect.CreateInviterFailed)
-                    }
-                    is Response.Success -> {
-                        val balance = loadResponse.value
-                        binding.balanceTextView.text = getString(R.string.sphinx_ready_balance_label, balance.localBalance.value, balance.remoteBalance.value)
-                    }
+            viewModel.getBalances().collect { nodeBalance ->
+                val balance = nodeBalance?.balance?.value
+
+                if (balance != null) {
+                    binding.balanceTextView.text = String.format(getString(R.string.sphinx_ready_balance_label), balance)
                 }
             }
         }

@@ -25,6 +25,7 @@ import chat.sphinx.concept_repository_connect_manager.model.NetworkStatus
 import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.concept_repository_dashboard_android.RepositoryDashboardAndroid
 import chat.sphinx.concept_repository_feed.FeedRepository
+import chat.sphinx.concept_repository_message.MessageRepository
 import chat.sphinx.concept_service_media.MediaPlayerServiceController
 import chat.sphinx.concept_service_notification.PushNotificationRegistrar
 import chat.sphinx.concept_signer_manager.SignerManager
@@ -149,6 +150,7 @@ internal class DashboardViewModel @Inject constructor(
     private val chatRepository: ChatRepository,
     private val feedRepository: FeedRepository,
     private val actionsRepository: ActionsRepository,
+    private val messageRepository: MessageRepository,
 
     private val networkQueryAuthorizeExternal: NetworkQueryAuthorizeExternal,
     private val networkQueryPeople: NetworkQueryPeople,
@@ -270,9 +272,11 @@ internal class DashboardViewModel @Inject constructor(
                     is OwnerRegistrationState.GetNodes -> {
                         val routerUrl = serverSettingsSharedPreferences.getString(ROUTER_URL, null)
                         if (routerUrl != null) {
-                            storeRouterPubKey(routerUrl)
                             connectManagerRepository.requestNodes(routerUrl)
                         }
+                    }
+                    is OwnerRegistrationState.StoreRouterPubKey -> {
+                        storeRouterPubKey(connectionState.nodes)
                     }
                     else -> {}
                 }
@@ -1293,10 +1297,15 @@ internal class DashboardViewModel @Inject constructor(
                 return@launch
             }
 
-            val payeeLspPubKey = invoiceBolt11.hop_hints?.getOrNull(0)?.substringBefore('_')
+            var payeeLspPubKey = invoiceBolt11.hop_hints?.getOrNull(0)?.substringBefore('_')
             val ownerLsp = getOwner().routeHint?.getLspPubKey()
 
-            if (payeeLspPubKey != null && payeeLspPubKey != ownerLsp) {
+            if (payeeLspPubKey == null) {
+                val contact = contactRepository.getContactByPubKey(invoicePayeePubKey).firstOrNull()
+                payeeLspPubKey = contact?.routeHint?.getLspPubKey()
+            }
+
+            if (payeeLspPubKey == null || payeeLspPubKey != ownerLsp) {
                 val routerUrl = serverSettingsSharedPreferences.getString(ROUTER_URL, null)
 
                 if (routerUrl == null) {
@@ -1395,6 +1404,12 @@ internal class DashboardViewModel @Inject constructor(
                     )
                 )
             )
+        }
+    }
+
+    fun fetchDeletedMessagesOnDb() {
+        viewModelScope.launch(io) {
+            messageRepository.fetchDeletedMessagesOnDb()
         }
     }
 

@@ -211,7 +211,7 @@ class MemeServerTokenHandlerImpl(
 
                     is Response.Success -> {
                         id = loadResponse.value.id.toAuthenticationId()
-                        connectManagerRepository?.singChallenge(loadResponse.value.challenge)
+                        connectManagerRepository?.signChallenge(loadResponse.value.challenge)
                         challenge = loadResponse.value.challenge.toAuthenticationChallenge()
                     }
                 }

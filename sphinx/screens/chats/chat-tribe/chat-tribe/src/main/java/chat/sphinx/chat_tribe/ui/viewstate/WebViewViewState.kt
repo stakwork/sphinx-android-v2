@@ -8,6 +8,7 @@ sealed class WebViewViewState: ViewState<WebViewViewState>() {
     object Idle: WebViewViewState()
 
     object RequestAuthorization: WebViewViewState()
+    object SetBudget: WebViewViewState()
     class ChallengeError(val error: String): WebViewViewState()
 
     class SendAuthorization(

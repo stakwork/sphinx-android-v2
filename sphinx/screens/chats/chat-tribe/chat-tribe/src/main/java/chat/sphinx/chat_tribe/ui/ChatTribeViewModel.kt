@@ -39,8 +39,11 @@ import chat.sphinx.wrapper_chat.*
 import chat.sphinx.wrapper_common.PhotoUrl
 import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_common.dashboard.ContactId
+import chat.sphinx.wrapper_common.feed.FeedType
+import chat.sphinx.wrapper_common.feed.toFeedUrl
 import chat.sphinx.wrapper_common.lightning.Sat
 import chat.sphinx.wrapper_common.message.MessageUUID
+import chat.sphinx.wrapper_common.message.toMessageUUID
 import chat.sphinx.wrapper_common.util.getInitials
 import chat.sphinx.wrapper_contact.Contact
 import chat.sphinx.wrapper_feed.FeedPlayerSpeed
@@ -301,16 +304,16 @@ class ChatTribeViewModel @Inject constructor(
                     }
                     else {
                         _feedDataStateFlow.value = TribeFeedData.Result.FeedData(
-                            tribeData.host,
-                            tribeData.feedUrl,
-                            tribeData.chatUUID,
-                            tribeData.feedType,
-                            tribeData.appUrl,
-                            tribeData.badges
+                            chat.host ?: return@let,
+                            tribeData.feed_url?.toFeedUrl(),
+                            chat.uuid,
+                            FeedType.Unknown(-1),
+                            tribeData.app_url?.toAppUrl(),
+                            arrayOf() // needs to be fill
                         )
                     }
 
-                    updatePinnedMessageState(tribeData.pin, chat.id)
+                    updatePinnedMessageState(tribeData.pin?.toMessageUUID(), chat.id)
 
                 } ?: run {
                     _feedDataStateFlow.value = TribeFeedData.Result.NoFeed

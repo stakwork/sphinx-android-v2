@@ -31,8 +31,6 @@ import chat.sphinx.dashboard.ui.viewstates.*
 import chat.sphinx.insetter_activity.InsetterActivity
 import chat.sphinx.insetter_activity.addNavigationBarPadding
 import chat.sphinx.insetter_activity.addStatusBarPadding
-import chat.sphinx.kotlin_response.LoadResponse
-import chat.sphinx.kotlin_response.Response
 import chat.sphinx.menu_bottom_scanner.BottomScannerMenu
 import chat.sphinx.resources.databinding.LayoutPodcastPlayerFooterBinding
 import chat.sphinx.swipe_reveal_layout.SwipeRevealLayout
@@ -620,13 +618,14 @@ internal class DashboardFragment : MotionLayoutFragment<
 
                             textViewRestoreProgress.text = getString(label, progressString)
                             progressBarRestore.progress = response
-                            buttonStopRestore.isEnabled = true
+                            buttonStopRestore.isEnabled = false
                             buttonStopRestore.backgroundTintList =
-                                if (true) ContextCompat.getColorStateList(root.context, R.color.primaryBlue)
+                                if (false) ContextCompat.getColorStateList(root.context, R.color.primaryBlue)
                                 else ContextCompat.getColorStateList(root.context, R.color.secondaryTextInverted)
                         }
                         root.visible
                     } else {
+                        viewModel.fetchDeletedMessagesOnDb()
                         root.gone
                     }
                 }

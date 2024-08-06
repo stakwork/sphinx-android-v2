@@ -13,6 +13,13 @@ import chat.sphinx.feature_coredb.adapters.contact.*
 import chat.sphinx.feature_coredb.adapters.feed.*
 import chat.sphinx.feature_coredb.adapters.invite.InviteCodeAdapter
 import chat.sphinx.feature_coredb.adapters.invite.InviteStringAdapter
+import chat.sphinx.feature_coredb.adapters.lsp.LsatIdentifierAdapter
+import chat.sphinx.feature_coredb.adapters.lsp.LsatIssuerAdapter
+import chat.sphinx.feature_coredb.adapters.lsp.LsatMetaDataAdapter
+import chat.sphinx.feature_coredb.adapters.lsp.LsatPathsAdapter
+import chat.sphinx.feature_coredb.adapters.lsp.LsatPreImageAdapter
+import chat.sphinx.feature_coredb.adapters.lsp.LsatStatusAdapter
+import chat.sphinx.feature_coredb.adapters.lsp.MacaroonAdapter
 import chat.sphinx.feature_coredb.adapters.media.*
 import chat.sphinx.feature_coredb.adapters.media.FileNameAdapter
 import chat.sphinx.feature_coredb.adapters.media.MediaKeyAdapter
@@ -24,13 +31,11 @@ import chat.sphinx.feature_coredb.adapters.server.IpAdapter
 import chat.sphinx.feature_coredb.adapters.subscription.CronAdapter
 import chat.sphinx.feature_coredb.adapters.subscription.EndNumberAdapter
 import chat.sphinx.feature_coredb.adapters.subscription.SubscriptionCountAdapter
-import chat.sphinx.wrapper_action_track.ActionTrackMetaData
 import com.squareup.moshi.Moshi
 import com.squareup.sqldelight.db.SqlDriver
 import io.matthewnelson.concept_encryption_key.EncryptionKey
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.collect
 
 abstract class CoreDBImpl(private val moshi: Moshi): CoreDB() {
 
@@ -257,6 +262,17 @@ abstract class CoreDBImpl(private val moshi: Moshi): CoreDB() {
                 serverDboAdapter = ServerDbo.Adapter(
                     ipAdapter = IpAdapter(),
                     pub_keyAdapter = LightningNodePubKeyAdapter.getInstance()
+                ),
+                lsatDboAdapter = LsatDbo.Adapter(
+                    idAdapter = LsatIdentifierAdapter(),
+                    macaroonAdapter = MacaroonAdapter(),
+                    payment_requestAdapter = LightningPaymentRequestAdapter.getInstance(),
+                    issuerAdapter = LsatIssuerAdapter(),
+                    meta_dataAdapter = LsatMetaDataAdapter(),
+                    pathsAdapter = LsatPathsAdapter(),
+                    preimageAdapter = LsatPreImageAdapter(),
+                    statusAdapter = LsatStatusAdapter(),
+                    created_atAdapter = DateTimeAdapter.getInstance()
                 )
             ).sphinxDatabaseQueries
         }

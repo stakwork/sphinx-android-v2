@@ -70,6 +70,7 @@ import chat.sphinx.feature_repository.mappers.feed.podcast.FeedDboPodcastPresent
 import chat.sphinx.feature_repository.mappers.feed.podcast.FeedItemDboPodcastEpisodePresenterMapper
 import chat.sphinx.feature_repository.mappers.feed.podcast.FeedRecommendationPodcastPresenterMapper
 import chat.sphinx.feature_repository.mappers.invite.InviteDboPresenterMapper
+import chat.sphinx.feature_repository.mappers.lsat.LsatDboPresenterMapper
 import chat.sphinx.feature_repository.mappers.mapListFrom
 import chat.sphinx.feature_repository.mappers.message.MessageDboPresenterMapper
 import chat.sphinx.feature_repository.mappers.subscription.SubscriptionDboPresenterMapper
@@ -111,6 +112,10 @@ import chat.sphinx.wrapper_common.lightning.toLightningPaymentHash
 import chat.sphinx.wrapper_common.lightning.toLightningPaymentRequestOrNull
 import chat.sphinx.wrapper_common.lightning.toLightningRouteHint
 import chat.sphinx.wrapper_common.lightning.toSat
+import chat.sphinx.wrapper_common.lsat.Lsat
+import chat.sphinx.wrapper_common.lsat.LsatIdentifier
+import chat.sphinx.wrapper_common.lsat.LsatIssuer
+import chat.sphinx.wrapper_common.lsat.LsatStatus
 import chat.sphinx.wrapper_common.message.*
 import chat.sphinx.wrapper_common.payment.PaymentTemplate
 import chat.sphinx.wrapper_contact.*
@@ -253,6 +258,14 @@ abstract class SphinxRepository(
         MutableStateFlow(null)
     }
 
+    override val webViewPaymentHash: MutableStateFlow<String?> by lazy {
+        MutableStateFlow(null)
+    }
+
+    override val webViewPreImage: MutableStateFlow<String?> by lazy {
+        MutableStateFlow(null)
+    }
+
     init {
         connectManager.addListener(this)
         memeServerTokenHandler.addListener(this)
@@ -332,8 +345,8 @@ abstract class SphinxRepository(
         connectManager.setOwnerDeviceId(deviceId)
     }
 
-    override fun singChallenge(challenge: String) {
-        connectManager.processChallengeSignature(challenge)
+    override fun signChallenge(challenge: String): String? {
+        return connectManager.processChallengeSignature(challenge)
     }
 
     override fun createInvite(
@@ -495,6 +508,7 @@ abstract class SphinxRepository(
                 when (loadResponse) {
                     is Response.Success -> {
                         val nodes = loadResponse.value
+                        connectionManagerState.value = OwnerRegistrationState.StoreRouterPubKey(nodes)
                         connectManager.addNodesFromResponse(nodes)
                     }
                 }
@@ -512,6 +526,10 @@ abstract class SphinxRepository(
 
     override fun getSignBase64(text: String): String? {
         return connectManager.getSignBase64(text)
+    }
+
+    override fun getIdFromMacaroon(macaroon: String): String? {
+        return connectManager.getIdFromMacaroon(macaroon)
     }
 
     override suspend fun exitAndDeleteTribe(tribe: Chat) {
@@ -999,11 +1017,6 @@ abstract class SphinxRepository(
                 val messageType = msgType.toMessageType()
 
                 when (messageType) {
-                    is MessageType.Delete -> {
-                        msg.toMsg(moshi).replyUuid?.toMessageUUID()?.let { replyUuid ->
-                            deleteMqttMessage(replyUuid)
-                        }
-                    }
                     is MessageType.ContactKeyRecord -> {
                         // Handled on onRestoreContacts
                     }
@@ -1057,6 +1070,11 @@ abstract class SphinxRepository(
                             is MessageType.ContactKey -> {
                                 saveNewContactRegistered(msgSender)
                             }
+                            is MessageType.Delete -> {
+                                msg.toMsg(moshi).replyUuid?.toMessageUUID()?.let { replyUuid ->
+                                    deleteMqttMessage(replyUuid)
+                                }
+                            }
                         }
 
                         val messageId = if (msgIndex.isNotEmpty()) MessageId(msgIndex.toLong()) else return@launch
@@ -1064,7 +1082,6 @@ abstract class SphinxRepository(
                         val originalUUID = message.originalUuid?.toMessageUUID()
                         val timestamp = msgTimestamp?.toDateTime()
                         val date = message.date?.toDateTime()
-                        val realAmount = if (fromMe == true) message.amount?.milliSatsToSats() else amount?.toSat()
                         val paymentRequest = message.invoice?.toLightningPaymentRequestOrNull()
                         val bolt11 = paymentRequest?.let { Bolt11.decode(it) }
                         val paymentHash = paymentRequest?.let {
@@ -1078,11 +1095,12 @@ abstract class SphinxRepository(
                             messageType,
                             messageUuid,
                             messageId,
+                            message.amount?.milliSatsToSats(),
                             originalUUID,
                             timestamp,
                             date,
                             fromMe ?: false,
-                            realAmount,
+                            amount?.toSat(),
                             paymentRequest,
                             paymentHash,
                             bolt11,
@@ -1137,6 +1155,12 @@ abstract class SphinxRepository(
                     newSentStatus.message?.toErrorMessage(),
                     newSentStatus.tag?.toTagMessage()
                 )
+
+                // Check if web view payment hash matches
+                if (newSentStatus.payment_hash == webViewPaymentHash.value) {
+                    webViewPreImage.value = newSentStatus.preimage
+                    webViewPaymentHash.value = null
+                }
             }
         }
     }
@@ -1340,11 +1364,12 @@ abstract class SphinxRepository(
         msgType: MessageType,
         msgUuid: MessageUUID,
         msgIndex: MessageId,
+        msgAmount: Sat?,
         originalUuid: MessageUUID?,
         timestamp: DateTime?,
         date: DateTime?,
         fromMe: Boolean,
-        amount: Sat?,
+        realPaymentAmount: Sat?,
         paymentRequest: LightningPaymentRequest?,
         paymentHash: LightningPaymentHash?,
         bolt11: Bolt11?,
@@ -1413,6 +1438,9 @@ abstract class SphinxRepository(
                 else -> MessageStatus.Received
             }
 
+            val isTribeBoost = isTribe && msgType is MessageType.Boost
+            val amount = if (fromMe || isTribeBoost) msgAmount else realPaymentAmount
+
             val now = DateTime.nowUTC().toDateTime()
             val messageDate = if (isTribe) date ?: now else timestamp ?: now
 
@@ -1426,7 +1454,7 @@ abstract class SphinxRepository(
                 amount = bolt11?.getSatsAmount() ?: existingMessage?.amount ?: amount ?: Sat(0L),
                 paymentRequest = existingMessage?.payment_request ?: paymentRequest,
                 paymentHash = existingMessage?.payment_hash ?: msg.paymentHash?.toLightningPaymentHash() ?: paymentHash,
-                date = messageDate ,
+                date = messageDate,
                 expirationDate = existingMessage?.expiration_date ?: bolt11?.getExpiryTime()?.toDateTime(),
                 messageContent = null,
                 status = status,
@@ -1506,6 +1534,17 @@ abstract class SphinxRepository(
 
         messageLock.withLock {
             queries.messageUpdateStatusByUUID(MessageStatus.Deleted, messageUuid)
+        }
+    }
+
+    override suspend fun fetchDeletedMessagesOnDb() {
+        val queries = coreDB.getSphinxDatabaseQueries()
+        val messagesToDelete = getDeletedMessages().firstOrNull()
+
+        if (messagesToDelete != null) {
+            val uuidToDelete = messagesToDelete.map { it.replyUUID?.value?.toMessageUUID() }
+            queries.messageUpdateMessagesStatusByUUIDS(MessageStatus.Deleted, uuidToDelete)
+            // after this line, the messages of type 17 should be deleted on the Db
         }
     }
 
@@ -3246,6 +3285,21 @@ abstract class SphinxRepository(
         )
     }
 
+    override fun getDeletedMessages(): Flow<List<Message>> = flow {
+        emitAll(
+            coreDB.getSphinxDatabaseQueries()
+                .messageGetDeletedMessages()
+                .asFlow()
+                .mapToList(io)
+                .map { listMessageDbo ->
+                    listMessageDbo.map {
+                        messageDboPresenterMapper.mapFrom(it)
+                    }
+                }
+                .distinctUntilChanged()
+        )
+    }
+
     override fun getMessagesByPaymentHashes(paymentHashes: List<LightningPaymentHash>): Flow<List<Message?>> = flow {
         emitAll(
             coreDB.getSphinxDatabaseQueries()
@@ -4403,8 +4457,14 @@ abstract class SphinxRepository(
         paymentRequest: LightningPaymentRequest,
         endHops: String?,
         routerPubKey: String?,
-        milliSatAmount: Long
+        milliSatAmount: Long,
+        paymentHash: String?
     ) {
+        if (paymentHash != null) {
+            webViewPaymentHash.value = paymentHash
+
+        }
+
         if (endHops?.isNotEmpty() == true && routerPubKey != null) {
             connectManager.concatNodesFromResponse(
                 endHops,
@@ -4437,6 +4497,10 @@ abstract class SphinxRepository(
             milliSatAmount,
             routeHint
         )
+    }
+
+    override fun clearWebViewPreImage() {
+        webViewPreImage.value = null
     }
 
     override suspend fun sendNewPaymentRequest(requestPayment: SendPaymentRequest) {
@@ -4730,7 +4794,7 @@ abstract class SphinxRepository(
         }
     }
 
-    override suspend fun updateTribeInfo(chat: Chat, isProductionEnvironment: Boolean): TribeData? {
+    override suspend fun updateTribeInfo(chat: Chat, isProductionEnvironment: Boolean): NewTribeDto? {
         var owner: Contact? = accountOwner.value
 
         if (owner == null) {
@@ -4746,7 +4810,7 @@ abstract class SphinxRepository(
             delay(25L)
         }
 
-        var tribeData: TribeData? = null
+        var tribeData: NewTribeDto? = null
 
         chat.host?.let { chatHost ->
             val chatUUID = chat.uuid
@@ -4764,16 +4828,15 @@ abstract class SphinxRepository(
                             is LoadResponse.Loading -> {}
                             is Response.Error -> {}
                             is Response.Success -> {
-                                val tribeDto = loadResponse.value
+                                tribeData = loadResponse.value
 
                                 if (owner?.nodePubKey != chat.ownerPubKey) {
 
                                     chatLock.withLock {
                                         queries.transaction {
-                                            updateNewChatTribeData(tribeDto, chat.id, queries)
+                                            updateNewChatTribeData(loadResponse.value, chat.id, queries)
                                         }
                                     }
-
                                 }
                             }
                         }
@@ -6494,6 +6557,59 @@ abstract class SphinxRepository(
         }.join()
 
         return response
+    }
+
+    private val lsatDboPresenterMapper: LsatDboPresenterMapper by lazy {
+        LsatDboPresenterMapper(dispatchers)
+    }
+
+
+    override suspend fun getLastLsatByIssuer(issuer: LsatIssuer): Flow<Lsat?> = flow {
+        val queries = coreDB.getSphinxDatabaseQueries()
+        emitAll(
+            queries.lsatGetLastActiveByIssuer(issuer)
+                .asFlow()
+                .mapToOneOrNull(io)
+                .map {
+                    it?.let { lsatDboPresenterMapper.mapFrom(it) }
+                }
+                .distinctUntilChanged()
+        )
+    }
+
+
+    override suspend fun getLastLsatActive(): Flow<Lsat?> = flow {
+        val queries = coreDB.getSphinxDatabaseQueries()
+        emitAll(
+            queries.lsatGetLastActive()
+                .asFlow()
+                .mapToOneOrNull(io)
+                .map { it?.let { lsatDboPresenterMapper.mapFrom(it) } }
+                .distinctUntilChanged()
+        )
+    }
+
+    override suspend fun getLsatByIdentifier(identifier: LsatIdentifier): Flow<Lsat?> = flow {
+        val queries = coreDB.getSphinxDatabaseQueries()
+        emitAll(
+            queries.lsatGetById(identifier)
+                .asFlow()
+                .mapToOneOrNull(io)
+                .map { it?.let { lsatDboPresenterMapper.mapFrom(it) } }
+                .distinctUntilChanged()
+        )
+    }
+
+    override suspend fun upsertLsat(lsat: Lsat) {
+        val queries = coreDB.getSphinxDatabaseQueries()
+        queries.transaction {
+            upsertLsat(lsat, queries)
+        }
+    }
+
+    override suspend fun updateLsatStatus(identifier: LsatIdentifier, status: LsatStatus) {
+        val queries = coreDB.getSphinxDatabaseQueries()
+        queries.lsatUpdateStatus(status, identifier)
     }
 
     /***

@@ -21,6 +21,7 @@ import chat.sphinx.wrapper_common.invite.isPaymentPending
 import chat.sphinx.wrapper_common.invite.isProcessingPayment
 import chat.sphinx.wrapper_common.invite.toInviteStatus
 import chat.sphinx.wrapper_common.lightning.*
+import chat.sphinx.wrapper_common.lsat.Lsat
 import chat.sphinx.wrapper_common.message.MessageId
 import chat.sphinx.wrapper_common.message.toMessageUUID
 import chat.sphinx.wrapper_common.subscription.Cron
@@ -993,6 +994,25 @@ inline fun TransactionCallbacks.updateSubscriptionStatus(
     queries.feedUpdateSubscribe(subscribed, feedId)
     queries.contentFeedStatusUpdateSubscriptionStatus(subscribed, feedId)
 }
+
+@Suppress("NOTHING_TO_INLINE")
+inline fun TransactionCallbacks.upsertLsat(
+    lsat: Lsat,
+    queries: SphinxDatabaseQueries
+) {
+    queries.lsatUpsert(
+        lsat.macaroon,
+        lsat.paymentRequest,
+        lsat.issuer,
+        lsat.metaData,
+        lsat.paths,
+        lsat.preimage,
+        lsat.status,
+        lsat.createdAt,
+        lsat.id
+    )
+}
+
 
 fun TransactionCallbacks.clearDatabase(
     queries: SphinxDatabaseQueries

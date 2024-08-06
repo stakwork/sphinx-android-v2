@@ -30,6 +30,8 @@ interface ConnectManagerRepository {
     val userStateFlow: MutableStateFlow<String?>
     val tribeMembersState: MutableStateFlow<TribeMembersResponse?>
     val restoreProgress: MutableStateFlow<Int?>
+    val webViewPaymentHash: MutableStateFlow<String?>
+    val webViewPreImage: MutableStateFlow<String?>
 
     fun connectAndSubscribeToMqtt(userState: String?, mixerIp: String?) {}
     fun createOwnerAccount()
@@ -39,7 +41,7 @@ interface ConnectManagerRepository {
     fun setMnemonicWords(words: List<String>?)
     fun setNetworkType(isTestEnvironment: Boolean)
     fun setOwnerDeviceId(deviceId: String)
-    fun singChallenge(challenge: String)
+    fun signChallenge(challenge: String): String?
     fun createInvite(
         nickname: String,
         welcomeMessage: String,
@@ -75,7 +77,8 @@ interface ConnectManagerRepository {
         paymentRequest: LightningPaymentRequest,
         endHops: String?,
         routerPubKey: String?,
-        milliSatAmount: Long
+        milliSatAmount: Long,
+        paymentHash: String? = null
     )
     suspend fun sendKeySend(
         pubKey: String,
@@ -84,10 +87,13 @@ interface ConnectManagerRepository {
         routerPubKey: String?,
         routeHint: String?
     )
+
+    fun clearWebViewPreImage()
+
     suspend fun updateLspAndOwner(data: String) {}
     fun requestNodes(nodeUrl: String)
     fun getInvoiceInfo(invoice: String): String?
-
     fun getSignedTimeStamps(): String?
     fun getSignBase64(text: String): String?
+    fun getIdFromMacaroon(macaroon: String): String?
 }

@@ -7,10 +7,13 @@ import chat.sphinx.kotlin_response.Response
 import chat.sphinx.kotlin_response.ResponseError
 import chat.sphinx.wrapper_chat.Chat
 import chat.sphinx.wrapper_chat.NotificationLevel
-import chat.sphinx.wrapper_chat.TribeData
 import chat.sphinx.wrapper_common.chat.ChatUUID
 import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_common.dashboard.ContactId
+import chat.sphinx.wrapper_common.lsat.Lsat
+import chat.sphinx.wrapper_common.lsat.LsatIdentifier
+import chat.sphinx.wrapper_common.lsat.LsatIssuer
+import chat.sphinx.wrapper_common.lsat.LsatStatus
 import chat.sphinx.wrapper_message.Message
 import chat.sphinx.wrapper_podcast.Podcast
 import kotlinx.coroutines.flow.Flow
@@ -63,7 +66,7 @@ interface ChatRepository {
         tribeServer: String?
     ): Flow<List<NewTribeDto>>
 
-    suspend fun updateTribeInfo(chat: Chat, isProductionEnvironment: Boolean): TribeData?
+    suspend fun updateTribeInfo(chat: Chat, isProductionEnvironment: Boolean): NewTribeDto?
     suspend fun storeTribe(createTribe: CreateTribe, chatId: ChatId?)
     suspend fun updateTribe(chatId: ChatId, createTribe: CreateTribe)
     suspend fun exitAndDeleteTribe(tribe: Chat)
@@ -81,5 +84,13 @@ interface ChatRepository {
     ): Response<Any, ResponseError>
 
     suspend fun addTribeMember(addMember: AddMember): Response<Any, ResponseError>
+
+    // LSAT related
+    suspend fun getLastLsatByIssuer(issuer: LsatIssuer): Flow<Lsat?>
+    suspend fun getLastLsatActive(): Flow<Lsat?>
+
+    suspend fun getLsatByIdentifier(identifier: LsatIdentifier): Flow<Lsat?>
+    suspend fun upsertLsat(lsat: Lsat)
+    suspend fun updateLsatStatus(identifier: LsatIdentifier, status: LsatStatus)
 
 }

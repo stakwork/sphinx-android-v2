@@ -69,6 +69,7 @@ dependencies {
     implementation project(path: ':sphinx:application:data:concepts:repositories:concept-repository-lightning')
     implementation project(path: ':sphinx:application:data:concepts:repositories:concept-repository-connect-manager')
     implementation project(path: ':sphinx:application:network:concepts:queries:concept-network-query-contact')
+    implementation project(path: ':sphinx:application:data:concepts:repositories:concept-repository-message')
 
     api project(path: ':sphinx:service:concepts:concept-service-media-player')
 

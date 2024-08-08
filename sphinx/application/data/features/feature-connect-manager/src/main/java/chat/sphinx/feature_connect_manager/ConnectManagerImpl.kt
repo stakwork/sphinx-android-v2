@@ -104,7 +104,8 @@ class ConnectManagerImpl: ConnectManager()
     private var readyForPing: Boolean = false
     private var delayedRRObjects: MutableList<RunReturn> = mutableListOf()
     private val restoreProgress = RestoreProgress()
-    private var isMqttConnected = false
+    private var isMqttConnected: Boolean = false
+    private var isAppFirstInit: Boolean = true
 
     companion object {
         const val TEST_V2_SERVER_IP = "75.101.247.127:1883"
@@ -1009,6 +1010,15 @@ class ConnectManagerImpl: ConnectManager()
                 )
             }
             Log.d("MQTT_MESSAGES", "onReconnectMqtt")
+        }
+    }
+
+    override fun attemptReconnectOnResume() {
+        if (isAppFirstInit) {
+            isAppFirstInit = false
+            return
+        } else {
+            reconnectWithBackOff()
         }
     }
 

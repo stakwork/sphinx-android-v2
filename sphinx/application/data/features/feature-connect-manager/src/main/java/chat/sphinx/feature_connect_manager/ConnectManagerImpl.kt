@@ -214,6 +214,10 @@ class ConnectManagerImpl: ConnectManager()
                 override fun connectionLost(cause: Throwable?) {
                     isMqttConnected = false
                     reconnectWithBackOff()
+
+                    notifyListeners {
+                        onConnectManagerError(ConnectManagerError.MqttConnectError)
+                    }
                     Log.d("MQTT_MESSAGES", "MQTT DISCONNECTED! $cause ${cause?.message}")
                 }
 
@@ -1003,12 +1007,7 @@ class ConnectManagerImpl: ConnectManager()
                     walletMnemonic!!,
                     ownerInfoStateFlow.value,
                 )
-            } else {
-                notifyListeners {
-                    onConnectManagerError(ConnectManagerError.MqttReconnectError)
-                }
             }
-
             Log.d("MQTT_MESSAGES", "onReconnectMqtt")
         }
     }

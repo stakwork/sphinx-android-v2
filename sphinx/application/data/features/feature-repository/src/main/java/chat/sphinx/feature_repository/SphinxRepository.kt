@@ -533,7 +533,7 @@ abstract class SphinxRepository(
     }
 
     override fun attemptReconnectOnResume() {
-        // implement logic to disconnect and reconnect on resume if needed
+        connectManager.reconnectWithBackOff()
     }
 
     override suspend fun exitAndDeleteTribe(tribe: Chat) {

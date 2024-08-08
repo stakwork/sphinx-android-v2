@@ -178,6 +178,7 @@ class MainActivity: MotionLayoutNavigationActivity<
 
     override fun onResume() {
         super.onResume()
+        viewModel.connectManagerRepository.attemptReconnectOnResume()
         isActive = true
     }
 

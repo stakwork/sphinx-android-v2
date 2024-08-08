@@ -1974,7 +1974,6 @@ class ConnectManagerImpl: ConnectManager()
         if (mqttClient?.isConnected == true) {
             mqttClient?.disconnect()
         }
-        mqttClient = null
     }
 
     private fun storeUserState(state: ByteArray) {

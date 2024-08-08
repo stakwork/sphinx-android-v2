@@ -532,6 +532,10 @@ abstract class SphinxRepository(
         return connectManager.getIdFromMacaroon(macaroon)
     }
 
+    override fun attemptReconnectOnResume() {
+        // implement logic to disconnect and reconnect on resume if needed
+    }
+
     override suspend fun exitAndDeleteTribe(tribe: Chat) {
         val queries = coreDB.getSphinxDatabaseQueries()
         applicationScope.launch(io) {
@@ -1343,7 +1347,7 @@ abstract class SphinxRepository(
     private fun reconnectMqtt() {
         applicationScope.launch(mainImmediate) {
             delay(2000L)
-            connectManager.reconnectWithBackoff()
+            connectManager.reconnectWithBackOff()
         }
     }
 

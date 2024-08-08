@@ -104,6 +104,7 @@ class ConnectManagerImpl: ConnectManager()
     private var readyForPing: Boolean = false
     private var delayedRRObjects: MutableList<RunReturn> = mutableListOf()
     private val restoreProgress = RestoreProgress()
+    private var isMqttConnected = false
 
     companion object {
         const val TEST_V2_SERVER_IP = "75.101.247.127:1883"
@@ -185,6 +186,7 @@ class ConnectManagerImpl: ConnectManager()
 
             mqttClient?.connect(options, null, object : IMqttActionListener {
                 override fun onSuccess(asyncActionToken: IMqttToken?) {
+                    isMqttConnected = true
                     hasAttemptedReconnect = false
 
                     subscribeOwnerMQTT()
@@ -196,11 +198,13 @@ class ConnectManagerImpl: ConnectManager()
                 }
 
                 override fun onFailure(asyncActionToken: IMqttToken?, exception: Throwable?) {
+                    isMqttConnected = false
+
                     // If it's the first time trying to connect, try to reconnect otherwise
                     // prevent infinite loop
                     if (!hasAttemptedReconnect) {
                         hasAttemptedReconnect = true
-                        reconnectWithBackoff()
+                        reconnectWithBackOff()
                     }
                     Log.d("MQTT_MESSAGES", "Failed to connect to MQTT: ${exception?.message}")
                 }
@@ -208,7 +212,8 @@ class ConnectManagerImpl: ConnectManager()
 
             mqttClient?.setCallback(object : MqttCallback {
                 override fun connectionLost(cause: Throwable?) {
-                    reconnectWithBackoff()
+                    isMqttConnected = false
+                    reconnectWithBackOff()
                     Log.d("MQTT_MESSAGES", "MQTT DISCONNECTED! $cause ${cause?.message}")
                 }
 
@@ -233,11 +238,12 @@ class ConnectManagerImpl: ConnectManager()
                 }
             })
         } catch (e: MqttException) {
+            isMqttConnected = false
             notifyListeners {
                 onConnectManagerError(ConnectManagerError.MqttConnectError)
             }
 
-            reconnectWithBackoff()
+            reconnectWithBackOff()
             Log.d("MQTT_MESSAGES", "MQTT DISCONNECTED! exception ${e.printStackTrace()}")
         }
     }
@@ -975,10 +981,14 @@ class ConnectManagerImpl: ConnectManager()
                 now,
                 sig,
             )
+        } else {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.XPubOrSignError)
+            }
         }
     }
 
-    override fun reconnectWithBackoff() {
+    override fun reconnectWithBackOff() {
         if (!isConnected()) {
             resetMQTT()
 
@@ -986,13 +996,17 @@ class ConnectManagerImpl: ConnectManager()
                 onNetworkStatusChange(false)
             }
 
-            if (mixerIp != null && walletMnemonic != null && ownerInfoStateFlow.value != null) {
+            if (mixerIp != null && walletMnemonic != null) {
 
                 initializeMqttAndSubscribe(
                     mixerIp!!,
                     walletMnemonic!!,
                     ownerInfoStateFlow.value,
                 )
+            } else {
+                notifyListeners {
+                    onConnectManagerError(ConnectManagerError.MqttReconnectError)
+                }
             }
 
             Log.d("MQTT_MESSAGES", "onReconnectMqtt")
@@ -1954,7 +1968,6 @@ class ConnectManagerImpl: ConnectManager()
         mqttClient = null
     }
 
-
     private fun storeUserState(state: ByteArray) {
         try {
             val decoded = MsgPack.decodeFromByteArray(MsgPackDynamicSerializer, state)
@@ -2085,7 +2098,7 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
     private fun isConnected(): Boolean {
-        return mqttClient?.isConnected ?: false
+        return isMqttConnected
     }
 
     private fun handlePing(ping: String) {

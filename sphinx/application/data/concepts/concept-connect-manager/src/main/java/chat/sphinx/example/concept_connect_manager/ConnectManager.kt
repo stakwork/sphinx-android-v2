@@ -40,7 +40,7 @@ abstract class ConnectManager {
         mnemonicWords: WalletMnemonic,
         ownerInfo: OwnerInfo
     )
-    abstract fun reconnectWithBackoff()
+    abstract fun reconnectWithBackOff()
     abstract fun retrieveLspIp(): String?
 
     // Contact Management Methods

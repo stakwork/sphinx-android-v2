@@ -1751,7 +1751,6 @@ class ConnectManagerImpl: ConnectManager()
                 child
             )
         } catch (e: Exception) {
-            val exce = e
             null
         }
     }

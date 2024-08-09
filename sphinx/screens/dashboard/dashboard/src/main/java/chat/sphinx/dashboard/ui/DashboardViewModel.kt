@@ -494,7 +494,7 @@ internal class DashboardViewModel @Inject constructor(
     }
 
     suspend fun getPubKeyByEncryptedChild(child: String): ChatId? {
-        return connectManagerRepository.getPubKeyByEncryptedChild(child).firstOrNull()
+        return connectManagerRepository.getChatIdByEncryptedChild(child).firstOrNull()
     }
 
     private fun syncFeedRecommendationsState() {

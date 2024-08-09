@@ -127,7 +127,7 @@ class MainActivity: MotionLayoutNavigationActivity<
 
         onStopSupervisor.scope.launch(viewModel.mainImmediate) {
         intent.extras?.getString("child")?.let { chatId ->
-            viewModel.connectManagerRepository.getPubKeyByEncryptedChild(chatId).firstOrNull()?.let {
+            viewModel.connectManagerRepository.getChatIdByEncryptedChild(chatId).firstOrNull()?.let {
                 handlePushNotification(it.value)
             }
         }

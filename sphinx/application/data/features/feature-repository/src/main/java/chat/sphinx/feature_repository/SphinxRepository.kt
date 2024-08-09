@@ -460,7 +460,7 @@ abstract class SphinxRepository(
         )
     }
 
-    override suspend fun getPubKeyByEncryptedChild(child: String) = flow {
+    override suspend fun getChatIdByEncryptedChild(child: String) = flow {
         val queries = coreDB.getSphinxDatabaseQueries()
         val pubkey = connectManager.getPubKeyByEncryptedChild(child)
         if (pubkey != null) {

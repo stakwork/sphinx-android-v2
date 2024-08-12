@@ -292,7 +292,7 @@
     <string name="connect_manager_generate_xpub_error">Error generating extended public key.</string>
     <string name="connect_manager_generate_mnemonic_error">Error trying to generate mnemonic.</string>
     <string name="connect_manager_process_invite_error">Error processing invite.</string>
-    <string name="connect_manager_mqtt_connect_error">Error connecting to MQTT server.</string>
+    <string name="connect_manager_mqtt_connect_error">Error connecting to MQTT server. Cause: %s .</string>
     <string name="connect_manager_subscribe_owner_error">Error subscribing to owner topic.</string>
     <string name="connect_manager_mqtt_client_error">Error with MQTT client.</string>
     <string name="connect_manager_mqtt_init_error">Error during MQTT initialization.</string>

@@ -1,5 +1,9 @@
 # ChangeLog
 
+## Version 1.0.0-alpha10 (2021-08-12)
+- Fixes reconnection issues
+- Fixes push notification issues
+
 ## Version 1.0.0-alpha09 (2021-08-06)
 - Fixes issues when paying invoices and sending payments
 - Adds support for web apps inside tribes

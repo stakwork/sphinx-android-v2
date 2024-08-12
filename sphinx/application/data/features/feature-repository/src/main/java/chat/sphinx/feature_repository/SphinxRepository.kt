@@ -460,7 +460,7 @@ abstract class SphinxRepository(
         )
     }
 
-    override suspend fun getPubKeyByEncryptedChild(child: String) = flow {
+    override suspend fun getChatIdByEncryptedChild(child: String) = flow {
         val queries = coreDB.getSphinxDatabaseQueries()
         val pubkey = connectManager.getPubKeyByEncryptedChild(child)
         if (pubkey != null) {
@@ -724,7 +724,7 @@ abstract class SphinxRepository(
                 NewContact(
                     contactAlias = contactInfo.alias?.toContactAlias(),
                     lightningNodePubKey = contactInfo.pubkey.toLightningNodePubKey(),
-                    lightningRouteHint = null,
+                    lightningRouteHint = contactInfo.route_hint?.toLightningRouteHint(),
                     photoUrl = contactInfo.photo_url?.toPhotoUrl(),
                     confirmed = contactInfo.confirmed,
                     null,

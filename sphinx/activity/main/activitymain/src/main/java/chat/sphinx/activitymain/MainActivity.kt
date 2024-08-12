@@ -74,6 +74,9 @@ class MainActivity: MotionLayoutNavigationActivity<
         private var navigationBarInsets: InsetPadding? = null
         private var keyboardInsets: InsetPadding? = null
 
+        var isAppCompletelyClosed: Boolean = true
+        var isAppInForeground: Boolean = false
+
         var isActive = false
     }
 
@@ -180,6 +183,14 @@ class MainActivity: MotionLayoutNavigationActivity<
         super.onResume()
         viewModel.connectManagerRepository.attemptReconnectOnResume()
         isActive = true
+
+        isAppInForeground = true
+        isAppCompletelyClosed = false
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        isAppCompletelyClosed = !isAppInForeground
     }
 
     override fun onStop() {
@@ -323,6 +334,8 @@ class MainActivity: MotionLayoutNavigationActivity<
         viewModel.getDeleteExcessFileIfApplicable()
 
         isActive = false
+        isAppInForeground = false
+
     }
 
     override var isKeyboardVisible: Boolean = false

@@ -1512,7 +1512,7 @@ abstract class SphinxRepository(
 
             messageLock.withLock {
                 queries.transaction {
-                    upsertNewMessage(newMessage, queries, null)
+                    upsertNewMessage(newMessage, queries, messageMedia?.file_name)
 
                     updateChatNewLatestMessage(
                         newMessage,

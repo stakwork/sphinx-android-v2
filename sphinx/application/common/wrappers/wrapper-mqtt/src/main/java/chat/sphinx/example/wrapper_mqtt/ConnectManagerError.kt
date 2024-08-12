@@ -32,4 +32,7 @@ sealed class ConnectManagerError {
     object SetMuteError: ConnectManagerError()
     object LoadTransactionsError: ConnectManagerError()
     object SendKeySendError: ConnectManagerError()
+    object SendBoostError: ConnectManagerError()
+    object MqttReconnectError: ConnectManagerError()
+    object XPubOrSignError: ConnectManagerError()
 }

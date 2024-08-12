@@ -96,4 +96,6 @@ interface ConnectManagerRepository {
     fun getSignedTimeStamps(): String?
     fun getSignBase64(text: String): String?
     fun getIdFromMacaroon(macaroon: String): String?
+    fun attemptReconnectOnResume()
+
 }

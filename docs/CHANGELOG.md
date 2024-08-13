@@ -1,5 +1,8 @@
 # ChangeLog
 
+## Version 1.0.0-alpha11 (2021-08-13)
+- Fixes reconnection issues
+
 ## Version 1.0.0-alpha10 (2021-08-12)
 - Fixes reconnection issues
 - Fixes push notification issues

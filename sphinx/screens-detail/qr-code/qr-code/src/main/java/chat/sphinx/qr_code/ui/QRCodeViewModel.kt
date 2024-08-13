@@ -119,6 +119,16 @@ internal class QRCodeViewModel @Inject constructor(
         return args.qrText.trim().startsWith(INVITE_REGEX)
     }
 
+    fun deleteInvite() {
+        viewModelScope.launch(mainImmediate) {
+            submitSideEffect(
+                NotifySideEffect.AlertConfirmDeleteInvite {
+
+                }
+            )
+        }
+    }
+
     override fun onCleared() {
         super.onCleared()
     }

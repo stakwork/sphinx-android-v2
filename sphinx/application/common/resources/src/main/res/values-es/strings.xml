@@ -199,5 +199,7 @@
     <string name="connect_manager_mqtt_reconnect_error">Error al intentar reconectar</string>
     <string name="connect_manager_xpub_or_sign_error">Error al generar xPub o al intentar realizar una firma</string>
     <string name="connect_manager_load_transactions_error">Error al cargar transacciones</string>
+    <string name="alert_confirm_delete_invite_title">Eliminar Invitación</string>
+    <string name="alert_confirm_delete_invite_message">¿Está seguro de que desea eliminar esta invitación?</string>
 
 </resources>

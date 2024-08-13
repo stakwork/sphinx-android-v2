@@ -84,6 +84,10 @@ internal class QRCodeFragment: SideEffectDetailFragment<
             )
             if (viewModel.isInviteQRCode()) {
                 buttonCancelInvite.visible
+
+                buttonCancelInvite.setOnClickListener {
+                    viewModel.deleteInvite()
+                }
             }
         }
     }

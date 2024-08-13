@@ -60,6 +60,7 @@ internal class QRCodeViewModel @Inject constructor(
 
     companion object {
         private const val BITMAP_XY = 512
+        const val INVITE_REGEX = "sphinx.chat://?action=i&"
     }
 
     private val args: QRCodeFragmentArgs by handle.navArgs()
@@ -112,6 +113,10 @@ internal class QRCodeViewModel @Inject constructor(
                 )
             }
         }
+    }
+
+    fun isInviteQRCode(): Boolean {
+        return args.qrText.trim().startsWith(INVITE_REGEX)
     }
 
     override fun onCleared() {

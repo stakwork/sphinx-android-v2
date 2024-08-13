@@ -69,8 +69,7 @@ internal class SphinxFirebaseMessagingService: FirebaseMessagingService() {
         val child: String? = p0.data["child"]
         val message = "You have new messages %s"
 
-        val currentNetworkStatus = networkStatusStateFlow.value
-        if (currentNetworkStatus != NetworkStatus.Connected || child == null || child == "null") {
+        if (child == null || child == "null") {
             LOG.d(TAG, "Network not connected or null child value. Skipping notification.")
             return
         }
@@ -86,16 +85,19 @@ internal class SphinxFirebaseMessagingService: FirebaseMessagingService() {
         }
 
         // Get Contact/Tribe name from the child
-        runBlocking {
-            child.let { nnChild ->
-                val chatId = connectManagerRepository.getChatIdByEncryptedChild(nnChild).firstOrNull()
-                val chat = chatId?.let { chatRepository.getChatById(it).firstOrNull() }
-                val name = chat?.name?.value
+        if (!MainActivity.isAppCompletelyClosed) {
+            runBlocking {
+                child.let { nnChild ->
+                    val chatId =
+                        connectManagerRepository.getChatIdByEncryptedChild(nnChild).firstOrNull()
+                    val chat = chatId?.let { chatRepository.getChatById(it).firstOrNull() }
+                    val name = chat?.name?.value
 
-                messageBody = if (chat?.isTribe() == true && !name.isNullOrEmpty()) {
-                    String.format(message, "in $name Tribe")
-                } else {
-                    String.format(message, "from $name")
+                    messageBody = if (chat?.isTribe() == true && !name.isNullOrEmpty()) {
+                        String.format(message, "in $name Tribe")
+                    } else {
+                        String.format(message, "from $name")
+                    }
                 }
             }
         }

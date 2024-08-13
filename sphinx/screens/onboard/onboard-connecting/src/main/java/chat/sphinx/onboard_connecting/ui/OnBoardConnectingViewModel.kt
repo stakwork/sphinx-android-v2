@@ -493,7 +493,7 @@ internal class OnBoardConnectingViewModel @Inject constructor(
                     }
                     is ConnectManagerError.MqttConnectError -> {
                         submitSideEffect(OnBoardConnectingSideEffect.Notify(
-                            app.getString(R.string.connect_manager_mqtt_connect_error))
+                            String.format(app.getString(R.string.connect_manager_mqtt_connect_error), connectManagerError.error))
                         )
                     }
                     is ConnectManagerError.SubscribeOwnerError -> {

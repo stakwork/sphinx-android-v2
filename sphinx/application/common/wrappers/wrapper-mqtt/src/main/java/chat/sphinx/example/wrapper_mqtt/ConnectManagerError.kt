@@ -6,7 +6,7 @@ sealed class ConnectManagerError {
     object GenerateMnemonicError: ConnectManagerError()
     object ProcessInviteError: ConnectManagerError()
     object SubscribeOwnerError: ConnectManagerError()
-    object MqttConnectError: ConnectManagerError()
+    data class MqttConnectError(val error: String?): ConnectManagerError()
     object MqttClientError: ConnectManagerError()
     object MqttInitError: ConnectManagerError()
     object SendMessageError: ConnectManagerError()

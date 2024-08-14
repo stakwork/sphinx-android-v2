@@ -529,7 +529,7 @@ internal class ChatTribeFragment: ChatFragment<
             )
         )
 
-        if (viewModel.moreOptionsMenuStateFlow.value is MoreMenuOptionsViewState.OwnTribe) {
+        if (viewModel.moreOptionsMenuStateFlow.value is MoreMenuOptionsViewState.ShareTribeLinkAvailable) {
             menuOptions.add(
                 MenuBottomOption(
                     text = chat.sphinx.chat_common.R.string.bottom_menu_more_option_share,

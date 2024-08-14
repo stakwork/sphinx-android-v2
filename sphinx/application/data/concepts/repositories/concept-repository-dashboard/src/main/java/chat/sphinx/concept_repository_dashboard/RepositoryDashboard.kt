@@ -43,7 +43,7 @@ interface RepositoryDashboard {
     fun getInviteById(inviteId: InviteId): Flow<Invite?>
 
     suspend fun payForInvite(invite: Invite)
-    suspend fun deleteInvite(inviteString: String)
+    suspend fun deleteInviteAndContact(inviteString: String)
 
     fun getAllFeedsOfType(feedType: FeedType): Flow<List<Feed>>
     fun getAllSubscribedFeedsOfType(feedType: FeedType): Flow<List<Feed>>

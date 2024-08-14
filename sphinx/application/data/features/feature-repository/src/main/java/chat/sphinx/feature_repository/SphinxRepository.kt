@@ -6135,7 +6135,7 @@ abstract class SphinxRepository(
 //        }
     }
 
-    override suspend fun deleteInvite(inviteString: String) {
+    override suspend fun deleteInviteAndContact(inviteString: String) {
         val queries = coreDB.getSphinxDatabaseQueries()
         val invite = getInviteByString(InviteString(inviteString)).firstOrNull()
         val inviteCode = invite?.inviteCode?.value

@@ -126,7 +126,7 @@ internal class QRCodeViewModel @Inject constructor(
             submitSideEffect(
                 NotifySideEffect.AlertConfirmDeleteInvite {
                     viewModelScope.launch {
-                        repositoryDashboard.deleteInvite(args.qrText)
+                        repositoryDashboard.deleteInviteAndContact(args.qrText)
                         navigator.popBackStack()
                     }
                 }

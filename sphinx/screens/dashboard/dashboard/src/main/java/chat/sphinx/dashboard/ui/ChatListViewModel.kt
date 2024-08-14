@@ -443,7 +443,7 @@ internal class ChatListViewModel @Inject constructor(
         submitSideEffect(
             ChatListSideEffect.AlertConfirmDeleteInvite() {
                 viewModelScope.launch(mainImmediate) {
-                    repositoryDashboard.deleteInvite(invite.inviteString.value)
+                    repositoryDashboard.deleteInviteAndContact(invite.inviteString.value)
                 }
             }
         )

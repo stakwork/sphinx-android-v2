@@ -179,6 +179,7 @@
     <string name="connect_manager_join_tribe_error">Error al unirse a la tribu.</string>
     <string name="connect_manager_create_tribe_error">Error al crear tribu.</string>
     <string name="connect_manager_create_invite_error">Error al crear invitación.</string>
+    <string name="connect_manager_delete_invite_error">Error cancelar la invitación.</string>
     <string name="connect_manager_create_invoice_error">Error al crear factura.</string>
     <string name="connect_manager_server_pubkey_error">Error al obtener la clave pública del servidor.</string>
     <string name="connect_manager_pay_contact_invoice_error">Error al pagar factura de contacto.</string>

@@ -178,6 +178,7 @@
     <string name="connect_manager_join_tribe_error">Error joining tribe.</string>
     <string name="connect_manager_create_tribe_error">Error creating tribe.</string>
     <string name="connect_manager_create_invite_error">Error creating invite.</string>
+    <string name="connect_manager_delete_invite_error">Error deleting invite.</string>
     <string name="connect_manager_create_invoice_error">Error creating invoice.</string>
     <string name="connect_manager_server_pubkey_error">Error fetching server public key.</string>
     <string name="connect_manager_pay_contact_invoice_error">Error paying contact invoice.</string>

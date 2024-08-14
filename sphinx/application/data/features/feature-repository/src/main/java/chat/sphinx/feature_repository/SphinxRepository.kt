@@ -2142,6 +2142,17 @@ abstract class SphinxRepository(
         )
     }
 
+    override fun getInviteByString(inviteString: InviteString): Flow<Invite?> = flow {
+        emitAll(
+            coreDB.getSphinxDatabaseQueries().inviteGetByInviteString(inviteString)
+                .asFlow()
+                .mapToOneOrNull(io)
+                .map { it?.let { inviteDboPresenterMapper.mapFrom(it) } }
+                .distinctUntilChanged()
+        )
+    }
+
+
     var latestContactsPercentage = 1
 
     private val inviteLock = Mutex()
@@ -6124,24 +6135,21 @@ abstract class SphinxRepository(
 //        }
     }
 
-    override suspend fun deleteInvite(invite: Invite): Response<Any, ResponseError> {
+    override suspend fun deleteInvite(inviteString: String) {
         val queries = coreDB.getSphinxDatabaseQueries()
-//        val response = networkQueryContact.deleteContact(invite.contactId)
+        val invite = getInviteByString(InviteString(inviteString)).firstOrNull()
+        val inviteCode = invite?.inviteCode?.value
 
-        // TODO V2 deleteInvite
+        if (inviteCode != null) {
+            withContext(io) {
+                queries.inviteDeleteById(invite.id)
+                queries.contactDeleteById(invite.contactId)
+            }
 
-//        if (response is Response.Success) {
-//            contactLock.withLock {
-//                withContext(io) {
-//                    queries.transaction {
-//                        updatedContactIds.add(invite.contactId)
-//                        deleteContactById(invite.contactId, queries)
-//                    }
-//                }
-//
-//            }
-//        }
-        return  Response.Error(ResponseError("Not implemented yet"))
+            connectManager.deleteInvite(inviteCode)
+        } else {
+            onConnectManagerError(ConnectManagerError.DeleteInviteError)
+        }
     }
 
     override suspend fun authorizeStakwork(

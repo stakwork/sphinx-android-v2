@@ -35,6 +35,7 @@ import uniffi.sphinxrs.ParsedInvite
 import uniffi.sphinxrs.RunReturn
 import uniffi.sphinxrs.addContact
 import uniffi.sphinxrs.addNode
+import uniffi.sphinxrs.cancelInvite
 import uniffi.sphinxrs.codeFromInvite
 import uniffi.sphinxrs.concatRoute
 import uniffi.sphinxrs.deleteMsgs
@@ -1201,6 +1202,18 @@ class ConnectManagerImpl: ConnectManager()
             }
             Log.e("MQTT_MESSAGES", "createInvite ${e.message}")
         }
+    }
+
+    override fun deleteInvite(inviteString: String) {
+        try {
+            val cancelInvite = cancelInvite(
+                ownerSeed!!,
+                getTimestampInMilliseconds(),
+                getCurrentUserState(),
+                inviteString
+            )
+            handleRunReturn(cancelInvite, mqttClient)
+        } catch (e: Exception) { }
     }
 
     override fun deleteContact(pubKey: String) {

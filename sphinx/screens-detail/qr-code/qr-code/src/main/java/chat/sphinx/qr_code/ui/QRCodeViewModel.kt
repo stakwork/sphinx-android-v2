@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.provider.MediaStore
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import chat.sphinx.concept_repository_dashboard_android.RepositoryDashboardAndroid
 import chat.sphinx.qr_code.R
 import chat.sphinx.qr_code.navigation.QRCodeNavigator
 import chat.sphinx.share_qr_code.ShareQRCodeMenuHandler
@@ -33,6 +34,7 @@ internal class QRCodeViewModel @Inject constructor(
     private val app: Application,
     val navigator: QRCodeNavigator,
     private val mediaCacheHandler: MediaCacheHandler,
+    private val repositoryDashboard: RepositoryDashboardAndroid<Any>,
     dispatchers: CoroutineDispatchers,
     handle: SavedStateHandle,
 ): SideEffectViewModel<
@@ -123,7 +125,10 @@ internal class QRCodeViewModel @Inject constructor(
         viewModelScope.launch(mainImmediate) {
             submitSideEffect(
                 NotifySideEffect.AlertConfirmDeleteInvite {
-
+                    viewModelScope.launch {
+                        repositoryDashboard.deleteInvite(args.qrText)
+                        navigator.popBackStack()
+                    }
                 }
             )
         }

@@ -262,7 +262,7 @@ class ConnectManagerImpl: ConnectManager()
             mqttClient?.let { client ->
                 // Network setup and handling
                 val networkSetup = setNetwork(network)
-                handleRunReturn(networkSetup, client)
+                handleRunReturn(networkSetup)
 
                 // Initial setup and handling
                 val setUp = initialSetup(
@@ -272,7 +272,7 @@ class ConnectManagerImpl: ConnectManager()
                     UUID.randomUUID().toString(),
                     inviterContact?.inviteCode
                 )
-                handleRunReturn(setUp, client)
+                handleRunReturn(setUp)
 
                 val qos = IntArray(1) { 1 }
 
@@ -308,12 +308,11 @@ class ConnectManagerImpl: ConnectManager()
 
     private fun handleRunReturn(
         rr: RunReturn,
-        client: MqttAsyncClient?,
         skipSettleTopic: Boolean = false,
         skipAsyncTopic: Boolean = false,
         topic: String? = null
     ) {
-        if (client != null) {
+        if (mqttClient != null) {
             // Set updated state into db
             rr.stateMp?.let {
                 storeUserState(it)
@@ -604,14 +603,14 @@ class ConnectManagerImpl: ConnectManager()
 
             rr.subscriptionTopics.forEach { topic ->
                 val qos = IntArray(1) { 1 }
-                client.subscribe(arrayOf(topic), qos)
+                mqttClient?.subscribe(arrayOf(topic), qos)
                 Log.d("MQTT_MESSAGES", "=> subscribed to $topic")
             }
 
             if (!skipSettleTopic) {
                 rr.settleTopic?.let { settleTopic ->
                     rr.settlePayload?.let { payload ->
-                        client.publish(settleTopic, MqttMessage(payload))
+                        mqttClient?.publish(settleTopic, MqttMessage(payload))
                         delayedRRObjects.add(rr)
                         Log.d("MQTT_MESSAGES", "=> settleRunReturn $settleTopic")
                         return
@@ -619,11 +618,11 @@ class ConnectManagerImpl: ConnectManager()
                 }
             }
 
-            handleRegisterTopic(client, rr, skipAsyncTopic) { runReturn, callbackSkipAsyncTopic ->
+            handleRegisterTopic(rr, skipAsyncTopic) { runReturn, callbackSkipAsyncTopic ->
                 if (!callbackSkipAsyncTopic) {
                     rr.asyncpayTopic?.let { asyncPayTopic ->
                         rr.asyncpayPayload?.let { asyncPayPayload ->
-                            client.publish(asyncPayTopic, MqttMessage(asyncPayPayload))
+                            mqttClient?.publish(asyncPayTopic, MqttMessage(asyncPayPayload))
 
                             delayedRRObjects.add(runReturn)
 
@@ -635,7 +634,7 @@ class ConnectManagerImpl: ConnectManager()
 
                 rr.topics.forEachIndexed { index, topic ->
                     val payload = rr.payloads.getOrElse(index) { ByteArray(0) }
-                    client.publish(topic, MqttMessage(payload))
+                    mqttClient?.publish(topic, MqttMessage(payload))
                     Log.d("MQTT_MESSAGES", "=> published to $topic")
                 }
             }
@@ -658,14 +657,13 @@ class ConnectManagerImpl: ConnectManager()
     }
 
     private fun handleRegisterTopic(
-        client: MqttAsyncClient?,
         rr: RunReturn,
         skipAsyncTopic: Boolean,
         callback: (RunReturn, Boolean) -> Unit
     ) {
         if (rr.registerTopic != null && rr.registerPayload != null) {
             val payload = rr.registerPayload!!
-            client?.publish(rr.registerTopic!!, MqttMessage(payload))
+            mqttClient?.publish(rr.registerTopic!!, MqttMessage(payload))
             Log.d("MQTT_MESSAGES", "=> registerTopic ${rr.registerTopic}")
 
             notifyListeners {
@@ -692,7 +690,6 @@ class ConnectManagerImpl: ConnectManager()
 
                 handleRunReturn(
                     rr,
-                    mqttClient,
                     skipSettleTopic = true,
                     skipAsyncTopic = true
                 )
@@ -816,7 +813,7 @@ class ConnectManagerImpl: ConnectManager()
                 getCurrentUserState(),
                 deviceId
             )
-            handleRunReturn(token, mqttClient)
+            handleRunReturn(token)
         } catch (e: Exception) {
             notifyListeners {
                 onConnectManagerError(ConnectManagerError.SetDeviceIdError)
@@ -874,7 +871,7 @@ class ConnectManagerImpl: ConnectManager()
                 limit.toUInt(),
                 false
             )
-            handleRunReturn(fetchFirstMsg, mqttClient)
+            handleRunReturn(fetchFirstMsg)
         } catch (e: Exception) {
             notifyListeners {
                 onConnectManagerError(ConnectManagerError.FetchFirstMessageError)
@@ -898,7 +895,7 @@ class ConnectManagerImpl: ConnectManager()
                 MSG_BATCH_LIMIT.toUInt(),
                     true,
             )
-            handleRunReturn(fetchMessages, mqttClient)
+            handleRunReturn(fetchMessages)
         } catch (e: Exception) {
             notifyListeners {
                 onConnectManagerError(ConnectManagerError.FetchMessageError)
@@ -914,7 +911,7 @@ class ConnectManagerImpl: ConnectManager()
                 getTimestampInMilliseconds(),
                 getCurrentUserState()
             )
-            handleRunReturn(messageAmount, mqttClient)
+            handleRunReturn(messageAmount)
         } catch (e: Exception) {
             notifyListeners {
                 onConnectManagerError(ConnectManagerError.MessageCountError)
@@ -1039,7 +1036,7 @@ class ConnectManagerImpl: ConnectManager()
                 getTimestampInMilliseconds(),
                 getCurrentUserState()
             )
-            handleRunReturn(pings, mqttClient)
+            handleRunReturn(pings)
         } catch (e: Exception) {
 //            notifyListeners {
 //                onConnectManagerError(ConnectManagerError.FetchPingsError)
@@ -1148,8 +1145,7 @@ class ConnectManagerImpl: ConnectManager()
             )
 
             handleRunReturn(
-                runReturn,
-                mqttClient
+                runReturn
             )
         } catch (e: Exception) {
             Log.e("MQTT_MESSAGES", "add contact excp $e")
@@ -1194,7 +1190,7 @@ class ConnectManagerImpl: ConnectManager()
                     tag
                 )
 
-                handleRunReturn(createInvite, mqttClient)
+                handleRunReturn(createInvite)
             }
         } catch (e: Exception) {
             notifyListeners {
@@ -1232,7 +1228,7 @@ class ConnectManagerImpl: ConnectManager()
                 contactPubKey,
                 messageIndex.toULong()
             )
-            handleRunReturn(readMessage, mqttClient)
+            handleRunReturn(readMessage)
         } catch (e: Exception) {
             notifyListeners {
                 onConnectManagerError(ConnectManagerError.ReadMessageError)
@@ -1248,7 +1244,7 @@ class ConnectManagerImpl: ConnectManager()
                 getTimestampInMilliseconds(),
                 getCurrentUserState()
             )
-            handleRunReturn(readMessages, mqttClient)
+            handleRunReturn(readMessages)
         } catch (e: Exception) {
             notifyListeners {
                 onConnectManagerError(ConnectManagerError.GetReadMessagesError)
@@ -1266,7 +1262,7 @@ class ConnectManagerImpl: ConnectManager()
                 contactPubKey,
                 muteLevel.toUByte()
             )
-            handleRunReturn(mute, mqttClient)
+            handleRunReturn(mute)
         } catch (e: Exception) {
             notifyListeners {
                 onConnectManagerError(ConnectManagerError.SetMuteError)
@@ -1281,7 +1277,7 @@ class ConnectManagerImpl: ConnectManager()
                 getTimestampInMilliseconds(),
                 getCurrentUserState()
             )
-            handleRunReturn(mutedChats, mqttClient)
+            handleRunReturn(mutedChats)
         } catch (e: Exception) {
             Log.e("MQTT_MESSAGES", "getMutedChats ${e.message}")
         }
@@ -1292,7 +1288,7 @@ class ConnectManagerImpl: ConnectManager()
             val addNodes = addNode(
                 nodesJson
             )
-            handleRunReturn(addNodes, mqttClient)
+            handleRunReturn(addNodes)
         } catch (e: Exception) {
 //            notifyListeners {
 //                onConnectManagerError(ConnectManagerError.AddNodesError)
@@ -1313,7 +1309,7 @@ class ConnectManagerImpl: ConnectManager()
                 routerPubKey,
                 amount.toULong()
             )
-            handleRunReturn(concatNodes, mqttClient)
+            handleRunReturn(concatNodes)
         } catch (e: Exception) {
             notifyListeners {
                 onConnectManagerError(ConnectManagerError.ConcatNodesError)
@@ -1335,7 +1331,7 @@ class ConnectManagerImpl: ConnectManager()
                 MSG_BATCH_LIMIT.toUInt(),
                 reverse
             )
-            handleRunReturn(fetchMessages, mqttClient)
+            handleRunReturn(fetchMessages)
 
         } catch (e: Exception) {
 //            notifyListeners {
@@ -1367,7 +1363,6 @@ class ConnectManagerImpl: ConnectManager()
                 mqttClient?.let { client ->
                     handleRunReturn(
                         runReturn,
-                        client,
                         topic = topic
                     )
                 }
@@ -1413,7 +1408,7 @@ class ConnectManagerImpl: ConnectManager()
                 convertSatsToMillisats(nnAmount),
                 isTribe
             )
-            handleRunReturn(message, mqttClient)
+            handleRunReturn(message)
 
             message.msgs.firstOrNull()?.let { sentMessage ->
                 sentMessage.uuid?.let { msgUuid ->
@@ -1454,7 +1449,7 @@ class ConnectManagerImpl: ConnectManager()
                 convertSatsToMillisats(nnAmount),
                 isTribe
             )
-            handleRunReturn(message, mqttClient)
+            handleRunReturn(message)
 
         } catch (e: Exception) {
             notifyListeners {
@@ -1473,7 +1468,7 @@ class ConnectManagerImpl: ConnectManager()
                 null,
                 messageIndexList.map { it.toULong() }
             )
-            handleRunReturn(deleteOkKeyMessages, mqttClient)
+            handleRunReturn(deleteOkKeyMessages)
         } catch (e: Exception) {
 //            notifyListeners {
 //                onConnectManagerError(ConnectManagerError.DeleteContactMessagesError)
@@ -1491,7 +1486,7 @@ class ConnectManagerImpl: ConnectManager()
                 contactPubKey,
                 null
             )
-            handleRunReturn(deletePubKeyMsgs, mqttClient)
+            handleRunReturn(deletePubKeyMsgs)
         }
         catch (e: Exception) {
             Log.e("MQTT_MESSAGES", "deletePubKeyMessages ${e.message}")
@@ -1507,7 +1502,7 @@ class ConnectManagerImpl: ConnectManager()
                 tags,
                 null
             )
-            handleRunReturn(messageStatus, mqttClient)
+            handleRunReturn(messageStatus)
         } catch (e: Exception) {
 //            notifyListeners {
 //                onConnectManagerError(ConnectManagerError.MessageStatusError)
@@ -1533,7 +1528,7 @@ class ConnectManagerImpl: ConnectManager()
                 )
             }
             if (createTribe != null) {
-                handleRunReturn(createTribe, mqttClient)
+                handleRunReturn(createTribe)
             }
         }
         catch (e: Exception) {
@@ -1566,7 +1561,7 @@ class ConnectManagerImpl: ConnectManager()
                 convertSatsToMillisats(amount),
                 isPrivate
             )
-            handleRunReturn(joinTribeMessage, mqttClient)
+            handleRunReturn(joinTribeMessage)
 
         } catch (e: Exception) {
             notifyListeners {
@@ -1587,7 +1582,7 @@ class ConnectManagerImpl: ConnectManager()
                 tribeServerPubKey,
                 tribePubKey
             )
-            handleRunReturn(tribeMembers, mqttClient)
+            handleRunReturn(tribeMembers)
         }
         catch (e: Exception) {
             notifyListeners {
@@ -1625,7 +1620,7 @@ class ConnectManagerImpl: ConnectManager()
                 )
             }
             if (updatedTribe != null) {
-                handleRunReturn(updatedTribe, mqttClient)
+                handleRunReturn(updatedTribe)
             }
         } catch (e:Exception) {
             Log.d("MQTT_MESSAGES", "editTribe ${e.message}")
@@ -1643,7 +1638,7 @@ class ConnectManagerImpl: ConnectManager()
                 convertSatsToMillisats(amount),
                 memo
             )
-            handleRunReturn(makeInvoice, mqttClient)
+            handleRunReturn(makeInvoice)
 
             val invoice = makeInvoice.invoice
 
@@ -1674,7 +1669,7 @@ class ConnectManagerImpl: ConnectManager()
                 null,
                 routeHint
             )
-            handleRunReturn(keySend, mqttClient)
+            handleRunReturn(keySend)
         } catch (e: Exception) {
             notifyListeners {
                 onConnectManagerError(ConnectManagerError.SendKeySendError)
@@ -1696,7 +1691,7 @@ class ConnectManagerImpl: ConnectManager()
                 ownerInfoStateFlow.value.picture ?: "",
                 false // not implemented on tribes yet
             )
-            handleRunReturn(processInvoice, mqttClient)
+            handleRunReturn(processInvoice)
         } catch (e: Exception) {
             notifyListeners {
                 onConnectManagerError(ConnectManagerError.PayContactInvoiceError)
@@ -1717,7 +1712,7 @@ class ConnectManagerImpl: ConnectManager()
                 paymentRequest,
                 milliSatAmount.toULong()
             )
-            handleRunReturn(invoice, mqttClient)
+            handleRunReturn(invoice)
         } catch (e: Exception) {
             notifyListeners {
                 onConnectManagerError(ConnectManagerError.PayInvoiceError)
@@ -1759,7 +1754,7 @@ class ConnectManagerImpl: ConnectManager()
                 minMsat?.toULong(),
                 true
             )
-            handleRunReturn(payments, mqttClient)
+            handleRunReturn(payments)
         } catch (e: Exception) {
             notifyListeners {
                 onConnectManagerError(ConnectManagerError.LoadTransactionsError)
@@ -1964,7 +1959,6 @@ class ConnectManagerImpl: ConnectManager()
                     rrObject?.let { rr ->
                         handleRunReturn(
                             rr,
-                            mqttClient,
                             true
                         )
                     }
@@ -2156,7 +2150,7 @@ class ConnectManagerImpl: ConnectManager()
                             getCurrentUserState(),
                             timestamp.toULong()
                         )
-                        handleRunReturn(pingDone, mqttClient)
+                        handleRunReturn(pingDone)
                         removeFromPingsMapWith(paymentHash)
                     } catch (e: Exception) {
                         Log.d("MQTT_MESSAGES", "Error calling ping done")
@@ -2179,7 +2173,7 @@ class ConnectManagerImpl: ConnectManager()
                                 getCurrentUserState(),
                                 timestamp.toULong()
                             )
-                            handleRunReturn(pingDone, mqttClient)
+                            handleRunReturn(pingDone)
                             removeFromPingsMapWith(tag)
                         } catch (e: Exception) {
                             Log.d("MQTT_MESSAGES", "Error calling ping done")

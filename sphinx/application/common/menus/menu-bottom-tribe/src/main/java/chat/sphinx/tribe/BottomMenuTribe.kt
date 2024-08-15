@@ -8,6 +8,7 @@ import chat.sphinx.menu_bottom_tribe.R
 import chat.sphinx.resources.getString
 import chat.sphinx.wrapper_chat.Chat
 import chat.sphinx.wrapper_chat.isTribeOwnedByAccount
+import chat.sphinx.wrapper_chat.isTrue
 import chat.sphinx.wrapper_contact.Contact
 import io.matthewnelson.android_feature_viewmodel.util.OnStopSupervisor
 
@@ -27,8 +28,9 @@ class BottomMenuTribe(
         lifecycleOwner: LifecycleOwner
     ) {
         val menuBottomOptions = ArrayList<MenuBottomOption>()
+        val isTribeOwnedByAccount = chat.isTribeOwnedByAccount(accountOwner.nodePubKey)
 
-        if (chat.isTribeOwnedByAccount(accountOwner.nodePubKey)) {
+        if (isTribeOwnedByAccount || !chat.privateTribe.isTrue()) {
             menuBottomOptions.add(
                 MenuBottomOption(
                     text = R.string.bottom_menu_tribe_option_share_tribe,
@@ -38,6 +40,8 @@ class BottomMenuTribe(
                     }
                 )
             )
+        }
+        if (isTribeOwnedByAccount) {
 
             menuBottomOptions.add(
                 MenuBottomOption(

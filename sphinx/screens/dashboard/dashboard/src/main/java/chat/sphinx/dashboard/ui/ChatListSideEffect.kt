@@ -12,7 +12,7 @@ sealed class ChatListSideEffect: SideEffect<Context>() {
 
     class Notify(
         private val msg: String,
-        private val notificationLengthLong: Boolean = false
+        private val notificationLengthLong: Boolean = true
     ): ChatListSideEffect() {
         override suspend fun execute(value: Context) {
             SphinxToastUtils(toastLengthLong = notificationLengthLong).show(value, msg)

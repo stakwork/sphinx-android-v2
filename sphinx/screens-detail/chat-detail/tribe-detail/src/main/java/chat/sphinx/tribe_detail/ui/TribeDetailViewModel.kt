@@ -23,6 +23,7 @@ import chat.sphinx.tribe_detail.R
 import chat.sphinx.tribe_detail.navigation.TribeDetailNavigator
 import chat.sphinx.wrapper_chat.Chat
 import chat.sphinx.wrapper_chat.isTribeOwnedByAccount
+import chat.sphinx.wrapper_chat.isTrue
 import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_contact.Contact
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -274,7 +275,7 @@ internal class TribeDetailViewModel @Inject constructor(
     override fun shareTribe() {
         viewModelScope.launch(mainImmediate) {
             val chat = getChat()
-            if (chat.isTribeOwnedByAccount(getOwner().nodePubKey)) {
+            if (chat.isTribeOwnedByAccount(getOwner().nodePubKey) || !chat.privateTribe.isTrue()) {
                 val shareTribeURL = "sphinx.chat://?action=tribeV2&pubkey=${chat.uuid.value}&host=${tribeDefaultServerUrl}"
                 navigator.toShareTribeScreen(shareTribeURL, app.getString(R.string.qr_code_title))
             }

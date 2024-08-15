@@ -8,7 +8,7 @@ sealed class ConnectManagerError {
     object SubscribeOwnerError: ConnectManagerError()
     data class MqttConnectError(val error: String?): ConnectManagerError()
     object MqttClientError: ConnectManagerError()
-    object MqttInitError: ConnectManagerError()
+    data class MqttInitError(val logs: String) : ConnectManagerError()
     object SendMessageError: ConnectManagerError()
     object DeleteMessageError: ConnectManagerError()
     object JoinTribeError: ConnectManagerError()

@@ -307,7 +307,6 @@ internal class DashboardViewModel @Inject constructor(
                         submitSideEffect(ChatListSideEffect.Notify(
                             String.format(app.getString(R.string.connect_manager_mqtt_connect_error), connectManagerError.error))
                         )
-
                     }
                     is ConnectManagerError.MqttClientError -> {
                         submitSideEffect(ChatListSideEffect.Notify(
@@ -316,7 +315,8 @@ internal class DashboardViewModel @Inject constructor(
                     }
                     is ConnectManagerError.MqttInitError -> {
                         submitSideEffect(ChatListSideEffect.Notify(
-                            app.getString(R.string.connect_manager_mqtt_init_error))
+                            String.format(
+                            app.getString(R.string.connect_manager_mqtt_init_error), connectManagerError.logs))
                         )
                     }
                     is ConnectManagerError.JoinTribeError -> {

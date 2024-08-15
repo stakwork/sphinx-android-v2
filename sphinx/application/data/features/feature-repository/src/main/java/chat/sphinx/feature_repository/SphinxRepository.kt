@@ -275,12 +275,27 @@ abstract class SphinxRepository(
         applicationScope.launch(mainImmediate) {
             val queries = coreDB.getSphinxDatabaseQueries()
             val mnemonic = walletDataHandler.retrieveWalletMnemonic()
-            val okKey = accountOwner.value?.nodePubKey?.value
+            var owner: Contact? = accountOwner.value
+
+            if (owner == null) {
+                try {
+                    accountOwner.collect { contact ->
+                        if (contact != null) {
+                            owner = contact
+                            throw Exception()
+                        }
+                    }
+                } catch (e: Exception) {
+                }
+                delay(25L)
+            }
+
+            val okKey = owner?.nodePubKey?.value
             val lastMessageIndex = queries.messageGetMaxId().executeAsOneOrNull()?.MAX
 
             val ownerInfo = OwnerInfo(
-                accountOwner.value?.alias?.value ?: "",
-                accountOwner.value?.photoUrl?.value ?: "",
+                owner?.alias?.value ?: "",
+                owner?.photoUrl?.value ?: "",
                 userState,
                 lastMessageIndex
             )
@@ -292,7 +307,13 @@ abstract class SphinxRepository(
                     ownerInfo
                 )
             } else {
-                connectManagerErrorState.value = ConnectManagerError.MqttInitError
+                val logMixerIp = !mixerIp.isNullOrEmpty()
+                val logMnemonic = !mnemonic?.value.isNullOrEmpty()
+                val logOkKey = !okKey.isNullOrEmpty()
+
+                connectManagerErrorState.value = ConnectManagerError.MqttInitError(
+                    "mixerIp: $logMixerIp mnemonic: $logMnemonic okKey: $logOkKey"
+                )
             }
         }
     }
@@ -1627,8 +1648,8 @@ abstract class SphinxRepository(
                                 host = contactInfo.host?.toChatHost(),
                                 pricePerMessage = loadResponse.value.price_per_message.toSat(),
                                 escrowAmount = loadResponse.value.escrow_amount.toSat(),
-                                unlisted = ChatUnlisted.False,
-                                privateTribe = ChatPrivate.False,
+                                unlisted = loadResponse.value.unlisted?.toChatUnlisted() ?: ChatUnlisted.False,
+                                privateTribe = loadResponse.value.private.toChatPrivate(),
                                 ownerPubKey = if (isAdmin) accountOwner.value?.nodePubKey else LightningNodePubKey(contactInfo.pubkey),
                                 seen = Seen.False,
                                 metaData = null,

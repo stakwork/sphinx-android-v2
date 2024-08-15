@@ -233,7 +233,7 @@ class ChatTribeViewModel @Inject constructor(
             )
 
     internal val moreOptionsMenuStateFlow: MutableStateFlow<MoreMenuOptionsViewState> by lazy {
-        MutableStateFlow(MoreMenuOptionsViewState.OwnTribe)
+        MutableStateFlow(MoreMenuOptionsViewState.ShareTribeLinkAvailable)
     }
 
     override suspend fun getChatInfo(): Triple<ChatName?, PhotoUrl?, String>? {
@@ -291,10 +291,10 @@ class ChatTribeViewModel @Inject constructor(
         viewModelScope.launch(mainImmediate) {
             chatRepository.getChatById(chatId).firstOrNull()?.let { chat ->
                 moreOptionsMenuStateFlow.value =
-                    if (chat.isTribeOwnedByAccount(getOwner().nodePubKey)) {
-                        MoreMenuOptionsViewState.OwnTribe
+                    if (chat.isTribeOwnedByAccount(getOwner().nodePubKey) || !chat.privateTribe.isTrue()) {
+                        MoreMenuOptionsViewState.ShareTribeLinkAvailable
                     } else {
-                        MoreMenuOptionsViewState.NotOwnTribe
+                        MoreMenuOptionsViewState.ShareTribeLinkDisable
                     }
 
                 chatRepository.updateTribeInfo(chat, isProductionEnvironment)?.let { tribeData ->

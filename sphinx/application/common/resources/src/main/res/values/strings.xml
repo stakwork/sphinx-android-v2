@@ -295,7 +295,7 @@
     <string name="connect_manager_mqtt_connect_error">Error connecting to MQTT server. Cause: %s .</string>
     <string name="connect_manager_subscribe_owner_error">Error subscribing to owner topic.</string>
     <string name="connect_manager_mqtt_client_error">Error with MQTT client.</string>
-    <string name="connect_manager_mqtt_init_error">Error during MQTT initialization.</string>
+    <string name="connect_manager_mqtt_init_error">Error: %s</string>
     <string name="connect_manager_send_message_error">Error sending message.</string>
     <string name="connect_manager_delete_message_error">Error deleting message.</string>
     <string name="connect_manager_join_tribe_error">Error joining tribe.</string>

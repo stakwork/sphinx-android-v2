@@ -14,6 +14,7 @@ sealed class ConnectManagerError {
     object JoinTribeError: ConnectManagerError()
     object CreateTribeError: ConnectManagerError()
     object CreateInviteError: ConnectManagerError()
+    object DeleteInviteError: ConnectManagerError()
     object ConcatNodesError: ConnectManagerError()
     object CreateInvoiceError: ConnectManagerError()
     object ServerPubKeyError: ConnectManagerError()

@@ -115,6 +115,31 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent">
 
+                    <androidx.constraintlayout.widget.ConstraintLayout
+                        android:id="@+id/layout_constraint_dashboard_chat_holder_invite"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:visibility="gone"
+                        android:layout_marginStart="@dimen/default_layout_margin"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        tools:visibility="visible">
+
+                        <androidx.appcompat.widget.AppCompatImageView
+                            android:id="@+id/image_view_dashboard_chat_holder_picture"
+                            android:layout_width="@dimen/default_invite_qr_image_xy"
+                            android:layout_height="@dimen/default_invite_qr_image_xy"
+                            android:layout_centerInParent="true"
+                            android:src="@drawable/ic_invite_qr_code"
+                            android:tint="@color/textMessages"
+                            app:layout_constraintBottom_toBottomOf="parent"
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintTop_toTopOf="parent" />
+
+                    </androidx.constraintlayout.widget.ConstraintLayout>
+
                     <include
                         android:id="@+id/layout_address_book_initial_holder"
                         layout="@layout/layout_chat_image_initial_holder"
@@ -124,6 +149,7 @@
                         app:layout_constraintBottom_toBottomOf="parent"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toTopOf="parent" />
+
 
                     <androidx.constraintlayout.widget.ConstraintLayout
                         android:id="@+id/layout_constraint_address_book_holder_content"

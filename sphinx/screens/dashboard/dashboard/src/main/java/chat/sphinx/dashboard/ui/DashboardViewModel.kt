@@ -334,6 +334,11 @@ internal class DashboardViewModel @Inject constructor(
                             app.getString(R.string.connect_manager_create_invite_error))
                         )
                     }
+                    is ConnectManagerError.DeleteInviteError -> {
+                        submitSideEffect(ChatListSideEffect.Notify(
+                            app.getString(R.string.connect_manager_delete_invite_error))
+                        )
+                    }
                     is ConnectManagerError.ConcatNodesError -> {
                         submitSideEffect(ChatListSideEffect.Notify(
                             app.getString(R.string.connect_manager_concat_nodes_error))

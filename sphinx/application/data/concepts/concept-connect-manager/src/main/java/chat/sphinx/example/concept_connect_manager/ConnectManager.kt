@@ -54,6 +54,8 @@ abstract class ConnectManager {
         tribeServerIp: String?,
         mixerIp: String?,
     )
+
+    abstract fun deleteInvite(inviteString: String)
     abstract fun deleteContact(pubKey: String)
     abstract fun setReadMessage(contactPubKey: String, messageIndex: Long)
     abstract fun getReadMessages()

@@ -11,6 +11,7 @@ import chat.sphinx.wrapper_common.lightning.LightningRouteHint
 import chat.sphinx.wrapper_common.lightning.Sat
 import chat.sphinx.wrapper_contact.*
 import chat.sphinx.wrapper_invite.Invite
+import chat.sphinx.wrapper_invite.InviteString
 import chat.sphinx.wrapper_io_utils.InputStreamProvider
 import chat.sphinx.wrapper_message_media.MediaType
 import io.matthewnelson.crypto_common.clazzes.Password
@@ -33,6 +34,7 @@ interface ContactRepository {
     // Need to review DB upsert when setting invites on upsertNewContact query
     fun getInviteByContactId(contactId: ContactId): Flow<Invite?>
     fun getInviteById(inviteId: InviteId): Flow<Invite?>
+    fun getInviteByString(inviteString: InviteString): Flow<Invite?>
 
     var updatedContactIds: MutableList<ContactId>
 

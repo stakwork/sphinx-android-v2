@@ -24,7 +24,11 @@ import chat.sphinx.wrapper_common.util.getInitials
 import chat.sphinx.wrapper_contact.Contact
 import chat.sphinx.wrapper_contact.getColorKey
 import chat.sphinx.wrapper_contact.isBlocked
+import chat.sphinx.wrapper_contact.isInviteContact
+import io.matthewnelson.android_feature_screens.util.gone
 import io.matthewnelson.android_feature_screens.util.goneIfFalse
+import io.matthewnelson.android_feature_screens.util.invisible
+import io.matthewnelson.android_feature_screens.util.visible
 import io.matthewnelson.android_feature_viewmodel.collectViewState
 import io.matthewnelson.android_feature_viewmodel.currentViewState
 import io.matthewnelson.android_feature_viewmodel.util.OnStopSupervisor
@@ -259,6 +263,16 @@ internal class AddressBookListAdapter(
                         R.string.block_contact
                     }
                 )
+
+                //Invite
+
+                if (addressBookContact.isInviteContact()) {
+                    layoutConstraintDashboardChatHolderInvite.visible
+                    layoutAddressBookInitialHolder.root.invisible
+                } else {
+                    layoutConstraintDashboardChatHolderInvite.gone
+                    layoutAddressBookInitialHolder.root.visible
+                }
             }
         }
     }

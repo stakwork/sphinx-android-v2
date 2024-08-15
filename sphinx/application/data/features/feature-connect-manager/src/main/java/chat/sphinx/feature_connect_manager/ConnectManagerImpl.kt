@@ -1208,7 +1208,7 @@ class ConnectManagerImpl: ConnectManager()
                 getCurrentUserState(),
                 inviteString
             )
-            handleRunReturn(cancelInvite, mqttClient)
+            handleRunReturn(cancelInvite)
         } catch (e: Exception) { }
     }
 

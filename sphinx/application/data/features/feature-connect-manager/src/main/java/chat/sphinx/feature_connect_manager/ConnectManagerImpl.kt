@@ -372,9 +372,12 @@ class ConnectManagerImpl: ConnectManager()
                         if (restoreStateFlow.value is RestoreState.RestoringMessages) {
                             notifyListeners { onRestoreProgress(restoreProgress.fixedContactPercentage + restoreProgress.fixedMessagesPercentage) }
                             _restoreStateFlow.value = RestoreState.RestoreFinished
+                            notifyListeners { onRestoreFinished() }
                         }
 
-                        getReadMessages()
+                        if (restoreStateFlow.value == null) {
+                            getReadMessages()
+                        }
                         getMutedChats()
                         getPings()
                     }
@@ -419,6 +422,10 @@ class ConnectManagerImpl: ConnectManager()
                             minIndex?.let { nnMinIndex ->
                                 calculateMessageRestore()
                                 fetchMessagesOnRestoreAccount(nnMinIndex.minus(1u).toLong())
+
+                                notifyListeners {
+                                    onRestoreMinIndex(nnMinIndex.toLong())
+                                }
                             }
                             Log.d("RESTORE_PROCESS", "=> RestoreMessages Step $minIndex")
                         }

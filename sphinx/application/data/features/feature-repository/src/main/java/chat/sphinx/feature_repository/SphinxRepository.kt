@@ -266,6 +266,10 @@ abstract class SphinxRepository(
         MutableStateFlow(null)
     }
 
+    override val restoreMinIndex: MutableStateFlow<Long?> by lazy {
+        MutableStateFlow(null)
+    }
+
     init {
         connectManager.addListener(this)
         memeServerTokenHandler.addListener(this)
@@ -1024,6 +1028,20 @@ abstract class SphinxRepository(
         restoreProgress.value = progress
     }
 
+    override fun onRestoreFinished() {
+        val messageId = restoreMinIndex.value?.let { MessageId(it) }
+        if (messageId != null) {
+            applicationScope.launch(io) {
+                getMessageById(messageId).collect { message ->
+                    if (message != null) {
+                        connectManager.getReadMessages()
+                        restoreMinIndex.value = null
+                    }
+                }
+            }
+        }
+    }
+
     // Messaging Callbacks
     override fun onMessage(
         msg: String,
@@ -1207,6 +1225,10 @@ abstract class SphinxRepository(
                 }
             }
         }
+    }
+
+    override fun onRestoreMinIndex(minIndex: Long) {
+        restoreMinIndex.value = minIndex
     }
 
     // Tribe Management Callbacks

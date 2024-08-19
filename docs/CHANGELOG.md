@@ -1,5 +1,13 @@
 # ChangeLog
 
+## Version 1.0.0-alpha13 (2021-08-19)
+- Fixes read state issues
+
+## Version 1.0.0-alpha12 (2021-08-15)
+- Fixes reconnection issues
+- Adds ability to cancel invite
+- Adds ability to share tribe join link
+
 ## Version 1.0.0-alpha11 (2021-08-13)
 - Fixes reconnection issues
 

@@ -40,6 +40,7 @@ import chat.sphinx.wrapper_common.PhotoUrl
 import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_common.dashboard.ContactId
 import chat.sphinx.wrapper_common.feed.FeedType
+import chat.sphinx.wrapper_common.feed.toFeedType
 import chat.sphinx.wrapper_common.feed.toFeedUrl
 import chat.sphinx.wrapper_common.lightning.Sat
 import chat.sphinx.wrapper_common.message.MessageUUID
@@ -307,7 +308,7 @@ class ChatTribeViewModel @Inject constructor(
                             chat.host ?: return@let,
                             tribeData.feed_url?.toFeedUrl(),
                             chat.uuid,
-                            FeedType.Unknown(-1),
+                            tribeData.feed_type?.toFeedType() ?: FeedType.Podcast,
                             tribeData.app_url?.toAppUrl(),
                             arrayOf() // needs to be fill
                         )

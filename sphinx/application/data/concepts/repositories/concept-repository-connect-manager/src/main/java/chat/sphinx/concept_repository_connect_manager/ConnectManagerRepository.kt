@@ -32,6 +32,7 @@ interface ConnectManagerRepository {
     val restoreProgress: MutableStateFlow<Int?>
     val webViewPaymentHash: MutableStateFlow<String?>
     val webViewPreImage: MutableStateFlow<String?>
+    val restoreMinIndex: MutableStateFlow<Long?>
 
     fun connectAndSubscribeToMqtt(userState: String?, mixerIp: String?) {}
     fun createOwnerAccount()

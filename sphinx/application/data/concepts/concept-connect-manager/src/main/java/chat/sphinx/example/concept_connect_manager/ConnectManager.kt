@@ -187,6 +187,7 @@ interface ConnectManagerListener {
     fun onGetNodes()
     fun onConnectManagerError(error: ConnectManagerError)
     fun onRestoreProgress(progress: Int)
+    fun onRestoreFinished()
 
     // Messaging Callbacks
     fun onMessage(
@@ -205,6 +206,8 @@ interface ConnectManagerListener {
     fun onMessagesCounts(msgsCounts: String)
     fun onSentStatus(sentStatus: String)
     fun onMessageTagList(tags: String)
+
+    fun onRestoreMinIndex(minIndex: Long)
 
     // Tribe Management Callbacks
     fun onNewTribeCreated(newTribe: String)

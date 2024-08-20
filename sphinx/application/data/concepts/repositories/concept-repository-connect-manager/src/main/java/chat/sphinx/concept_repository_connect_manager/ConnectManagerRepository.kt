@@ -7,7 +7,9 @@ import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
 import chat.sphinx.example.wrapper_mqtt.TransactionDto
 import chat.sphinx.example.wrapper_mqtt.TribeMembersResponse
 import chat.sphinx.wrapper_common.dashboard.ChatId
+import chat.sphinx.wrapper_common.lightning.LightningNodePubKey
 import chat.sphinx.wrapper_common.lightning.LightningPaymentRequest
+import chat.sphinx.wrapper_common.lightning.LightningRouteHint
 import chat.sphinx.wrapper_contact.NewContact
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -88,6 +90,14 @@ interface ConnectManagerRepository {
         routerPubKey: String?,
         routeHint: String?
     )
+
+    suspend fun sendKeySendWithRouting(
+        pubKey: LightningNodePubKey,
+        routeHint: LightningRouteHint?,
+        milliSatAmount: Long,
+        routerUrl: String?,
+        routerPubKey: String?
+    ): Boolean
 
     fun clearWebViewPreImage()
 

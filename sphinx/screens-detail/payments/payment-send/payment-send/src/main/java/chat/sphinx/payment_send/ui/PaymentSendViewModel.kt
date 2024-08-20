@@ -133,8 +133,7 @@ internal class PaymentSendViewModel @Inject constructor(
                             pubKey
                         ).firstOrNull()
                         val contactLspPubKey = contact?.routeHint?.getLspPubKey()
-                        val ownerLsp =
-                            contactRepository.accountOwner.value?.routeHint?.getLspPubKey()
+                        val ownerLsp = contactRepository.accountOwner.value?.routeHint?.getLspPubKey()
 
                         if (contact == null || (contactLspPubKey != null && contactLspPubKey != ownerLsp)) {
                             sendKeySend(pubKey, routeHint)
@@ -189,61 +188,25 @@ internal class PaymentSendViewModel @Inject constructor(
                 lightningNodePubKey?.value ?: ""
             ) {
                 viewModelScope.launch {
-                    val payeeLspPubKey = routeHint?.getLspPubKey()
-                    val ownerLspPubKey = contactRepository.accountOwner.value?.routeHint?.getLspPubKey()
+                    val routerUrl = serverSettingsSharedPreferences.getString(ROUTER_URL, null)
+                    val routerPubKey = serverSettingsSharedPreferences.getString(ROUTER_PUBKEY, null)
 
-                    if (payeeLspPubKey == ownerLspPubKey) {
-                        connectManagerRepository.sendKeySend(
-                            pubKey.value,
-                            null,
-                            sendPaymentBuilder.paymentAmount,
-                            null,
-                            routeHint?.value
-                        )
+                    val success = connectManagerRepository.sendKeySendWithRouting(
+                        pubKey = pubKey,
+                        routeHint = routeHint,
+                        milliSatAmount = sendPaymentBuilder.paymentAmount,
+                        routerUrl = routerUrl,
+                        routerPubKey = routerPubKey
+                    )
+
+                    if (success) {
                         navigator.closeDetailScreen()
                     } else {
-                        val routerUrl = serverSettingsSharedPreferences.getString(ROUTER_URL, null)
-                        if (routerUrl != null) {
-                            networkQueryContact.getRoutingNodes(
-                                routerUrl,
-                                pubKey,
-                                convertToMilliSat(sendPaymentBuilder.paymentAmount)
-                            ).collect { response ->
-                                when (response) {
-                                    is LoadResponse.Loading -> {}
-                                    is Response.Error -> {
-                                        submitSideEffect(
-                                            PaymentSideEffect.Notify(
-                                                app.getString(R.string.error_payment_empty_router)
-                                            )
-                                        )
-                                    }
-                                    is Response.Success -> {
-                                        val routerPubKey = serverSettingsSharedPreferences
-                                            .getString(ROUTER_PUBKEY, null)
-
-                                        if (isJsonResponseEmpty(response.value)) {
-                                            connectManagerRepository.sendKeySend(
-                                                pubKey.value,
-                                                null,
-                                                sendPaymentBuilder.paymentAmount,
-                                                null,
-                                                routeHint?.value
-                                            )
-                                        } else {
-                                            connectManagerRepository.sendKeySend(
-                                                pubKey.value,
-                                                response.value,
-                                                sendPaymentBuilder.paymentAmount,
-                                                routerPubKey,
-                                                routeHint?.value
-                                            )
-                                        }
-                                        navigator.closeDetailScreen()
-                                    }
-                                }
-                            }
-                        }
+                        submitSideEffect(
+                            PaymentSideEffect.Notify(
+                                app.getString(R.string.error_payment_empty_router)
+                            )
+                        )
                     }
                 }
             }

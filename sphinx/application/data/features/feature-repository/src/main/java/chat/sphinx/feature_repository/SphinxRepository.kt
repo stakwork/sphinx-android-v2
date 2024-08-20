@@ -105,6 +105,7 @@ import chat.sphinx.wrapper_common.lightning.LightningPaymentRequest
 import chat.sphinx.wrapper_common.lightning.LightningRouteHint
 import chat.sphinx.wrapper_common.lightning.Sat
 import chat.sphinx.wrapper_common.lightning.ServerIp
+import chat.sphinx.wrapper_common.lightning.getLspPubKey
 import chat.sphinx.wrapper_common.lightning.getScid
 import chat.sphinx.wrapper_common.lightning.milliSatsToSats
 import chat.sphinx.wrapper_common.lightning.toLightningNodePubKey
@@ -4556,6 +4557,85 @@ abstract class SphinxRepository(
             milliSatAmount,
             routeHint
         )
+    }
+
+    override suspend fun sendKeySendWithRouting(
+        pubKey: LightningNodePubKey,
+        routeHint: LightningRouteHint?,
+        milliSatAmount: Long,
+        routerUrl: String?,
+        routerPubKey: String?
+    ): Boolean {
+        var owner: Contact? = accountOwner.value
+
+        if (owner == null) {
+            try {
+                accountOwner.collect {
+                    if (it != null) {
+                        owner = it
+                        throw Exception()
+                    }
+                }
+            } catch (e: Exception) {
+            }
+            delay(25L)
+        }
+        val payeeLspPubKey = routeHint?.getLspPubKey()
+        val ownerLspPubKey = owner?.routeHint?.getLspPubKey()
+
+        return if (payeeLspPubKey == ownerLspPubKey) {
+            sendKeySend(
+                pubKey.value,
+                null,
+                milliSatAmount,
+                null,
+                routeHint?.value
+            )
+            true
+        } else {
+            if (routerUrl != null) {
+                var success = false
+                networkQueryContact.getRoutingNodes(
+                    routerUrl,
+                    pubKey,
+                    milliSatAmount
+                ).collect { response ->
+                    when (response) {
+                        is LoadResponse.Loading -> {}
+                        is Response.Error -> {
+                            success = false
+                        }
+                        is Response.Success -> {
+                            if (isJsonResponseEmpty(response.value)) {
+                                sendKeySend(
+                                    pubKey.value,
+                                    null,
+                                    milliSatAmount,
+                                    null,
+                                    routeHint?.value
+                                )
+                            } else {
+                                sendKeySend(
+                                    pubKey.value,
+                                    response.value,
+                                    milliSatAmount,
+                                    routerPubKey,
+                                    routeHint?.value
+                                )
+                            }
+                            success = true
+                        }
+                    }
+                }
+                success
+            } else {
+                false
+            }
+        }
+    }
+
+    private fun isJsonResponseEmpty(json: String?): Boolean {
+        return json.isNullOrEmpty()
     }
 
     override fun clearWebViewPreImage() {

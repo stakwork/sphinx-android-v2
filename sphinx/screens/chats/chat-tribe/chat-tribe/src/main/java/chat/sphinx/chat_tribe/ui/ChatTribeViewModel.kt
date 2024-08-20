@@ -116,6 +116,8 @@ class ChatTribeViewModel @Inject constructor(
         private const val TRIBE_SERVER_IP = "tribe_server_ip"
         const val SERVER_SETTINGS_SHARED_PREFERENCES = "server_ip_settings"
         const val ENVIRONMENT_TYPE = "environment_type"
+        const val ROUTER_URL= "router_url"
+        const val ROUTER_PUBKEY= "router_pubkey"
     }
 
     override val args: ChatTribeFragmentArgs by savedStateHandle.navArgs()
@@ -125,6 +127,7 @@ class ChatTribeViewModel @Inject constructor(
         SERVER_SETTINGS_SHARED_PREFERENCES,
         Context.MODE_PRIVATE
     )
+
 
     private val tribeDefaultServerUrl = serverSettingsSharedPreferences.getString(TRIBE_SERVER_IP, null)
     private val isProductionEnvironment = serverSettingsSharedPreferences.getBoolean(ENVIRONMENT_TYPE, true)
@@ -243,6 +246,10 @@ class ChatTribeViewModel @Inject constructor(
 
     override suspend fun shouldStreamSatsFor(podcastClip: PodcastClip, messageUUID: MessageUUID?) {
         getPodcast()?.let { podcast ->
+
+            val routerUrl = serverSettingsSharedPreferences.getString(ROUTER_URL, null)
+            val routerPubKey = serverSettingsSharedPreferences.getString(ROUTER_PUBKEY, null)
+
             feedRepository.streamFeedPayments(
                 chatId,
                 podcastClip.feedID.value,
@@ -251,7 +258,9 @@ class ChatTribeViewModel @Inject constructor(
                 getChat()?.metaData?.satsPerMinute ?: Sat(podcast.satsPerMinute),
                 FeedPlayerSpeed(1.0),
                 podcast.getFeedDestinations(podcastClip.pubkey),
-                messageUUID
+                messageUUID,
+                routerUrl = routerUrl,
+                routerPubKey = routerPubKey
             )
         }
     }

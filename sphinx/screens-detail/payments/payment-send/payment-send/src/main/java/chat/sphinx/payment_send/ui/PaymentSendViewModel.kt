@@ -13,8 +13,6 @@ import chat.sphinx.concept_repository_lightning.LightningRepository
 import chat.sphinx.concept_repository_message.MessageRepository
 import chat.sphinx.concept_repository_message.model.SendPayment
 import chat.sphinx.concept_view_model_coordinator.ViewModelCoordinator
-import chat.sphinx.kotlin_response.LoadResponse
-import chat.sphinx.kotlin_response.Response
 import chat.sphinx.payment_common.ui.PaymentSideEffect
 import chat.sphinx.payment_common.ui.PaymentViewModel
 import chat.sphinx.payment_common.ui.viewstate.AmountViewState
@@ -194,7 +192,7 @@ internal class PaymentSendViewModel @Inject constructor(
                     val success = connectManagerRepository.sendKeySendWithRouting(
                         pubKey = pubKey,
                         routeHint = routeHint,
-                        milliSatAmount = sendPaymentBuilder.paymentAmount,
+                        milliSatAmount = sendPaymentBuilder.paymentAmount.toMilliSat(),
                         routerUrl = routerUrl,
                         routerPubKey = routerPubKey
                     )

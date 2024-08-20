@@ -70,7 +70,9 @@ interface FeedRepository {
         amount: Sat?,
         playerSpeed: FeedPlayerSpeed?,
         destinations: List<FeedDestination>,
-        clipMessageUUID: MessageUUID? = null
+        clipMessageUUID: MessageUUID? = null,
+        routerUrl: String?,
+        routerPubKey: String?
     )
 
     fun updateContentFeedStatus(

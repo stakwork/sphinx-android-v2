@@ -118,7 +118,12 @@ abstract class ConnectManager {
         amount: Long,
         memo: String
     ): Pair<String, String>? // invoice, paymentHash
-    abstract fun sendKeySend(pubKey: String, amount: Long, routeHint: String?)
+    abstract fun sendKeySend(
+        pubKey: String,
+        amount: Long,
+        routeHint: String?,
+        data: String? = null
+    )
     abstract fun processContactInvoicePayment(paymentRequest: String)
     abstract fun processInvoicePayment(
         paymentRequest: String,

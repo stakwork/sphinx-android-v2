@@ -2,6 +2,7 @@ package chat.sphinx.feature_service_media_player_android.service
 
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.net.wifi.WifiManager
@@ -32,7 +33,6 @@ import chat.sphinx.wrapper_podcast.FeedRecommendation
 import io.matthewnelson.concept_foreground_state.ForegroundState
 import io.matthewnelson.concept_foreground_state.ForegroundStateManager
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.collect
 import java.util.*
 import kotlin.collections.ArrayList
 
@@ -40,6 +40,9 @@ internal abstract class MediaPlayerService: SphinxService() {
 
     companion object {
         const val TAG = "MediaPlayerService"
+        const val SERVER_SETTINGS_SHARED_PREFERENCES = "server_ip_settings"
+        const val ROUTER_URL= "router_url"
+        const val ROUTER_PUBKEY= "router_pubkey"
     }
 
     override val mustComplete: Boolean
@@ -56,6 +59,7 @@ internal abstract class MediaPlayerService: SphinxService() {
     protected abstract val feedRepository: FeedRepository
     protected abstract val actionsRepository: ActionsRepository
 
+
     @Suppress("DEPRECATION")
     private val wifiLock: WifiManager.WifiLock? by lazy {
         (getSystemService(Context.WIFI_SERVICE) as? WifiManager)
@@ -64,6 +68,10 @@ internal abstract class MediaPlayerService: SphinxService() {
 
     private val notification: MediaPlayerNotification by lazy {
         MediaPlayerNotification(this)
+    }
+
+    private val serverSettingsSharedPreferences: SharedPreferences by lazy {
+        serviceContext.getSharedPreferences(SERVER_SETTINGS_SHARED_PREFERENCES, Context.MODE_PRIVATE)
     }
 
     @Volatile
@@ -245,6 +253,9 @@ internal abstract class MediaPlayerService: SphinxService() {
                             nnData.setDestinations(userAction.destinations)
                         }
 
+                        val routerUrl = serverSettingsSharedPreferences.getString(ROUTER_URL, null)
+                        val routerPubKey = serverSettingsSharedPreferences.getString(ROUTER_PUBKEY, null)
+
                         feedRepository.streamFeedPayments(
                             userAction.chatId,
                             nnData.podcastId,
@@ -252,7 +263,9 @@ internal abstract class MediaPlayerService: SphinxService() {
                             userAction.contentEpisodeStatus.currentTime.value,
                             userAction.contentFeedStatus.satsPerMinute,
                             userAction.contentFeedStatus.playerSpeed,
-                            nnData.destinations
+                            nnData.destinations,
+                            routerPubKey = routerPubKey,
+                            routerUrl = routerUrl
                         )
                     }
                 }
@@ -580,6 +593,10 @@ internal abstract class MediaPlayerService: SphinxService() {
                         }
 
                         if (count >= 60.0 * speed) {
+
+                            val routerUrl = serverSettingsSharedPreferences.getString(ROUTER_URL, null)
+                            val routerPubKey = serverSettingsSharedPreferences.getString(ROUTER_PUBKEY, null)
+
                             feedRepository.streamFeedPayments(
                                 nnData.chatId,
                                 nnData.podcastId,
@@ -587,7 +604,9 @@ internal abstract class MediaPlayerService: SphinxService() {
                                 currentTimeSeconds.toLong(),
                                 nnData.satsPerMinute,
                                 speed.toFeedPlayerSpeed(),
-                                nnData.destinations
+                                nnData.destinations,
+                                routerUrl = routerUrl,
+                                routerPubKey = routerPubKey
                             )
                             count = 0.0
                         } else {

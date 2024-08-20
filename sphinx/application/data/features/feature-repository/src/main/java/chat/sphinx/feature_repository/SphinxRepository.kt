@@ -103,6 +103,7 @@ import chat.sphinx.wrapper_common.lightning.LightningNodePubKey
 import chat.sphinx.wrapper_common.lightning.LightningPaymentHash
 import chat.sphinx.wrapper_common.lightning.LightningPaymentRequest
 import chat.sphinx.wrapper_common.lightning.LightningRouteHint
+import chat.sphinx.wrapper_common.lightning.MilliSat
 import chat.sphinx.wrapper_common.lightning.Sat
 import chat.sphinx.wrapper_common.lightning.ServerIp
 import chat.sphinx.wrapper_common.lightning.getLspPubKey
@@ -112,6 +113,7 @@ import chat.sphinx.wrapper_common.lightning.toLightningNodePubKey
 import chat.sphinx.wrapper_common.lightning.toLightningPaymentHash
 import chat.sphinx.wrapper_common.lightning.toLightningPaymentRequestOrNull
 import chat.sphinx.wrapper_common.lightning.toLightningRouteHint
+import chat.sphinx.wrapper_common.lightning.toMilliSat
 import chat.sphinx.wrapper_common.lightning.toSat
 import chat.sphinx.wrapper_common.lsat.Lsat
 import chat.sphinx.wrapper_common.lsat.LsatIdentifier
@@ -2052,49 +2054,39 @@ abstract class SphinxRepository(
         amount: Sat?,
         playerSpeed: FeedPlayerSpeed?,
         destinations: List<FeedDestination>,
-        clipMessageUUID: MessageUUID?
+        clipMessageUUID: MessageUUID?,
+        routerUrl: String?,
+        routerPubKey: String?
     ) {
-
         if ((amount?.value ?: 0) <= 0 || destinations.isEmpty()) {
             return
         }
 
         applicationScope.launch(io) {
-//            val destinationsArray: MutableList<PostStreamSatsDestinationDto> =
-//                ArrayList(destinations.size)
-
             val streamSatsText = StreamSatsText(
                 feedId,
                 feedItemId,
                 currentTime,
             ).toJson(moshi)
 
+            val totalSplit = destinations.sumOf { it.split.value }
 
             for (destination in destinations) {
-                val destinationAmount = (amount?.value?.toDouble()?.div(100) ?: 0.0) * destination.split.value
+                val destinationAmount = (amount?.value?.toDouble() ?: 0.0) * (destination.split.value / totalSplit)
 
-//                destinationsArray.add(
-//                    PostStreamSatsDestinationDto(
-//                        destination.address.value,
-//                        destination.type.value,
-//                        destination.split.value,
-//                    )
-//                )
+                destination.address.value.toLightningNodePubKey()?.let { pubKey ->
+                    sendKeySendWithRouting(
+                        pubKey,
+                        null,
+                        destinationAmount.toLong().toSat()?.toMilliSat(),
+                        routerUrl,
+                        routerPubKey,
+                        streamSatsText
+                    )
+                }
             }
-
-
-//            val postStreamSatsDto = PostStreamSatsDto(
-//                amount?.value ?: 0,
-//                chatId.value,
-//                streamSatsText.toJson(moshi),
-//                false,
-//                destinationsArray
-//            )
-
         }
-        // TODO V2 implement streamSats
     }
-
 
     ////////////////
     /// Contacts ///
@@ -4543,7 +4535,8 @@ abstract class SphinxRepository(
         endHops: String?,
         milliSatAmount: Long,
         routerPubKey: String?,
-        routeHint: String?
+        routeHint: String?,
+        data: String?
     ) {
         if (endHops?.isNotEmpty() == true && routerPubKey != null) {
             connectManager.concatNodesFromResponse(
@@ -4555,16 +4548,18 @@ abstract class SphinxRepository(
         connectManager.sendKeySend(
             pubKey,
             milliSatAmount,
-            routeHint
+            routeHint,
+            data
         )
     }
 
     override suspend fun sendKeySendWithRouting(
         pubKey: LightningNodePubKey,
         routeHint: LightningRouteHint?,
-        milliSatAmount: Long,
+        milliSatAmount: MilliSat?,
         routerUrl: String?,
-        routerPubKey: String?
+        routerPubKey: String?,
+        data: String?
     ): Boolean {
         var owner: Contact? = accountOwner.value
 
@@ -4587,9 +4582,10 @@ abstract class SphinxRepository(
             sendKeySend(
                 pubKey.value,
                 null,
-                milliSatAmount,
+                milliSatAmount?.value ?: 0,
                 null,
-                routeHint?.value
+                routeHint?.value,
+                data
             )
             true
         } else {
@@ -4598,7 +4594,7 @@ abstract class SphinxRepository(
                 networkQueryContact.getRoutingNodes(
                     routerUrl,
                     pubKey,
-                    milliSatAmount
+                    milliSatAmount?.value ?: 0
                 ).collect { response ->
                     when (response) {
                         is LoadResponse.Loading -> {}
@@ -4610,17 +4606,19 @@ abstract class SphinxRepository(
                                 sendKeySend(
                                     pubKey.value,
                                     null,
-                                    milliSatAmount,
+                                    milliSatAmount?.value ?: 0,
                                     null,
-                                    routeHint?.value
+                                    routeHint?.value,
+                                    data
                                 )
                             } else {
                                 sendKeySend(
                                     pubKey.value,
                                     response.value,
-                                    milliSatAmount,
+                                    milliSatAmount?.value ?: 0,
                                     routerPubKey,
-                                    routeHint?.value
+                                    routeHint?.value,
+                                    data
                                 )
                             }
                             success = true

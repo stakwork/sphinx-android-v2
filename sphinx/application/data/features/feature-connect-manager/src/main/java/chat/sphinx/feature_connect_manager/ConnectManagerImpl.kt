@@ -1663,7 +1663,7 @@ class ConnectManagerImpl: ConnectManager()
         return null
     }
 
-    override fun sendKeySend(pubKey: String, amount: Long, routeHint: String?) {
+    override fun sendKeySend(pubKey: String, amount: Long, routeHint: String?, data: String?) {
         val now = getTimestampInMilliseconds()
 
         try {
@@ -1673,7 +1673,7 @@ class ConnectManagerImpl: ConnectManager()
                 pubKey,
                 getCurrentUserState(),
                 convertSatsToMillisats(amount),
-                null,
+                data?.encodeToByteArray(),
                 routeHint
             )
             handleRunReturn(keySend)

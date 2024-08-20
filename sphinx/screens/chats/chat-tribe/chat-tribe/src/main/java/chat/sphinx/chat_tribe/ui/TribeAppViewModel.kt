@@ -35,6 +35,7 @@ import chat.sphinx.wrapper_common.lightning.Sat
 import chat.sphinx.wrapper_common.lightning.getLspPubKey
 import chat.sphinx.wrapper_common.lightning.toLightningNodePubKey
 import chat.sphinx.wrapper_common.lightning.toLightningPaymentRequestOrNull
+import chat.sphinx.wrapper_common.lightning.toMilliSat
 import chat.sphinx.wrapper_common.lightning.toSat
 import chat.sphinx.wrapper_common.lsat.Lsat
 import chat.sphinx.wrapper_common.lsat.LsatStatus
@@ -577,7 +578,7 @@ internal class TribeAppViewModel @Inject constructor(
                 val success = connectManagerRepository.sendKeySendWithRouting(
                     pubKey = dest.toLightningNodePubKey()!!,
                     routeHint = null,
-                    milliSatAmount = amt.toLong(),
+                    milliSatAmount = amt.toLong().toMilliSat(),
                     routerUrl = routerUrl,
                     routerPubKey = routerPubKey
                 )

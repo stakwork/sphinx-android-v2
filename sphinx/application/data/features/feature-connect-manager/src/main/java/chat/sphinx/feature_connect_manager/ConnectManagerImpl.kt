@@ -1398,7 +1398,7 @@ class ConnectManagerImpl: ConnectManager()
 
         // Have to include al least 1 sat for tribe messages
         val nnAmount = when {
-            isTribe && (amount == null || amount == 0L) -> 1L
+            isTribe && (amount == null || amount < 3L) -> 3L
             isTribe -> amount ?: 1L
             else -> amount ?: 0L
         }

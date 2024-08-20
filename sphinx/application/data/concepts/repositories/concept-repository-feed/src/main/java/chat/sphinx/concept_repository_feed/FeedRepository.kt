@@ -67,7 +67,7 @@ interface FeedRepository {
         feedId: String,
         feedItemId: String,
         currentTime: Long,
-        satsPerMinute: Sat?,
+        amount: Sat?,
         playerSpeed: FeedPlayerSpeed?,
         destinations: List<FeedDestination>,
         clipMessageUUID: MessageUUID? = null

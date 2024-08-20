@@ -426,7 +426,7 @@ internal open class VideoFeedScreenViewModel(
                         feedId = videoState.feedId?.value ?: "",
                         feedItemId = videoState.id.value,
                         currentTime = 0,
-                        satsPerMinute = satsPerMinuteStateFlow.value,
+                        amount = satsPerMinuteStateFlow.value,
                         playerSpeed = null,
                         destinations = feed.destinations
                     )

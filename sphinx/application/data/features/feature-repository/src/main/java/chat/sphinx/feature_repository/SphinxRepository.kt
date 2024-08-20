@@ -2048,46 +2048,47 @@ abstract class SphinxRepository(
         feedId: String,
         feedItemId: String,
         currentTime: Long,
-        satsPerMinute: Sat?,
+        amount: Sat?,
         playerSpeed: FeedPlayerSpeed?,
         destinations: List<FeedDestination>,
         clipMessageUUID: MessageUUID?
     ) {
 
-        if ((satsPerMinute?.value ?: 0) <= 0 || destinations.isEmpty()) {
+        if ((amount?.value ?: 0) <= 0 || destinations.isEmpty()) {
             return
         }
 
         applicationScope.launch(io) {
-            val destinationsArray: MutableList<PostStreamSatsDestinationDto> =
-                ArrayList(destinations.size)
+//            val destinationsArray: MutableList<PostStreamSatsDestinationDto> =
+//                ArrayList(destinations.size)
+
+            val streamSatsText = StreamSatsText(
+                feedId,
+                feedItemId,
+                currentTime,
+            ).toJson(moshi)
+
 
             for (destination in destinations) {
-                destinationsArray.add(
-                    PostStreamSatsDestinationDto(
-                        destination.address.value,
-                        destination.type.value,
-                        destination.split.value,
-                    )
-                )
+                val destinationAmount = (amount?.value?.toDouble()?.div(100) ?: 0.0) * destination.split.value
+
+//                destinationsArray.add(
+//                    PostStreamSatsDestinationDto(
+//                        destination.address.value,
+//                        destination.type.value,
+//                        destination.split.value,
+//                    )
+//                )
             }
 
-            val streamSatsText =
-                StreamSatsText(
-                    feedId,
-                    feedItemId,
-                    currentTime,
-                    playerSpeed?.value ?: 1.0,
-                    clipMessageUUID?.value
-                )
 
-            val postStreamSatsDto = PostStreamSatsDto(
-                satsPerMinute?.value ?: 0,
-                chatId.value,
-                streamSatsText.toJson(moshi),
-                false,
-                destinationsArray
-            )
+//            val postStreamSatsDto = PostStreamSatsDto(
+//                amount?.value ?: 0,
+//                chatId.value,
+//                streamSatsText.toJson(moshi),
+//                false,
+//                destinationsArray
+//            )
 
         }
         // TODO V2 implement streamSats

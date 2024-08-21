@@ -355,17 +355,17 @@ class ConnectManagerImpl: ConnectManager()
                     }
 
                     val contactsToRestore = rr.msgs.filter {
-                        it.type?.toInt() == TYPE_CONTACT_KEY_RECORD ||
-                                it.type?.toInt() == TYPE_CONTACT_KEY_CONFIRMATION ||
+                        it.type?.toInt() == TYPE_CONTACT_KEY_RECORD                   ||
+                                it.type?.toInt() == TYPE_CONTACT_KEY_CONFIRMATION     ||
                                 it.type?.toInt() == TYPE_CONTACT_KEY
                     }.map { it.sender }.distinct()
 
                     potentialMessagesToRestore = if (contactsToRestore.isNotEmpty()) {
                         rr.msgs.filter { msg ->
-                            (contactsToRestore.contains(msg.sender) &&
-                                    msg.type?.toInt() != TYPE_CONTACT_KEY_RECORD &&
+                            (contactsToRestore.contains(msg.sender)                    &&
+                                    msg.type?.toInt() != TYPE_CONTACT_KEY_RECORD       &&
                                     msg.type?.toInt() != TYPE_CONTACT_KEY_CONFIRMATION &&
-                                    msg.type?.toInt() != TYPE_CONTACT_KEY) ||
+                                    msg.type?.toInt() != TYPE_CONTACT_KEY)             ||
                                     msg.fromMe == true
                         }
                     } else {
@@ -376,39 +376,13 @@ class ConnectManagerImpl: ConnectManager()
                         onRestoreTribes(tribesToRestore, isProductionEnvironment()) {
                             // Handle new messages
                             rr.msgs.forEach { msg ->
-                                notifyListeners {
-                                    onMessage(
-                                        msg.message.orEmpty(),
-                                        msg.sender.orEmpty(),
-                                        msg.type?.toInt() ?: 0,
-                                        msg.uuid.orEmpty(),
-                                        msg.index.orEmpty(),
-                                        msg.timestamp?.toLong(),
-                                        msg.sentTo.orEmpty(),
-                                        msg.msat?.let { convertMillisatsToSats(it) },
-                                        msg.fromMe,
-                                        msg.tag
-                                    )
-                                }
+                                processMessage(msg)
                             }
                         }
                     }
                 } else {
                     rr.msgs.forEach { msg ->
-                        notifyListeners {
-                            onMessage(
-                                msg.message.orEmpty(),
-                                msg.sender.orEmpty(),
-                                msg.type?.toInt() ?: 0,
-                                msg.uuid.orEmpty(),
-                                msg.index.orEmpty(),
-                                msg.timestamp?.toLong(),
-                                msg.sentTo.orEmpty(),
-                                msg.msat?.let { convertMillisatsToSats(it) },
-                                msg.fromMe,
-                                msg.tag
-                            )
-                        }
+                        processMessage(msg)
                     }
                 }
             }
@@ -707,6 +681,23 @@ class ConnectManagerImpl: ConnectManager()
             notifyListeners {
                 onConnectManagerError(ConnectManagerError.MqttClientError)
             }
+        }
+    }
+
+    private fun processMessage(msg: Msg) {
+        notifyListeners {
+            onMessage(
+                msg.message.orEmpty(),
+                msg.sender.orEmpty(),
+                msg.type?.toInt() ?: 0,
+                msg.uuid.orEmpty(),
+                msg.index.orEmpty(),
+                msg.timestamp?.toLong(),
+                msg.sentTo.orEmpty(),
+                msg.msat?.let { convertMillisatsToSats(it) },
+                msg.fromMe,
+                msg.tag
+            )
         }
     }
 
@@ -1579,20 +1570,7 @@ class ConnectManagerImpl: ConnectManager()
     override fun restorePendingMessages() {
         if (potentialMessagesToRestore.isNotEmpty()) {
             potentialMessagesToRestore.forEach { msg ->
-                notifyListeners {
-                    onMessage(
-                        msg.message.orEmpty(),
-                        msg.sender.orEmpty(),
-                        msg.type?.toInt() ?: 0,
-                        msg.uuid.orEmpty(),
-                        msg.index.orEmpty(),
-                        msg.timestamp?.toLong(),
-                        msg.sentTo.orEmpty(),
-                        msg.msat?.let { convertMillisatsToSats(it) },
-                        msg.fromMe,
-                        msg.tag
-                    )
-                }
+                processMessage(msg)
             }
         }
     }

@@ -776,9 +776,20 @@ abstract class SphinxRepository(
 
     override fun onRestoreTribes(
         tribes: List<Pair<String?, Boolean?>>,
-        isProductionEnvironment: Boolean
+        isProductionEnvironment: Boolean,
+        callback: (() -> Unit)?
     )  {
+        if (tribes.isEmpty()) {
+            callback?.let { nnCallback ->
+                nnCallback()
+            }
+            return
+        }
+
         applicationScope.launch(io) {
+            val total = tribes.count();
+            var index = 0
+
             val tribeList = tribes.mapNotNull { tribes ->
                 try {
                     Pair(
@@ -793,7 +804,23 @@ abstract class SphinxRepository(
             tribeList.forEach { tribe ->
                 val isAdmin = (tribe.first?.role == 0 && tribe.second == true)
                 tribe.first?.let {
-                    joinTribeOnRestoreAccount(it, isAdmin, isProductionEnvironment)
+                    joinTribeOnRestoreAccount(it, isAdmin, isProductionEnvironment) {
+                        if (index == total - 1) {
+                            callback?.let { nnCallback ->
+                                nnCallback()
+                            }
+                        } else {
+                            index += 1
+                        }
+                    }
+                } ?: run {
+                    if (index == total - 1) {
+                        callback?.let { nnCallback ->
+                            nnCallback()
+                        }
+                    } else {
+                        index += 1
+                    }
                 }
             }
         }
@@ -1059,9 +1086,28 @@ abstract class SphinxRepository(
             try {
                 val messageType = msgType.toMessageType()
 
+                val messageSender = msgSender.toMsgSender(moshi)
+
+                val contactInfo = if (fromMe == false) {
+                    messageSender
+                } else {
+                    // Add
+                    MsgSender(
+                        sentTo,
+                        messageSender.route_hint,
+                        messageSender.alias,
+                        messageSender.photo_url,
+                        messageSender.person,
+                        messageSender.confirmed,
+                        messageSender.code,
+                        messageSender.host,
+                        messageSender.role
+                    )
+                }
+
                 when (messageType) {
                     is MessageType.ContactKeyRecord -> {
-                        // Handled on onRestoreContacts
+                        saveNewContactRegistered(msgSender)
                     }
                     else -> {
                         val message = if (msg.isNotEmpty()) msg.toMsg(moshi) else Msg(
@@ -1077,25 +1123,6 @@ abstract class SphinxRepository(
                             null,
                             null
                         )
-
-                        val messageSender = msgSender.toMsgSender(moshi)
-
-                        val contactInfo = if (fromMe == false) {
-                            messageSender
-                        } else {
-                            // Add
-                            MsgSender(
-                                sentTo,
-                                messageSender.route_hint,
-                                messageSender.alias,
-                                messageSender.photo_url,
-                                messageSender.person,
-                                messageSender.confirmed,
-                                messageSender.code,
-                                messageSender.host,
-                                messageSender.role
-                            )
-                        }
 
                         when (messageType) {
                             is MessageType.Purchase.Processing -> {
@@ -1636,8 +1663,9 @@ abstract class SphinxRepository(
     private suspend fun joinTribeOnRestoreAccount(
         contactInfo: MsgSender,
         isAdmin: Boolean,
-        isProductionEnvironment: Boolean)
-    {
+        isProductionEnvironment: Boolean,
+        callback: (() -> Unit)? = null
+    ) {
         val host = contactInfo.host ?: return
 
         withContext(dispatchers.io) {
@@ -1645,7 +1673,11 @@ abstract class SphinxRepository(
                 .collect { loadResponse ->
                     when (loadResponse) {
                         is LoadResponse.Loading -> {}
-                        is Response.Error -> {}
+                        is Response.Error -> {
+                            callback?.let {nnCallback ->
+                                nnCallback()
+                            }
+                        }
                         is Response.Success -> {
                             val queries = coreDB.getSphinxDatabaseQueries()
 
@@ -1695,6 +1727,10 @@ abstract class SphinxRepository(
                                         accountOwner.value?.nodePubKey
                                     )
                                 }
+                            }
+
+                            callback?.let {nnCallback ->
+                                nnCallback()
                             }
                         }
                     }

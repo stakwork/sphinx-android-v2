@@ -107,6 +107,7 @@ class ConnectManagerImpl: ConnectManager()
     private val restoreProgress = RestoreProgress()
     private var isMqttConnected: Boolean = false
     private var isAppFirstInit: Boolean = true
+    private var potentialMessagesToRestore: List<Msg> = emptyList()
 
     companion object {
         const val TEST_V2_SERVER_IP = "75.101.247.127:1883"
@@ -339,10 +340,25 @@ class ConnectManagerImpl: ConnectManager()
                 handlePingDone(rr.msgs)
 
                 if (!isRestoreAccount()) {
+
                     val tribesToRestore = rr.msgs.filter {
                         it.type?.toInt() == 20 || it.type?.toInt() == 14
                     }.map {
                         Pair(it.sender, it.fromMe)
+                    }
+
+                    val contactsToRestore = rr.msgs.filter {
+                        it.type?.toInt() == 33 || it.type?.toInt() == 11 || it.type?.toInt() == 10
+                    }.map { it.sender }.distinct()
+
+                    potentialMessagesToRestore = if (contactsToRestore.isNotEmpty()) {
+                        rr.msgs.filter { msg ->
+                            (contactsToRestore.contains(msg.sender) && msg.type?.toInt() != 33 &&
+                                    msg.type?.toInt() != 11 && msg.type?.toInt() != 10) ||
+                                    msg.fromMe == true
+                        }
+                    } else {
+                        emptyList()
                     }
 
                     notifyListeners {
@@ -1544,6 +1560,27 @@ class ConnectManagerImpl: ConnectManager()
 //                onConnectManagerError(ConnectManagerError.MessageStatusError)
 //            }
             Log.e("MQTT_MESSAGES", "getMessagesStatusByTags ${e.message}")
+        }
+    }
+
+    override fun restorePendingMessages() {
+        if (potentialMessagesToRestore.isNotEmpty()) {
+            potentialMessagesToRestore.forEach { msg ->
+                notifyListeners {
+                    onMessage(
+                        msg.message.orEmpty(),
+                        msg.sender.orEmpty(),
+                        msg.type?.toInt() ?: 0,
+                        msg.uuid.orEmpty(),
+                        msg.index.orEmpty(),
+                        msg.timestamp?.toLong(),
+                        msg.sentTo.orEmpty(),
+                        msg.msat?.let { convertMillisatsToSats(it) },
+                        msg.fromMe,
+                        msg.tag
+                    )
+                }
+            }
         }
     }
 

@@ -94,6 +94,8 @@ abstract class ConnectManager {
     )
     abstract fun getMessagesStatusByTags(tags: List<String>)
 
+    abstract fun restorePendingMessages()
+
     // Tribe Management Methods
     abstract fun createTribe(tribeJson: String)
     abstract fun joinToTribe(

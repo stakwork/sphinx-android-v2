@@ -616,7 +616,7 @@ abstract class SphinxRepository(
     override fun saveNewContactRegistered(
         msgSender: String
     ) {
-        applicationScope.launch(io) {
+        applicationScope.launch(mainImmediate) {
             val contactInfo = msgSender.toMsgSender(moshi)
             val contact = NewContact(
                 contactAlias = contactInfo.alias?.toContactAlias(),
@@ -2887,6 +2887,8 @@ abstract class SphinxRepository(
                         }
                     }
                 }
+
+                connectManager.restorePendingMessages()
             }
         }
     }

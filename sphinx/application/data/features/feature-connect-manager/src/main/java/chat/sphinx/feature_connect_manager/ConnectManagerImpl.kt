@@ -119,6 +119,13 @@ class ConnectManagerImpl: ConnectManager()
         const val COMPLETE_STATUS = "COMPLETE"
         const val MSG_BATCH_LIMIT = 100
         const val MSG_FIRST_PER_KEY_LIMIT = 100
+
+        // MESSAGES TYPES
+        const val TYPE_CONTACT_KEY = 10
+        const val TYPE_CONTACT_KEY_CONFIRMATION = 11
+        const val TYPE_GROUP_JOIN = 14
+        const val TYPE_MEMBER_APPROVE = 20
+        const val TYPE_CONTACT_KEY_RECORD = 33
     }
 
     private val _ownerInfoStateFlow: MutableStateFlow<OwnerInfo> by lazy {
@@ -342,19 +349,23 @@ class ConnectManagerImpl: ConnectManager()
                 if (!isRestoreAccount()) {
 
                     val tribesToRestore = rr.msgs.filter {
-                        it.type?.toInt() == 20 || it.type?.toInt() == 14
+                        it.type?.toInt() == TYPE_MEMBER_APPROVE || it.type?.toInt() == TYPE_GROUP_JOIN
                     }.map {
                         Pair(it.sender, it.fromMe)
                     }
 
                     val contactsToRestore = rr.msgs.filter {
-                        it.type?.toInt() == 33 || it.type?.toInt() == 11 || it.type?.toInt() == 10
+                        it.type?.toInt() == TYPE_CONTACT_KEY_RECORD ||
+                                it.type?.toInt() == TYPE_CONTACT_KEY_CONFIRMATION ||
+                                it.type?.toInt() == TYPE_CONTACT_KEY
                     }.map { it.sender }.distinct()
 
                     potentialMessagesToRestore = if (contactsToRestore.isNotEmpty()) {
                         rr.msgs.filter { msg ->
-                            (contactsToRestore.contains(msg.sender) && msg.type?.toInt() != 33 &&
-                                    msg.type?.toInt() != 11 && msg.type?.toInt() != 10) ||
+                            (contactsToRestore.contains(msg.sender) &&
+                                    msg.type?.toInt() != TYPE_CONTACT_KEY_RECORD &&
+                                    msg.type?.toInt() != TYPE_CONTACT_KEY_CONFIRMATION &&
+                                    msg.type?.toInt() != TYPE_CONTACT_KEY) ||
                                     msg.fromMe == true
                         }
                     } else {
@@ -433,7 +444,9 @@ class ConnectManagerImpl: ConnectManager()
                         if (restoreStateFlow.value is RestoreState.RestoringContacts) {
 
                             val contactsToRestore = rr.msgs.filter {
-                                it.type?.toInt() == 33 || it.type?.toInt() == 11 || it.type?.toInt() == 10
+                                it.type?.toInt() == TYPE_CONTACT_KEY_RECORD ||
+                                        it.type?.toInt() == TYPE_CONTACT_KEY_CONFIRMATION ||
+                                        it.type?.toInt() == TYPE_CONTACT_KEY
                             }.map { it.sender }.distinct()
 
                             if (contactsToRestore.isNotEmpty()) {
@@ -443,7 +456,7 @@ class ConnectManagerImpl: ConnectManager()
                             }
 
                             val tribesToRestore = rr.msgs.filter {
-                                it.type?.toInt() == 20 || it.type?.toInt() == 14
+                                it.type?.toInt() == TYPE_MEMBER_APPROVE || it.type?.toInt() == TYPE_GROUP_JOIN
                             }.map {
                                 Pair(it.sender, it.fromMe)
                             }

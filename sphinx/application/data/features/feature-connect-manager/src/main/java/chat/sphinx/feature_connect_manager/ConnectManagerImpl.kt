@@ -345,25 +345,23 @@ class ConnectManagerImpl: ConnectManager()
                         Pair(it.sender, it.fromMe)
                     }
 
-                    if (tribesToRestore.isNotEmpty()) {
-                        notifyListeners {
-                            onRestoreTribes(tribesToRestore, isProductionEnvironment()) {
-                                // Handle new messages
-                                rr.msgs.forEach { msg ->
-                                    notifyListeners {
-                                        onMessage(
-                                            msg.message.orEmpty(),
-                                            msg.sender.orEmpty(),
-                                            msg.type?.toInt() ?: 0,
-                                            msg.uuid.orEmpty(),
-                                            msg.index.orEmpty(),
-                                            msg.timestamp?.toLong(),
-                                            msg.sentTo.orEmpty(),
-                                            msg.msat?.let { convertMillisatsToSats(it) },
-                                            msg.fromMe,
-                                            msg.tag
-                                        )
-                                    }
+                    notifyListeners {
+                        onRestoreTribes(tribesToRestore, isProductionEnvironment()) {
+                            // Handle new messages
+                            rr.msgs.forEach { msg ->
+                                notifyListeners {
+                                    onMessage(
+                                        msg.message.orEmpty(),
+                                        msg.sender.orEmpty(),
+                                        msg.type?.toInt() ?: 0,
+                                        msg.uuid.orEmpty(),
+                                        msg.index.orEmpty(),
+                                        msg.timestamp?.toLong(),
+                                        msg.sentTo.orEmpty(),
+                                        msg.msat?.let { convertMillisatsToSats(it) },
+                                        msg.fromMe,
+                                        msg.tag
+                                    )
                                 }
                             }
                         }

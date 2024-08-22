@@ -1080,7 +1080,8 @@ abstract class SphinxRepository(
         sentTo: String,
         amount: Long?,
         fromMe: Boolean?,
-        tag: String?
+        tag: String?,
+        isRestore: Boolean
     ) {
         applicationScope.launch(io) {
             try {
@@ -1107,7 +1108,9 @@ abstract class SphinxRepository(
 
                 when (messageType) {
                     is MessageType.ContactKeyRecord -> {
-                        saveNewContactRegistered(msgSender)
+                        if (!isRestore) {
+                            saveNewContactRegistered(msgSender)
+                        }
                     }
                     else -> {
                         val message = if (msg.isNotEmpty()) msg.toMsg(moshi) else Msg(
@@ -1145,6 +1148,7 @@ abstract class SphinxRepository(
                                     deleteMqttMessage(replyUuid)
                                 }
                             }
+                            else -> {}
                         }
 
                         val messageId = if (msgIndex.isNotEmpty()) MessageId(msgIndex.toLong()) else return@launch

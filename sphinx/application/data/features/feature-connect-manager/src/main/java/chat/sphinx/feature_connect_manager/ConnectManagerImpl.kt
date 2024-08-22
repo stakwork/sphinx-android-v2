@@ -107,7 +107,7 @@ class ConnectManagerImpl: ConnectManager()
     private val restoreProgress = RestoreProgress()
     private var isMqttConnected: Boolean = false
     private var isAppFirstInit: Boolean = true
-    private var potentialMessagesToRestore: List<Msg> = emptyList()
+    private var potentialMessagesToUpdate: List<Msg> = emptyList()
 
     companion object {
         const val TEST_V2_SERVER_IP = "75.101.247.127:1883"
@@ -348,21 +348,21 @@ class ConnectManagerImpl: ConnectManager()
 
                 if (!isRestoreAccount()) {
 
-                    val tribesToRestore = rr.msgs.filter {
+                    val tribesToUpdate = rr.msgs.filter {
                         it.type?.toInt() == TYPE_MEMBER_APPROVE || it.type?.toInt() == TYPE_GROUP_JOIN
                     }.map {
                         Pair(it.sender, it.fromMe)
                     }
 
-                    val contactsToRestore = rr.msgs.filter {
+                    val contactsToUpdate = rr.msgs.filter {
                         it.type?.toInt() == TYPE_CONTACT_KEY_RECORD                   ||
                                 it.type?.toInt() == TYPE_CONTACT_KEY_CONFIRMATION     ||
                                 it.type?.toInt() == TYPE_CONTACT_KEY
                     }.map { it.sender }.distinct()
 
-                    potentialMessagesToRestore = if (contactsToRestore.isNotEmpty()) {
+                    potentialMessagesToUpdate = if (contactsToUpdate.isNotEmpty()) {
                         rr.msgs.filter { msg ->
-                            (contactsToRestore.contains(msg.sender)                    &&
+                            (contactsToUpdate.contains(msg.sender)                    &&
                                     msg.type?.toInt() != TYPE_CONTACT_KEY_RECORD       &&
                                     msg.type?.toInt() != TYPE_CONTACT_KEY_CONFIRMATION &&
                                     msg.type?.toInt() != TYPE_CONTACT_KEY)             ||
@@ -373,7 +373,7 @@ class ConnectManagerImpl: ConnectManager()
                     }
 
                     notifyListeners {
-                        onRestoreTribes(tribesToRestore, isProductionEnvironment()) {
+                        onRestoreTribes(tribesToUpdate, isProductionEnvironment()) {
                             // Handle new messages
                             rr.msgs.forEach { msg ->
                                 processMessage(msg)
@@ -696,7 +696,8 @@ class ConnectManagerImpl: ConnectManager()
                 msg.sentTo.orEmpty(),
                 msg.msat?.let { convertMillisatsToSats(it) },
                 msg.fromMe,
-                msg.tag
+                msg.tag,
+                isRestoreAccount()
             )
         }
     }
@@ -1568,8 +1569,8 @@ class ConnectManagerImpl: ConnectManager()
     }
 
     override fun restorePendingMessages() {
-        if (potentialMessagesToRestore.isNotEmpty()) {
-            potentialMessagesToRestore.forEach { msg ->
+        if (potentialMessagesToUpdate.isNotEmpty()) {
+            potentialMessagesToUpdate.forEach { msg ->
                 processMessage(msg)
             }
         }

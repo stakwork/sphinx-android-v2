@@ -206,7 +206,8 @@ interface ConnectManagerListener {
         sentTo: String,
         amount: Long?,
         fromMe: Boolean?,
-        tag: String?
+        tag: String?,
+        isRestore: Boolean,
     )
     fun onMessageTagAndUuid(tag: String?, msgUUID: String, provisionalId: Long)
     fun onMessagesCounts(msgsCounts: String)

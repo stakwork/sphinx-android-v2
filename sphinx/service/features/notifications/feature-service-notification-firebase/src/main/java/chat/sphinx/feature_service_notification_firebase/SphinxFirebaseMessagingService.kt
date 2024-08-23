@@ -95,8 +95,10 @@ internal class SphinxFirebaseMessagingService: FirebaseMessagingService() {
 
                     messageBody = if (chat?.isTribe() == true && !name.isNullOrEmpty()) {
                         String.format(message, "in $name Tribe")
-                    } else {
+                    } else if (chat != null) {
                         String.format(message, "from $name")
+                    } else {
+                        message
                     }
                 }
             }

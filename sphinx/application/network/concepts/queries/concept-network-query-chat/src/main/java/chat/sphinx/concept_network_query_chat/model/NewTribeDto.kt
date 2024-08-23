@@ -29,6 +29,7 @@ data class NewTribeDto(
     val pin: String?,
     val app_url: String?,
     val feed_url: String?,
+    val feed_type: Int?
 ) {
 
     var amount: Long? = null

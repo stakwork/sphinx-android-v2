@@ -35,6 +35,7 @@ import chat.sphinx.wrapper_common.lightning.Sat
 import chat.sphinx.wrapper_common.lightning.getLspPubKey
 import chat.sphinx.wrapper_common.lightning.toLightningNodePubKey
 import chat.sphinx.wrapper_common.lightning.toLightningPaymentRequestOrNull
+import chat.sphinx.wrapper_common.lightning.toMilliSat
 import chat.sphinx.wrapper_common.lightning.toSat
 import chat.sphinx.wrapper_common.lsat.Lsat
 import chat.sphinx.wrapper_common.lsat.LsatStatus
@@ -570,77 +571,28 @@ internal class TribeAppViewModel @Inject constructor(
         val budget = budgetStateFlow.value.value
 
         if (dest != null && amt != null && amt <= budget) {
+            val routerUrl = serverSettingsSharedPreferences.getString(ROUTER_URL, null)
+            val routerPubKey = serverSettingsSharedPreferences.getString(ROUTER_PUBKEY, null)
 
-            val keySendPubKey = dest.toLightningNodePubKey()?.let {
-                contactRepository.getContactByPubKey(
-                    it
-                ).firstOrNull()
-            }
-            val keySendLspPubKey = keySendPubKey?.routeHint?.getLspPubKey()
-            val ownerLsp = contactRepository.accountOwner.value?.routeHint?.getLspPubKey()
-
-            if (ownerLsp == keySendLspPubKey) {
-
-                connectManagerRepository.sendKeySend(
-                    pubKey = dest,
-                    endHops = null,
-                    milliSatAmount = amt.toLong(),
-                    routerPubKey = null,
-                    routeHint = null
+            viewModelScope.launch {
+                val success = connectManagerRepository.sendKeySendWithRouting(
+                    pubKey = dest.toLightningNodePubKey()!!,
+                    routeHint = null,
+                    milliSatAmount = amt.toLong().toMilliSat(),
+                    routerUrl = routerUrl,
+                    routerPubKey = routerPubKey
                 )
 
                 val sendKeySend = SendKeySend(
                     type = webViewDto.type,
                     application = webViewDto.application,
                     password = password ?: "",
-                    success = true
+                    success = success
                 ).toJson(moshi)
 
                 sendWebAppMessage(sendKeySend)
-
-            } else {
-                val routerUrl = serverSettingsSharedPreferences.getString(ROUTER_URL, null)
-                if (routerUrl != null) {
-                    networkQueryContact.getRoutingNodes(
-                        routerUrl,
-                        dest.toLightningNodePubKey()!!,
-                        amt.toLong()
-                    ).collect { response ->
-                        when (response) {
-                            is LoadResponse.Loading -> {}
-                            is Response.Error -> {}
-                            is Response.Success -> {
-                                try {
-                                    val routerPubKey = serverSettingsSharedPreferences
-                                        .getString(ROUTER_PUBKEY, null)
-                                        ?: "true"
-
-                                    connectManagerRepository.sendKeySend(
-                                        pubKey = dest,
-                                        endHops = response.value,
-                                        milliSatAmount = amt.toLong(),
-                                        routerPubKey = routerPubKey,
-                                        routeHint = null
-                                    )
-
-                                    val sendKeySend = SendKeySend(
-                                        type = webViewDto.type,
-                                        application = webViewDto.application,
-                                        password = password ?: "",
-                                        success = true
-                                    ).toJson(moshi)
-
-                                    sendWebAppMessage(sendKeySend)
-
-                                } catch (e: Exception) {
-                                }
-                            }
-                        }
-                    }
-                }
             }
         } else {
-            // Failure
             val sendKeySend = SendKeySend(
                 type = webViewDto?.type ?: "",
                 application = webViewDto?.application ?: "",
@@ -650,6 +602,88 @@ internal class TribeAppViewModel @Inject constructor(
 
             sendWebAppMessage(sendKeySend)
         }
+
+//        if (dest != null && amt != null && amt <= budget) {
+//
+//            val keySendPubKey = dest.toLightningNodePubKey()?.let {
+//                contactRepository.getContactByPubKey(
+//                    it
+//                ).firstOrNull()
+//            }
+//            val keySendLspPubKey = keySendPubKey?.routeHint?.getLspPubKey()
+//            val ownerLsp = contactRepository.accountOwner.value?.routeHint?.getLspPubKey()
+//
+//            if (ownerLsp == keySendLspPubKey) {
+//
+//                connectManagerRepository.sendKeySend(
+//                    pubKey = dest,
+//                    endHops = null,
+//                    milliSatAmount = amt.toLong(),
+//                    routerPubKey = null,
+//                    routeHint = null
+//                )
+//
+//                val sendKeySend = SendKeySend(
+//                    type = webViewDto.type,
+//                    application = webViewDto.application,
+//                    password = password ?: "",
+//                    success = true
+//                ).toJson(moshi)
+//
+//                sendWebAppMessage(sendKeySend)
+//
+//            } else {
+//                val routerUrl = serverSettingsSharedPreferences.getString(ROUTER_URL, null)
+//                if (routerUrl != null) {
+//                    networkQueryContact.getRoutingNodes(
+//                        routerUrl,
+//                        dest.toLightningNodePubKey()!!,
+//                        amt.toLong()
+//                    ).collect { response ->
+//                        when (response) {
+//                            is LoadResponse.Loading -> {}
+//                            is Response.Error -> {}
+//                            is Response.Success -> {
+//                                try {
+//                                    val routerPubKey = serverSettingsSharedPreferences
+//                                        .getString(ROUTER_PUBKEY, null)
+//                                        ?: "true"
+//
+//                                    connectManagerRepository.sendKeySend(
+//                                        pubKey = dest,
+//                                        endHops = response.value,
+//                                        milliSatAmount = amt.toLong(),
+//                                        routerPubKey = routerPubKey,
+//                                        routeHint = null
+//                                    )
+//
+//                                    val sendKeySend = SendKeySend(
+//                                        type = webViewDto.type,
+//                                        application = webViewDto.application,
+//                                        password = password ?: "",
+//                                        success = true
+//                                    ).toJson(moshi)
+//
+//                                    sendWebAppMessage(sendKeySend)
+//
+//                                } catch (e: Exception) {
+//                                }
+//                            }
+//                        }
+//                    }
+//                }
+//            }
+//        } else {
+//            // Failure
+//            val sendKeySend = SendKeySend(
+//                type = webViewDto?.type ?: "",
+//                application = webViewDto?.application ?: "",
+//                password = password ?: "",
+//                success = false
+//            ).toJson(moshi)
+//
+//            sendWebAppMessage(sendKeySend)
+//        }
     }
 
     private suspend fun processPayment() {

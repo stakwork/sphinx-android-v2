@@ -40,6 +40,7 @@ import chat.sphinx.wrapper_common.PhotoUrl
 import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_common.dashboard.ContactId
 import chat.sphinx.wrapper_common.feed.FeedType
+import chat.sphinx.wrapper_common.feed.toFeedType
 import chat.sphinx.wrapper_common.feed.toFeedUrl
 import chat.sphinx.wrapper_common.lightning.Sat
 import chat.sphinx.wrapper_common.message.MessageUUID
@@ -115,6 +116,8 @@ class ChatTribeViewModel @Inject constructor(
         private const val TRIBE_SERVER_IP = "tribe_server_ip"
         const val SERVER_SETTINGS_SHARED_PREFERENCES = "server_ip_settings"
         const val ENVIRONMENT_TYPE = "environment_type"
+        const val ROUTER_URL= "router_url"
+        const val ROUTER_PUBKEY= "router_pubkey"
     }
 
     override val args: ChatTribeFragmentArgs by savedStateHandle.navArgs()
@@ -124,6 +127,7 @@ class ChatTribeViewModel @Inject constructor(
         SERVER_SETTINGS_SHARED_PREFERENCES,
         Context.MODE_PRIVATE
     )
+
 
     private val tribeDefaultServerUrl = serverSettingsSharedPreferences.getString(TRIBE_SERVER_IP, null)
     private val isProductionEnvironment = serverSettingsSharedPreferences.getBoolean(ENVIRONMENT_TYPE, true)
@@ -242,6 +246,10 @@ class ChatTribeViewModel @Inject constructor(
 
     override suspend fun shouldStreamSatsFor(podcastClip: PodcastClip, messageUUID: MessageUUID?) {
         getPodcast()?.let { podcast ->
+
+            val routerUrl = serverSettingsSharedPreferences.getString(ROUTER_URL, null)
+            val routerPubKey = serverSettingsSharedPreferences.getString(ROUTER_PUBKEY, null)
+
             feedRepository.streamFeedPayments(
                 chatId,
                 podcastClip.feedID.value,
@@ -250,7 +258,9 @@ class ChatTribeViewModel @Inject constructor(
                 getChat()?.metaData?.satsPerMinute ?: Sat(podcast.satsPerMinute),
                 FeedPlayerSpeed(1.0),
                 podcast.getFeedDestinations(podcastClip.pubkey),
-                messageUUID
+                messageUUID,
+                routerUrl = routerUrl,
+                routerPubKey = routerPubKey
             )
         }
     }
@@ -307,7 +317,7 @@ class ChatTribeViewModel @Inject constructor(
                             chat.host ?: return@let,
                             tribeData.feed_url?.toFeedUrl(),
                             chat.uuid,
-                            FeedType.Unknown(-1),
+                            tribeData.feed_type?.toFeedType() ?: FeedType.Podcast,
                             tribeData.app_url?.toAppUrl(),
                             arrayOf() // needs to be fill
                         )

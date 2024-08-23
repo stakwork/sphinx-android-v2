@@ -103,14 +103,17 @@ import chat.sphinx.wrapper_common.lightning.LightningNodePubKey
 import chat.sphinx.wrapper_common.lightning.LightningPaymentHash
 import chat.sphinx.wrapper_common.lightning.LightningPaymentRequest
 import chat.sphinx.wrapper_common.lightning.LightningRouteHint
+import chat.sphinx.wrapper_common.lightning.MilliSat
 import chat.sphinx.wrapper_common.lightning.Sat
 import chat.sphinx.wrapper_common.lightning.ServerIp
+import chat.sphinx.wrapper_common.lightning.getLspPubKey
 import chat.sphinx.wrapper_common.lightning.getScid
 import chat.sphinx.wrapper_common.lightning.milliSatsToSats
 import chat.sphinx.wrapper_common.lightning.toLightningNodePubKey
 import chat.sphinx.wrapper_common.lightning.toLightningPaymentHash
 import chat.sphinx.wrapper_common.lightning.toLightningPaymentRequestOrNull
 import chat.sphinx.wrapper_common.lightning.toLightningRouteHint
+import chat.sphinx.wrapper_common.lightning.toMilliSat
 import chat.sphinx.wrapper_common.lightning.toSat
 import chat.sphinx.wrapper_common.lsat.Lsat
 import chat.sphinx.wrapper_common.lsat.LsatIdentifier
@@ -2088,51 +2091,42 @@ abstract class SphinxRepository(
         feedId: String,
         feedItemId: String,
         currentTime: Long,
-        satsPerMinute: Sat?,
+        amount: Sat?,
         playerSpeed: FeedPlayerSpeed?,
         destinations: List<FeedDestination>,
-        clipMessageUUID: MessageUUID?
+        clipMessageUUID: MessageUUID?,
+        routerUrl: String?,
+        routerPubKey: String?
     ) {
-
-        if ((satsPerMinute?.value ?: 0) <= 0 || destinations.isEmpty()) {
+        if ((amount?.value ?: 0) <= 0 || destinations.isEmpty()) {
             return
         }
 
         applicationScope.launch(io) {
-            val destinationsArray: MutableList<PostStreamSatsDestinationDto> =
-                ArrayList(destinations.size)
+            val streamSatsText = StreamSatsText(
+                feedId,
+                feedItemId,
+                currentTime,
+            ).toJson(moshi)
+
+            val totalSplit = destinations.sumOf { it.split.value }
 
             for (destination in destinations) {
-                destinationsArray.add(
-                    PostStreamSatsDestinationDto(
-                        destination.address.value,
-                        destination.type.value,
-                        destination.split.value,
+                val destinationAmount = (amount?.value?.toDouble() ?: 0.0) * (destination.split.value / totalSplit)
+
+                destination.address.value.toLightningNodePubKey()?.let { pubKey ->
+                    sendKeySendWithRouting(
+                        pubKey,
+                        null,
+                        destinationAmount.toLong().toSat()?.toMilliSat(),
+                        routerUrl,
+                        routerPubKey,
+                        streamSatsText
                     )
-                )
+                }
             }
-
-            val streamSatsText =
-                StreamSatsText(
-                    feedId,
-                    feedItemId,
-                    currentTime,
-                    playerSpeed?.value ?: 1.0,
-                    clipMessageUUID?.value
-                )
-
-            val postStreamSatsDto = PostStreamSatsDto(
-                satsPerMinute?.value ?: 0,
-                chatId.value,
-                streamSatsText.toJson(moshi),
-                false,
-                destinationsArray
-            )
-
         }
-        // TODO V2 implement streamSats
     }
-
 
     ////////////////
     /// Contacts ///
@@ -4583,7 +4577,8 @@ abstract class SphinxRepository(
         endHops: String?,
         milliSatAmount: Long,
         routerPubKey: String?,
-        routeHint: String?
+        routeHint: String?,
+        data: String?
     ) {
         if (endHops?.isNotEmpty() == true && routerPubKey != null) {
             connectManager.concatNodesFromResponse(
@@ -4595,8 +4590,92 @@ abstract class SphinxRepository(
         connectManager.sendKeySend(
             pubKey,
             milliSatAmount,
-            routeHint
+            routeHint,
+            data
         )
+    }
+
+    override suspend fun sendKeySendWithRouting(
+        pubKey: LightningNodePubKey,
+        routeHint: LightningRouteHint?,
+        milliSatAmount: MilliSat?,
+        routerUrl: String?,
+        routerPubKey: String?,
+        data: String?
+    ): Boolean {
+        var owner: Contact? = accountOwner.value
+
+        if (owner == null) {
+            try {
+                accountOwner.collect {
+                    if (it != null) {
+                        owner = it
+                        throw Exception()
+                    }
+                }
+            } catch (e: Exception) {
+            }
+            delay(25L)
+        }
+        val payeeLspPubKey = routeHint?.getLspPubKey()
+        val ownerLspPubKey = owner?.routeHint?.getLspPubKey()
+
+        return if (payeeLspPubKey == ownerLspPubKey) {
+            sendKeySend(
+                pubKey.value,
+                null,
+                milliSatAmount?.value ?: 0,
+                null,
+                routeHint?.value,
+                data
+            )
+            true
+        } else {
+            if (routerUrl != null) {
+                var success = false
+                networkQueryContact.getRoutingNodes(
+                    routerUrl,
+                    pubKey,
+                    milliSatAmount?.value ?: 0
+                ).collect { response ->
+                    when (response) {
+                        is LoadResponse.Loading -> {}
+                        is Response.Error -> {
+                            success = false
+                        }
+                        is Response.Success -> {
+                            if (isJsonResponseEmpty(response.value)) {
+                                sendKeySend(
+                                    pubKey.value,
+                                    null,
+                                    milliSatAmount?.value ?: 0,
+                                    null,
+                                    routeHint?.value,
+                                    data
+                                )
+                            } else {
+                                sendKeySend(
+                                    pubKey.value,
+                                    response.value,
+                                    milliSatAmount?.value ?: 0,
+                                    routerPubKey,
+                                    routeHint?.value,
+                                    data
+                                )
+                            }
+                            success = true
+                        }
+                    }
+                }
+                success
+            } else {
+                false
+            }
+        }
+    }
+
+    private fun isJsonResponseEmpty(json: String?): Boolean {
+        return json.isNullOrEmpty()
     }
 
     override fun clearWebViewPreImage() {

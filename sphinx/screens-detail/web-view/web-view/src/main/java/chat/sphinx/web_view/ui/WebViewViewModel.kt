@@ -1,6 +1,8 @@
 package chat.sphinx.web_view.ui
 
 import android.app.Application
+import android.content.Context
+import android.content.SharedPreferences
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
@@ -54,6 +56,12 @@ internal class WebViewViewModel @Inject constructor(
         WebViewSideEffect,
         WebViewViewState>(dispatchers, WebViewViewState.Idle)
 {
+    companion object {
+        const val SERVER_SETTINGS_SHARED_PREFERENCES = "server_ip_settings"
+        const val ROUTER_URL= "router_url"
+        const val ROUTER_PUBKEY= "router_pubkey"
+    }
+
     private val args: WebViewFragmentArgs by savedStateHandle.navArgs()
 
     private suspend fun getAccountBalance(): StateFlow<NodeBalance?> =
@@ -82,6 +90,9 @@ internal class WebViewViewModel @Inject constructor(
         SharingStarted.WhileSubscribed(2_000),
         replay = 1,
     )
+
+    private val serverSettingsSharedPreferences: SharedPreferences =
+        app.getSharedPreferences(SERVER_SETTINGS_SHARED_PREFERENCES, Context.MODE_PRIVATE)
 
     init {
         args.chatId?.let { chatId ->
@@ -222,6 +233,9 @@ internal class WebViewViewModel @Inject constructor(
 
                                 feed.destinations.let { destinations ->
 
+                                    val routerUrl = serverSettingsSharedPreferences.getString(ROUTER_URL, null)
+                                    val routerPubKey = serverSettingsSharedPreferences.getString(ROUTER_PUBKEY, null)
+
                                     feedRepository.streamFeedPayments(
                                         chatId,
                                         feed.id.value,
@@ -229,7 +243,9 @@ internal class WebViewViewModel @Inject constructor(
                                         0,
                                         amount,
                                         FeedPlayerSpeed(1.0),
-                                        destinations
+                                        destinations,
+                                        routerUrl = routerUrl,
+                                        routerPubKey = routerPubKey
                                     )
                                 }
                             }

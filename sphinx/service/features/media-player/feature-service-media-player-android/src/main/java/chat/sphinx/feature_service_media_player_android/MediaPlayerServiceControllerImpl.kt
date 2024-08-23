@@ -5,6 +5,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.content.SharedPreferences
 import android.media.MediaPlayer
 import android.os.IBinder
 import chat.sphinx.concept_repository_feed.FeedRepository
@@ -16,7 +17,6 @@ import chat.sphinx.feature_service_media_player_android.service.SphinxMediaPlaye
 import chat.sphinx.feature_service_media_player_android.util.toIntent
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -30,6 +30,14 @@ internal class MediaPlayerServiceControllerImpl(
     private val binder: MutableStateFlow<MediaPlayerService.MediaPlayerServiceBinder?> by lazy {
         MutableStateFlow(null)
     }
+    companion object {
+        const val SERVER_SETTINGS_SHARED_PREFERENCES = "server_ip_settings"
+        const val ROUTER_URL= "router_url"
+        const val ROUTER_PUBKEY= "router_pubkey"
+    }
+
+    private val serverSettingsSharedPreferences: SharedPreferences =
+        app.getSharedPreferences(SERVER_SETTINGS_SHARED_PREFERENCES, Context.MODE_PRIVATE)
 
     override fun getCurrentState(): MediaPlayerServiceState {
         return binder.value?.getCurrentState() ?: if (userActionLock.isLocked) {
@@ -111,6 +119,10 @@ internal class MediaPlayerServiceControllerImpl(
             }
             is UserAction.SendBoost -> {
                 userAction.contentFeedStatus.itemId?.value?.let { itemId ->
+
+                    val routerUrl = serverSettingsSharedPreferences.getString(ROUTER_URL, null)
+                    val routerPubKey = serverSettingsSharedPreferences.getString(ROUTER_PUBKEY, null)
+
                     feedRepository.streamFeedPayments(
                         userAction.chatId,
                         userAction.podcastId,
@@ -118,7 +130,9 @@ internal class MediaPlayerServiceControllerImpl(
                         userAction.contentEpisodeStatus.currentTime.value,
                         userAction.contentFeedStatus.satsPerMinute,
                         userAction.contentFeedStatus.playerSpeed,
-                        userAction.destinations
+                        userAction.destinations,
+                        routerUrl = routerUrl,
+                        routerPubKey = routerPubKey
                     )
                 }
             }

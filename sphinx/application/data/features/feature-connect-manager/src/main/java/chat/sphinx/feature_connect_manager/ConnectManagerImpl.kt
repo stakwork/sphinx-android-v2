@@ -107,6 +107,7 @@ class ConnectManagerImpl: ConnectManager()
     private val restoreProgress = RestoreProgress()
     private var isMqttConnected: Boolean = false
     private var isAppFirstInit: Boolean = true
+    private var potentialMessagesToUpdate: List<Msg> = emptyList()
 
     companion object {
         const val TEST_V2_SERVER_IP = "75.101.247.127:1883"
@@ -118,6 +119,13 @@ class ConnectManagerImpl: ConnectManager()
         const val COMPLETE_STATUS = "COMPLETE"
         const val MSG_BATCH_LIMIT = 100
         const val MSG_FIRST_PER_KEY_LIMIT = 100
+
+        // MESSAGES TYPES
+        const val TYPE_CONTACT_KEY = 10
+        const val TYPE_CONTACT_KEY_CONFIRMATION = 11
+        const val TYPE_GROUP_JOIN = 14
+        const val TYPE_MEMBER_APPROVE = 20
+        const val TYPE_CONTACT_KEY_RECORD = 33
     }
 
     private val _ownerInfoStateFlow: MutableStateFlow<OwnerInfo> by lazy {
@@ -338,21 +346,43 @@ class ConnectManagerImpl: ConnectManager()
             if (rr.msgs.isNotEmpty()) {
                 handlePingDone(rr.msgs)
 
-                // Handle new messages
-                rr.msgs.forEach { msg ->
+                if (!isRestoreAccount()) {
+
+                    val tribesToUpdate = rr.msgs.filter {
+                        it.type?.toInt() == TYPE_MEMBER_APPROVE || it.type?.toInt() == TYPE_GROUP_JOIN
+                    }.map {
+                        Pair(it.sender, it.fromMe)
+                    }
+
+                    val contactsToUpdate = rr.msgs.filter {
+                        it.type?.toInt() == TYPE_CONTACT_KEY_RECORD                   ||
+                                it.type?.toInt() == TYPE_CONTACT_KEY_CONFIRMATION     ||
+                                it.type?.toInt() == TYPE_CONTACT_KEY
+                    }.map { it.sender }.distinct()
+
+                    potentialMessagesToUpdate = if (contactsToUpdate.isNotEmpty()) {
+                        rr.msgs.filter { msg ->
+                            (contactsToUpdate.contains(msg.sender)                    &&
+                                    msg.type?.toInt() != TYPE_CONTACT_KEY_RECORD       &&
+                                    msg.type?.toInt() != TYPE_CONTACT_KEY_CONFIRMATION &&
+                                    msg.type?.toInt() != TYPE_CONTACT_KEY)             ||
+                                    msg.fromMe == true
+                        }
+                    } else {
+                        emptyList()
+                    }
+
                     notifyListeners {
-                        onMessage(
-                            msg.message.orEmpty(),
-                            msg.sender.orEmpty(),
-                            msg.type?.toInt() ?: 0,
-                            msg.uuid.orEmpty(),
-                            msg.index.orEmpty(),
-                            msg.timestamp?.toLong(),
-                            msg.sentTo.orEmpty(),
-                            msg.msat?.let { convertMillisatsToSats(it) },
-                            msg.fromMe,
-                            msg.tag
-                        )
+                        onRestoreTribes(tribesToUpdate, isProductionEnvironment()) {
+                            // Handle new messages
+                            rr.msgs.forEach { msg ->
+                                processMessage(msg)
+                            }
+                        }
+                    }
+                } else {
+                    rr.msgs.forEach { msg ->
+                        processMessage(msg)
                     }
                 }
             }
@@ -388,7 +418,9 @@ class ConnectManagerImpl: ConnectManager()
                         if (restoreStateFlow.value is RestoreState.RestoringContacts) {
 
                             val contactsToRestore = rr.msgs.filter {
-                                it.type?.toInt() == 33 || it.type?.toInt() == 11 || it.type?.toInt() == 10
+                                it.type?.toInt() == TYPE_CONTACT_KEY_RECORD ||
+                                        it.type?.toInt() == TYPE_CONTACT_KEY_CONFIRMATION ||
+                                        it.type?.toInt() == TYPE_CONTACT_KEY
                             }.map { it.sender }.distinct()
 
                             if (contactsToRestore.isNotEmpty()) {
@@ -398,7 +430,7 @@ class ConnectManagerImpl: ConnectManager()
                             }
 
                             val tribesToRestore = rr.msgs.filter {
-                                it.type?.toInt() == 20 || it.type?.toInt() == 14
+                                it.type?.toInt() == TYPE_MEMBER_APPROVE || it.type?.toInt() == TYPE_GROUP_JOIN
                             }.map {
                                 Pair(it.sender, it.fromMe)
                             }
@@ -649,6 +681,24 @@ class ConnectManagerImpl: ConnectManager()
             notifyListeners {
                 onConnectManagerError(ConnectManagerError.MqttClientError)
             }
+        }
+    }
+
+    private fun processMessage(msg: Msg) {
+        notifyListeners {
+            onMessage(
+                msg.message.orEmpty(),
+                msg.sender.orEmpty(),
+                msg.type?.toInt() ?: 0,
+                msg.uuid.orEmpty(),
+                msg.index.orEmpty(),
+                msg.timestamp?.toLong(),
+                msg.sentTo.orEmpty(),
+                msg.msat?.let { convertMillisatsToSats(it) },
+                msg.fromMe,
+                msg.tag,
+                isRestoreAccount()
+            )
         }
     }
 
@@ -1515,6 +1565,14 @@ class ConnectManagerImpl: ConnectManager()
 //                onConnectManagerError(ConnectManagerError.MessageStatusError)
 //            }
             Log.e("MQTT_MESSAGES", "getMessagesStatusByTags ${e.message}")
+        }
+    }
+
+    override fun restorePendingMessages() {
+        if (potentialMessagesToUpdate.isNotEmpty()) {
+            potentialMessagesToUpdate.forEach { msg ->
+                processMessage(msg)
+            }
         }
     }
 

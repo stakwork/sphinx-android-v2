@@ -94,6 +94,8 @@ abstract class ConnectManager {
     )
     abstract fun getMessagesStatusByTags(tags: List<String>)
 
+    abstract fun restorePendingMessages()
+
     // Tribe Management Methods
     abstract fun createTribe(tribeJson: String)
     abstract fun joinToTribe(
@@ -177,7 +179,11 @@ interface ConnectManagerListener {
     fun onRestoreAccount(isProductionEnvironment: Boolean)
     fun onRestoreContacts(contacts: List<String?>)
     fun onRestoreMessages()
-    fun onRestoreTribes(tribes: List<Pair<String?, Boolean?>>, isProductionEnvironment: Boolean) // Sender, FromMe
+    fun onRestoreTribes(
+        tribes: List<Pair<String?, Boolean?>>,
+        isProductionEnvironment: Boolean,
+        callback: (() -> Unit)? = null
+    ) // Sender, FromMe
 //    fun onRestoreNextPageMessages(highestIndex: Long, limit: Int)
     fun onNewBalance(balance: Long)
     fun onSignedChallenge(sign: String)
@@ -200,7 +206,8 @@ interface ConnectManagerListener {
         sentTo: String,
         amount: Long?,
         fromMe: Boolean?,
-        tag: String?
+        tag: String?,
+        isRestore: Boolean,
     )
     fun onMessageTagAndUuid(tag: String?, msgUUID: String, provisionalId: Long)
     fun onMessagesCounts(msgsCounts: String)

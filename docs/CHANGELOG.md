@@ -1,5 +1,9 @@
 # ChangeLog
 
+## Version 1.0.0-alpha14 (2021-08-23)
+- Fixes multi client sync issues
+- Implements RSS feed
+
 ## Version 1.0.0-alpha13 (2021-08-19)
 - Fixes read state issues
 

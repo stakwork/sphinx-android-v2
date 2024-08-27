@@ -17,12 +17,11 @@ package uniffi.sphinxrs;
 // compile the Rust component. The easiest way to ensure this is to bundle the Kotlin
 // helpers directly inline like we're doing here.
 
-import com.sun.jna.Library
 import com.sun.jna.IntegerType
+import com.sun.jna.Library
 import com.sun.jna.Native
 import com.sun.jna.Pointer
 import com.sun.jna.Structure
-import com.sun.jna.Callback
 import com.sun.jna.ptr.*
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -494,8 +493,10 @@ internal interface _UniFFILib : Library {
     ): RustBuffer.ByValue
     fun uniffi_sphinxrs_fn_func_get_mutes(`seed`: RustBuffer.ByValue,`uniqueTime`: RustBuffer.ByValue,`state`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
-    fun uniffi_sphinxrs_fn_func_set_push_token(`seed`: RustBuffer.ByValue,`uniqueTime`: RustBuffer.ByValue,`state`: RustBuffer.ByValue,`pushToken`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
+    fun uniffi_sphinxrs_fn_func_set_push_token(`seed`: RustBuffer.ByValue,`uniqueTime`: RustBuffer.ByValue,`state`: RustBuffer.ByValue,`pushToken`: RustBuffer.ByValue,`pushKey`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
+    fun uniffi_sphinxrs_fn_func_decrypt_child_index(`encryptedChild`: RustBuffer.ByValue,`pushKey`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
+    ): Long
     fun uniffi_sphinxrs_fn_func_get_msgs_counts(`seed`: RustBuffer.ByValue,`uniqueTime`: RustBuffer.ByValue,`state`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_sphinxrs_fn_func_fetch_msgs_batch(`seed`: RustBuffer.ByValue,`uniqueTime`: RustBuffer.ByValue,`state`: RustBuffer.ByValue,`lastMsgIdx`: Long,`limit`: RustBuffer.ByValue,`reverse`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
@@ -523,6 +524,8 @@ internal interface _UniFFILib : Library {
     fun uniffi_sphinxrs_fn_func_fetch_pings(`seed`: RustBuffer.ByValue,`uniqueTime`: RustBuffer.ByValue,`state`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_sphinxrs_fn_func_id_from_macaroon(`macaroon`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
+    ): RustBuffer.ByValue
+    fun uniffi_sphinxrs_fn_func_find_route(`state`: RustBuffer.ByValue,`toPubkey`: RustBuffer.ByValue,`routeHint`: RustBuffer.ByValue,`amtMsat`: Long,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
     fun ffi_sphinxrs_rustbuffer_alloc(`size`: Int,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
@@ -664,6 +667,8 @@ internal interface _UniFFILib : Library {
     ): Short
     fun uniffi_sphinxrs_checksum_func_set_push_token(
     ): Short
+    fun uniffi_sphinxrs_checksum_func_decrypt_child_index(
+    ): Short
     fun uniffi_sphinxrs_checksum_func_get_msgs_counts(
     ): Short
     fun uniffi_sphinxrs_checksum_func_fetch_msgs_batch(
@@ -691,6 +696,8 @@ internal interface _UniFFILib : Library {
     fun uniffi_sphinxrs_checksum_func_fetch_pings(
     ): Short
     fun uniffi_sphinxrs_checksum_func_id_from_macaroon(
+    ): Short
+    fun uniffi_sphinxrs_checksum_func_find_route(
     ): Short
     fun ffi_sphinxrs_uniffi_contract_version(
     ): Int
@@ -904,7 +911,10 @@ private fun uniffiCheckApiChecksums(lib: _UniFFILib) {
     if (lib.uniffi_sphinxrs_checksum_func_get_mutes() != 4885.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_sphinxrs_checksum_func_set_push_token() != 7668.toShort()) {
+    if (lib.uniffi_sphinxrs_checksum_func_set_push_token() != 52747.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sphinxrs_checksum_func_decrypt_child_index() != 2032.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_sphinxrs_checksum_func_get_msgs_counts() != 29743.toShort()) {
@@ -947,6 +957,9 @@ private fun uniffiCheckApiChecksums(lib: _UniFFILib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_sphinxrs_checksum_func_id_from_macaroon() != 36424.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sphinxrs_checksum_func_find_route() != 27285.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
 }
@@ -2986,10 +2999,19 @@ fun `getMutes`(`seed`: String, `uniqueTime`: String, `state`: ByteArray): RunRet
 
 @Throws(SphinxException::class)
 
-fun `setPushToken`(`seed`: String, `uniqueTime`: String, `state`: ByteArray, `pushToken`: String): RunReturn {
+fun `setPushToken`(`seed`: String, `uniqueTime`: String, `state`: ByteArray, `pushToken`: String, `pushKey`: String): RunReturn {
     return FfiConverterTypeRunReturn.lift(
     rustCallWithError(SphinxException) { _status ->
-    _UniFFILib.INSTANCE.uniffi_sphinxrs_fn_func_set_push_token(FfiConverterString.lower(`seed`),FfiConverterString.lower(`uniqueTime`),FfiConverterByteArray.lower(`state`),FfiConverterString.lower(`pushToken`),_status)
+    _UniFFILib.INSTANCE.uniffi_sphinxrs_fn_func_set_push_token(FfiConverterString.lower(`seed`),FfiConverterString.lower(`uniqueTime`),FfiConverterByteArray.lower(`state`),FfiConverterString.lower(`pushToken`),FfiConverterString.lower(`pushKey`),_status)
+})
+}
+
+@Throws(SphinxException::class)
+
+fun `decryptChildIndex`(`encryptedChild`: String, `pushKey`: String): ULong {
+    return FfiConverterULong.lift(
+    rustCallWithError(SphinxException) { _status ->
+    _UniFFILib.INSTANCE.uniffi_sphinxrs_fn_func_decrypt_child_index(FfiConverterString.lower(`encryptedChild`),FfiConverterString.lower(`pushKey`),_status)
 })
 }
 
@@ -3116,6 +3138,15 @@ fun `idFromMacaroon`(`macaroon`: String): String {
     return FfiConverterString.lift(
     rustCallWithError(SphinxException) { _status ->
     _UniFFILib.INSTANCE.uniffi_sphinxrs_fn_func_id_from_macaroon(FfiConverterString.lower(`macaroon`),_status)
+})
+}
+
+@Throws(SphinxException::class)
+
+fun `findRoute`(`state`: ByteArray, `toPubkey`: String, `routeHint`: String?, `amtMsat`: ULong): String {
+    return FfiConverterString.lift(
+    rustCallWithError(SphinxException) { _status ->
+    _UniFFILib.INSTANCE.uniffi_sphinxrs_fn_func_find_route(FfiConverterByteArray.lower(`state`),FfiConverterString.lower(`toPubkey`),FfiConverterOptionalString.lower(`routeHint`),FfiConverterULong.lower(`amtMsat`),_status)
 })
 }
 

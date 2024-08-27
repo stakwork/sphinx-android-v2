@@ -65,7 +65,7 @@ interface ContactRepository {
 
     suspend fun getNewContactIndex(): Flow<ContactId?>
 
-    fun saveNewContactRegistered(msgSender: String)
+    fun saveNewContactRegistered(msgSender: String, date: Long?)
 
     fun updateNewContactInvited(contact: NewContact)
 

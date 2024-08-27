@@ -1383,15 +1383,15 @@ internal class DashboardViewModel @Inject constructor(
         if (jobNetworkRefresh?.isActive == true) {
             return
         }
+
+        jobNetworkRefresh = viewModelScope.launch(dispatchers.mainImmediate) {
+            connectManagerRepository.reconnectMqtt()
+        }
     }
 
     fun cancelRestore() {
         jobNetworkRefresh?.cancel()
         viewModelScope.launch(mainImmediate) {
-
-//            _networkStateFlow.value = Pair(Response.Success(true), true)
-//            _restoreProgressStateFlow.value = null
-
             repositoryDashboard.didCancelRestore()
         }
     }

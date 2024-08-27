@@ -114,6 +114,7 @@ internal class NewContactViewModel @Inject constructor(
                     null,
                     null,
                     null,
+                    null
                 )
                 connectManagerRepository.createContact(newContact)
                 viewStateContainer.updateViewState(ContactViewState.Saved)

@@ -146,8 +146,7 @@ internal class DashboardFragment : MotionLayoutFragment<
 
     override fun onRefresh() {
         binding.swipeRefreshLayoutDataReload.isRefreshing = false
-//        viewModel.networkRefresh(true)
-        showProgressBar()
+        viewModel.networkRefresh(true)
     }
 
     private fun setupSignerManager(){
@@ -681,11 +680,7 @@ internal class DashboardFragment : MotionLayoutFragment<
         onStopSupervisor.scope.launch(viewModel.mainImmediate) {
             binding.layoutDashboardHeader.let { dashboardHeader ->
                 dashboardHeader.progressBarDashboardHeaderNetwork.visible
-                dashboardHeader.textViewDashboardHeaderNetwork.visible
-
-                delay(2000)
-
-                dashboardHeader.progressBarDashboardHeaderNetwork.invisible
+                dashboardHeader.textViewDashboardHeaderNetwork.invisible
             }
         }
     }

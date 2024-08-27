@@ -134,6 +134,7 @@ import chat.sphinx.wrapper_lightning.toWalletMnemonic
 import chat.sphinx.wrapper_message.*
 import chat.sphinx.wrapper_message.Msg.Companion.toMsg
 import chat.sphinx.wrapper_message.MsgSender.Companion.toMsgSender
+import chat.sphinx.wrapper_message.MsgSender.Companion.toMsgSenderNull
 import chat.sphinx.wrapper_message_media.*
 import chat.sphinx.wrapper_message_media.token.MediaHost
 import chat.sphinx.wrapper_podcast.FeedRecommendation
@@ -334,15 +335,14 @@ abstract class SphinxRepository(
     override fun startRestoreProcess() {
         applicationScope.launch(mainImmediate) {
             var msgCounts: MsgsCounts? = null
-//            connectManager.getAllMessagesCount()
+
             restoreProcessState.asStateFlow().collect{ restoreProcessState ->
                 when (restoreProcessState) {
                     is RestoreProcessState.MessagesCounts -> {
                         msgCounts = restoreProcessState.msgsCounts
-                        connectManager.fetchFirstMessagesPerKey(0L, restoreProcessState.msgsCounts.first_for_each_scid)
+                        connectManager.fetchFirstMessagesPerKey(0L, msgCounts?.first_for_each_scid)
                     }
                     is RestoreProcessState.RestoreMessages -> {
-                        // Delay to ensure the contacts have been restored before fetching messages
                         delay(100L)
                         connectManager.fetchMessagesOnRestoreAccount(msgCounts?.total_highest_index)
                     }
@@ -353,7 +353,7 @@ abstract class SphinxRepository(
     }
 
     override fun createContact(contact: NewContact) {
-        applicationScope.launch(io) {
+        applicationScope.launch(mainImmediate) {
             createNewContact(contact)
             connectManager.createContact(contact)
         }
@@ -638,7 +638,8 @@ abstract class SphinxRepository(
     }
 
     override fun saveNewContactRegistered(
-        msgSender: String
+        msgSender: String,
+        date: Long?
     ) {
         applicationScope.launch(mainImmediate) {
             val contactInfo = msgSender.toMsgSender(moshi)
@@ -652,6 +653,7 @@ abstract class SphinxRepository(
                 inviteCode = contactInfo.code,
                 invitePrice = null,
                 null,
+                date?.toDateTime()
             )
 
             if (contactInfo.code != null) {
@@ -760,36 +762,45 @@ abstract class SphinxRepository(
         }
     }
 
-    override fun onRestoreContacts(contacts: List<String?>) {
-        applicationScope.launch(io) {
-            val contactList = contacts.mapNotNull { contact ->
-                try {
-                    contact?.toMsgSender(moshi)
-                } catch (e: Exception) {
-                    null
-                }
-            }.groupBy { it.pubkey }
+    override fun onRestoreContacts(
+        contacts: List<Pair<String?, Long?>>,
+        callback: (() -> Unit)?
+    ) {
+        if (contacts.isEmpty()) {
+            callback?.let { nnCallback ->
+                nnCallback()
+            }
+            return
+        }
+        applicationScope.launch(mainImmediate) {
+            val contactList: List<Pair<MsgSender?, DateTime?>> = contacts.mapNotNull { contact ->
+                Pair(contact?.first?.toMsgSenderNull(moshi), contact.second?.toDateTime())
+            }.groupBy { it.first?.pubkey }
                 .map { (_, group) ->
-                    group.find { it.confirmed } ?: group.first()
+                    group.find { it.first?.confirmed == true } ?: group.first()
                 }
 
             val newContactList = contactList.map { contactInfo ->
                 NewContact(
-                    contactAlias = contactInfo.alias?.toContactAlias(),
-                    lightningNodePubKey = contactInfo.pubkey.toLightningNodePubKey(),
-                    lightningRouteHint = contactInfo.route_hint?.toLightningRouteHint(),
-                    photoUrl = contactInfo.photo_url?.toPhotoUrl(),
-                    confirmed = contactInfo.confirmed,
+                    contactAlias = contactInfo.first?.alias?.toContactAlias(),
+                    lightningNodePubKey = contactInfo.first?.pubkey?.toLightningNodePubKey(),
+                    lightningRouteHint = contactInfo.first?.route_hint?.toLightningRouteHint(),
+                    photoUrl = contactInfo.first?.photo_url?.toPhotoUrl(),
+                    confirmed = contactInfo.first?.confirmed == true,
                     null,
-                    inviteCode = contactInfo.code,
+                    inviteCode = contactInfo.first?.code,
                     invitePrice = null,
                     null,
+                    contactInfo.second
                 )
             }
 
             newContactList.forEach { newContact ->
-                delay(100L)
                 createNewContact(newContact)
+            }
+
+            callback?.let { nnCallback ->
+                nnCallback()
             }
         }
     }
@@ -1105,6 +1116,7 @@ abstract class SphinxRepository(
         amount: Long?,
         fromMe: Boolean?,
         tag: String?,
+        date: Long?,
         isRestore: Boolean
     ) {
         applicationScope.launch(io) {
@@ -1133,7 +1145,7 @@ abstract class SphinxRepository(
                 when (messageType) {
                     is MessageType.ContactKeyRecord -> {
                         if (!isRestore) {
-                            saveNewContactRegistered(msgSender)
+                            saveNewContactRegistered(msgSender, date)
                         }
                     }
                     else -> {
@@ -1162,10 +1174,10 @@ abstract class SphinxRepository(
                                 }
                             }
                             is MessageType.ContactKeyConfirmation -> {
-                                saveNewContactRegistered(msgSender)
+                                saveNewContactRegistered(msgSender, date)
                             }
                             is MessageType.ContactKey -> {
-                                saveNewContactRegistered(msgSender)
+                                saveNewContactRegistered(msgSender, date)
                             }
                             is MessageType.Delete -> {
                                 msg.toMsg(moshi).replyUuid?.toMessageUUID()?.let { replyUuid ->
@@ -1228,6 +1240,7 @@ abstract class SphinxRepository(
         try {
             msgsCounts.toMsgsCounts(moshi)?.let {
                 restoreProcessState.value = RestoreProcessState.MessagesCounts(it)
+                connectManager.saveMessagesCounts(it)
             }
         } catch (e: Exception) {
             LOG.e(TAG, "onMessagesCounts: ${e.message}", e)
@@ -1402,9 +1415,14 @@ abstract class SphinxRepository(
         }
     }
 
-    override fun onNetworkStatusChange(isConnected: Boolean) {
+    override fun onNetworkStatusChange(
+        isConnected: Boolean,
+        isLoading: Boolean
+    ) {
         if (isConnected) {
             networkStatus.value = NetworkStatus.Connected
+        } else if (isLoading) {
+            networkStatus.value = NetworkStatus.Loading
         } else {
             networkStatus.value = NetworkStatus.Disconnected
             reconnectMqtt()
@@ -1416,10 +1434,7 @@ abstract class SphinxRepository(
         inviteCode: String,
         sats: Long
     ) {
-        applicationScope.launch(io) {
-            // Create the invite and save it to the database. inviteDbo.
-            //  connectionManagerState.value = ConnectionManagerState.NewInviteCode(inviteString)
-
+        applicationScope.launch(mainImmediate) {
             val newInvitee = NewContact(
                 contactAlias = nickname.toContactAlias(),
                 lightningNodePubKey = null,
@@ -1430,6 +1445,7 @@ abstract class SphinxRepository(
                 inviteCode = inviteCode,
                 invitePrice = sats.toSat(),
                 inviteStatus = InviteStatus.Pending,
+                null
             )
             createNewContact(newInvitee)
         }
@@ -1442,9 +1458,9 @@ abstract class SphinxRepository(
         }
     }
 
-    private fun reconnectMqtt() {
+    override fun reconnectMqtt() {
         applicationScope.launch(mainImmediate) {
-            delay(2000L)
+            delay(1000L)
             connectManager.reconnectWithBackOff()
         }
     }
@@ -1744,16 +1760,18 @@ abstract class SphinxRepository(
                                 notify = NotificationLevel.SeeAll
                             )
 
-                            chatLock.withLock {
-                                queries.transaction {
-                                    upsertNewChat(
-                                        newTribe,
-                                        moshi,
-                                        SynchronizedMap<ChatId, Seen>(),
-                                        queries,
-                                        null,
-                                        accountOwner.value?.nodePubKey
-                                    )
+                            messageLock.withLock {
+                                chatLock.withLock {
+                                    queries.transaction {
+                                        upsertNewChat(
+                                            newTribe,
+                                            moshi,
+                                            SynchronizedMap<ChatId, Seen>(),
+                                            queries,
+                                            null,
+                                            accountOwner.value?.nodePubKey
+                                        )
+                                    }
                                 }
                             }
 
@@ -2780,21 +2798,21 @@ abstract class SphinxRepository(
     }
 
     override suspend fun createNewContact(contact: NewContact) {
-        applicationScope.launch(io) {
-            val queries = coreDB.getSphinxDatabaseQueries()
-            val now = DateTime.nowUTC()
-            val contactId = getNewContactIndex().firstOrNull()?.value
+        val queries = coreDB.getSphinxDatabaseQueries()
+        val now = DateTime.nowUTC()
+        val contactId = getNewContactIndex().firstOrNull()?.value
 
-            val exitingContact = contact.lightningNodePubKey
-                ?.let { getContactByPubKey(it).firstOrNull() }
+        val exitingContact = contact.lightningNodePubKey
+            ?.let { getContactByPubKey(it).firstOrNull() }
 
-            val status = (contact.confirmed || exitingContact?.status?.isConfirmed() == true)
+        val status = (contact.confirmed || exitingContact?.status?.isConfirmed() == true)
 
-            if (exitingContact?.nodePubKey != null) {
-                val contactStatus = if (status) ContactStatus.Confirmed else ContactStatus.Pending
-                val chatStatus = if (status) ChatStatus.Approved else ChatStatus.Pending
+        if (exitingContact?.nodePubKey != null) {
+            val contactStatus = if (status) ContactStatus.Confirmed else ContactStatus.Pending
+            val chatStatus = if (status) ChatStatus.Approved else ChatStatus.Pending
 
-                contactLock.withLock {
+            contactLock.withLock {
+                withContext(dispatchers.io) {
                     queries.contactUpdateDetails(
                         contact.contactAlias,
                         contact.photoUrl,
@@ -2802,91 +2820,93 @@ abstract class SphinxRepository(
                         exitingContact.id
                     )
                 }
-                chatLock.withLock {
+            }
+            chatLock.withLock {
+                withContext(dispatchers.io) {
                     queries.chatUpdateDetails(
                         contact.photoUrl,
                         chatStatus,
                         ChatId(exitingContact.id.value)
                     )
                 }
-
+            }
+        } else {
+            val invite = if (contact.invitePrice != null && contact.inviteCode != null) {
+                Invite(
+                    id = InviteId(contactId ?: -1L),
+                    inviteString = InviteString(contact.inviteString ?: "null"),
+                    inviteCode = InviteCode(contact.inviteCode ?: ""),
+                    paymentRequest = null,
+                    contactId = ContactId(contactId ?: -1L),
+                    status = InviteStatus.Pending,
+                    price = contact.invitePrice,
+                    createdAt = now.toDateTime()
+                )
             } else {
+                null
+            }
 
-                val invite = if (contact.invitePrice != null && contact.inviteCode != null) {
-                    Invite(
-                        id = InviteId(contactId ?: -1L),
-                        inviteString = InviteString(contact.inviteString ?: "null"),
-                        inviteCode = InviteCode(contact.inviteCode ?: ""),
-                        paymentRequest = null,
-                        contactId = ContactId(contactId ?: -1L),
-                        status = InviteStatus.Pending,
-                        price = contact.invitePrice,
-                        createdAt = now.toDateTime()
-                    )
-                } else {
-                    null
-                }
+            val newContact = Contact(
+                id = ContactId(exitingContact?.id?.value ?: contactId ?: -1L),
+                routeHint = contact.lightningRouteHint,
+                nodePubKey = contact.lightningNodePubKey,
+                nodeAlias = null,
+                alias = exitingContact?.alias ?: contact.contactAlias,
+                photoUrl = contact.photoUrl,
+                privatePhoto = PrivatePhoto.False,
+                isOwner = Owner.False,
+                status = if (status) ContactStatus.Confirmed else ContactStatus.Pending,
+                rsaPublicKey = null,
+                deviceId = null,
+                createdAt = contact.createdAt ?: now.toDateTime(),
+                updatedAt = contact.createdAt ?: now.toDateTime(),
+                fromGroup = ContactFromGroup.False,
+                notificationSound = null,
+                tipAmount = null,
+                inviteId = invite?.id,
+                inviteStatus = invite?.status,
+                blocked = Blocked.False
+            )
 
-                val newContact = Contact(
-                    id = ContactId(exitingContact?.id?.value ?: contactId ?: -1L),
-                    routeHint = contact.lightningRouteHint,
-                    nodePubKey = contact.lightningNodePubKey,
-                    nodeAlias = null,
-                    alias = exitingContact?.alias ?: contact.contactAlias,
-                    photoUrl = contact.photoUrl,
-                    privatePhoto = PrivatePhoto.False,
-                    isOwner = Owner.False,
-                    status = if (status) ContactStatus.Confirmed else ContactStatus.Pending,
-                    rsaPublicKey = null,
-                    deviceId = null,
-                    createdAt = now.toDateTime(),
-                    updatedAt = now.toDateTime(),
-                    fromGroup = ContactFromGroup.False,
-                    notificationSound = null,
-                    tipAmount = null,
-                    inviteId = invite?.id,
-                    inviteStatus = invite?.status,
-                    blocked = Blocked.False
-                )
+            val newChat = Chat(
+                id = ChatId(exitingContact?.id?.value ?: contactId ?: -1L),
+                uuid = ChatUUID("${UUID.randomUUID()}"),
+                name = ChatName(
+                    exitingContact?.alias?.value ?: contact.contactAlias?.value ?: "unknown"
+                ),
+                photoUrl = contact.photoUrl,
+                type = ChatType.Conversation,
+                status = if (status) ChatStatus.Approved else ChatStatus.Pending,
+                contactIds = listOf(ContactId(0), ContactId(contactId ?: -1)),
+                isMuted = ChatMuted.False,
+                createdAt = contact.createdAt ?: now.toDateTime(),
+                groupKey = null,
+                host = null,
+                pricePerMessage = null,
+                escrowAmount = null,
+                unlisted = ChatUnlisted.False,
+                privateTribe = ChatPrivate.False,
+                ownerPubKey = null,
+                seen = Seen.False,
+                metaData = null,
+                myPhotoUrl = null,
+                myAlias = null,
+                pendingContactIds = emptyList(),
+                latestMessageId = null,
+                contentSeenAt = null,
+                pinedMessage = null,
+                notify = NotificationLevel.SeeAll
+            )
 
-                val newChat = Chat(
-                    id = ChatId(exitingContact?.id?.value ?: contactId ?: -1L),
-                    uuid = ChatUUID("${UUID.randomUUID()}"),
-                    name = ChatName(
-                        exitingContact?.alias?.value ?: contact.contactAlias?.value ?: "unknown"
-                    ),
-                    photoUrl = contact.photoUrl,
-                    type = ChatType.Conversation,
-                    status = if (status) ChatStatus.Approved else ChatStatus.Pending,
-                    contactIds = listOf(ContactId(0), ContactId(contactId ?: -1)),
-                    isMuted = ChatMuted.False,
-                    createdAt = now.toDateTime(),
-                    groupKey = null,
-                    host = null,
-                    pricePerMessage = null,
-                    escrowAmount = null,
-                    unlisted = ChatUnlisted.False,
-                    privateTribe = ChatPrivate.False,
-                    ownerPubKey = null,
-                    seen = Seen.False,
-                    metaData = null,
-                    myPhotoUrl = null,
-                    myAlias = null,
-                    pendingContactIds = emptyList(),
-                    latestMessageId = null,
-                    contentSeenAt = null,
-                    pinedMessage = null,
-                    notify = NotificationLevel.SeeAll
-                )
-
-
-                contactLock.withLock {
+            contactLock.withLock {
+                withContext(dispatchers.io) {
                     queries.transaction {
                         upsertNewContact(newContact, queries)
                     }
                 }
-
-                chatLock.withLock {
+            }
+            chatLock.withLock {
+                withContext(dispatchers.io) {
                     queries.transaction {
                         upsertNewChat(
                             newChat,
@@ -2898,16 +2918,15 @@ abstract class SphinxRepository(
                         )
                     }
                 }
-
-                inviteLock.withLock {
-                    invite?.let { invite ->
+            }
+            inviteLock.withLock {
+                invite?.let { invite ->
+                    withContext(dispatchers.io) {
                         queries.transaction {
                             upsertNewInvite(invite, queries)
                         }
                     }
                 }
-
-                connectManager.restorePendingMessages()
             }
         }
     }

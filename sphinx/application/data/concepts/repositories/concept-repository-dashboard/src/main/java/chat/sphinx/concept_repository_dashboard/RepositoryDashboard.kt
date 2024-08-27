@@ -72,9 +72,6 @@ interface RepositoryDashboard {
     ): Response<Boolean, ResponseError>
 
     val networkRefreshBalance: MutableStateFlow<Long?>
-    val networkRefreshLatestContacts: Flow<LoadResponse<RestoreProgress, ResponseError>>
-    val networkRefreshFeedContent: Flow<LoadResponse<RestoreProgress, ResponseError>>
-    val networkRefreshMessages: Flow<LoadResponse<RestoreProgress, ResponseError>>
 
     suspend fun didCancelRestore()
 

@@ -2182,6 +2182,8 @@ abstract class SphinxRepository(
         InviteDboPresenterMapper(dispatchers)
     }
 
+    private val inviteLock = Mutex()
+
     override val getAllContacts: Flow<List<Contact>> by lazy {
         flow {
             emitAll(
@@ -2272,34 +2274,6 @@ abstract class SphinxRepository(
         )
     }
 
-
-    var latestContactsPercentage = 1
-
-    private val inviteLock = Mutex()
-    override val networkRefreshLatestContacts: Flow<LoadResponse<RestoreProgress, ResponseError>> by lazy {
-        flow {
-            val lastSeenContactsDate: String? = authenticationStorage.getString(
-                REPOSITORY_LAST_SEEN_CONTACTS_DATE,
-                null
-            )
-
-            val lastSeenContactsDateResolved: DateTime = lastSeenContactsDate?.toDateTime()
-                ?: DATE_NIXON_SHOCK.toDateTime()
-
-            val now: String = DateTime.nowUTC()
-            val restoring = lastSeenContactsDate == null
-
-            emit(
-                Response.Success(
-                    RestoreProgress(restoring, 1)
-                )
-            )
-
-            var offset = 0
-            var limit = 1000
-
-        }
-    }
 
     override suspend fun deleteContactById(contactId: ContactId): Response<Any, ResponseError> {
         val queries = coreDB.getSphinxDatabaseQueries()
@@ -5987,54 +5961,6 @@ abstract class SphinxRepository(
         }
     }
 
-    override val networkRefreshFeedContent: Flow<LoadResponse<RestoreProgress, ResponseError>> by lazy {
-        flow {
-
-            val lastSeenMessagesDate: String? = authenticationStorage.getString(
-                REPOSITORY_LAST_SEEN_MESSAGE_DATE,
-                null
-            )
-
-            if (lastSeenMessagesDate != null) {
-                return@flow
-            }
-
-            val queries = coreDB.getSphinxDatabaseQueries()
-
-            var contentFeedStatuses: List<ContentFeedStatusDto> = listOf()
-
-            // TODO V2 getFeedStatuses
-//            networkQueryFeedStatus.getFeedStatuses().collect { loadResponse ->
-//                @Exhaustive
-//                when (loadResponse) {
-//                    is LoadResponse.Loading -> {}
-//                    is Response.Error -> {}
-//                    is Response.Success -> {
-//                        contentFeedStatuses = loadResponse.value
-//                    }
-//                }
-//            }
-            if (contentFeedStatuses.isNotEmpty()) {
-
-                for ((index, contentFeedStatus) in contentFeedStatuses.withIndex()) {
-
-                    restoreContentFeedStatusFrom(
-                        contentFeedStatus,
-                        queries,
-                        null,
-                        null
-                    )
-
-                    val restoreProgress =
-                        getFeedStatusesRestoreProgress(contentFeedStatuses.lastIndex, index)
-
-                    emit(Response.Success(restoreProgress))
-                }
-            }
-        }
-
-    }
-
     /*
 * Used to hold in memory the chat table's latest message time to reduce disk IO
 * and mitigate conflicting updates between SocketIO and networkRefreshMessages
@@ -6042,113 +5968,6 @@ abstract class SphinxRepository(
     @Suppress("RemoveExplicitTypeArguments")
     private val latestMessageUpdatedTimeMap: SynchronizedMap<ChatId, DateTime> by lazy {
         SynchronizedMap<ChatId, DateTime>()
-    }
-
-    override val networkRefreshMessages: Flow<LoadResponse<RestoreProgress, ResponseError>> by lazy {
-        flow {
-            emit(LoadResponse.Loading)
-            val queries = coreDB.getSphinxDatabaseQueries()
-
-            val lastSeenMessagesDate: String? = authenticationStorage.getString(
-                REPOSITORY_LAST_SEEN_MESSAGE_DATE,
-                null
-            )
-
-            val page: Int = if (lastSeenMessagesDate == null) {
-                authenticationStorage.getString(
-                    REPOSITORY_LAST_SEEN_MESSAGE_RESTORE_PAGE,
-                    "0"
-                )!!.toInt()
-            } else {
-                0
-            }
-
-            val lastSeenMessageDateResolved: DateTime = lastSeenMessagesDate?.toDateTime()
-                ?: DATE_NIXON_SHOCK.toDateTime()
-
-            val restoring: Boolean = lastSeenMessagesDate == null
-
-            val now: String = DateTime.nowUTC()
-
-            val supervisor = SupervisorJob(currentCoroutineContext().job)
-            val scope = CoroutineScope(supervisor)
-
-            var networkResponseError: Response.Error<ResponseError>? = null
-
-            val jobList =
-                ArrayList<Job>(MESSAGE_PAGINATION_LIMIT * 2 /* MessageDto fields to potentially decrypt */)
-
-
-            var offset: Int = page * MESSAGE_PAGINATION_LIMIT
-
-            supervisor.cancelAndJoin()
-
-            networkResponseError?.let { responseError ->
-
-                emit(responseError)
-
-            } ?: applicationScope.launch(mainImmediate) {
-
-                authenticationStorage.putString(
-                    REPOSITORY_LAST_SEEN_MESSAGE_DATE,
-                    now
-                )
-
-                if (lastSeenMessagesDate == null) {
-                    authenticationStorage.removeString(REPOSITORY_LAST_SEEN_MESSAGE_RESTORE_PAGE)
-                    LOG.d(TAG, "Removing message restore page number")
-                }
-
-            }.join()
-
-            emit(
-                Response.Success(
-                    RestoreProgress(
-                        false,
-                        100
-                    )
-                )
-            )
-        }
-    }
-
-    private fun getMessagesRestoreProgress(
-        newMessagesTotal: Int,
-        offset: Int
-    ): RestoreProgress {
-
-        val pages: Int = if (newMessagesTotal <= MESSAGE_PAGINATION_LIMIT) {
-            1
-        } else {
-            newMessagesTotal / MESSAGE_PAGINATION_LIMIT
-        }
-
-        val feedRestoreProgressTotal = 10
-        val messagesRestoreProgressTotal = 100 - feedRestoreProgressTotal - latestContactsPercentage
-        val currentPage: Int = offset / MESSAGE_PAGINATION_LIMIT
-
-        val progress: Int = latestContactsPercentage + feedRestoreProgressTotal + (currentPage * messagesRestoreProgressTotal / pages)
-
-        return RestoreProgress(
-            true,
-            progress
-        )
-    }
-
-    private fun getFeedStatusesRestoreProgress(
-        feedTotal: Int,
-        currentIndex: Int
-    ): RestoreProgress {
-
-        val feedRestoreProgressTotal = 10
-        val feedPercentage = feedRestoreProgressTotal.toDouble() / feedTotal.toDouble() * currentIndex
-
-        val progress: Int = latestContactsPercentage + round(feedPercentage).toInt()
-
-        return RestoreProgress(
-            true,
-            progress
-        )
     }
 
     override suspend fun didCancelRestore() {
@@ -6316,31 +6135,6 @@ abstract class SphinxRepository(
         }
 
         delay(25L)
-//        networkQueryInvite.payInvite(invite.inviteString).collect { loadResponse ->
-//            @Exhaustive
-//            when (loadResponse) {
-//                is LoadResponse.Loading -> {
-//                }
-//
-//                is Response.Error -> {
-//                    contactLock.withLock {
-//                        withContext(io) {
-//                            queries.transaction {
-//                                updatedContactIds.add(invite.contactId)
-//                                updateInviteStatus(
-//                                    invite.id,
-//                                    InviteStatus.PaymentPending,
-//                                    queries
-//                                )
-//                            }
-//                        }
-//                    }
-//                }
-//
-//                is Response.Success -> {
-//                }
-//            }
-//        }
     }
 
     override suspend fun deleteInviteAndContact(inviteString: String) {

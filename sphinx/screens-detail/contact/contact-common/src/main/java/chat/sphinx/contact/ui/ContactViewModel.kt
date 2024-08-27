@@ -124,12 +124,6 @@ abstract class ContactViewModel<ARGS: NavArgs>(
                 LightningNodePubKey(lightningNodePubKey),
                 lightningRouteHint?.toLightningRouteHint(),
             )
-
-//            saveContact(
-//                ContactAlias(contactAlias),
-//                LightningNodePubKey(lightningNodePubKey),
-//                lightningRouteHint?.toLightningRouteHint()
-//            )
         }
     }
 
@@ -137,15 +131,6 @@ abstract class ContactViewModel<ARGS: NavArgs>(
         contactAlias: ContactAlias,
         lightningNodePubKey: LightningNodePubKey,
         lightningRouteHint: LightningRouteHint?,
-    )
-
-
-    /** Sphinx V1 (likely to be removed) **/
-
-    protected abstract fun saveContact(
-        contactAlias: ContactAlias,
-        lightningNodePubKey: LightningNodePubKey,
-        lightningRouteHint: LightningRouteHint?
     )
 
     fun toQrCodeLightningNodePubKey(nodePubKey: String) {

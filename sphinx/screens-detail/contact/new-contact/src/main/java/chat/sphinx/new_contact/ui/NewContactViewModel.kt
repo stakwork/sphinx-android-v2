@@ -124,38 +124,4 @@ internal class NewContactViewModel @Inject constructor(
         }
     }
 
-    /** Sphinx V1 (likely to be removed) **/
-
-    override fun saveContact(
-        contactAlias: ContactAlias,
-        lightningNodePubKey: LightningNodePubKey,
-        lightningRouteHint: LightningRouteHint?
-    ) {
-        if (saveContactJob?.isActive == true) {
-            return
-        }
-
-        saveContactJob = viewModelScope.launch(mainImmediate) {
-            contactRepository.createContact(
-                contactAlias,
-                lightningNodePubKey,
-                lightningRouteHint
-            ).collect { loadResponse ->
-                @app.cash.exhaustive.Exhaustive
-                when(loadResponse) {
-                    LoadResponse.Loading -> {
-                        viewStateContainer.updateViewState(ContactViewState.Saving)
-                    }
-                    is Response.Error -> {
-                        submitSideEffect(ContactSideEffect.Notify.FailedToSaveContact)
-                        viewStateContainer.updateViewState(ContactViewState.Error)
-                    }
-                    is Response.Success -> {
-                        viewStateContainer.updateViewState(ContactViewState.Saved)
-                    }
-
-                }
-            }
-        }
-    }
 }

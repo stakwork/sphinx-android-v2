@@ -78,23 +78,4 @@ interface ContactRepository {
         routeHint: LightningRouteHint?
     ): Response<Any, ResponseError>
 
-    fun createContact(
-        contactAlias: ContactAlias,
-        lightningNodePubKey: LightningNodePubKey,
-        lightningRouteHint: LightningRouteHint?,
-        contactKey: ContactKey? = null,
-        photoUrl: PhotoUrl? = null
-    ): Flow<LoadResponse<Any, ResponseError>>
-
-    suspend fun connectToContact(
-        contactAlias: ContactAlias,
-        lightningNodePubKey: LightningNodePubKey,
-        lightningRouteHint: LightningRouteHint?,
-        contactKey: ContactKey,
-        message: String,
-        photoUrl: PhotoUrl?,
-        priceToMeet: Sat,
-    ): Response<ContactId?, ResponseError>
-
-
 }

@@ -108,7 +108,6 @@ class ConnectManagerImpl: ConnectManager()
     private val restoreProgress = RestoreProgress()
     private var isMqttConnected: Boolean = false
     private var isAppFirstInit: Boolean = true
-    private var potentialMessagesToUpdate: List<Msg> = emptyList()
 
     companion object {
         const val TEST_V2_SERVER_IP = "75.101.247.127:1883"

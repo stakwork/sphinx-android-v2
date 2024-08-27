@@ -113,11 +113,9 @@ internal class OnBoardConnectingViewModel @Inject constructor(
     private val keyRestore: KeyRestore,
     private val walletDataHandler: WalletDataHandler,
     private val networkQueryInvite: NetworkQueryInvite,
-    private val onBoardStepHandler: OnBoardStepHandler,
     private val networkQueryContact: NetworkQueryContact,
     private val connectManagerRepository: ConnectManagerRepository,
     val moshi: Moshi,
-    private val rsa: RSA,
     private val app: Application
     ): MotionLayoutViewModel<
         Any,
@@ -346,55 +344,6 @@ internal class OnBoardConnectingViewModel @Inject constructor(
         }
     }
 
-    private suspend fun continueWithToken(
-        token: AuthorizationToken,
-        relayUrl: RelayUrl,
-        transportKey: RsaPublicKey? = null,
-        redeemInviteDto: RedeemInviteDto?
-    ) {
-        val inviterData: OnBoardInviterData? = redeemInviteDto?.let { dto ->
-            OnBoardInviterData(
-                dto.nickname,
-                dto.pubkey?.toLightningNodePubKey(),
-                dto.route_hint,
-                dto.message,
-                dto.action,
-                dto.pin
-            )
-        }
-    }
-
-    private var tokenRetries = 0
-    private suspend fun registerTokenAndStartOnBoard(
-        ip: RelayUrl,
-        nodePubKey: String?,
-        password: String?,
-        redeemInviteDto: RedeemInviteDto?,
-        token: AuthorizationToken? = null,
-        transportKey: RsaPublicKey? = null,
-        transportToken: TransportToken? = null
-    ) {
-
-        @OptIn(RawPasswordAccess::class)
-        val authToken = token ?: AuthorizationToken(
-            PasswordGenerator(passwordLength = 20).password.value.joinToString("")
-        )
-
-        val inviterData: OnBoardInviterData? = redeemInviteDto?.let { dto ->
-            OnBoardInviterData(
-                dto.nickname,
-                dto.pubkey?.toLightningNodePubKey(),
-                dto.route_hint,
-                dto.message,
-                dto.action,
-                dto.pin
-            )
-        }
-
-        var generateTokenResponse: LoadResponse<GenerateTokenResponse, ResponseError> = Response.Error(
-            ResponseError("generateToken endpoint failed")
-        )
-    }
 
     private suspend fun goToConnectedScreen(
         ownerPrivateKey: RsaPrivateKey,

@@ -107,27 +107,6 @@ class OnBoardStepHandler @Inject constructor(
         }
     }
 
-    suspend fun persistOnBoardStep3Data(inviterData: OnBoardInviterData): OnBoardStep.Step3_Picture? {
-        lock.withLock {
-
-            val step3 = OnBoardStep.Step3_Picture(inviterData)
-            val step3Json: String = try {
-                withContext(default) {
-                    moshi
-                        .adapter(Step3Json::class.java)
-                        .toJson(Step3Json(inviterData.toInviteDataJson()))
-                } ?: throw IOException("Failed to convert Step3Json data to String")
-            } catch (e: Exception) {
-                LOG.e(TAG, "Step3 Json Conversion Error", e)
-                return null
-            }
-
-            authenticationStorage.putString(KEY, STEP_3 + step3Json)
-
-            return step3
-        }
-    }
-
     suspend fun persistOnBoardStep4Data(inviterData: OnBoardInviterData): OnBoardStep.Step4_Ready? {
         lock.withLock {
 

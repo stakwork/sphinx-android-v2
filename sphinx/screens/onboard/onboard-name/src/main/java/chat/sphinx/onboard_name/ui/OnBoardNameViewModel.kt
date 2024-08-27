@@ -37,5 +37,4 @@ internal class OnBoardNameViewModel @Inject constructor(
         }
     }
 
-    /** Sphinx V1 (likely to be removed) **/
 }

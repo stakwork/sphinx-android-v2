@@ -66,7 +66,6 @@ internal class TribeAppViewModel @Inject constructor(
     private val contactRepository: ContactRepository,
     private val chatRepository: ChatRepository,
     private val moshi: Moshi,
-    private val networkQueryAuthorizeExternal: NetworkQueryAuthorizeExternal,
     private val networkQueryContact: NetworkQueryContact,
     private val connectManagerRepository: ConnectManagerRepository
     ) : BaseViewModel<TribeFeedViewState>(dispatchers, TribeFeedViewState.Idle) {

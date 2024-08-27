@@ -18,10 +18,6 @@ interface LightningRepository {
 
     suspend fun getAccountBalance(): StateFlow<NodeBalance?>
 
-    suspend fun getAccountBalanceAll(
-        relayData: Triple<Pair<AuthorizationToken, TransportToken?>, RequestSignature?, RelayUrl>? = null
-    ): Flow<LoadResponse<NodeBalanceAll, ResponseError>>
-
     suspend fun updateLSP(lsp: LightningServiceProvider)
     suspend fun retrieveLSP(): Flow<LightningServiceProvider>
 }

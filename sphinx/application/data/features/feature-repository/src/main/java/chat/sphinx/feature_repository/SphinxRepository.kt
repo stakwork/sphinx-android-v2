@@ -2975,32 +2975,6 @@ abstract class SphinxRepository(
         MutableStateFlow(null)
     }
 
-    override suspend fun getAccountBalanceAll(
-        relayData: Triple<Pair<AuthorizationToken, TransportToken?>, RequestSignature?, RelayUrl>?
-    ): Flow<LoadResponse<NodeBalanceAll, ResponseError>> = flow {
-
-//        networkQueryLightning.getBalanceAll(
-//            relayData
-//        ).collect { loadResponse ->
-//            @Exhaustive
-//            when (loadResponse) {
-//                is LoadResponse.Loading -> {
-//                    emit(loadResponse)
-//                }
-//                is Response.Error -> {
-//                    emit(loadResponse)
-//                }
-//                is Response.Success -> {
-//                    val nodeBalanceAll = NodeBalanceAll(
-//                        Sat(loadResponse.value.local_balance),
-//                        Sat(loadResponse.value.remote_balance)
-//                    )
-//                    emit(Response.Success(nodeBalanceAll))
-//                }
-//            }
-//        }
-    }
-
     private val lspLock = Mutex()
 
     override suspend fun updateLSP(lsp: LightningServiceProvider) {

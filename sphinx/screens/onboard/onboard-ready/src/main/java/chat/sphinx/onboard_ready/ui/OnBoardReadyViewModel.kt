@@ -33,8 +33,6 @@ internal class OnBoardReadyViewModel @Inject constructor(
     private val navigator: OnBoardReadyNavigator,
     private val contactRepository: ContactRepository,
     private val lightningRepository: LightningRepository,
-    private val networkQueryInvite: NetworkQueryInvite,
-    private val connectManagerRepository: ConnectManagerRepository,
     private val onBoardStepHandler: OnBoardStepHandler,
 ): SideEffectViewModel<
         Context,

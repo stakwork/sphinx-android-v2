@@ -30,7 +30,7 @@ abstract class ConnectManager {
     abstract fun setInviteCode(inviteString: String)
     abstract fun setMnemonicWords(words: List<String>?)
     abstract fun setNetworkType(isTestEnvironment: Boolean)
-    abstract fun setOwnerDeviceId(deviceId: String)
+    abstract fun setOwnerDeviceId(deviceId: String, pushKey: String)
     abstract fun processChallengeSignature(challenge: String): String?
     abstract fun fetchFirstMessagesPerKey(lastMsgIdx: Long, firstForEachScid: Long?)
     abstract fun fetchMessagesOnRestoreAccount(totalHighestIndex: Long?)
@@ -140,8 +140,7 @@ abstract class ConnectManager {
         minMsat: Long?, // include only payments above this amount
         reverse: Boolean?
     )
-    abstract fun getPubKeyFromChildIndex(childIndex: Long): String?
-    abstract fun getPubKeyByEncryptedChild(child: String): String?
+    abstract fun getPubKeyByEncryptedChild(child: String, pushKey: String?): String?
     abstract fun generateMediaToken(
         contactPubKey: String,
         muid: String,

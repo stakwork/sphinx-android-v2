@@ -160,7 +160,9 @@ import kotlinx.coroutines.sync.withLock
 import okio.base64.encodeBase64
 import java.io.File
 import java.io.InputStream
+import java.security.SecureRandom
 import java.util.*
+import javax.management.monitor.StringMonitor
 import kotlin.collections.ArrayList
 import kotlin.collections.LinkedHashMap
 import kotlin.math.absoluteValue
@@ -214,8 +216,8 @@ abstract class SphinxRepository(
         const val REPOSITORY_LIGHTNING_BALANCE = "REPOSITORY_LIGHTNING_BALANCE"
         const val REPOSITORY_LAST_SEEN_MESSAGE_DATE = "REPOSITORY_LAST_SEEN_MESSAGE_DATE"
         const val REPOSITORY_LAST_SEEN_CONTACTS_DATE = "REPOSITORY_LAST_SEEN_CONTACTS_DATE"
-        const val REPOSITORY_LAST_SEEN_MESSAGE_RESTORE_PAGE =
-            "REPOSITORY_LAST_SEEN_MESSAGE_RESTORE_PAGE"
+        const val REPOSITORY_LAST_SEEN_MESSAGE_RESTORE_PAGE = "REPOSITORY_LAST_SEEN_MESSAGE_RESTORE_PAGE"
+        const val REPOSITORY_PUSH_KEY = "REPOSITORY_PUSH_KEY"
 
         // networkRefreshMessages
         const val MESSAGE_PAGINATION_LIMIT = 200
@@ -370,7 +372,22 @@ abstract class SphinxRepository(
     }
 
     override fun setOwnerDeviceId(deviceId: String) {
-        connectManager.setOwnerDeviceId(deviceId)
+        applicationScope.launch(mainImmediate) {
+            var pushKey: String? = authenticationStorage.getString(
+                REPOSITORY_PUSH_KEY,
+                null
+            )
+
+            if (pushKey == null) {
+                val newPushKey = generateRandomBytes(32).toHex()
+                LOG.d("PUSH_KEY", newPushKey)
+                authenticationStorage.putString(REPOSITORY_PUSH_KEY, newPushKey)
+            }
+
+            pushKey?.let {
+                connectManager.setOwnerDeviceId(deviceId, it)
+            }
+        }
     }
 
     override fun signChallenge(challenge: String): String? {
@@ -490,7 +507,11 @@ abstract class SphinxRepository(
 
     override suspend fun getChatIdByEncryptedChild(child: String) = flow {
         val queries = coreDB.getSphinxDatabaseQueries()
-        val pubkey = connectManager.getPubKeyByEncryptedChild(child)
+
+        val pubkey = connectManager.getPubKeyByEncryptedChild(
+            child,
+            authenticationStorage.getString(REPOSITORY_PUSH_KEY, null)
+        )
         if (pubkey != null) {
             val contact = withContext(io) {
                 queries.contactGetByPubKey(pubkey.toLightningNodePubKey()).executeAsOneOrNull()
@@ -502,7 +523,7 @@ abstract class SphinxRepository(
         } else {
             emit(null)
         }
-    }.flowOn(io)
+    }.flowOn(mainImmediate)
 
     override fun getTagsByChatId(chatId: ChatId) {
         applicationScope.launch(io) {
@@ -8390,4 +8411,28 @@ abstract class SphinxRepository(
             }
         }
     }
+
+    // Utility Methods
+    @OptIn(ExperimentalUnsignedTypes::class)
+    private fun generateRandomBytes(size: Int): ByteArray {
+        val random = SecureRandom()
+        val bytes = ByteArray(size)
+        random.nextBytes(bytes)
+        val byteArray = ByteArray(size)
+
+        for (i in bytes.indices) {
+            byteArray[i] = bytes[i]
+        }
+
+        return byteArray
+    }
 }
+
+@Suppress("NOTHING_TO_INLINE")
+inline fun ByteArray.toHex(): String =
+    StringBuilder(size * 2).let { hex ->
+        for (b in this) {
+            hex.append(String.format("%02x", b, 0xFF))
+        }
+        hex.toString()
+    }

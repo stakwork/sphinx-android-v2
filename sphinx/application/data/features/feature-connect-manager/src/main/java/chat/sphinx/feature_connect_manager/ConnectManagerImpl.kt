@@ -862,13 +862,17 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
-    override fun setOwnerDeviceId(deviceId: String) {
+    override fun setOwnerDeviceId(
+        deviceId: String,
+        pushKey: String
+    ) {
         try {
             val token = setPushToken(
                 ownerSeed!!,
                 getTimestampInMilliseconds(),
                 getCurrentUserState(),
-                deviceId
+                deviceId,
+                pushKey
             )
             handleRunReturn(token)
         } catch (e: Exception) {
@@ -1828,30 +1832,36 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
-    override fun getPubKeyFromChildIndex(childIndex: Long): String? {
-        return try {
-            uniffi.sphinxrs.contactPubkeyByChildIndex(
-                getCurrentUserState(),
-                childIndex.toULong()
-            )
-        } catch (e: Exception) {
-//            notifyListeners {
-//                onConnectManagerError(ConnectManagerError.PubKeyFromChildIndexError)
-//            }
-            null
-        }
-    }
+    override fun getPubKeyByEncryptedChild(
+        child: String,
+        pushKey: String?
+    ): String? {
+        var childIndex: ULong? = null
+        var publicKey: String? = null
 
-    override fun getPubKeyByEncryptedChild(child: String): String? {
-        return try {
-            uniffi.sphinxrs.contactPubkeyByEncryptedChild(
-                ownerSeed!!,
-                getCurrentUserState(),
-                child
-            )
-        } catch (e: Exception) {
-            null
+        pushKey?.let {
+            try {
+                childIndex = uniffi.sphinxrs.decryptChildIndex(
+                    child,
+                    it
+                )
+            } catch (e: Exception) {
+                return null
+            }
         }
+
+        childIndex?.let {
+            try {
+                publicKey = uniffi.sphinxrs.contactPubkeyByChildIndex(
+                    getCurrentUserState(),
+                    it
+                )
+            } catch (e: Exception) {
+                return null
+            }
+        }
+
+        return publicKey
     }
 
     override fun generateMediaToken(

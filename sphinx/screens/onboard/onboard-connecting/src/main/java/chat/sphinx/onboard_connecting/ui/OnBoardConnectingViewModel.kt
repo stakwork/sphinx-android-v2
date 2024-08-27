@@ -61,42 +61,6 @@ internal inline val OnBoardConnectingFragmentArgs.restoreCode: RedemptionCode.Ac
         return null
     }
 
-internal inline val OnBoardConnectingFragmentArgs.connectionCode: RedemptionCode.NodeInvite?
-    get() {
-        argCode?.let {
-            val redemptionCode = RedemptionCode.decode(it)
-
-            if (redemptionCode is RedemptionCode.NodeInvite) {
-                return redemptionCode
-            }
-        }
-        return null
-    }
-
-internal inline val OnBoardConnectingFragmentArgs.swarmConnect: RedemptionCode.SwarmConnect?
-    get() {
-        argCode?.let {
-            val redemptionCode = RedemptionCode.decode(it)
-
-            if (redemptionCode is RedemptionCode.SwarmConnect) {
-                return redemptionCode
-            }
-        }
-        return null
-    }
-
-internal inline val OnBoardConnectingFragmentArgs.swarmClaim: RedemptionCode.SwarmClaim?
-    get() {
-        argCode?.let {
-            val redemptionCode = RedemptionCode.decode(it)
-
-            if (redemptionCode is RedemptionCode.SwarmClaim) {
-                return redemptionCode
-            }
-        }
-        return null
-    }
-
 internal inline val OnBoardConnectingFragmentArgs.inviteCode: InviteString?
     get() {
         argCode?.let {

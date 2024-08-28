@@ -796,7 +796,11 @@ abstract class SphinxRepository(
             }
 
             newContactList.forEach { newContact ->
-                createNewContact(newContact)
+                if (newContact.inviteCode != null) {
+                    updateNewContactInvited(newContact)
+                } else {
+                    createNewContact(newContact)
+                }
             }
 
             callback?.let { nnCallback ->

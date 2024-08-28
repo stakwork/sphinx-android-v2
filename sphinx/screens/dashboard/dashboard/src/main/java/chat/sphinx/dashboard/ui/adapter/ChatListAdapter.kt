@@ -28,6 +28,7 @@ import chat.sphinx.wrapper_common.util.getInitials
 import chat.sphinx.wrapper_message.*
 import io.matthewnelson.android_feature_screens.util.gone
 import io.matthewnelson.android_feature_screens.util.goneIfFalse
+import io.matthewnelson.android_feature_screens.util.goneIfTrue
 import io.matthewnelson.android_feature_screens.util.invisibleIfFalse
 import io.matthewnelson.android_feature_screens.util.visible
 import io.matthewnelson.android_feature_viewmodel.util.OnStopSupervisor
@@ -374,6 +375,7 @@ internal class ChatListAdapter(
                 textViewChatHolderMessage.setTextFont(if (hasUnseenMessages) R.font.roboto_bold else R.font.roboto_regular)
 
                 textViewChatHolderMessage.text = messageText
+                textViewChatHolderMessage.goneIfTrue(messageText.isEmpty())
 
                 handleInviteLayouts()
 

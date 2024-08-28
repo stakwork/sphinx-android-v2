@@ -868,72 +868,7 @@ internal class DashboardViewModel @Inject constructor(
     }
 
     fun connectToContact(message: String?) {
-        val viewState = deepLinkPopupViewStateContainer.viewStateFlow.value
-
-        viewModelScope.launch(mainImmediate) {
-
-            if (message.isNullOrEmpty()) {
-                submitSideEffect(
-                    ChatListSideEffect.Notify(
-                        app.getString(R.string.dashboard_connect_message_empty)
-                    )
-                )
-
-                return@launch
-            }
-
-            deepLinkPopupViewStateContainer.updateViewState(
-                DeepLinkPopupViewState.PeopleConnectPopupProcessing
-            )
-
-            var errorMessage = app.getString(R.string.dashboard_connect_generic_error)
-
-            if (viewState is DeepLinkPopupViewState.PeopleConnectPopup) {
-                val alias = viewState.personInfoDto.owner_alias.toContactAlias() ?: ContactAlias(app.getString(R.string.unknown))
-                val priceToMeet = viewState.personInfoDto.price_to_meet?.toSat() ?: Sat(0)
-                val routeHint = viewState.personInfoDto.owner_route_hint?.toLightningRouteHint()
-                val photoUrl = viewState.personInfoDto.img?.toPhotoUrl()
-
-                viewState.personInfoDto.owner_pubkey.toLightningNodePubKey()?.let { pubKey ->
-                    viewState.personInfoDto.owner_contact_key.toContactKey()?.let { contactKey ->
-                        val response = contactRepository.connectToContact(
-                            alias,
-                            pubKey,
-                            routeHint,
-                            contactKey,
-                            message,
-                            photoUrl,
-                            priceToMeet
-                        )
-
-                        when (response) {
-                            is Response.Error -> {
-                                errorMessage = response.cause.message
-                            }
-                            is Response.Success -> {
-                                response.value?.let { contactId ->
-                                    dashboardNavigator.toChatContact(null, contactId)
-                                }
-
-                                deepLinkPopupViewStateContainer.updateViewState(
-                                    DeepLinkPopupViewState.PopupDismissed
-                                )
-
-                                return@launch
-                            }
-                        }
-                    }
-                }
-            }
-
-            submitSideEffect(
-                ChatListSideEffect.Notify(errorMessage)
-            )
-
-            deepLinkPopupViewStateContainer.updateViewState(
-                DeepLinkPopupViewState.PopupDismissed
-            )
-        }
+        // TODO V2 implement connectToContact
     }
 
     fun authorizeExternal() {
@@ -1383,15 +1318,15 @@ internal class DashboardViewModel @Inject constructor(
         if (jobNetworkRefresh?.isActive == true) {
             return
         }
+
+        jobNetworkRefresh = viewModelScope.launch(dispatchers.mainImmediate) {
+            connectManagerRepository.reconnectMqtt()
+        }
     }
 
     fun cancelRestore() {
         jobNetworkRefresh?.cancel()
         viewModelScope.launch(mainImmediate) {
-
-//            _networkStateFlow.value = Pair(Response.Success(true), true)
-//            _restoreProgressStateFlow.value = null
-
             repositoryDashboard.didCancelRestore()
         }
     }

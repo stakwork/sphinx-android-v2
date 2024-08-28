@@ -101,34 +101,4 @@ internal class EditContactViewModel @Inject constructor(
         (navigator as EditContactNavigator).toSubscribeDetailScreen(contactId)
     }
 
-    override fun saveContact(
-        contactAlias: ContactAlias,
-        lightningNodePubKey: LightningNodePubKey,
-        lightningRouteHint: LightningRouteHint?
-    ) {
-        if (saveContactJob?.isActive == true) {
-            return
-        }
-
-        saveContactJob = viewModelScope.launch(mainImmediate) {
-            viewStateContainer.updateViewState(ContactViewState.Saving)
-
-            val loadResponse = contactRepository.updateContact(
-                contactId,
-                contactAlias,
-                lightningRouteHint
-            )
-
-            when (loadResponse) {
-                is Response.Error -> {
-                    submitSideEffect(ContactSideEffect.Notify.FailedToSaveContact)
-
-                    viewStateContainer.updateViewState(ContactViewState.Error)
-                }
-                is Response.Success -> {
-                    viewStateContainer.updateViewState(ContactViewState.Saved)
-                }
-            }
-        }
-    }
 }

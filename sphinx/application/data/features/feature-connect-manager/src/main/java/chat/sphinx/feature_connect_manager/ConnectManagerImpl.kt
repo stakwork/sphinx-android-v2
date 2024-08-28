@@ -8,6 +8,7 @@ import chat.sphinx.example.concept_connect_manager.model.OwnerInfo
 import chat.sphinx.example.concept_connect_manager.model.RestoreProgress
 import chat.sphinx.example.concept_connect_manager.model.RestoreState
 import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
+import chat.sphinx.example.wrapper_mqtt.MsgsCounts
 import chat.sphinx.example.wrapper_mqtt.NewInvite
 import chat.sphinx.wrapper_common.lightning.toLightningNodePubKey
 import chat.sphinx.wrapper_common.lightning.toLightningRouteHint
@@ -107,7 +108,6 @@ class ConnectManagerImpl: ConnectManager()
     private val restoreProgress = RestoreProgress()
     private var isMqttConnected: Boolean = false
     private var isAppFirstInit: Boolean = true
-    private var potentialMessagesToUpdate: List<Msg> = emptyList()
 
     companion object {
         const val TEST_V2_SERVER_IP = "75.101.247.127:1883"
@@ -144,6 +144,10 @@ class ConnectManagerImpl: ConnectManager()
     }
     override val restoreStateFlow: StateFlow<RestoreState?>
         get() = _restoreStateFlow.asStateFlow()
+
+    override val msgsCountsState: MutableStateFlow<MsgsCounts?> by lazy {
+        MutableStateFlow(null)
+    }
 
     private var mixerIp: String?
         get() = _mixerIp?.let {
@@ -342,136 +346,12 @@ class ConnectManagerImpl: ConnectManager()
                 Log.d("MQTT_MESSAGES", "===> BALANCE ${newBalance.toLong()}")
             }
 
-            // Process each message in the new msgs array
-            if (rr.msgs.isNotEmpty()) {
-                handlePingDone(rr.msgs)
+            processMessages(
+                rr.msgs,
+                topic
+            )
 
-                if (!isRestoreAccount()) {
-
-                    val tribesToUpdate = rr.msgs.filter {
-                        it.type?.toInt() == TYPE_MEMBER_APPROVE || it.type?.toInt() == TYPE_GROUP_JOIN
-                    }.map {
-                        Pair(it.sender, it.fromMe)
-                    }
-
-                    val contactsToUpdate = rr.msgs.filter {
-                        it.type?.toInt() == TYPE_CONTACT_KEY_RECORD                   ||
-                                it.type?.toInt() == TYPE_CONTACT_KEY_CONFIRMATION     ||
-                                it.type?.toInt() == TYPE_CONTACT_KEY
-                    }.map { it.sender }.distinct()
-
-                    potentialMessagesToUpdate = if (contactsToUpdate.isNotEmpty()) {
-                        rr.msgs.filter { msg ->
-                            (contactsToUpdate.contains(msg.sender)                    &&
-                                    msg.type?.toInt() != TYPE_CONTACT_KEY_RECORD       &&
-                                    msg.type?.toInt() != TYPE_CONTACT_KEY_CONFIRMATION &&
-                                    msg.type?.toInt() != TYPE_CONTACT_KEY)             ||
-                                    msg.fromMe == true
-                        }
-                    } else {
-                        emptyList()
-                    }
-
-                    notifyListeners {
-                        onRestoreTribes(tribesToUpdate, isProductionEnvironment()) {
-                            // Handle new messages
-                            rr.msgs.forEach { msg ->
-                                processMessage(msg)
-                            }
-                        }
-                    }
-                } else {
-                    rr.msgs.forEach { msg ->
-                        processMessage(msg)
-                    }
-                }
-            }
-
-            if (topic?.contains("/batch") == true) {
-
-                if (rr.msgs.isEmpty()) {
-                    ///Restore phase or fetching messages finished. Go to next phase or end process
-                    if (restoreStateFlow.value is RestoreState.RestoringContacts) {
-
-                        notifyListeners { onRestoreProgress(restoreProgress.fixedContactPercentage) }
-                        notifyListeners { onRestoreMessages() }
-                    }
-
-                    if (restoreStateFlow.value is RestoreState.RestoringMessages || restoreStateFlow.value == null) {
-
-                        if (restoreStateFlow.value is RestoreState.RestoringMessages) {
-                            notifyListeners { onRestoreProgress(restoreProgress.fixedContactPercentage + restoreProgress.fixedMessagesPercentage) }
-                            _restoreStateFlow.value = RestoreState.RestoreFinished
-                            notifyListeners { onRestoreFinished() }
-                        }
-
-                        if (restoreStateFlow.value == null) {
-                            getReadMessages()
-                        }
-                        getMutedChats()
-                        getPings()
-                    }
-                } else {
-                    ///Restore phase or fetching messages page. Go to next page
-                    if (isRestoreAccount()) {
-                        // Restore contacts and tribes
-                        if (restoreStateFlow.value is RestoreState.RestoringContacts) {
-
-                            val contactsToRestore = rr.msgs.filter {
-                                it.type?.toInt() == TYPE_CONTACT_KEY_RECORD ||
-                                        it.type?.toInt() == TYPE_CONTACT_KEY_CONFIRMATION ||
-                                        it.type?.toInt() == TYPE_CONTACT_KEY
-                            }.map { it.sender }.distinct()
-
-                            if (contactsToRestore.isNotEmpty()) {
-                                notifyListeners {
-                                    onRestoreContacts(contactsToRestore)
-                                }
-                            }
-
-                            val tribesToRestore = rr.msgs.filter {
-                                it.type?.toInt() == TYPE_MEMBER_APPROVE || it.type?.toInt() == TYPE_GROUP_JOIN
-                            }.map {
-                                Pair(it.sender, it.fromMe)
-                            }
-
-                            if (tribesToRestore.isNotEmpty()) {
-                                notifyListeners {
-                                    onRestoreTribes(tribesToRestore, isProductionEnvironment())
-                                }
-                            }
-
-                            val highestIndex = rr.msgs.maxByOrNull { it.index?.toLong() ?: 0L }?.index?.toLong()
-                            highestIndex?.let { nnHighestIndex ->
-                                calculateContactRestore()
-                                fetchFirstMessagesPerKey(nnHighestIndex.plus(1L),null)
-                            }
-                            Log.d("RESTORE_PROCESS", "=> RestoreContacts Step $highestIndex")
-                        }
-                        // Restore Message Step
-                        if (restoreStateFlow.value is RestoreState.RestoringMessages) {
-                            val minIndex = rr.msgs.minByOrNull { it.index?.toLong() ?: 0L }?.index?.toULong()
-                            minIndex?.let { nnMinIndex ->
-                                calculateMessageRestore()
-                                fetchMessagesOnRestoreAccount(nnMinIndex.minus(1u).toLong())
-
-                                notifyListeners {
-                                    onRestoreMinIndex(nnMinIndex.toLong())
-                                }
-                            }
-                            Log.d("RESTORE_PROCESS", "=> RestoreMessages Step $minIndex")
-                        }
-                    } else {
-                        // Fetch messages when connected to mqtt
-                        val highestIndexReceived = rr.msgs.maxByOrNull { it.index?.toLong() ?: 0L }?.index?.toULong()
-
-                        highestIndexReceived?.let { nnHighestIndexReceived ->
-                            fetchMessagesWithPagination(nnHighestIndexReceived)
-                        }
-                        Log.d("RESTORE_PROCESS", "=> FetchMessagesWithPagination $highestIndexReceived")
-                    }
-                }
-            }
+            handlePingDone(rr.msgs)
 
             // Handling new tribe and tribe members
             rr.newTribe?.let { newTribe ->
@@ -535,6 +415,7 @@ class ConnectManagerImpl: ConnectManager()
                     code,
                     null,
                     null,
+                    null
                 )
 
                 subscribeOwnerMQTT()
@@ -543,10 +424,7 @@ class ConnectManagerImpl: ConnectManager()
             }
 
             rr.msgsCounts?.let { msgsCounts ->
-                notifyListeners {
-                    onMessagesCounts(msgsCounts)
-                }
-                Log.d("MQTT_MESSAGES", "=> msgsCounts $msgsCounts")
+                processMessagesCounts(msgsCounts)
             }
 
             rr.msgsTotal?.let { msgsTotal ->
@@ -684,7 +562,127 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
+    private fun processMessagesCounts(msgsCounts: String) {
+        notifyListeners {
+            onMessagesCounts(msgsCounts)
+        }
+        Log.d("MQTT_MESSAGES", "=> msgsCounts $msgsCounts")
+    }
+
+    override fun saveMessagesCounts(msgsCounts: MsgsCounts) {
+        msgsCountsState.value = msgsCounts
+    }
+
+    private fun processMessages(
+        msgs: List<Msg>,
+        topic: String?
+    ) {
+        if (msgs.isNotEmpty()) {
+            val tribesToUpdate = msgs.filter {
+                it.type?.toInt() == TYPE_MEMBER_APPROVE || it.type?.toInt() == TYPE_GROUP_JOIN
+            }.map {
+                Pair(it.sender, it.fromMe)
+            }
+
+            Log.d("RESTORE_PROCESS_TRIBE", "$tribesToUpdate")
+
+            notifyListeners {
+                onUpsertTribes(tribesToUpdate, isProductionEnvironment()) {
+                    val contactsToRestore: List<Pair<String?, Long?>> = msgs.filter {
+                        it.type?.toInt() == TYPE_CONTACT_KEY_RECORD ||
+                        it.type?.toInt() == TYPE_CONTACT_KEY_CONFIRMATION ||
+                        it.type?.toInt() == TYPE_CONTACT_KEY
+                    }.map {
+                        Pair(it.sender, it.timestamp?.toLong())
+                    }
+
+                    Log.d("RESTORE_PROCESS_CONTACTS", "$contactsToRestore")
+
+                    notifyListeners {
+                        onUpsertContacts(contactsToRestore) {
+                            // Handle new messages
+                            msgs.forEach { msg ->
+                                processMessage(msg)
+                            }
+
+                            continueRestore(msgs, topic)
+                        }
+                    }
+                }
+            }
+        } else {
+            if (topic?.contains("/batch") == true) {
+                goToNextPhaseOrFinish()
+            }
+        }
+    }
+
+    private fun goToNextPhaseOrFinish() {
+        if (restoreStateFlow.value is RestoreState.RestoringContacts) {
+            notifyListeners { onRestoreProgress(restoreProgress.fixedContactPercentage) }
+            notifyListeners { onRestoreMessages() }
+        }
+
+        if (restoreStateFlow.value is RestoreState.RestoringMessages || restoreStateFlow.value == null) {
+            if (restoreStateFlow.value is RestoreState.RestoringMessages) {
+                notifyListeners { onRestoreProgress(restoreProgress.fixedContactPercentage + restoreProgress.fixedMessagesPercentage) }
+                _restoreStateFlow.value = RestoreState.RestoreFinished
+                notifyListeners { onRestoreFinished() }
+            }
+
+            getReadMessages()
+            getMutedChats()
+            getPings()
+        }
+    }
+    private fun continueRestore(
+        msgs: List<Msg>,
+        topic: String?
+    ) {
+        if (topic?.contains("/batch") == false) {
+            return
+        }
+
+        if (isRestoreAccount()) {
+
+            if (restoreStateFlow.value is RestoreState.RestoringContacts) {
+                val highestIndex = msgs.maxByOrNull { it.index?.toLong() ?: 0L }?.index?.toLong()
+                highestIndex?.let { nnHighestIndex ->
+                    calculateContactRestore()
+
+                    msgsCountsState.value?.first_for_each_scid_highest_index?.let { highestIndex ->
+                        if (nnHighestIndex < highestIndex) {
+                            fetchFirstMessagesPerKey(nnHighestIndex.plus(1L),null)
+                        } else {
+                            goToNextPhaseOrFinish()
+                        }
+                    }
+                }
+            }
+            // Restore Message Step
+            if (restoreStateFlow.value is RestoreState.RestoringMessages) {
+                val minIndex = msgs.minByOrNull { it.index?.toLong() ?: 0L }?.index?.toULong()
+                minIndex?.let { nnMinIndex ->
+                    calculateMessageRestore()
+                    fetchMessagesOnRestoreAccount(nnMinIndex.minus(1u).toLong())
+
+                    notifyListeners {
+                        onRestoreMinIndex(nnMinIndex.toLong())
+                    }
+                }
+            }
+        } else {
+            val highestIndexReceived = msgs.maxByOrNull { it.index?.toLong() ?: 0L }?.index?.toULong()
+
+            highestIndexReceived?.let { nnHighestIndexReceived ->
+                fetchMessagesWithPagination(nnHighestIndexReceived)
+            }
+        }
+    }
+
     private fun processMessage(msg: Msg) {
+        Log.d("RESTORE_PROCESS_MESSAGE", "${msg.index.orEmpty()}")
+
         notifyListeners {
             onMessage(
                 msg.message.orEmpty(),
@@ -697,6 +695,7 @@ class ConnectManagerImpl: ConnectManager()
                 msg.msat?.let { convertMillisatsToSats(it) },
                 msg.fromMe,
                 msg.tag,
+                msg.timestamp?.toLong(),
                 isRestoreAccount()
             )
         }
@@ -788,9 +787,10 @@ class ConnectManagerImpl: ConnectManager()
                         invite.code,
                         null,
                         null,
+                        null
                     )
                     _mixerIp = invite.lspHost
-                    tribeServer = hostAndPubKey?.first ?: TEST_V2_TRIBES_SERVER
+                    tribeServer = hostAndPubKey?.first
                     inviteInitialTribe = invite.initialTribe
 
                     network = if (isProductionServer()) {
@@ -862,13 +862,17 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
-    override fun setOwnerDeviceId(deviceId: String) {
+    override fun setOwnerDeviceId(
+        deviceId: String,
+        pushKey: String
+    ) {
         try {
             val token = setPushToken(
                 ownerSeed!!,
                 getTimestampInMilliseconds(),
                 getCurrentUserState(),
-                deviceId
+                deviceId,
+                pushKey
             )
             handleRunReturn(token)
         } catch (e: Exception) {
@@ -919,6 +923,7 @@ class ConnectManagerImpl: ConnectManager()
                 _restoreStateFlow.value = RestoreState.RestoringContacts
                 setContactKeyTotal(firstForEachScid)
             }
+
             val limit = MSG_FIRST_PER_KEY_LIMIT
             val fetchFirstMsg = uniffi.sphinxrs.fetchFirstMsgsPerKey(
                 ownerSeed!!,
@@ -950,7 +955,7 @@ class ConnectManagerImpl: ConnectManager()
                 getCurrentUserState(),
                 totalHighestIndex?.toULong() ?: 0.toULong(),
                 MSG_BATCH_LIMIT.toUInt(),
-                    true,
+                true,
             )
             handleRunReturn(fetchMessages)
         } catch (e: Exception) {
@@ -1006,7 +1011,13 @@ class ConnectManagerImpl: ConnectManager()
                 }
             }
 
-            // return always that the mqtt is connected
+            getReadMessages()
+            getMutedChats()
+
+            notifyListeners {
+                onNetworkStatusChange(true)
+            }
+
             return
         }
         _ownerInfoStateFlow.value = ownerInfo
@@ -1052,12 +1063,12 @@ class ConnectManagerImpl: ConnectManager()
     }
 
     override fun reconnectWithBackOff() {
+        notifyListeners {
+            onNetworkStatusChange(false, isLoading = true)
+        }
+
         if (!isConnected()) {
             resetMQTT()
-
-            notifyListeners {
-                onNetworkStatusChange(false)
-            }
 
             if (mixerIp != null && walletMnemonic != null) {
 
@@ -1068,6 +1079,13 @@ class ConnectManagerImpl: ConnectManager()
                 )
             }
             Log.d("MQTT_MESSAGES", "onReconnectMqtt")
+        } else {
+            getReadMessages()
+            getMutedChats()
+
+            notifyListeners {
+                onNetworkStatusChange(true)
+            }
         }
     }
 
@@ -1568,16 +1586,7 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
-    override fun restorePendingMessages() {
-        if (potentialMessagesToUpdate.isNotEmpty()) {
-            potentialMessagesToUpdate.forEach { msg ->
-                processMessage(msg)
-            }
-        }
-    }
-
     // Tribe Management Methods
-
     override fun createTribe(tribeJson: String) {
         val now = getTimestampInMilliseconds()
 
@@ -1828,30 +1837,36 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
-    override fun getPubKeyFromChildIndex(childIndex: Long): String? {
-        return try {
-            uniffi.sphinxrs.contactPubkeyByChildIndex(
-                getCurrentUserState(),
-                childIndex.toULong()
-            )
-        } catch (e: Exception) {
-//            notifyListeners {
-//                onConnectManagerError(ConnectManagerError.PubKeyFromChildIndexError)
-//            }
-            null
-        }
-    }
+    override fun getPubKeyByEncryptedChild(
+        child: String,
+        pushKey: String?
+    ): String? {
+        var childIndex: ULong? = null
+        var publicKey: String? = null
 
-    override fun getPubKeyByEncryptedChild(child: String): String? {
-        return try {
-            uniffi.sphinxrs.contactPubkeyByEncryptedChild(
-                ownerSeed!!,
-                getCurrentUserState(),
-                child
-            )
-        } catch (e: Exception) {
-            null
+        pushKey?.let {
+            try {
+                childIndex = uniffi.sphinxrs.decryptChildIndex(
+                    child,
+                    it
+                )
+            } catch (e: Exception) {
+                return null
+            }
         }
+
+        childIndex?.let {
+            try {
+                publicKey = uniffi.sphinxrs.contactPubkeyByChildIndex(
+                    getCurrentUserState(),
+                    it
+                )
+            } catch (e: Exception) {
+                return null
+            }
+        }
+
+        return publicKey
     }
 
     override fun generateMediaToken(

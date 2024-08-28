@@ -9,13 +9,8 @@ import chat.sphinx.onboard.navigation.OnBoardMessageNavigator
 import chat.sphinx.onboard_common.OnBoardStepHandler
 import chat.sphinx.onboard_common.model.OnBoardInviterData
 import chat.sphinx.wrapper_relay.AuthorizationToken
-import chat.sphinx.wrapper_relay.RelayHMacKey
-import chat.sphinx.wrapper_relay.RelayUrl
-import chat.sphinx.wrapper_relay.isOnionAddress
-import chat.sphinx.wrapper_rsa.RsaPublicKey
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.matthewnelson.android_feature_viewmodel.SideEffectViewModel
-import io.matthewnelson.android_feature_viewmodel.submitSideEffect
 import io.matthewnelson.android_feature_viewmodel.updateViewState
 import io.matthewnelson.concept_authentication.coordinator.AuthenticationCoordinator
 import io.matthewnelson.concept_authentication.coordinator.AuthenticationRequest
@@ -52,10 +47,7 @@ internal class OnBoardMessageViewModel @Inject constructor(
 
     private var loginJob: Job? = null
     fun presentLoginModal(
-        relayUrl: RelayUrl,
         authToken: AuthorizationToken,
-        transportKey: RsaPublicKey?,
-        hMacKey: RelayHMacKey?,
         inviterData: OnBoardInviterData,
     ) {
         if (loginJob?.isActive == true || proceedJob?.isActive == true) {

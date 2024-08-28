@@ -65,18 +65,7 @@ internal class OnBoardReadyFragment: SideEffectFragment<
         }
 
         binding.buttonContinue.setOnClickListener {
-            viewModel.updateViewState(OnBoardReadyViewState.Saving)
-
-            val nickname = inviterData.nickname
-            val pubkey = inviterData.pubkey
-            val routeHint = inviterData.routeHint
-            val inviteString = inviterData.pin
-
-            if (nickname != null && pubkey != null) {
-                viewModel.saveInviterAndFinish(nickname, pubkey.value, routeHint, inviteString)
-            } else if (inviteString != null){ } else {
-                viewModel.finishSignup()
-            }
+            viewModel.finishSignup()
         }
     }
 

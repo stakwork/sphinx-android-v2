@@ -134,6 +134,7 @@ import chat.sphinx.wrapper_lightning.toWalletMnemonic
 import chat.sphinx.wrapper_message.*
 import chat.sphinx.wrapper_message.Msg.Companion.toMsg
 import chat.sphinx.wrapper_message.MsgSender.Companion.toMsgSender
+import chat.sphinx.wrapper_message.MsgSender.Companion.toMsgSenderNull
 import chat.sphinx.wrapper_message_media.*
 import chat.sphinx.wrapper_message_media.token.MediaHost
 import chat.sphinx.wrapper_podcast.FeedRecommendation
@@ -160,7 +161,9 @@ import kotlinx.coroutines.sync.withLock
 import okio.base64.encodeBase64
 import java.io.File
 import java.io.InputStream
+import java.security.SecureRandom
 import java.util.*
+import javax.management.monitor.StringMonitor
 import kotlin.collections.ArrayList
 import kotlin.collections.LinkedHashMap
 import kotlin.math.absoluteValue
@@ -214,8 +217,8 @@ abstract class SphinxRepository(
         const val REPOSITORY_LIGHTNING_BALANCE = "REPOSITORY_LIGHTNING_BALANCE"
         const val REPOSITORY_LAST_SEEN_MESSAGE_DATE = "REPOSITORY_LAST_SEEN_MESSAGE_DATE"
         const val REPOSITORY_LAST_SEEN_CONTACTS_DATE = "REPOSITORY_LAST_SEEN_CONTACTS_DATE"
-        const val REPOSITORY_LAST_SEEN_MESSAGE_RESTORE_PAGE =
-            "REPOSITORY_LAST_SEEN_MESSAGE_RESTORE_PAGE"
+        const val REPOSITORY_LAST_SEEN_MESSAGE_RESTORE_PAGE = "REPOSITORY_LAST_SEEN_MESSAGE_RESTORE_PAGE"
+        const val REPOSITORY_PUSH_KEY = "REPOSITORY_PUSH_KEY"
 
         // networkRefreshMessages
         const val MESSAGE_PAGINATION_LIMIT = 200
@@ -332,15 +335,14 @@ abstract class SphinxRepository(
     override fun startRestoreProcess() {
         applicationScope.launch(mainImmediate) {
             var msgCounts: MsgsCounts? = null
-//            connectManager.getAllMessagesCount()
+
             restoreProcessState.asStateFlow().collect{ restoreProcessState ->
                 when (restoreProcessState) {
                     is RestoreProcessState.MessagesCounts -> {
                         msgCounts = restoreProcessState.msgsCounts
-                        connectManager.fetchFirstMessagesPerKey(0L, restoreProcessState.msgsCounts.first_for_each_scid)
+                        connectManager.fetchFirstMessagesPerKey(0L, msgCounts?.first_for_each_scid)
                     }
                     is RestoreProcessState.RestoreMessages -> {
-                        // Delay to ensure the contacts have been restored before fetching messages
                         delay(100L)
                         connectManager.fetchMessagesOnRestoreAccount(msgCounts?.total_highest_index)
                     }
@@ -351,7 +353,7 @@ abstract class SphinxRepository(
     }
 
     override fun createContact(contact: NewContact) {
-        applicationScope.launch(io) {
+        applicationScope.launch(mainImmediate) {
             createNewContact(contact)
             connectManager.createContact(contact)
         }
@@ -370,7 +372,22 @@ abstract class SphinxRepository(
     }
 
     override fun setOwnerDeviceId(deviceId: String) {
-        connectManager.setOwnerDeviceId(deviceId)
+        applicationScope.launch(mainImmediate) {
+            var pushKey: String? = authenticationStorage.getString(
+                REPOSITORY_PUSH_KEY,
+                null
+            )
+
+            if (pushKey == null) {
+                val newPushKey = generateRandomBytes(32).toHex()
+                LOG.d("PUSH_KEY", newPushKey)
+                authenticationStorage.putString(REPOSITORY_PUSH_KEY, newPushKey)
+            }
+
+            pushKey?.let {
+                connectManager.setOwnerDeviceId(deviceId, it)
+            }
+        }
     }
 
     override fun signChallenge(challenge: String): String? {
@@ -490,7 +507,11 @@ abstract class SphinxRepository(
 
     override suspend fun getChatIdByEncryptedChild(child: String) = flow {
         val queries = coreDB.getSphinxDatabaseQueries()
-        val pubkey = connectManager.getPubKeyByEncryptedChild(child)
+
+        val pubkey = connectManager.getPubKeyByEncryptedChild(
+            child,
+            authenticationStorage.getString(REPOSITORY_PUSH_KEY, null)
+        )
         if (pubkey != null) {
             val contact = withContext(io) {
                 queries.contactGetByPubKey(pubkey.toLightningNodePubKey()).executeAsOneOrNull()
@@ -502,7 +523,7 @@ abstract class SphinxRepository(
         } else {
             emit(null)
         }
-    }.flowOn(io)
+    }.flowOn(mainImmediate)
 
     override fun getTagsByChatId(chatId: ChatId) {
         applicationScope.launch(io) {
@@ -617,7 +638,8 @@ abstract class SphinxRepository(
     }
 
     override fun saveNewContactRegistered(
-        msgSender: String
+        msgSender: String,
+        date: Long?
     ) {
         applicationScope.launch(mainImmediate) {
             val contactInfo = msgSender.toMsgSender(moshi)
@@ -631,6 +653,7 @@ abstract class SphinxRepository(
                 inviteCode = contactInfo.code,
                 invitePrice = null,
                 null,
+                date?.toDateTime()
             )
 
             if (contactInfo.code != null) {
@@ -739,36 +762,49 @@ abstract class SphinxRepository(
         }
     }
 
-    override fun onRestoreContacts(contacts: List<String?>) {
-        applicationScope.launch(io) {
-            val contactList = contacts.mapNotNull { contact ->
-                try {
-                    contact?.toMsgSender(moshi)
-                } catch (e: Exception) {
-                    null
-                }
-            }.groupBy { it.pubkey }
+    override fun onUpsertContacts(
+        contacts: List<Pair<String?, Long?>>,
+        callback: (() -> Unit)?
+    ) {
+        if (contacts.isEmpty()) {
+            callback?.let { nnCallback ->
+                nnCallback()
+            }
+            return
+        }
+        applicationScope.launch(mainImmediate) {
+            val contactList: List<Pair<MsgSender?, DateTime?>> = contacts.mapNotNull { contact ->
+                Pair(contact?.first?.toMsgSenderNull(moshi), contact.second?.toDateTime())
+            }.groupBy { it.first?.pubkey }
                 .map { (_, group) ->
-                    group.find { it.confirmed } ?: group.first()
+                    group.find { it.first?.confirmed == true } ?: group.first()
                 }
 
             val newContactList = contactList.map { contactInfo ->
                 NewContact(
-                    contactAlias = contactInfo.alias?.toContactAlias(),
-                    lightningNodePubKey = contactInfo.pubkey.toLightningNodePubKey(),
-                    lightningRouteHint = contactInfo.route_hint?.toLightningRouteHint(),
-                    photoUrl = contactInfo.photo_url?.toPhotoUrl(),
-                    confirmed = contactInfo.confirmed,
+                    contactAlias = contactInfo.first?.alias?.toContactAlias(),
+                    lightningNodePubKey = contactInfo.first?.pubkey?.toLightningNodePubKey(),
+                    lightningRouteHint = contactInfo.first?.route_hint?.toLightningRouteHint(),
+                    photoUrl = contactInfo.first?.photo_url?.toPhotoUrl(),
+                    confirmed = contactInfo.first?.confirmed == true,
                     null,
-                    inviteCode = contactInfo.code,
+                    inviteCode = contactInfo.first?.code,
                     invitePrice = null,
                     null,
+                    contactInfo.second
                 )
             }
 
             newContactList.forEach { newContact ->
-                delay(100L)
-                createNewContact(newContact)
+                if (newContact.inviteCode != null) {
+                    updateNewContactInvited(newContact)
+                } else {
+                    createNewContact(newContact)
+                }
+            }
+
+            callback?.let { nnCallback ->
+                nnCallback()
             }
         }
     }
@@ -777,7 +813,7 @@ abstract class SphinxRepository(
         restoreProcessState.value = RestoreProcessState.RestoreMessages
     }
 
-    override fun onRestoreTribes(
+    override fun onUpsertTribes(
         tribes: List<Pair<String?, Boolean?>>,
         isProductionEnvironment: Boolean,
         callback: (() -> Unit)?
@@ -1084,6 +1120,7 @@ abstract class SphinxRepository(
         amount: Long?,
         fromMe: Boolean?,
         tag: String?,
+        date: Long?,
         isRestore: Boolean
     ) {
         applicationScope.launch(io) {
@@ -1112,7 +1149,7 @@ abstract class SphinxRepository(
                 when (messageType) {
                     is MessageType.ContactKeyRecord -> {
                         if (!isRestore) {
-                            saveNewContactRegistered(msgSender)
+                            saveNewContactRegistered(msgSender, date)
                         }
                     }
                     else -> {
@@ -1141,10 +1178,10 @@ abstract class SphinxRepository(
                                 }
                             }
                             is MessageType.ContactKeyConfirmation -> {
-                                saveNewContactRegistered(msgSender)
+                                saveNewContactRegistered(msgSender, date)
                             }
                             is MessageType.ContactKey -> {
-                                saveNewContactRegistered(msgSender)
+                                saveNewContactRegistered(msgSender, date)
                             }
                             is MessageType.Delete -> {
                                 msg.toMsg(moshi).replyUuid?.toMessageUUID()?.let { replyUuid ->
@@ -1207,6 +1244,7 @@ abstract class SphinxRepository(
         try {
             msgsCounts.toMsgsCounts(moshi)?.let {
                 restoreProcessState.value = RestoreProcessState.MessagesCounts(it)
+                connectManager.saveMessagesCounts(it)
             }
         } catch (e: Exception) {
             LOG.e(TAG, "onMessagesCounts: ${e.message}", e)
@@ -1381,9 +1419,14 @@ abstract class SphinxRepository(
         }
     }
 
-    override fun onNetworkStatusChange(isConnected: Boolean) {
+    override fun onNetworkStatusChange(
+        isConnected: Boolean,
+        isLoading: Boolean
+    ) {
         if (isConnected) {
             networkStatus.value = NetworkStatus.Connected
+        } else if (isLoading) {
+            networkStatus.value = NetworkStatus.Loading
         } else {
             networkStatus.value = NetworkStatus.Disconnected
             reconnectMqtt()
@@ -1395,10 +1438,7 @@ abstract class SphinxRepository(
         inviteCode: String,
         sats: Long
     ) {
-        applicationScope.launch(io) {
-            // Create the invite and save it to the database. inviteDbo.
-            //  connectionManagerState.value = ConnectionManagerState.NewInviteCode(inviteString)
-
+        applicationScope.launch(mainImmediate) {
             val newInvitee = NewContact(
                 contactAlias = nickname.toContactAlias(),
                 lightningNodePubKey = null,
@@ -1409,6 +1449,7 @@ abstract class SphinxRepository(
                 inviteCode = inviteCode,
                 invitePrice = sats.toSat(),
                 inviteStatus = InviteStatus.Pending,
+                null
             )
             createNewContact(newInvitee)
         }
@@ -1421,9 +1462,9 @@ abstract class SphinxRepository(
         }
     }
 
-    private fun reconnectMqtt() {
+    override fun reconnectMqtt() {
         applicationScope.launch(mainImmediate) {
-            delay(2000L)
+            delay(1000L)
             connectManager.reconnectWithBackOff()
         }
     }
@@ -1723,16 +1764,18 @@ abstract class SphinxRepository(
                                 notify = NotificationLevel.SeeAll
                             )
 
-                            chatLock.withLock {
-                                queries.transaction {
-                                    upsertNewChat(
-                                        newTribe,
-                                        moshi,
-                                        SynchronizedMap<ChatId, Seen>(),
-                                        queries,
-                                        null,
-                                        accountOwner.value?.nodePubKey
-                                    )
+                            messageLock.withLock {
+                                chatLock.withLock {
+                                    queries.transaction {
+                                        upsertNewChat(
+                                            newTribe,
+                                            moshi,
+                                            SynchronizedMap<ChatId, Seen>(),
+                                            queries,
+                                            null,
+                                            accountOwner.value?.nodePubKey
+                                        )
+                                    }
                                 }
                             }
 
@@ -2139,6 +2182,8 @@ abstract class SphinxRepository(
         InviteDboPresenterMapper(dispatchers)
     }
 
+    private val inviteLock = Mutex()
+
     override val getAllContacts: Flow<List<Contact>> by lazy {
         flow {
             emitAll(
@@ -2230,34 +2275,6 @@ abstract class SphinxRepository(
     }
 
 
-    var latestContactsPercentage = 1
-
-    private val inviteLock = Mutex()
-    override val networkRefreshLatestContacts: Flow<LoadResponse<RestoreProgress, ResponseError>> by lazy {
-        flow {
-            val lastSeenContactsDate: String? = authenticationStorage.getString(
-                REPOSITORY_LAST_SEEN_CONTACTS_DATE,
-                null
-            )
-
-            val lastSeenContactsDateResolved: DateTime = lastSeenContactsDate?.toDateTime()
-                ?: DATE_NIXON_SHOCK.toDateTime()
-
-            val now: String = DateTime.nowUTC()
-            val restoring = lastSeenContactsDate == null
-
-            emit(
-                Response.Success(
-                    RestoreProgress(restoring, 1)
-                )
-            )
-
-            var offset = 0
-            var limit = 1000
-
-        }
-    }
-
     override suspend fun deleteContactById(contactId: ContactId): Response<Any, ResponseError> {
         val queries = coreDB.getSphinxDatabaseQueries()
         val contact = queries.contactGetById(contactId).executeAsOneOrNull()
@@ -2307,123 +2324,6 @@ abstract class SphinxRepository(
         var deleteContactResponse: Response<Any, ResponseError> = Response.Success(Any())
 
         return deleteContactResponse
-    }
-
-    override fun createContact(
-        contactAlias: ContactAlias,
-        lightningNodePubKey: LightningNodePubKey,
-        lightningRouteHint: LightningRouteHint?,
-        contactKey: ContactKey?,
-        photoUrl: PhotoUrl?
-    ): Flow<LoadResponse<Any, ResponseError>> = flow {
-        val queries = coreDB.getSphinxDatabaseQueries()
-
-        val postContactDto = PostContactDto(
-            alias = contactAlias.value,
-            public_key = lightningNodePubKey.value,
-            status = ContactStatus.CONFIRMED.absoluteValue,
-            route_hint = lightningRouteHint?.value,
-            contact_key = contactKey?.value,
-            photo_url = photoUrl?.value
-        )
-
-        val sharedFlow: MutableSharedFlow<Response<Boolean, ResponseError>> =
-            MutableSharedFlow(1, 0)
-
-        applicationScope.launch(mainImmediate) {
-
-//            networkQueryContact.createContact(postContactDto).collect { loadResponse ->
-//                @Exhaustive
-//                when (loadResponse) {
-//                    LoadResponse.Loading -> {
-//                    }
-//                    is Response.Error -> {
-//                        sharedFlow.emit(loadResponse)
-//                    }
-//                    is Response.Success -> {
-//                        contactLock.withLock {
-//                            withContext(io) {
-//                                queries.transaction {
-//                                    upsertContact(loadResponse.value, queries)
-//                                }
-//                            }
-//                        }
-//
-//                        sharedFlow.emit(Response.Success(true))
-//                    }
-//                }
-//            }
-
-            // TODO V2 createContact
-
-        }
-
-        emit(LoadResponse.Loading)
-
-        sharedFlow.asSharedFlow().firstOrNull().let { response ->
-            if (response == null) {
-                emit(Response.Error(ResponseError("")))
-            } else {
-                emit(response)
-            }
-        }
-    }
-
-    override suspend fun connectToContact(
-        contactAlias: ContactAlias,
-        lightningNodePubKey: LightningNodePubKey,
-        lightningRouteHint: LightningRouteHint?,
-        contactKey: ContactKey,
-        message: String,
-        photoUrl: PhotoUrl?,
-        priceToMeet: Sat,
-    ): Response<ContactId?, ResponseError> {
-        var response: Response<ContactId?, ResponseError> = Response.Error(
-            ResponseError("Something went wrong, please try again later")
-        )
-
-        applicationScope.launch(mainImmediate) {
-            createContact(
-                contactAlias,
-                lightningNodePubKey,
-                lightningRouteHint,
-                contactKey,
-                photoUrl
-            ).collect { loadResponse ->
-                @Exhaustive
-                when (loadResponse) {
-                    is LoadResponse.Loading -> {}
-
-                    is Response.Error -> {
-                        response = loadResponse
-                    }
-                    is Response.Success -> {
-                        val contact = getContactByPubKey(lightningNodePubKey).firstOrNull {
-                            it?.rsaPublicKey != null
-                        }
-
-                        response = if (contact != null) {
-                            val messageBuilder = SendMessage.Builder()
-                            messageBuilder.setText(message)
-                            messageBuilder.setContactId(contact.id)
-                            messageBuilder.setPriceToMeet(priceToMeet)
-
-                            sendMessage(
-                                messageBuilder.build().first
-                            )
-
-                            Response.Success(contact.id)
-                        } else {
-                            Response.Error(
-                                ResponseError("Contact not found")
-                            )
-                        }
-                    }
-                }
-            }
-        }.join()
-
-        return response
     }
 
     override suspend fun updateOwner(
@@ -2759,21 +2659,21 @@ abstract class SphinxRepository(
     }
 
     override suspend fun createNewContact(contact: NewContact) {
-        applicationScope.launch(io) {
-            val queries = coreDB.getSphinxDatabaseQueries()
-            val now = DateTime.nowUTC()
-            val contactId = getNewContactIndex().firstOrNull()?.value
+        val queries = coreDB.getSphinxDatabaseQueries()
+        val now = DateTime.nowUTC()
+        val contactId = getNewContactIndex().firstOrNull()?.value
 
-            val exitingContact = contact.lightningNodePubKey
-                ?.let { getContactByPubKey(it).firstOrNull() }
+        val exitingContact = contact.lightningNodePubKey
+            ?.let { getContactByPubKey(it).firstOrNull() }
 
-            val status = (contact.confirmed || exitingContact?.status?.isConfirmed() == true)
+        val status = (contact.confirmed || exitingContact?.status?.isConfirmed() == true)
 
-            if (exitingContact?.nodePubKey != null) {
-                val contactStatus = if (status) ContactStatus.Confirmed else ContactStatus.Pending
-                val chatStatus = if (status) ChatStatus.Approved else ChatStatus.Pending
+        if (exitingContact?.nodePubKey != null) {
+            val contactStatus = if (status) ContactStatus.Confirmed else ContactStatus.Pending
+            val chatStatus = if (status) ChatStatus.Approved else ChatStatus.Pending
 
-                contactLock.withLock {
+            contactLock.withLock {
+                withContext(dispatchers.io) {
                     queries.contactUpdateDetails(
                         contact.contactAlias,
                         contact.photoUrl,
@@ -2781,91 +2681,93 @@ abstract class SphinxRepository(
                         exitingContact.id
                     )
                 }
-                chatLock.withLock {
+            }
+            chatLock.withLock {
+                withContext(dispatchers.io) {
                     queries.chatUpdateDetails(
                         contact.photoUrl,
                         chatStatus,
                         ChatId(exitingContact.id.value)
                     )
                 }
-
+            }
+        } else {
+            val invite = if (contact.invitePrice != null && contact.inviteCode != null) {
+                Invite(
+                    id = InviteId(contactId ?: -1L),
+                    inviteString = InviteString(contact.inviteString ?: "null"),
+                    inviteCode = InviteCode(contact.inviteCode ?: ""),
+                    paymentRequest = null,
+                    contactId = ContactId(contactId ?: -1L),
+                    status = InviteStatus.Pending,
+                    price = contact.invitePrice,
+                    createdAt = now.toDateTime()
+                )
             } else {
+                null
+            }
 
-                val invite = if (contact.invitePrice != null && contact.inviteCode != null) {
-                    Invite(
-                        id = InviteId(contactId ?: -1L),
-                        inviteString = InviteString(contact.inviteString ?: "null"),
-                        inviteCode = InviteCode(contact.inviteCode ?: ""),
-                        paymentRequest = null,
-                        contactId = ContactId(contactId ?: -1L),
-                        status = InviteStatus.Pending,
-                        price = contact.invitePrice,
-                        createdAt = now.toDateTime()
-                    )
-                } else {
-                    null
-                }
+            val newContact = Contact(
+                id = ContactId(exitingContact?.id?.value ?: contactId ?: -1L),
+                routeHint = contact.lightningRouteHint,
+                nodePubKey = contact.lightningNodePubKey,
+                nodeAlias = null,
+                alias = exitingContact?.alias ?: contact.contactAlias,
+                photoUrl = contact.photoUrl,
+                privatePhoto = PrivatePhoto.False,
+                isOwner = Owner.False,
+                status = if (status) ContactStatus.Confirmed else ContactStatus.Pending,
+                rsaPublicKey = null,
+                deviceId = null,
+                createdAt = contact.createdAt ?: now.toDateTime(),
+                updatedAt = contact.createdAt ?: now.toDateTime(),
+                fromGroup = ContactFromGroup.False,
+                notificationSound = null,
+                tipAmount = null,
+                inviteId = invite?.id,
+                inviteStatus = invite?.status,
+                blocked = Blocked.False
+            )
 
-                val newContact = Contact(
-                    id = ContactId(exitingContact?.id?.value ?: contactId ?: -1L),
-                    routeHint = contact.lightningRouteHint,
-                    nodePubKey = contact.lightningNodePubKey,
-                    nodeAlias = null,
-                    alias = exitingContact?.alias ?: contact.contactAlias,
-                    photoUrl = contact.photoUrl,
-                    privatePhoto = PrivatePhoto.False,
-                    isOwner = Owner.False,
-                    status = if (status) ContactStatus.Confirmed else ContactStatus.Pending,
-                    rsaPublicKey = null,
-                    deviceId = null,
-                    createdAt = now.toDateTime(),
-                    updatedAt = now.toDateTime(),
-                    fromGroup = ContactFromGroup.False,
-                    notificationSound = null,
-                    tipAmount = null,
-                    inviteId = invite?.id,
-                    inviteStatus = invite?.status,
-                    blocked = Blocked.False
-                )
+            val newChat = Chat(
+                id = ChatId(exitingContact?.id?.value ?: contactId ?: -1L),
+                uuid = ChatUUID("${UUID.randomUUID()}"),
+                name = ChatName(
+                    exitingContact?.alias?.value ?: contact.contactAlias?.value ?: "unknown"
+                ),
+                photoUrl = contact.photoUrl,
+                type = ChatType.Conversation,
+                status = if (status) ChatStatus.Approved else ChatStatus.Pending,
+                contactIds = listOf(ContactId(0), ContactId(contactId ?: -1)),
+                isMuted = ChatMuted.False,
+                createdAt = contact.createdAt ?: now.toDateTime(),
+                groupKey = null,
+                host = null,
+                pricePerMessage = null,
+                escrowAmount = null,
+                unlisted = ChatUnlisted.False,
+                privateTribe = ChatPrivate.False,
+                ownerPubKey = null,
+                seen = Seen.False,
+                metaData = null,
+                myPhotoUrl = null,
+                myAlias = null,
+                pendingContactIds = emptyList(),
+                latestMessageId = null,
+                contentSeenAt = null,
+                pinedMessage = null,
+                notify = NotificationLevel.SeeAll
+            )
 
-                val newChat = Chat(
-                    id = ChatId(exitingContact?.id?.value ?: contactId ?: -1L),
-                    uuid = ChatUUID("${UUID.randomUUID()}"),
-                    name = ChatName(
-                        exitingContact?.alias?.value ?: contact.contactAlias?.value ?: "unknown"
-                    ),
-                    photoUrl = contact.photoUrl,
-                    type = ChatType.Conversation,
-                    status = if (status) ChatStatus.Approved else ChatStatus.Pending,
-                    contactIds = listOf(ContactId(0), ContactId(contactId ?: -1)),
-                    isMuted = ChatMuted.False,
-                    createdAt = now.toDateTime(),
-                    groupKey = null,
-                    host = null,
-                    pricePerMessage = null,
-                    escrowAmount = null,
-                    unlisted = ChatUnlisted.False,
-                    privateTribe = ChatPrivate.False,
-                    ownerPubKey = null,
-                    seen = Seen.False,
-                    metaData = null,
-                    myPhotoUrl = null,
-                    myAlias = null,
-                    pendingContactIds = emptyList(),
-                    latestMessageId = null,
-                    contentSeenAt = null,
-                    pinedMessage = null,
-                    notify = NotificationLevel.SeeAll
-                )
-
-
-                contactLock.withLock {
+            contactLock.withLock {
+                withContext(dispatchers.io) {
                     queries.transaction {
                         upsertNewContact(newContact, queries)
                     }
                 }
-
-                chatLock.withLock {
+            }
+            chatLock.withLock {
+                withContext(dispatchers.io) {
                     queries.transaction {
                         upsertNewChat(
                             newChat,
@@ -2877,16 +2779,15 @@ abstract class SphinxRepository(
                         )
                     }
                 }
-
-                inviteLock.withLock {
-                    invite?.let { invite ->
+            }
+            inviteLock.withLock {
+                invite?.let { invite ->
+                    withContext(dispatchers.io) {
                         queries.transaction {
                             upsertNewInvite(invite, queries)
                         }
                     }
                 }
-
-                connectManager.restorePendingMessages()
             }
         }
     }
@@ -2955,32 +2856,6 @@ abstract class SphinxRepository(
 
     override val networkRefreshBalance: MutableStateFlow<Long?> by lazy {
         MutableStateFlow(null)
-    }
-
-    override suspend fun getAccountBalanceAll(
-        relayData: Triple<Pair<AuthorizationToken, TransportToken?>, RequestSignature?, RelayUrl>?
-    ): Flow<LoadResponse<NodeBalanceAll, ResponseError>> = flow {
-
-//        networkQueryLightning.getBalanceAll(
-//            relayData
-//        ).collect { loadResponse ->
-//            @Exhaustive
-//            when (loadResponse) {
-//                is LoadResponse.Loading -> {
-//                    emit(loadResponse)
-//                }
-//                is Response.Error -> {
-//                    emit(loadResponse)
-//                }
-//                is Response.Success -> {
-//                    val nodeBalanceAll = NodeBalanceAll(
-//                        Sat(loadResponse.value.local_balance),
-//                        Sat(loadResponse.value.remote_balance)
-//                    )
-//                    emit(Response.Success(nodeBalanceAll))
-//                }
-//            }
-//        }
     }
 
     private val lspLock = Mutex()
@@ -5943,54 +5818,6 @@ abstract class SphinxRepository(
         }
     }
 
-    override val networkRefreshFeedContent: Flow<LoadResponse<RestoreProgress, ResponseError>> by lazy {
-        flow {
-
-            val lastSeenMessagesDate: String? = authenticationStorage.getString(
-                REPOSITORY_LAST_SEEN_MESSAGE_DATE,
-                null
-            )
-
-            if (lastSeenMessagesDate != null) {
-                return@flow
-            }
-
-            val queries = coreDB.getSphinxDatabaseQueries()
-
-            var contentFeedStatuses: List<ContentFeedStatusDto> = listOf()
-
-            // TODO V2 getFeedStatuses
-//            networkQueryFeedStatus.getFeedStatuses().collect { loadResponse ->
-//                @Exhaustive
-//                when (loadResponse) {
-//                    is LoadResponse.Loading -> {}
-//                    is Response.Error -> {}
-//                    is Response.Success -> {
-//                        contentFeedStatuses = loadResponse.value
-//                    }
-//                }
-//            }
-            if (contentFeedStatuses.isNotEmpty()) {
-
-                for ((index, contentFeedStatus) in contentFeedStatuses.withIndex()) {
-
-                    restoreContentFeedStatusFrom(
-                        contentFeedStatus,
-                        queries,
-                        null,
-                        null
-                    )
-
-                    val restoreProgress =
-                        getFeedStatusesRestoreProgress(contentFeedStatuses.lastIndex, index)
-
-                    emit(Response.Success(restoreProgress))
-                }
-            }
-        }
-
-    }
-
     /*
 * Used to hold in memory the chat table's latest message time to reduce disk IO
 * and mitigate conflicting updates between SocketIO and networkRefreshMessages
@@ -5998,113 +5825,6 @@ abstract class SphinxRepository(
     @Suppress("RemoveExplicitTypeArguments")
     private val latestMessageUpdatedTimeMap: SynchronizedMap<ChatId, DateTime> by lazy {
         SynchronizedMap<ChatId, DateTime>()
-    }
-
-    override val networkRefreshMessages: Flow<LoadResponse<RestoreProgress, ResponseError>> by lazy {
-        flow {
-            emit(LoadResponse.Loading)
-            val queries = coreDB.getSphinxDatabaseQueries()
-
-            val lastSeenMessagesDate: String? = authenticationStorage.getString(
-                REPOSITORY_LAST_SEEN_MESSAGE_DATE,
-                null
-            )
-
-            val page: Int = if (lastSeenMessagesDate == null) {
-                authenticationStorage.getString(
-                    REPOSITORY_LAST_SEEN_MESSAGE_RESTORE_PAGE,
-                    "0"
-                )!!.toInt()
-            } else {
-                0
-            }
-
-            val lastSeenMessageDateResolved: DateTime = lastSeenMessagesDate?.toDateTime()
-                ?: DATE_NIXON_SHOCK.toDateTime()
-
-            val restoring: Boolean = lastSeenMessagesDate == null
-
-            val now: String = DateTime.nowUTC()
-
-            val supervisor = SupervisorJob(currentCoroutineContext().job)
-            val scope = CoroutineScope(supervisor)
-
-            var networkResponseError: Response.Error<ResponseError>? = null
-
-            val jobList =
-                ArrayList<Job>(MESSAGE_PAGINATION_LIMIT * 2 /* MessageDto fields to potentially decrypt */)
-
-
-            var offset: Int = page * MESSAGE_PAGINATION_LIMIT
-
-            supervisor.cancelAndJoin()
-
-            networkResponseError?.let { responseError ->
-
-                emit(responseError)
-
-            } ?: applicationScope.launch(mainImmediate) {
-
-                authenticationStorage.putString(
-                    REPOSITORY_LAST_SEEN_MESSAGE_DATE,
-                    now
-                )
-
-                if (lastSeenMessagesDate == null) {
-                    authenticationStorage.removeString(REPOSITORY_LAST_SEEN_MESSAGE_RESTORE_PAGE)
-                    LOG.d(TAG, "Removing message restore page number")
-                }
-
-            }.join()
-
-            emit(
-                Response.Success(
-                    RestoreProgress(
-                        false,
-                        100
-                    )
-                )
-            )
-        }
-    }
-
-    private fun getMessagesRestoreProgress(
-        newMessagesTotal: Int,
-        offset: Int
-    ): RestoreProgress {
-
-        val pages: Int = if (newMessagesTotal <= MESSAGE_PAGINATION_LIMIT) {
-            1
-        } else {
-            newMessagesTotal / MESSAGE_PAGINATION_LIMIT
-        }
-
-        val feedRestoreProgressTotal = 10
-        val messagesRestoreProgressTotal = 100 - feedRestoreProgressTotal - latestContactsPercentage
-        val currentPage: Int = offset / MESSAGE_PAGINATION_LIMIT
-
-        val progress: Int = latestContactsPercentage + feedRestoreProgressTotal + (currentPage * messagesRestoreProgressTotal / pages)
-
-        return RestoreProgress(
-            true,
-            progress
-        )
-    }
-
-    private fun getFeedStatusesRestoreProgress(
-        feedTotal: Int,
-        currentIndex: Int
-    ): RestoreProgress {
-
-        val feedRestoreProgressTotal = 10
-        val feedPercentage = feedRestoreProgressTotal.toDouble() / feedTotal.toDouble() * currentIndex
-
-        val progress: Int = latestContactsPercentage + round(feedPercentage).toInt()
-
-        return RestoreProgress(
-            true,
-            progress
-        )
     }
 
     override suspend fun didCancelRestore() {
@@ -6272,31 +5992,6 @@ abstract class SphinxRepository(
         }
 
         delay(25L)
-//        networkQueryInvite.payInvite(invite.inviteString).collect { loadResponse ->
-//            @Exhaustive
-//            when (loadResponse) {
-//                is LoadResponse.Loading -> {
-//                }
-//
-//                is Response.Error -> {
-//                    contactLock.withLock {
-//                        withContext(io) {
-//                            queries.transaction {
-//                                updatedContactIds.add(invite.contactId)
-//                                updateInviteStatus(
-//                                    invite.id,
-//                                    InviteStatus.PaymentPending,
-//                                    queries
-//                                )
-//                            }
-//                        }
-//                    }
-//                }
-//
-//                is Response.Success -> {
-//                }
-//            }
-//        }
     }
 
     override suspend fun deleteInviteAndContact(inviteString: String) {
@@ -8390,4 +8085,28 @@ abstract class SphinxRepository(
             }
         }
     }
+
+    // Utility Methods
+    @OptIn(ExperimentalUnsignedTypes::class)
+    private fun generateRandomBytes(size: Int): ByteArray {
+        val random = SecureRandom()
+        val bytes = ByteArray(size)
+        random.nextBytes(bytes)
+        val byteArray = ByteArray(size)
+
+        for (i in bytes.indices) {
+            byteArray[i] = bytes[i]
+        }
+
+        return byteArray
+    }
 }
+
+@Suppress("NOTHING_TO_INLINE")
+inline fun ByteArray.toHex(): String =
+    StringBuilder(size * 2).let { hex ->
+        for (b in this) {
+            hex.append(String.format("%02x", b, 0xFF))
+        }
+        hex.toString()
+    }

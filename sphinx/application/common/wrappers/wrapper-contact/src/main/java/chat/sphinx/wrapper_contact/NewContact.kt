@@ -1,5 +1,6 @@
 package chat.sphinx.wrapper_contact
 
+import chat.sphinx.wrapper_common.DateTime
 import chat.sphinx.wrapper_common.PhotoUrl
 import chat.sphinx.wrapper_common.invite.InviteStatus
 import chat.sphinx.wrapper_common.lightning.LightningNodePubKey
@@ -15,5 +16,6 @@ data class NewContact(
     val inviteString: String?,
     val inviteCode: String?,
     val invitePrice: Sat?,
-    val inviteStatus: InviteStatus?
+    val inviteStatus: InviteStatus?,
+    val createdAt: DateTime?
 )

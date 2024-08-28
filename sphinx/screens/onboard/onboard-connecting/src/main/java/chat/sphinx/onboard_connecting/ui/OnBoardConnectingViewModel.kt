@@ -61,42 +61,6 @@ internal inline val OnBoardConnectingFragmentArgs.restoreCode: RedemptionCode.Ac
         return null
     }
 
-internal inline val OnBoardConnectingFragmentArgs.connectionCode: RedemptionCode.NodeInvite?
-    get() {
-        argCode?.let {
-            val redemptionCode = RedemptionCode.decode(it)
-
-            if (redemptionCode is RedemptionCode.NodeInvite) {
-                return redemptionCode
-            }
-        }
-        return null
-    }
-
-internal inline val OnBoardConnectingFragmentArgs.swarmConnect: RedemptionCode.SwarmConnect?
-    get() {
-        argCode?.let {
-            val redemptionCode = RedemptionCode.decode(it)
-
-            if (redemptionCode is RedemptionCode.SwarmConnect) {
-                return redemptionCode
-            }
-        }
-        return null
-    }
-
-internal inline val OnBoardConnectingFragmentArgs.swarmClaim: RedemptionCode.SwarmClaim?
-    get() {
-        argCode?.let {
-            val redemptionCode = RedemptionCode.decode(it)
-
-            if (redemptionCode is RedemptionCode.SwarmClaim) {
-                return redemptionCode
-            }
-        }
-        return null
-    }
-
 internal inline val OnBoardConnectingFragmentArgs.inviteCode: InviteString?
     get() {
         argCode?.let {
@@ -113,11 +77,9 @@ internal class OnBoardConnectingViewModel @Inject constructor(
     private val keyRestore: KeyRestore,
     private val walletDataHandler: WalletDataHandler,
     private val networkQueryInvite: NetworkQueryInvite,
-    private val onBoardStepHandler: OnBoardStepHandler,
     private val networkQueryContact: NetworkQueryContact,
     private val connectManagerRepository: ConnectManagerRepository,
     val moshi: Moshi,
-    private val rsa: RSA,
     private val app: Application
     ): MotionLayoutViewModel<
         Any,
@@ -231,20 +193,28 @@ internal class OnBoardConnectingViewModel @Inject constructor(
     }
 
 
-    private fun fetchRouterUrl(isProductionEnvironment: Boolean) {
+    private fun fetchMissingAccountConfig(
+        isProductionEnvironment: Boolean,
+        routerUrl: String?,
+        tribeServerHost: String?,
+        defaultTribe: String?
+    ) {
         viewModelScope.launch(mainImmediate) {
             networkQueryContact.getAccountConfig(isProductionEnvironment).collect { loadResponse ->
                 when (loadResponse) {
                     is Response.Success -> {
-                        storeRouterUrl(loadResponse.value.router)
-
-                        if (loadResponse.value.tribe.isNotEmpty()) {
-                            storeDefaultTribe(loadResponse.value.tribe)
+                        loadResponse.value.router.takeIf { it.isNotEmpty() && routerUrl.isNullOrEmpty() }?.let {
+                            storeRouterUrl(it)
+                        }
+                        loadResponse.value.tribe_host.takeIf { it.isNotEmpty() && tribeServerHost.isNullOrEmpty() }?.let {
+                            storeTribeServerIp(it)
+                        }
+                        loadResponse.value.tribe.takeIf { it.isNotEmpty() && defaultTribe.isNullOrEmpty() }?.let {
+                            storeDefaultTribe(it)
                         }
                         delay(100L)
                         navigator.toOnBoardNameScreen()
                     }
-
                     is Response.Error -> {
                         submitSideEffect(
                             OnBoardConnectingSideEffect.Notify(
@@ -346,55 +316,6 @@ internal class OnBoardConnectingViewModel @Inject constructor(
         }
     }
 
-    private suspend fun continueWithToken(
-        token: AuthorizationToken,
-        relayUrl: RelayUrl,
-        transportKey: RsaPublicKey? = null,
-        redeemInviteDto: RedeemInviteDto?
-    ) {
-        val inviterData: OnBoardInviterData? = redeemInviteDto?.let { dto ->
-            OnBoardInviterData(
-                dto.nickname,
-                dto.pubkey?.toLightningNodePubKey(),
-                dto.route_hint,
-                dto.message,
-                dto.action,
-                dto.pin
-            )
-        }
-    }
-
-    private var tokenRetries = 0
-    private suspend fun registerTokenAndStartOnBoard(
-        ip: RelayUrl,
-        nodePubKey: String?,
-        password: String?,
-        redeemInviteDto: RedeemInviteDto?,
-        token: AuthorizationToken? = null,
-        transportKey: RsaPublicKey? = null,
-        transportToken: TransportToken? = null
-    ) {
-
-        @OptIn(RawPasswordAccess::class)
-        val authToken = token ?: AuthorizationToken(
-            PasswordGenerator(passwordLength = 20).password.value.joinToString("")
-        )
-
-        val inviterData: OnBoardInviterData? = redeemInviteDto?.let { dto ->
-            OnBoardInviterData(
-                dto.nickname,
-                dto.pubkey?.toLightningNodePubKey(),
-                dto.route_hint,
-                dto.message,
-                dto.action,
-                dto.pin
-            )
-        }
-
-        var generateTokenResponse: LoadResponse<GenerateTokenResponse, ResponseError> = Response.Error(
-            ResponseError("generateToken endpoint failed")
-        )
-    }
 
     private suspend fun goToConnectedScreen(
         ownerPrivateKey: RsaPrivateKey,
@@ -443,17 +364,23 @@ internal class OnBoardConnectingViewModel @Inject constructor(
                     }
                     is OwnerRegistrationState.OwnerRegistered -> {
                         connectionState.mixerServerIp?.let { storeNetworkMixerIp(it) }
-                        connectionState.tirbeServerHost?.let { storeTribeServerIp(it) }
                         connectionState.defaultTribe?.let { storeDefaultTribe(it) }
-
                         storeEnvironmentType(connectionState.isProductionEnvironment)
 
-                        if (connectionState.routerUrl?.isNotEmpty() == true) {
-                            storeRouterUrl(connectionState.routerUrl)
+                        val needsToFetchConfig = connectionState.routerUrl.isNullOrEmpty() || connectionState.tirbeServerHost.isNullOrEmpty()
+
+                        if (needsToFetchConfig) {
+                            fetchMissingAccountConfig(
+                                isProductionEnvironment = connectionState.isProductionEnvironment,
+                                routerUrl = connectionState.routerUrl,
+                                tribeServerHost = connectionState.tirbeServerHost,
+                                defaultTribe = connectionState.defaultTribe
+                            )
+                        } else {
+                            connectionState.routerUrl?.let { storeRouterUrl(it) }
+                            connectionState.tirbeServerHost?.let { storeTribeServerIp(it) }
                             delay(100L)
                             navigator.toOnBoardNameScreen()
-                        } else {
-                            fetchRouterUrl(connectionState.isProductionEnvironment)
                         }
                     }
                     else -> {}

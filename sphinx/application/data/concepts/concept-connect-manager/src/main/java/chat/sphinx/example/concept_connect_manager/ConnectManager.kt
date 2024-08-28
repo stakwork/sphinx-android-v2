@@ -3,8 +3,10 @@ package chat.sphinx.example.concept_connect_manager
 import chat.sphinx.example.concept_connect_manager.model.OwnerInfo
 import chat.sphinx.example.concept_connect_manager.model.RestoreState
 import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
+import chat.sphinx.example.wrapper_mqtt.MsgsCounts
 import chat.sphinx.wrapper_contact.NewContact
 import chat.sphinx.wrapper_lightning.WalletMnemonic
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -18,6 +20,7 @@ import kotlinx.coroutines.flow.StateFlow
 abstract class ConnectManager {
     abstract val ownerInfoStateFlow: StateFlow<OwnerInfo?>
     abstract val restoreStateFlow: StateFlow<RestoreState?>
+    abstract val msgsCountsState: MutableStateFlow<MsgsCounts?>
 
     // Account Management Methods
     abstract fun createAccount()
@@ -30,7 +33,7 @@ abstract class ConnectManager {
     abstract fun setInviteCode(inviteString: String)
     abstract fun setMnemonicWords(words: List<String>?)
     abstract fun setNetworkType(isTestEnvironment: Boolean)
-    abstract fun setOwnerDeviceId(deviceId: String)
+    abstract fun setOwnerDeviceId(deviceId: String, pushKey: String)
     abstract fun processChallengeSignature(challenge: String): String?
     abstract fun fetchFirstMessagesPerKey(lastMsgIdx: Long, firstForEachScid: Long?)
     abstract fun fetchMessagesOnRestoreAccount(totalHighestIndex: Long?)
@@ -94,8 +97,6 @@ abstract class ConnectManager {
     )
     abstract fun getMessagesStatusByTags(tags: List<String>)
 
-    abstract fun restorePendingMessages()
-
     // Tribe Management Methods
     abstract fun createTribe(tribeJson: String)
     abstract fun joinToTribe(
@@ -140,8 +141,7 @@ abstract class ConnectManager {
         minMsat: Long?, // include only payments above this amount
         reverse: Boolean?
     )
-    abstract fun getPubKeyFromChildIndex(childIndex: Long): String?
-    abstract fun getPubKeyByEncryptedChild(child: String): String?
+    abstract fun getPubKeyByEncryptedChild(child: String, pushKey: String?): String?
     abstract fun generateMediaToken(
         contactPubKey: String,
         muid: String,
@@ -158,6 +158,8 @@ abstract class ConnectManager {
     // Listener Methods
     abstract fun addListener(listener: ConnectManagerListener): Boolean
     abstract fun removeListener(listener: ConnectManagerListener): Boolean
+
+    abstract fun saveMessagesCounts(msgsCounts: MsgsCounts)
 }
 
 /**
@@ -182,9 +184,12 @@ interface ConnectManagerListener {
         defaultTribe: String?
     )
     fun onRestoreAccount(isProductionEnvironment: Boolean)
-    fun onRestoreContacts(contacts: List<String?>)
+    fun onUpsertContacts(
+        contacts: List<Pair<String?, Long?>>,
+        callback: (() -> Unit)? = null
+    )
     fun onRestoreMessages()
-    fun onRestoreTribes(
+    fun onUpsertTribes(
         tribes: List<Pair<String?, Boolean?>>,
         isProductionEnvironment: Boolean,
         callback: (() -> Unit)? = null
@@ -212,6 +217,7 @@ interface ConnectManagerListener {
         amount: Long?,
         fromMe: Boolean?,
         tag: String?,
+        date: Long?,
         isRestore: Boolean,
     )
     fun onMessageTagAndUuid(tag: String?, msgUUID: String, provisionalId: Long)
@@ -227,7 +233,10 @@ interface ConnectManagerListener {
 
     // Invoice and Payment Management Callbacks
     fun onPayments(payments: String)
-    fun onNetworkStatusChange(isConnected: Boolean)
+    fun onNetworkStatusChange(
+        isConnected: Boolean,
+        isLoading: Boolean = false
+    )
     fun onNewInviteCreated(
         nickname: String,
         inviteString: String,

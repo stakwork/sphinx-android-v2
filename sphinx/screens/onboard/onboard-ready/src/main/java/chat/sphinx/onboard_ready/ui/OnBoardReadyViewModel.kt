@@ -33,8 +33,6 @@ internal class OnBoardReadyViewModel @Inject constructor(
     private val navigator: OnBoardReadyNavigator,
     private val contactRepository: ContactRepository,
     private val lightningRepository: LightningRepository,
-    private val networkQueryInvite: NetworkQueryInvite,
-    private val connectManagerRepository: ConnectManagerRepository,
     private val onBoardStepHandler: OnBoardStepHandler,
 ): SideEffectViewModel<
         Context,
@@ -42,43 +40,6 @@ internal class OnBoardReadyViewModel @Inject constructor(
         OnBoardReadyViewState
         >(dispatchers, OnBoardReadyViewState.Idle)
 {
-
-    fun saveInviterAndFinish(
-        nickname: String,
-        pubkey: String,
-        routeHint: String?,
-        inviteString: String? = null
-    ) {
-        viewModelScope.launch(mainImmediate) {
-            val alias = ContactAlias(nickname)
-            val pubKey = LightningNodePubKey(pubkey)
-            val lightningRouteHint = routeHint?.toLightningRouteHint()
-
-            contactRepository.createContact(
-                alias,
-                pubKey,
-                lightningRouteHint
-            ).collect { loadResponse ->
-                @Exhaustive
-                when (loadResponse) {
-                    LoadResponse.Loading ->
-                        viewStateContainer.updateViewState(OnBoardReadyViewState.Saving)
-                    is Response.Error -> {
-                        viewStateContainer.updateViewState(OnBoardReadyViewState.Error)
-
-                        submitSideEffect(OnBoardReadySideEffect.CreateInviterFailed)
-                    }
-                    is Response.Success -> {
-                        if (inviteString != null && inviteString.isNotEmpty()) { }
-                        else {
-                            finishSignup()
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     fun finishSignup() {
         viewModelScope.launch(mainImmediate) {
             goToDashboard()

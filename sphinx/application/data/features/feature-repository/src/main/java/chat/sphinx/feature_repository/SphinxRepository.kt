@@ -773,9 +773,33 @@ abstract class SphinxRepository(
             return
         }
         applicationScope.launch(mainImmediate) {
-            contacts.forEach { contact ->
-                contact.first?.let { msgSender ->
-                    saveNewContactRegistered(msgSender, contact.second)
+            val contactList: List<Pair<MsgSender?, DateTime?>> = contacts.mapNotNull { contact ->
+                Pair(contact?.first?.toMsgSenderNull(moshi), contact.second?.toDateTime())
+            }.groupBy { it.first?.pubkey }
+                .map { (_, group) ->
+                    group.find { it.first?.confirmed == true } ?: group.first()
+                }
+
+            val newContactList = contactList.map { contactInfo ->
+                NewContact(
+                    contactAlias = contactInfo.first?.alias?.toContactAlias(),
+                    lightningNodePubKey = contactInfo.first?.pubkey?.toLightningNodePubKey(),
+                    lightningRouteHint = contactInfo.first?.route_hint?.toLightningRouteHint(),
+                    photoUrl = contactInfo.first?.photo_url?.toPhotoUrl(),
+                    confirmed = contactInfo.first?.confirmed == true,
+                    null,
+                    inviteCode = contactInfo.first?.code,
+                    invitePrice = null,
+                    null,
+                    contactInfo.second
+                )
+            }
+
+            newContactList.forEach { newContact ->
+                if (newContact.inviteCode != null) {
+                    updateNewContactInvited(newContact)
+                } else {
+                    createNewContact(newContact)
                 }
             }
 

@@ -196,7 +196,8 @@ internal class OnBoardConnectingViewModel @Inject constructor(
     private fun fetchMissingAccountConfig(
         isProductionEnvironment: Boolean,
         routerUrl: String?,
-        tribeServerHost: String?
+        tribeServerHost: String?,
+        defaultTribe: String?
     ) {
         viewModelScope.launch(mainImmediate) {
             networkQueryContact.getAccountConfig(isProductionEnvironment).collect { loadResponse ->
@@ -207,6 +208,9 @@ internal class OnBoardConnectingViewModel @Inject constructor(
                         }
                         loadResponse.value.tribe_host.takeIf { it.isNotEmpty() && tribeServerHost.isNullOrEmpty() }?.let {
                             storeTribeServerIp(it)
+                        }
+                        loadResponse.value.tribe.takeIf { it.isNotEmpty() && defaultTribe.isNullOrEmpty() }?.let {
+                            storeDefaultTribe(it)
                         }
                         delay(100L)
                         navigator.toOnBoardNameScreen()
@@ -364,11 +368,13 @@ internal class OnBoardConnectingViewModel @Inject constructor(
                         storeEnvironmentType(connectionState.isProductionEnvironment)
 
                         val needsToFetchConfig = connectionState.routerUrl.isNullOrEmpty() || connectionState.tirbeServerHost.isNullOrEmpty()
+
                         if (needsToFetchConfig) {
                             fetchMissingAccountConfig(
                                 isProductionEnvironment = connectionState.isProductionEnvironment,
                                 routerUrl = connectionState.routerUrl,
-                                tribeServerHost = connectionState.tirbeServerHost
+                                tribeServerHost = connectionState.tirbeServerHost,
+                                defaultTribe = connectionState.defaultTribe
                             )
                         } else {
                             connectionState.routerUrl?.let { storeRouterUrl(it) }

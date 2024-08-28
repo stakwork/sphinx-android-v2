@@ -790,7 +790,7 @@ class ConnectManagerImpl: ConnectManager()
                         null
                     )
                     _mixerIp = invite.lspHost
-                    tribeServer = hostAndPubKey?.first ?: TEST_V2_TRIBES_SERVER
+                    tribeServer = hostAndPubKey?.first
                     inviteInitialTribe = invite.initialTribe
 
                     network = if (isProductionServer()) {

@@ -193,20 +193,24 @@ internal class OnBoardConnectingViewModel @Inject constructor(
     }
 
 
-    private fun fetchRouterUrl(isProductionEnvironment: Boolean) {
+    private fun fetchMissingAccountConfig(
+        isProductionEnvironment: Boolean,
+        routerUrl: String?,
+        tribeServerHost: String?
+    ) {
         viewModelScope.launch(mainImmediate) {
             networkQueryContact.getAccountConfig(isProductionEnvironment).collect { loadResponse ->
                 when (loadResponse) {
                     is Response.Success -> {
-                        storeRouterUrl(loadResponse.value.router)
-
-                        if (loadResponse.value.tribe.isNotEmpty()) {
-                            storeDefaultTribe(loadResponse.value.tribe)
+                        loadResponse.value.router.takeIf { it.isNotEmpty() && routerUrl.isNullOrEmpty() }?.let {
+                            storeRouterUrl(it)
+                        }
+                        loadResponse.value.tribe_host.takeIf { it.isNotEmpty() && tribeServerHost.isNullOrEmpty() }?.let {
+                            storeTribeServerIp(it)
                         }
                         delay(100L)
                         navigator.toOnBoardNameScreen()
                     }
-
                     is Response.Error -> {
                         submitSideEffect(
                             OnBoardConnectingSideEffect.Notify(
@@ -356,17 +360,21 @@ internal class OnBoardConnectingViewModel @Inject constructor(
                     }
                     is OwnerRegistrationState.OwnerRegistered -> {
                         connectionState.mixerServerIp?.let { storeNetworkMixerIp(it) }
-                        connectionState.tirbeServerHost?.let { storeTribeServerIp(it) }
                         connectionState.defaultTribe?.let { storeDefaultTribe(it) }
-
                         storeEnvironmentType(connectionState.isProductionEnvironment)
 
-                        if (connectionState.routerUrl?.isNotEmpty() == true) {
-                            storeRouterUrl(connectionState.routerUrl)
+                        val needsToFetchConfig = connectionState.routerUrl.isNullOrEmpty() || connectionState.tirbeServerHost.isNullOrEmpty()
+                        if (needsToFetchConfig) {
+                            fetchMissingAccountConfig(
+                                isProductionEnvironment = connectionState.isProductionEnvironment,
+                                routerUrl = connectionState.routerUrl,
+                                tribeServerHost = connectionState.tirbeServerHost
+                            )
+                        } else {
+                            connectionState.routerUrl?.let { storeRouterUrl(it) }
+                            connectionState.tirbeServerHost?.let { storeTribeServerIp(it) }
                             delay(100L)
                             navigator.toOnBoardNameScreen()
-                        } else {
-                            fetchRouterUrl(connectionState.isProductionEnvironment)
                         }
                     }
                     else -> {}

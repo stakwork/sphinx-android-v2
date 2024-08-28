@@ -98,7 +98,7 @@ internal class SphinxFirebaseMessagingService: FirebaseMessagingService() {
                     } else if (chat != null) {
                         String.format(message, "from $name")
                     } else {
-                        message
+                        String.format(message, "")
                     }
                 }
             }

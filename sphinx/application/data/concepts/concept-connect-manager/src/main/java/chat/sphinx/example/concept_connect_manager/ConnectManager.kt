@@ -184,12 +184,12 @@ interface ConnectManagerListener {
         defaultTribe: String?
     )
     fun onRestoreAccount(isProductionEnvironment: Boolean)
-    fun onRestoreContacts(
+    fun onUpsertContacts(
         contacts: List<Pair<String?, Long?>>,
         callback: (() -> Unit)? = null
     )
     fun onRestoreMessages()
-    fun onRestoreTribes(
+    fun onUpsertTribes(
         tribes: List<Pair<String?, Boolean?>>,
         isProductionEnvironment: Boolean,
         callback: (() -> Unit)? = null

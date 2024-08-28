@@ -762,7 +762,7 @@ abstract class SphinxRepository(
         }
     }
 
-    override fun onRestoreContacts(
+    override fun onUpsertContacts(
         contacts: List<Pair<String?, Long?>>,
         callback: (() -> Unit)?
     ) {
@@ -813,7 +813,7 @@ abstract class SphinxRepository(
         restoreProcessState.value = RestoreProcessState.RestoreMessages
     }
 
-    override fun onRestoreTribes(
+    override fun onUpsertTribes(
         tribes: List<Pair<String?, Boolean?>>,
         isProductionEnvironment: Boolean,
         callback: (() -> Unit)?

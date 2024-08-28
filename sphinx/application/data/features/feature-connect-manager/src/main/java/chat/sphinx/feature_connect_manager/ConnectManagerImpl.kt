@@ -587,7 +587,7 @@ class ConnectManagerImpl: ConnectManager()
             Log.d("RESTORE_PROCESS_TRIBE", "$tribesToUpdate")
 
             notifyListeners {
-                onRestoreTribes(tribesToUpdate, isProductionEnvironment()) {
+                onUpsertTribes(tribesToUpdate, isProductionEnvironment()) {
                     val contactsToRestore: List<Pair<String?, Long?>> = msgs.filter {
                         it.type?.toInt() == TYPE_CONTACT_KEY_RECORD ||
                         it.type?.toInt() == TYPE_CONTACT_KEY_CONFIRMATION ||
@@ -599,7 +599,7 @@ class ConnectManagerImpl: ConnectManager()
                     Log.d("RESTORE_PROCESS_CONTACTS", "$contactsToRestore")
 
                     notifyListeners {
-                        onRestoreContacts(contactsToRestore) {
+                        onUpsertContacts(contactsToRestore) {
                             // Handle new messages
                             msgs.forEach { msg ->
                                 processMessage(msg)

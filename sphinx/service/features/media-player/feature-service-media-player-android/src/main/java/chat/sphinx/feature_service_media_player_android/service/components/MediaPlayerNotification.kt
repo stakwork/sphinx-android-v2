@@ -49,9 +49,11 @@ internal class MediaPlayerNotification(
     }
 
     init {
-        mediaPlayerService
-            .serviceContext
-            .registerReceiver(this, IntentFilter(SERVICE_INTENT_FILTER))
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.TIRAMISU) {
+            mediaPlayerService
+                .serviceContext
+                .registerReceiver(this, IntentFilter(SERVICE_INTENT_FILTER))
+        }
     }
 
     private inline val notificationManager: NotificationManager?

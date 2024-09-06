@@ -1415,7 +1415,7 @@ abstract class SphinxRepository(
                     )
                 }
             }
-            transactionDtoState.value = transactionDtoList.sortedByDescending { it.date?.value }
+            transactionDtoState.value = transactionDtoList.sortedByDescending { it.date?.value }.distinct()
         }
     }
 

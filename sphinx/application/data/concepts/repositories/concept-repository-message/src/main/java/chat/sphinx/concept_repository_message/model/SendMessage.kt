@@ -226,6 +226,15 @@ class SendMessage private constructor(
         }
 
         @Synchronized
+        fun isEmptyThreadUUID(): Boolean {
+            return threadUUID == null
+        }
+        @Synchronized
+        fun isEmptyReplyUUID(): Boolean {
+            return replyUUID == null
+        }
+
+        @Synchronized
         fun build(): Pair<SendMessage?, ValidationError?> {
             val isValid = isValid()
 

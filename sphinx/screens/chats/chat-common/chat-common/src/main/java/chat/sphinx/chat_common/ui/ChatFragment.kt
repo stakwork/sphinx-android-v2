@@ -71,8 +71,6 @@ import chat.sphinx.insetter_activity.addKeyboardPadding
 import chat.sphinx.insetter_activity.addNavigationBarPadding
 import chat.sphinx.insetter_activity.addStatusBarPadding
 import chat.sphinx.keyboard_inset_fragment.KeyboardInsetMotionLayoutFragment
-import chat.sphinx.kotlin_response.LoadResponse
-import chat.sphinx.kotlin_response.Response
 import chat.sphinx.menu_bottom.databinding.LayoutMenuBottomBinding
 import chat.sphinx.menu_bottom.model.MenuBottomOption
 import chat.sphinx.menu_bottom.ui.BottomMenu
@@ -80,7 +78,6 @@ import chat.sphinx.menu_bottom.ui.MenuBottomViewState
 import chat.sphinx.resources.*
 import chat.sphinx.wrapper_common.FileSize
 import chat.sphinx.wrapper_common.asFormattedString
-import chat.sphinx.wrapper_common.chat.PushNotificationLink
 import chat.sphinx.wrapper_common.lightning.asFormattedString
 import chat.sphinx.wrapper_common.lightning.toSat
 import chat.sphinx.wrapper_common.message.MessageId
@@ -100,7 +97,6 @@ import io.matthewnelson.android_feature_viewmodel.updateViewState
 import io.matthewnelson.concept_views.viewstate.collect
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 abstract class ChatFragment<
@@ -361,6 +357,28 @@ abstract class ChatFragment<
         footerBinding.apply {
             insetterActivity.addNavigationBarPadding(root)
 
+//            editTextChatFooter.filters = arrayOf<InputFilter>(object : InputFilter {
+//                override fun filter(
+//                    source: CharSequence,
+//                    start: Int,
+//                    end: Int,
+//                    dest: Spanned,
+//                    dstart: Int,
+//                    dend: Int
+//                ): CharSequence {
+//                    val currentText = dest.toString()
+//                    val proposedText = currentText.substring(0, dstart) + source.subSequence(start, end) + currentText.substring(dend)
+//
+//                    return if (proposedText.toByteArray().size > 594) {
+//                        // needs to check protected val sendMessageBuilder = SendMessage.Builder() to get the arguments call
+//                        ""
+//                    } else {
+//                        // If the proposed text does not exceed the limit, allow the change
+//                        source.subSequence(start, end)
+//
+//                    }
+//                }
+//            })
             editTextChatFooter.filters = arrayOf<InputFilter>(object : InputFilter {
                 override fun filter(
                     source: CharSequence,
@@ -370,16 +388,21 @@ abstract class ChatFragment<
                     dstart: Int,
                     dend: Int
                 ): CharSequence {
+                    // Get the current and proposed text
                     val currentText = dest.toString()
                     val proposedText = currentText.substring(0, dstart) + source.subSequence(start, end) + currentText.substring(dend)
 
-                    return if (proposedText.toByteArray().size > 594) {
-                        // If the proposed text exceeds the limit, return an empty string to prevent the change
+                    // Get whether there's an attachment and the threadUUID or replyUUID if applicable
+                    val sendingAttachment = viewModel.getAttachmentSendViewStateFlow().value !is AttachmentSendViewState.Idle
+                    val isEmptyThreadUUID = sendMessageBuilder.isEmptyThreadUUID()
+                    val isEmptyReplyUUID = sendMessageBuilder.isEmptyReplyUUID()
+
+                    // Check if the message length is valid
+                    return if (!isMessageLengthValid(proposedText, sendingAttachment, isEmptyThreadUUID, isEmptyReplyUUID)) {
                         ""
                     } else {
                         // If the proposed text does not exceed the limit, allow the change
                         source.subSequence(start, end)
-
                     }
                 }
             })
@@ -585,6 +608,33 @@ abstract class ChatFragment<
             ).build()
     }
 
+    fun isMessageLengthValid(
+        text: String,
+        sendingAttachment: Boolean,
+        isEmptyThreadUUID: Boolean,
+        isEmptyReplyUUID: Boolean
+    ): Boolean {
+        val contentBytes = 18
+        val attachmentBytes = 389
+        val replyBytes = 84
+        val threadBytes = 84
+
+        var bytes = text.toByteArray().size + contentBytes
+
+        if (sendingAttachment) {
+            bytes += attachmentBytes
+        }
+
+        if (!isEmptyReplyUUID) {
+            bytes += replyBytes
+        }
+
+        if (!isEmptyThreadUUID) {
+            bytes += threadBytes
+        }
+
+        return bytes <= 869
+    }
     private fun setupCallMenu() {
         bottomMenuCall.newBuilder(callMenuBinding, viewLifecycleOwner)
             .setHeaderText(R.string.bottom_menu_call_header_text)

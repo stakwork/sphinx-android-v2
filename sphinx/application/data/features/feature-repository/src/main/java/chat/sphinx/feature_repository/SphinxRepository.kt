@@ -4494,8 +4494,13 @@ abstract class SphinxRepository(
         }
         val payeeLspPubKey = routeHint?.getLspPubKey()
         val ownerLspPubKey = owner?.routeHint?.getLspPubKey()
+        val isAvailableRoute = isRouteAvailable(
+            pubKey.value,
+            routerPubKey,
+            milliSatAmount?.value ?: 0,
+            )
 
-        return if (payeeLspPubKey == ownerLspPubKey) {
+        return if (payeeLspPubKey == ownerLspPubKey || isAvailableRoute) {
             sendKeySend(
                 pubKey.value,
                 null,
@@ -4547,6 +4552,10 @@ abstract class SphinxRepository(
                 false
             }
         }
+    }
+
+    override fun isRouteAvailable(pubKey: String, routeHint: String?, milliSat: Long): Boolean {
+        return connectManager.isRouteAvailable(pubKey, routeHint, milliSat)
     }
 
     private fun isJsonResponseEmpty(json: String?): Boolean {

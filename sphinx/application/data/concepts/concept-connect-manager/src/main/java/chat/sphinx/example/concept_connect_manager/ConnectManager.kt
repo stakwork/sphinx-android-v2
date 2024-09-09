@@ -151,6 +151,8 @@ abstract class ConnectManager {
     ): String?
     abstract fun getInvoiceInfo(invoice: String): String?
 
+    abstract fun isRouteAvailable(pubKey: String, routeHint: String?, milliSat: Long): Boolean
+
     // Utility Methods
     abstract fun getSignedTimeStamps(): String?
     abstract fun getSignBase64(text: String): String?

@@ -697,10 +697,17 @@ internal class TribeAppViewModel @Inject constructor(
         val isAmountValid = paymentAmount != null
         val isBudgetSufficient = budget >= (paymentAmount ?: 0)
         val lightningPaymentRequest = webViewDto?.paymentRequest?.toLightningPaymentRequestOrNull()
+        val ownerLsp = contactRepository.accountOwner.value?.routeHint?.getLspPubKey()
+
+        val isAvailableRoute = connectManagerRepository.isRouteAvailable(
+            invoicePubKey?.value ?: "",
+            null,
+            paymentAmount ?: 0
+        )
 
         if (isAmountValid && isBudgetSufficient && lightningPaymentRequest != null) {
 
-            if (invoice?.retrieveLspPubKey() == contactRepository.accountOwner.value?.routeHint?.getLspPubKey()) {
+            if (invoice?.retrieveLspPubKey() == ownerLsp || isAvailableRoute) {
                 connectManagerRepository.payInvoice(
                     lightningPaymentRequest,
                     endHops = null,

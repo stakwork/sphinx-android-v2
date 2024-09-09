@@ -1256,7 +1256,13 @@ internal class DashboardViewModel @Inject constructor(
                 payeeLspPubKey = contact?.routeHint?.getLspPubKey()
             }
 
-            if (payeeLspPubKey == null || payeeLspPubKey != ownerLsp) {
+            val isRouteAvailable = connectManagerRepository.isRouteAvailable(
+                invoicePayeePubKey.value,
+                null,
+                invoiceAmountMilliSat
+            )
+
+            if (payeeLspPubKey == null || payeeLspPubKey != ownerLsp || !isRouteAvailable) {
                 val routerUrl = serverSettingsSharedPreferences.getString(ROUTER_URL, null)
 
                 if (routerUrl == null) {

@@ -4207,18 +4207,6 @@ abstract class SphinxRepository(
                             upsertNewMessage(newPayment, queries, null)
                         }
                     }
-
-                    queries.transaction {
-                        sendPayment.chatId?.let { chatId ->
-
-                            updateChatNewLatestMessage(
-                                newPayment,
-                                chatId,
-                                latestMessageUpdatedTimeMap,
-                                queries
-                            )
-                        }
-                    }
                 }
             }
 

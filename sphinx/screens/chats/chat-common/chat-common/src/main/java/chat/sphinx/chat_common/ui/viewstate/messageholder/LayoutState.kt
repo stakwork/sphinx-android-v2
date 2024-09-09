@@ -34,6 +34,7 @@ sealed class LayoutState private constructor() {
         val showSent: Boolean,
         val showSendingIcon: Boolean,
         val showBoltIcon: Boolean,
+        val showGrayBoltIcon: Boolean,
         val showFailedContainer: Boolean,
         val showLockIcon: Boolean,
         val timestamp: String,

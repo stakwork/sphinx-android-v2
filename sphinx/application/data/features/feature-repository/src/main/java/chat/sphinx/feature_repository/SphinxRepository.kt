@@ -4134,7 +4134,7 @@ abstract class SphinxRepository(
                 date = DateTime.nowUTC().toDateTime(),
                 expirationDate = null,
                 messageContent = null,
-                status = MessageStatus.Confirmed,
+                status = MessageStatus.Pending,
                 seen = Seen.True,
                 senderAlias = null,
                 senderPic = null,

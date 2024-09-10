@@ -174,6 +174,7 @@ object SphinxHighlightingTool {
                         Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
                     )
 
+                    text.movementMethod = LinkMovementMethod.getInstance()
                     text.setText(t, TextView.BufferType.SPANNABLE)
                 }
             } else {
@@ -198,7 +199,6 @@ object SphinxHighlightingTool {
 
                     text.movementMethod = LinkMovementMethod.getInstance()
                     text.setText(spannable, TextView.BufferType.SPANNABLE)
-                    text.invalidate()
                 }
             }
         }

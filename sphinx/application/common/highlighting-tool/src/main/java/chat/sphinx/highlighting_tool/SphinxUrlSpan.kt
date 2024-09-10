@@ -37,6 +37,11 @@ open class SphinxUrlSpan(
     }
 
     override fun onClick(widget: View) {
+        if (onInteractionListener == null) {
+            super.onClick(widget)
+            return
+        }
+
         if (onInteractionListener?.longClickCounter?.get() == 0) {
             if (url.isSphinxUrl) {
                 onInteractionListener?.onClick(url)

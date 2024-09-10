@@ -1,12 +1,9 @@
 package chat.sphinx.chat_common.ui.viewstate.thread
 
-import androidx.annotation.IntRange
 import chat.sphinx.chat_common.ui.viewstate.messageholder.LayoutState
-import chat.sphinx.chat_common.ui.viewstate.messageholder.MessageHolderViewState
 import chat.sphinx.wrapper_common.PhotoUrl
 import chat.sphinx.wrapper_contact.ContactAlias
 import io.matthewnelson.concept_views.viewstate.ViewState
-import java.io.File
 
 sealed class ThreadHeaderViewState: ViewState<ThreadHeaderViewState>() {
 

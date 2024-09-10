@@ -6,11 +6,13 @@ import android.content.res.Resources
 import android.os.Build
 import android.text.Spannable
 import android.text.SpannableString
+import android.text.TextPaint
+import android.text.method.LinkMovementMethod
 import android.text.style.BackgroundColorSpan
+import android.text.style.MetricAffectingSpan
 import android.text.style.TypefaceSpan
+import android.text.style.URLSpan
 import android.widget.TextView
-import androidx.annotation.IntRange
-import androidx.annotation.RequiresApi
 import androidx.core.content.res.ResourcesCompat
 import java.util.*
 
@@ -32,23 +34,26 @@ object SphinxHighlightingTool {
      *
      * @return True if at least one link is found and applied.
      */
-    fun addHighlights(
+    fun addMarkdowns(
         text: TextView,
         highlightedTexts: List<Pair<String, IntRange>>,
+        boldTexts: List<Pair<String, IntRange>>,
+        linkTexts: List<Pair<String, IntRange>>,
+        onSphinxInteractionListener: SphinxUrlSpan.OnInteractionListener?,
         resources: Resources,
         context: Context
     ) {
-
         if (highlightedTexts.isNotEmpty()) {
             val t = text.text
+
             if (t is Spannable) {
                 for (highlightedText in highlightedTexts) {
                     ResourcesCompat.getFont(context, R.font.roboto_light)?.let { typeface ->
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                             t.setSpan(
                                 TypefaceSpan(typeface),
-                                highlightedText.second.from.toInt(),
-                                highlightedText.second.to.toInt(),
+                                highlightedText.second.first,
+                                highlightedText.second.last,
                                 Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
                             )
                         }
@@ -56,10 +61,20 @@ object SphinxHighlightingTool {
 
                     t.setSpan(
                         BackgroundColorSpan(resources.getColor(R.color.highlightedTextBackground)),
-                        highlightedText.second.from.toInt(),
-                        highlightedText.second.to.toInt(),
+                        highlightedText.second.first,
+                        highlightedText.second.last,
                         Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
                     )
+
+                    t.setSpan(object : MetricAffectingSpan() {
+                        override fun updateMeasureState(paint: TextPaint) {
+                            paint.baselineShift -= 8  // Adjust baseline to reduce padding
+                        }
+
+                        override fun updateDrawState(tp: TextPaint) {
+                            tp.baselineShift -= 8  // Same adjustment for drawing
+                        }
+                    }, 0, t.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
 
                     text.setText(t, TextView.BufferType.SPANNABLE)
                 }
@@ -71,8 +86,8 @@ object SphinxHighlightingTool {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                             spannable.setSpan(
                                 TypefaceSpan(typeface),
-                                highlightedText.second.from.toInt(),
-                                highlightedText.second.to.toInt(),
+                                highlightedText.second.first,
+                                highlightedText.second.last,
                                 Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
                             )
                         }
@@ -80,12 +95,114 @@ object SphinxHighlightingTool {
 
                     spannable.setSpan(
                         BackgroundColorSpan(resources.getColor(R.color.highlightedTextBackground)),
-                        highlightedText.second.from.toInt(),
-                        highlightedText.second.to.toInt(),
+                        highlightedText.second.first,
+                        highlightedText.second.last,
                         Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
                     )
 
+                    spannable.setSpan(object : MetricAffectingSpan() {
+                        override fun updateMeasureState(paint: TextPaint) {
+                            paint.baselineShift -= 8  // Adjust baseline to reduce padding
+                        }
+
+                        override fun updateDrawState(tp: TextPaint) {
+                            tp.baselineShift -= 8  // Same adjustment for drawing
+                        }
+                    }, 0, t.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+
                     text.setText(spannable, TextView.BufferType.SPANNABLE)
+                }
+            }
+        }
+
+        if (boldTexts.isNotEmpty()) {
+            val t = text.text
+
+            if (t is Spannable) {
+                for (boldText in boldTexts) {
+                    ResourcesCompat.getFont(context, R.font.roboto_black)?.let { typeface ->
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                            t.setSpan(
+                                TypefaceSpan(typeface),
+                                boldText.second.first,
+                                boldText.second.last,
+                                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                            )
+                        }
+                    }
+
+                    text.setText(t, TextView.BufferType.SPANNABLE)
+                }
+            } else {
+                val spannable: Spannable = SpannableString(text.text)
+
+                for (boldText in boldTexts) {
+                    ResourcesCompat.getFont(context, R.font.roboto_black)?.let { typeface ->
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                            spannable.setSpan(
+                                TypefaceSpan(typeface),
+                                boldText.second.first,
+                                boldText.second.last,
+                                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                            )
+                        }
+                    }
+
+                    text.setText(spannable, TextView.BufferType.SPANNABLE)
+                }
+            }
+        }
+
+        if (linkTexts.isNotEmpty()) {
+            val t = text.text
+
+            if (t is Spannable) {
+                for (linkText in linkTexts) {
+                    onSphinxInteractionListener?.let {
+                        val span = SphinxUrlSpan(
+                            linkText.first,
+                            true,
+                            context.getColor(
+                                R.color.primaryBlue
+                            ),
+                            it
+                        )
+
+                        t.setSpan(
+                            span,
+                            linkText.second.first,
+                            linkText.second.last,
+                            Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                        )
+
+                        text.setText(t, TextView.BufferType.SPANNABLE)
+                    }
+                }
+            } else {
+                val spannable: Spannable = SpannableString(text.text)
+
+                for (linkText in linkTexts) {
+                    onSphinxInteractionListener?.let {
+                        val span = SphinxUrlSpan(
+                            linkText.first,
+                            true,
+                            context.getColor(
+                                R.color.primaryBlue
+                            ),
+                            it
+                        )
+
+                        spannable.setSpan(
+                            span,
+                            linkText.second.first,
+                            linkText.second.last + 1,
+                            Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                        )
+
+                        text.movementMethod = LinkMovementMethod.getInstance()
+                        text.setText(spannable, TextView.BufferType.SPANNABLE)
+                        text.invalidate()
+                    }
                 }
             }
         }
@@ -102,38 +219,89 @@ inline fun String.highlightedTexts(): List<Pair<String, IntRange>> {
     }
 
     var adaptedText = this
-
-    ranges.forEachIndexed { index, range ->
-        val subtraction = index * 2
-
-        val adaptedRange = IntRange(
-            start = range.first - subtraction,
-            endInclusive = range.last - subtraction
-        )
-
-        val rangeString = adaptedText.substring(adaptedRange.first, adaptedRange.last).replace("`","")
-
-        adaptedText = adaptedText.replaceRange(adaptedRange, rangeString)
-    }
-
     var matches: MutableList<Pair<String, IntRange>> = mutableListOf()
 
-    ranges.forEachIndexed { index, range ->
-        val subtraction = index * 2
-
-        val adaptedRange = IntRange(
-            from = (range.first - subtraction).toLong(),
-            to = (range.last - subtraction - 1).toLong()
-        )
-
-        val rangeString = adaptedText.substring(adaptedRange.from.toInt(), adaptedRange.to.toInt())
+    ranges.forEach { range ->
+        val rangeString = adaptedText.substring(range)
 
         matches.add(
-            Pair(rangeString, adaptedRange)
+            Pair(rangeString, range)
         )
     }
 
     return matches
+}
+
+@Suppress("NOTHING_TO_INLINE")
+inline fun String.boldTexts(): List<Pair<String, IntRange>> {
+    val matcher = "\\*\\*([^`]*)\\*\\*".toRegex()
+    val ranges = matcher.findAll(this).map{ it.range }.toList()
+
+    if (ranges.isEmpty()) {
+        return emptyList()
+    }
+
+    var adaptedText = this
+    var matches: MutableList<Pair<String, IntRange>> = mutableListOf()
+
+    ranges.forEach { range ->
+        val rangeString = adaptedText.substring(range)
+
+        matches.add(
+            Pair(rangeString, range)
+        )
+    }
+
+    return matches
+}
+
+@Suppress("NOTHING_TO_INLINE")
+inline fun String.markDownLinkTexts(): List<Pair<String, IntRange>> {
+    val matcher = "!?\\[(.*?)\\]\\((https?:\\/\\/[^\\s)]+)\\)".toRegex()
+    val ranges = matcher.findAll(this).map{ it.range }.toList()
+
+    if (ranges.isEmpty()) {
+        return emptyList()
+    }
+
+    var adaptedText = this
+    var matches: MutableList<Pair<String, IntRange>> = mutableListOf()
+
+    ranges.forEach { range ->
+        val rangeString = adaptedText.substring(range)
+        val match = matcher.find(rangeString)
+
+        if (match != null) {
+            matches.add(
+                Pair(match.groups[2]?.value ?: "", range)
+            )
+        }
+    }
+
+    return matches
+}
+
+inline fun String.replacingMarkdown(): String {
+    return this.replacingHighlightedDelimiters().replacingBoldDelimiters().replacingDashWithBullets().replacingMarkdownLinks()
+}
+
+@Suppress("NOTHING_TO_INLINE")
+inline fun String.replacingDashWithBullets(): String {
+    val matcher = "(?:\\r?\\n)-".toRegex()
+    val ranges = matcher.findAll(this).map{ it.range }.toList()
+
+    if (ranges.isEmpty()) {
+        return this
+    }
+
+    var adaptedText = this
+
+    ranges.forEach { range ->
+        val rangeString = adaptedText.substring(range).replace("-", "•")
+        adaptedText = adaptedText.replaceRange(range, rangeString)
+    }
+
+    return adaptedText
 }
 
 @Suppress("NOTHING_TO_INLINE")
@@ -146,18 +314,65 @@ inline fun String.replacingHighlightedDelimiters(): String {
     }
 
     var adaptedText = this
+    val invisibleChar = "\u200B"
 
-    ranges.forEachIndexed { index, range ->
-        val subtraction = index * 2
+    ranges.forEach { range ->
+        val rangeString = adaptedText.substring(range).replace("`", invisibleChar)
+        adaptedText = adaptedText.replaceRange(range, rangeString)
+    }
 
-        val adaptedRange = IntRange(
-            start = range.first - subtraction,
-            endInclusive = range.last - subtraction
-        )
+    return adaptedText
+}
 
-        val rangeString = adaptedText.substring(adaptedRange.first, adaptedRange.last).replace("`","")
+@Suppress("NOTHING_TO_INLINE")
+inline fun String.replacingBoldDelimiters(): String {
+    val matcher = "\\*\\*([^`]*)\\*\\*".toRegex()
+    val ranges = matcher.findAll(this).map{ it.range }.toList()
 
-        adaptedText = adaptedText.replaceRange(adaptedRange, rangeString)
+    if (ranges.isEmpty()) {
+        return this
+    }
+
+    var adaptedText = this
+    val invisibleChars = "\u200B\u200B"
+
+    ranges.forEach { range ->
+        val rangeString = adaptedText.substring(range).replace("**", invisibleChars)
+        adaptedText = adaptedText.replaceRange(range, rangeString)
+    }
+
+    return adaptedText
+}
+
+@Suppress("NOTHING_TO_INLINE")
+inline fun String.replacingMarkdownLinks(): String {
+    val matcher = "!?\\[(.*?)\\]\\((https?:\\/\\/[^\\s)]+)\\)".toRegex()
+    val ranges = matcher.findAll(this).map{ it.range }.toList()
+
+    if (ranges.isEmpty()) {
+        return this
+    }
+
+    var adaptedText = this
+    val invisibleChars = "\u200B"
+
+    ranges.forEach { range ->
+        var rangeString = adaptedText.substring(range)
+
+        val result = matcher.replace(rangeString) { matchResult ->
+            val anyText = matchResult.groups[1]?.value ?: ""
+
+            val prefix = matchResult.value.substringBefore(anyText) // Get everything before AnyText
+            val suffix = matchResult.value.substringAfter(anyText)  // Get everything after AnyText
+
+            // Replace each character in prefix and suffix with an invisible character
+            val invisiblePrefix = prefix.map { "$invisibleChars" }.joinToString("")
+            val invisibleSuffix = suffix.map { "$invisibleChars" }.joinToString("")
+
+            invisiblePrefix + anyText + invisibleSuffix
+        }
+
+        adaptedText = adaptedText.replaceRange(range, result)
     }
 
     return adaptedText

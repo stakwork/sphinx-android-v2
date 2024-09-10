@@ -1,7 +1,7 @@
 package chat.sphinx.chat_common.model
 
 import chat.sphinx.chat_common.ui.viewstate.messageholder.LayoutState
-import chat.sphinx.chat_common.util.SphinxLinkify
+import chat.sphinx.highlighting_tool.SphinxLinkify
 import chat.sphinx.wrapper_common.feed.FeedItemLink
 import chat.sphinx.wrapper_common.feed.toFeedItemLink
 import chat.sphinx.wrapper_common.lightning.LightningNodeDescriptor
@@ -59,9 +59,17 @@ sealed interface MessageLinkPreview {
                 }
 
             } else {
-
-                null
-
+                if (text.markdownLinkTexts.isEmpty()) {
+                    null
+                } else {
+                    text.markdownLinkTexts.first()?.first?.let {
+                        if (it.startsWith("http://") || it.startsWith("https://")) {
+                            UnspecifiedUrl(it)
+                        } else {
+                            UnspecifiedUrl("https://$it")
+                        }
+                    }
+                }
             }
         }
     }

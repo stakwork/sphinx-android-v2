@@ -49,7 +49,7 @@ dependencies {
     implementation project(path: ':sphinx:activity:insetter-activity')
     implementation project(path: ':sphinx:application:common:resources')
     implementation project(path: ':sphinx:application:common:swipe-reveal-layout')
-
+    implementation project(path: ':sphinx:application:common:highlighting-tool')
 
     implementation project(path: ':sphinx:application:data:concepts:repositories:concept-repository-actions')
     implementation project(path: ':sphinx:application:data:concepts:repositories:concept-repository-chat')

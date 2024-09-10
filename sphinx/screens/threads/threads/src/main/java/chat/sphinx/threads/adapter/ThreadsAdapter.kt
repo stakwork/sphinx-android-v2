@@ -1,23 +1,20 @@
 package chat.sphinx.threads.adapter
 
 import android.graphics.Color
-import android.os.Build
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.widget.ImageView
-import androidx.annotation.RequiresApi
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import chat.sphinx.chat_common.ui.viewstate.messageholder.ReplyUserHolder
+import chat.sphinx.highlighting_tool.SphinxUrlSpan
 import chat.sphinx.chat_common.util.VideoThumbnailUtil
 import chat.sphinx.concept_image_loader.Disposable
 import chat.sphinx.concept_image_loader.ImageLoader
 import chat.sphinx.concept_image_loader.ImageLoaderOptions
-import chat.sphinx.concept_image_loader.OnImageLoadListener
 import chat.sphinx.concept_image_loader.Transformation
 import chat.sphinx.concept_user_colors_helper.UserColorsHelper
 import chat.sphinx.highlighting_tool.SphinxHighlightingTool
@@ -35,7 +32,6 @@ import chat.sphinx.wrapper_common.util.getInitials
 import chat.sphinx.wrapper_view.Px
 import io.matthewnelson.android_feature_screens.util.gone
 import io.matthewnelson.android_feature_screens.util.goneIfFalse
-import io.matthewnelson.android_feature_screens.util.invisible
 import io.matthewnelson.android_feature_screens.util.visible
 import io.matthewnelson.android_feature_viewmodel.util.OnStopSupervisor
 import io.matthewnelson.concept_views.viewstate.collect
@@ -179,10 +175,18 @@ internal class ThreadsAdapter(
 
         private var item: ThreadItem? = null
 
+        private val onSphinxInteractionListener: SphinxUrlSpan.OnInteractionListener
+
         init {
             binding.root.setOnClickListener {
                 item?.let { threadItem ->
                     viewModel.navigateToThreadDetail(threadItem.uuid)
+                }
+            }
+
+            onSphinxInteractionListener = object: SphinxUrlSpan.OnInteractionListener(null) {
+                override fun onClick(url: String?) {
+//                    viewModel.handleContactTribeLinks(url)
                 }
             }
         }
@@ -205,9 +209,12 @@ internal class ThreadsAdapter(
                 textViewThreadMessageContent.text = threadItem.message
                 textViewThreadMessageContent.goneIfFalse(threadItem.message.isNotEmpty())
 
-                SphinxHighlightingTool.addHighlights(
+                SphinxHighlightingTool.addMarkdowns(
                     textViewThreadMessageContent,
                     threadItem.highlightedTexts,
+                    threadItem.boldTexts,
+                    threadItem.markdownLinkTexts,
+                    onSphinxInteractionListener,
                     textViewThreadMessageContent.resources,
                     textViewThreadMessageContent.context
                 )

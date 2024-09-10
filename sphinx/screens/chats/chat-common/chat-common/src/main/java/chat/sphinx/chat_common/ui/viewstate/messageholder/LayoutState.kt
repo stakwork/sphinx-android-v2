@@ -1,6 +1,5 @@
 package chat.sphinx.chat_common.ui.viewstate.messageholder
 
-import androidx.annotation.IntRange
 import chat.sphinx.concept_link_preview.model.*
 import chat.sphinx.wrapper_chat.ChatType
 import chat.sphinx.wrapper_common.FileSize
@@ -210,6 +209,8 @@ sealed class LayoutState private constructor() {
             data class Message(
                 val text: String?,
                 val highlightedTexts: List<Pair<String, IntRange>>,
+                val boldTexts: List<Pair<String, IntRange>>,
+                val markdownLinkTexts: List<Pair<String, IntRange>>,
                 val decryptionError: Boolean,
                 val isThread: Boolean
             ): ContainerThird()

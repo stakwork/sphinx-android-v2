@@ -496,7 +496,7 @@ abstract class SphinxRepository(
 
     override fun getPayments(lastMessageDate: Long, limit: Int) {
         connectManager.getPayments(
-            lastMessageDate,
+            lastMessageDate + 250L, // adds 1/4 second to ensure the last transaction is included
             limit,
             null,
             null,

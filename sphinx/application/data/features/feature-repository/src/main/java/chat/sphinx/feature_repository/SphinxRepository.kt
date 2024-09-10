@@ -4573,6 +4573,10 @@ abstract class SphinxRepository(
         return connectManager.isRouteAvailable(pubKey, routeHint, milliSat)
     }
 
+    override fun createInvoice(amount: Long, memo: String): Pair<String, String>? {
+        return connectManager.createInvoice(amount, memo)
+    }
+
     private fun isJsonResponseEmpty(json: String?): Boolean {
         return json.isNullOrEmpty()
     }

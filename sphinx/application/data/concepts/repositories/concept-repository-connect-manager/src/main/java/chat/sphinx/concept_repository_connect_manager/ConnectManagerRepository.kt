@@ -102,7 +102,12 @@ interface ConnectManagerRepository {
         data: String? = null
     ): Boolean
 
-    abstract fun isRouteAvailable(pubKey: String, routeHint: String?, milliSat: Long): Boolean
+    fun isRouteAvailable(pubKey: String, routeHint: String?, milliSat: Long): Boolean
+
+    fun createInvoice(
+        amount: Long,
+        memo: String
+    ): Pair<String, String>? // invoice, paymentHash
 
     fun clearWebViewPreImage()
 

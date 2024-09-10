@@ -383,7 +383,9 @@ internal sealed class MessageHolderViewState(
             if (message.type.isBotRes()) {
                 message.retrieveBotResponseHtmlString()?.let { html ->
                     LayoutState.Bubble.ContainerSecond.BotResponse(
-                        html
+                        html,
+                        html.boldTexts(),
+                        html.markDownLinkTexts()
                     )
                 }
             } else {

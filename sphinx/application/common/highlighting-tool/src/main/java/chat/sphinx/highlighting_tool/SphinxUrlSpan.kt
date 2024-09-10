@@ -24,7 +24,7 @@ open class SphinxUrlSpan(
     url: String?,
     private val underlined: Boolean = true,
     @ColorInt private val linkColor: Int? = null,
-    private val onInteractionListener: OnInteractionListener
+    private val onInteractionListener: OnInteractionListener?
 ): URLSpan(url) {
 
     override fun updateDrawState(ds: TextPaint) {
@@ -37,14 +37,14 @@ open class SphinxUrlSpan(
     }
 
     override fun onClick(widget: View) {
-        if (onInteractionListener.longClickCounter.get() == 0) {
+        if (onInteractionListener?.longClickCounter?.get() == 0) {
             if (url.isSphinxUrl) {
-                onInteractionListener.onClick(url)
+                onInteractionListener?.onClick(url)
             } else {
                 super.onClick(widget)
             }
         } else {
-            onInteractionListener.longClickCounter.set(0)
+            onInteractionListener?.longClickCounter?.set(0)
         }
 
     }

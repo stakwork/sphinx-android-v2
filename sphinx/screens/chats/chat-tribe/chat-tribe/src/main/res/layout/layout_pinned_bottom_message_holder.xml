@@ -11,7 +11,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:padding="16dp"
-        android:fontFamily="@font/roboto_regular"
+        android:fontFamily="@font/roboto_light"
         android:textColor="@color/text"
         android:textSize="@dimen/menu_bottom_header_text_size"
         android:textStyle="bold"

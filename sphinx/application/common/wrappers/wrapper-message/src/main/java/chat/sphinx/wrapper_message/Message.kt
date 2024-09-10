@@ -29,9 +29,6 @@ inline fun Message.retrieveTextToShow(): String? =
         if (isSphinxCallLink) {
             return null
         }
-        if (type.isBotRes()) {
-            return null
-        }
         if (type.isInvoice()) {
             return null
         }

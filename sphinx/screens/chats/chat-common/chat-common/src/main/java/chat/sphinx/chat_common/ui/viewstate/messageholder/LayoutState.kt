@@ -186,7 +186,9 @@ sealed class LayoutState private constructor() {
             ): ContainerSecond()
 
             data class BotResponse(
-                val html: String
+                val html: String,
+                val boldTexts: List<Pair<String, IntRange>>,
+                val markdownLinkTexts: List<Pair<String, IntRange>>,
             ): ContainerSecond()
 
             data class PodcastClip(

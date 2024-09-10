@@ -158,51 +158,47 @@ object SphinxHighlightingTool {
 
             if (t is Spannable) {
                 for (linkText in linkTexts) {
-                    onSphinxInteractionListener?.let {
-                        val span = SphinxUrlSpan(
-                            linkText.first,
-                            true,
-                            context.getColor(
-                                R.color.primaryBlue
-                            ),
-                            it
-                        )
+                    val span = SphinxUrlSpan(
+                        linkText.first,
+                        true,
+                        context.getColor(
+                            R.color.primaryBlue
+                        ),
+                        onSphinxInteractionListener
+                    )
 
-                        t.setSpan(
-                            span,
-                            linkText.second.first,
-                            linkText.second.last,
-                            Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-                        )
+                    t.setSpan(
+                        span,
+                        linkText.second.first,
+                        linkText.second.last,
+                        Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                    )
 
-                        text.setText(t, TextView.BufferType.SPANNABLE)
-                    }
+                    text.setText(t, TextView.BufferType.SPANNABLE)
                 }
             } else {
                 val spannable: Spannable = SpannableString(text.text)
 
                 for (linkText in linkTexts) {
-                    onSphinxInteractionListener?.let {
-                        val span = SphinxUrlSpan(
-                            linkText.first,
-                            true,
-                            context.getColor(
-                                R.color.primaryBlue
-                            ),
-                            it
-                        )
+                    val span = SphinxUrlSpan(
+                        linkText.first,
+                        true,
+                        context.getColor(
+                            R.color.primaryBlue
+                        ),
+                        onSphinxInteractionListener
+                    )
 
-                        spannable.setSpan(
-                            span,
-                            linkText.second.first,
-                            linkText.second.last + 1,
-                            Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-                        )
+                    spannable.setSpan(
+                        span,
+                        linkText.second.first,
+                        linkText.second.last + 1,
+                        Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                    )
 
-                        text.movementMethod = LinkMovementMethod.getInstance()
-                        text.setText(spannable, TextView.BufferType.SPANNABLE)
-                        text.invalidate()
-                    }
+                    text.movementMethod = LinkMovementMethod.getInstance()
+                    text.setText(spannable, TextView.BufferType.SPANNABLE)
+                    text.invalidate()
                 }
             }
         }
@@ -234,7 +230,7 @@ inline fun String.highlightedTexts(): List<Pair<String, IntRange>> {
 
 @Suppress("NOTHING_TO_INLINE")
 inline fun String.boldTexts(): List<Pair<String, IntRange>> {
-    val matcher = "\\*\\*([^`]*)\\*\\*".toRegex()
+    val matcher = "\\*\\*(.*?)\\*\\*".toRegex()
     val ranges = matcher.findAll(this).map{ it.range }.toList()
 
     if (ranges.isEmpty()) {
@@ -282,7 +278,7 @@ inline fun String.markDownLinkTexts(): List<Pair<String, IntRange>> {
 }
 
 inline fun String.replacingMarkdown(): String {
-    return this.replacingHighlightedDelimiters().replacingBoldDelimiters().replacingDashWithBullets().replacingMarkdownLinks()
+    return this.trim().replacingHighlightedDelimiters().replacingBoldDelimiters().replacingDashWithBullets().replacingMarkdownLinks().markdownTrim()
 }
 
 @Suppress("NOTHING_TO_INLINE")
@@ -302,6 +298,55 @@ inline fun String.replacingDashWithBullets(): String {
     }
 
     return adaptedText
+}
+
+@Suppress("NOTHING_TO_INLINE")
+inline fun String.markdownTrim(): String {
+    if (this.length < 3) {
+        return this
+    }
+
+    var trimmedString = this
+    val zeroWidthSpace = "\u200B"
+
+    ///Replace new line with empty space if it starts with highlight char and new line
+    if (this.startsWith("$zeroWidthSpace\n")) {
+        val range: IntRange = 0..1
+        val rangeString = trimmedString.substring(range).replace(
+            "$zeroWidthSpace\n",
+            "$zeroWidthSpace$zeroWidthSpace"
+        )
+        trimmedString = trimmedString.replaceRange(range, rangeString)
+    }
+
+    if (trimmedString.startsWith("$zeroWidthSpace$zeroWidthSpace\n")) {
+        val range: IntRange = 0..2
+        val rangeString = trimmedString.substring(range).replace(
+            "$zeroWidthSpace$zeroWidthSpace\n",
+            "$zeroWidthSpace$zeroWidthSpace$zeroWidthSpace"
+        )
+        trimmedString = trimmedString.replaceRange(range, rangeString)
+    }
+
+    if (trimmedString.endsWith("\n$zeroWidthSpace")) {
+        val range: IntRange = (trimmedString.length - 2) until trimmedString.length
+        val rangeString = trimmedString.substring(range).replace(
+            "\n$zeroWidthSpace",
+            "$zeroWidthSpace$zeroWidthSpace"
+        )
+        trimmedString = trimmedString.replaceRange(range, rangeString)
+    }
+
+    if (trimmedString.endsWith("\n$zeroWidthSpace$zeroWidthSpace")) {
+        val range: IntRange = (trimmedString.length - 3) until trimmedString.length
+        val rangeString = trimmedString.substring(range).replace(
+            "\n$zeroWidthSpace$zeroWidthSpace",
+            "$zeroWidthSpace$zeroWidthSpace$zeroWidthSpace"
+        )
+        trimmedString = trimmedString.replaceRange(range, rangeString)
+    }
+
+    return trimmedString
 }
 
 @Suppress("NOTHING_TO_INLINE")

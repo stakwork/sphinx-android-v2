@@ -280,10 +280,10 @@ internal fun  LayoutMessageHolderBinding.setView(
             setBubbleCallInvite(
                 viewState.bubbleCallInvite
             )
-            setBubbleBotResponse(
-                viewState.bubbleBotResponse,
-                onRowLayoutListener
-            )
+//            setBubbleBotResponse(
+//                viewState.bubbleBotResponse,
+//                onRowLayoutListener
+//            )
             setBubbleDirectPaymentLayout(
                 viewState.bubbleDirectPayment,
                 holderJobs,

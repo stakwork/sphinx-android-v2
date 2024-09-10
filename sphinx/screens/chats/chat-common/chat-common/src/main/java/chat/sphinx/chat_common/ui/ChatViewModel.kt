@@ -555,8 +555,8 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                     unseenSeparatorAdded = true
                 }
                 // Consider last reply or message and last reply of previous message if exists
-                val actualMessage = message.thread?.last() ?: message
-                val actualPreviousMessage = previousMessage?.thread?.last() ?: previousMessage
+                val actualMessage = message.thread?.first() ?: message
+                val actualPreviousMessage = previousMessage?.thread?.first() ?: previousMessage
 
                 if (actualPreviousMessage == null || actualMessage.date.isDifferentDayThan(actualPreviousMessage.date)) {
                     newList.add(
@@ -773,7 +773,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
         // Sort messages list by the last thread message date if applicable
 
-        return filteredMessages.sortedBy { it.thread?.last()?.date?.value ?: it.date.value }
+        return filteredMessages.sortedBy { it.thread?.first()?.date?.value ?: it.date.value }
     }
 
     internal val messageHolderViewStateFlow: MutableStateFlow<List<MessageHolderViewState>> by lazy {

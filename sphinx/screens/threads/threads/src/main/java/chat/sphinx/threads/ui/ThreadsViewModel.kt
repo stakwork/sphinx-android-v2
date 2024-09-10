@@ -260,7 +260,7 @@ internal class ThreadsViewModel @Inject constructor(
             usersReplies = createReplyUserHolders(repliesList, chat, owner),
             usersCount = repliesList?.size ?: 0,
             repliesAmount = String.format(app.getString(R.string.replies_amount), messagesForThread?.drop(1)?.size?.toString() ?: "0"),
-            lastReplyDate = messagesForThread?.last()?.date?.timeAgo(),
+            lastReplyDate = messagesForThread?.first()?.date?.timeAgo(),
             uuid = uuid ?: "",
             imageAttachment = imageAttachment,
             videoAttachment = videoAttachment,

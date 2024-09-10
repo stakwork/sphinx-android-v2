@@ -104,7 +104,6 @@ interface ConnectManagerRepository {
 
     abstract fun isRouteAvailable(pubKey: String, routeHint: String?, milliSat: Long): Boolean
 
-
     fun clearWebViewPreImage()
 
     suspend fun updateLspAndOwner(data: String) {}

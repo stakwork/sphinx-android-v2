@@ -918,7 +918,7 @@ abstract class SphinxRepository(
                                 loadResponse.value.route_hint,
                                 loadResponse.value.private ?: false,
                                 accountOwner.value?.alias?.value ?: "unknown",
-                                loadResponse.value.price_to_join ?: 0
+                                loadResponse.value.getPriceToJoinInSats()
                             )
 
                             // TribeId is set from LONG.MAX_VALUE and decremented by 1 for each new tribe
@@ -940,8 +940,8 @@ abstract class SphinxRepository(
                                 createdAt = now.toDateTime(),
                                 groupKey = null,
                                 host = ChatHost(host),
-                                pricePerMessage = loadResponse.value.price_per_message.toSat(),
-                                escrowAmount = loadResponse.value.escrow_amount.toSat(),
+                                pricePerMessage = loadResponse.value.getPricePerMessageInSats().toSat(),
+                                escrowAmount = loadResponse.value.getEscrowAmountInSats().toSat(),
                                 unlisted = ChatUnlisted.False,
                                 privateTribe = ChatPrivate.False,
                                 ownerPubKey = LightningNodePubKey(tribePubKey),
@@ -1328,8 +1328,8 @@ abstract class SphinxRepository(
                     createdAt = newCreateTribe.created?.toDateTime() ?: now.toDateTime(),
                     groupKey = existingTribe?.groupKey,
                     host = existingTribe?.host,
-                    pricePerMessage = newCreateTribe.price_per_message?.let { Sat(it) },
-                    escrowAmount = newCreateTribe.escrow_amount?.let { Sat(it) },
+                    pricePerMessage = newCreateTribe.getPricePerMessageInSats().toSat(),
+                    escrowAmount = newCreateTribe.getEscrowAmountInSats().toSat(),
                     unlisted = if (newCreateTribe.unlisted == true) ChatUnlisted.True else ChatUnlisted.False,
                     privateTribe = if (newCreateTribe.private == true) ChatPrivate.True else ChatPrivate.False,
                     ownerPubKey = accountOwner.value?.nodePubKey,
@@ -1776,8 +1776,8 @@ abstract class SphinxRepository(
                                 createdAt = now.toDateTime(),
                                 groupKey = null,
                                 host = contactInfo.host?.toChatHost(),
-                                pricePerMessage = loadResponse.value.price_per_message.toSat(),
-                                escrowAmount = loadResponse.value.escrow_amount.toSat(),
+                                pricePerMessage = loadResponse.value.getPricePerMessageInSats().toSat(),
+                                escrowAmount = loadResponse.value.getEscrowAmountInSats().toSat(),
                                 unlisted = loadResponse.value.unlisted?.toChatUnlisted() ?: ChatUnlisted.False,
                                 privateTribe = loadResponse.value.private.toChatPrivate(),
                                 ownerPubKey = if (isAdmin) accountOwner.value?.nodePubKey else LightningNodePubKey(contactInfo.pubkey),

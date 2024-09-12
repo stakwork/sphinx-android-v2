@@ -253,9 +253,9 @@ class CreateTribe private constructor(
             description = this.description,
             tags = this.tags.toList(),
             img = image ?: this.imgUrl,
-            price_per_message = this.pricePerMessage,
-            price_to_join = this.priceToJoin,
-            escrow_amount = this.escrowAmount,
+            price_per_message = (this.pricePerMessage ?: 0L) * 1000,  // Convert Sats to milliSats
+            price_to_join = (this.priceToJoin ?: 0L) * 1000,  // Convert Sats to milliSats
+            escrow_amount = (this.escrowAmount ?: 0L) * 1000,  // Convert Sats to milliSats
             escrow_millis = this.escrowMillis,
             unlisted = this.unlisted,
             private = this.private,

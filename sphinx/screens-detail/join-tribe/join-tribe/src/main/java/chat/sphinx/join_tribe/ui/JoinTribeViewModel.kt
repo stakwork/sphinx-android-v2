@@ -175,9 +175,9 @@ internal class JoinTribeViewModel @Inject constructor(
                                     loadResponse.value.name,
                                     loadResponse.value.description.toString(),
                                     loadResponse.value.img,
-                                    loadResponse.value.price_to_join.toString(),
-                                    loadResponse.value.price_per_message.toString(),
-                                    loadResponse.value.escrow_amount.toString(),
+                                    loadResponse.value.getPriceToJoinInSats().toString(),
+                                    loadResponse.value.getPricePerMessageInSats().toString(),
+                                    loadResponse.value.getEscrowAmountInSats().toString(),
                                     loadResponse.value.escrow_millis.escrowMillisToHours().toString(),
                                     accountOwnerStateFlow.value?.alias?.value,
                                     accountOwnerStateFlow.value?.photoUrl?.value
@@ -219,9 +219,9 @@ internal class JoinTribeViewModel @Inject constructor(
                     tribeInfo.img,
                     tribeInfo.private ?: false,
                     alias,
-                    tribeInfo.price_per_message,
-                    tribeInfo.escrow_amount,
-                    tribeInfo.price_to_join,
+                    tribeInfo.getPricePerMessageInSats(),
+                    tribeInfo.getEscrowAmountInSats(),
+                    tribeInfo.getPriceToJoinInSats(),
 
                 )
                 updateViewState(JoinTribeViewState.TribeJoined)

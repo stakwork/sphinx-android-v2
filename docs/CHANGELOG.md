@@ -1,5 +1,12 @@
 # ChangeLog
 
+## Version 1.0.0-alpha16 (2021-09-12)
+- Fixes podcast player issues
+- Adds Bots support and markdown
+- Adds Bots support and markdown
+- Fixes issues related with amount unit
+- Fixes issues in transactions history
+
 ## Version 1.0.0-alpha15 (2021-08-28)
 - Fixes restore issues
 

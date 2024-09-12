@@ -1,7 +1,6 @@
 package chat.sphinx.chat_common.ui.viewstate.messageholder
 
 import android.graphics.Color
-import android.os.Build
 import android.view.Gravity
 import android.view.View
 import android.webkit.WebView
@@ -11,7 +10,6 @@ import android.widget.ImageView
 import androidx.annotation.ColorRes
 import androidx.annotation.DrawableRes
 import androidx.annotation.MainThread
-import androidx.annotation.RequiresApi
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
@@ -848,6 +846,20 @@ internal inline fun LayoutMessageHolderBinding.setStatusHeader(
                 progressBarMessageStatusSending.goneIfFalse(statusHeader.showSendingIcon)
                 textViewMessageStatusSentBoltIcon.goneIfFalse(statusHeader.showBoltIcon)
                 layoutConstraintMessageStatusSentFailedContainer.goneIfFalse(statusHeader.showFailedContainer)
+
+                val boltColor = if (statusHeader.showGrayBoltIcon) {
+                    ContextCompat.getColor(
+                        root.context,
+                        R.color.amp_gray
+                    )
+                } else {
+                    ContextCompat.getColor(
+                        root.context,
+                        R.color.primaryGreen
+                    )
+                }
+
+                textViewMessageStatusSentBoltIcon.setTextColor(boltColor)
 
                 if (statusHeader.errorMessage?.isNotEmpty() == true) {
                     textViewMessageStatusSentFailedText.text = statusHeader.errorMessage

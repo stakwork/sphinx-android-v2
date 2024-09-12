@@ -115,6 +115,7 @@ internal sealed class MessageHolderViewState(
                     this is Sent,
                     this is Sent && message.id.isProvisionalMessage && message.status.isPending(),
                     this is Sent && (message.status.isReceived() || message.status.isConfirmed()),
+                    message.isPaymentConfirmed(),
                     this is Sent && message.status.isFailed(),
                     message.messageContentDecrypted != null || message.messageMedia?.mediaKeyDecrypted != null,
                     message.date.messageTimeFormat(),

@@ -4162,7 +4162,7 @@ abstract class SphinxRepository(
                 date = DateTime.nowUTC().toDateTime(),
                 expirationDate = null,
                 messageContent = null,
-                status = MessageStatus.Confirmed,
+                status = MessageStatus.Pending,
                 seen = Seen.True,
                 senderAlias = null,
                 senderPic = null,
@@ -4233,18 +4233,6 @@ abstract class SphinxRepository(
 
                         queries.transaction {
                             upsertNewMessage(newPayment, queries, null)
-                        }
-                    }
-
-                    queries.transaction {
-                        sendPayment.chatId?.let { chatId ->
-
-                            updateChatNewLatestMessage(
-                                newPayment,
-                                chatId,
-                                latestMessageUpdatedTimeMap,
-                                queries
-                            )
                         }
                     }
                 }

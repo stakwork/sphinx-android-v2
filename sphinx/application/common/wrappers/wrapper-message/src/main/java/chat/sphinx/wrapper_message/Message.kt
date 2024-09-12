@@ -29,9 +29,6 @@ inline fun Message.retrieveTextToShow(): String? =
         if (isSphinxCallLink) {
             return null
         }
-        if (type.isBotRes()) {
-            return null
-        }
         if (type.isInvoice()) {
             return null
         }
@@ -267,6 +264,11 @@ inline fun Message.isUnPinAllowed(chatPinnedMessage: MessageUUID?): Boolean {
     }
     return false
 }
+
+@Suppress("NOTHING_TO_INLINE")
+inline fun Message.isPaymentConfirmed(): Boolean =
+    this.paymentHash != null && this.status is MessageStatus.Confirmed
+
 
 inline val Message.isBoostAllowed: Boolean
     get() = status.isReceived() &&

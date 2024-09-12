@@ -45,9 +45,8 @@ import chat.sphinx.chat_common.ui.viewstate.thread.ThreadHeaderViewState
 import chat.sphinx.chat_common.util.AudioPlayerController
 import chat.sphinx.chat_common.util.AudioPlayerControllerImpl
 import chat.sphinx.chat_common.util.AudioRecorderController
-import chat.sphinx.chat_common.util.SphinxLinkify
+import chat.sphinx.highlighting_tool.SphinxLinkify
 import chat.sphinx.highlighting_tool.highlightedTexts
-import chat.sphinx.highlighting_tool.replacingHighlightedDelimiters
 import chat.sphinx.concept_image_loader.ImageLoaderOptions
 import chat.sphinx.concept_link_preview.LinkPreviewHandler
 import chat.sphinx.concept_link_preview.model.TribePreviewName
@@ -67,6 +66,9 @@ import chat.sphinx.concept_repository_message.MessageRepository
 import chat.sphinx.concept_repository_message.model.SendMessage
 import chat.sphinx.concept_view_model_coordinator.ViewModelCoordinator
 import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
+import chat.sphinx.highlighting_tool.boldTexts
+import chat.sphinx.highlighting_tool.markDownLinkTexts
+import chat.sphinx.highlighting_tool.replacingMarkdown
 import chat.sphinx.kotlin_response.*
 import chat.sphinx.logger.SphinxLogger
 import chat.sphinx.logger.e
@@ -553,8 +555,8 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                     unseenSeparatorAdded = true
                 }
                 // Consider last reply or message and last reply of previous message if exists
-                val actualMessage = message.thread?.last() ?: message
-                val actualPreviousMessage = previousMessage?.thread?.last() ?: previousMessage
+                val actualMessage = message.thread?.first() ?: message
+                val actualPreviousMessage = previousMessage?.thread?.first() ?: previousMessage
 
                 if (actualPreviousMessage == null || actualMessage.date.isDifferentDayThan(actualPreviousMessage.date)) {
                     newList.add(
@@ -771,7 +773,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
         // Sort messages list by the last thread message date if applicable
 
-        return filteredMessages.sortedBy { it.thread?.last()?.date?.value ?: it.date.value }
+        return filteredMessages.sortedBy { it.thread?.first()?.date?.value ?: it.date.value }
     }
 
     internal val messageHolderViewStateFlow: MutableStateFlow<List<MessageHolderViewState>> by lazy {
@@ -945,8 +947,10 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
                             text?.let { nnText ->
                                 messageLayoutState = LayoutState.Bubble.ContainerThird.Message(
-                                    text = nnText.replacingHighlightedDelimiters(),
+                                    text = nnText.replacingMarkdown(),
                                     highlightedTexts = nnText.highlightedTexts(),
+                                    boldTexts = nnText.boldTexts(),
+                                    markdownLinkTexts = nnText.markDownLinkTexts(),
                                     decryptionError = false,
                                     isThread = false
                                 )

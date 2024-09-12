@@ -918,7 +918,7 @@ abstract class SphinxRepository(
                                 loadResponse.value.route_hint,
                                 loadResponse.value.private ?: false,
                                 accountOwner.value?.alias?.value ?: "unknown",
-                                loadResponse.value.price_to_join ?: 0
+                                loadResponse.value.getPriceToJoinInSats()
                             )
 
                             // TribeId is set from LONG.MAX_VALUE and decremented by 1 for each new tribe
@@ -940,8 +940,8 @@ abstract class SphinxRepository(
                                 createdAt = now.toDateTime(),
                                 groupKey = null,
                                 host = ChatHost(host),
-                                pricePerMessage = loadResponse.value.price_per_message.toSat(),
-                                escrowAmount = loadResponse.value.escrow_amount.toSat(),
+                                pricePerMessage = loadResponse.value.getPricePerMessageInSats().toSat(),
+                                escrowAmount = loadResponse.value.getEscrowAmountInSats().toSat(),
                                 unlisted = ChatUnlisted.False,
                                 privateTribe = ChatPrivate.False,
                                 ownerPubKey = LightningNodePubKey(tribePubKey),
@@ -1328,8 +1328,8 @@ abstract class SphinxRepository(
                     createdAt = newCreateTribe.created?.toDateTime() ?: now.toDateTime(),
                     groupKey = existingTribe?.groupKey,
                     host = existingTribe?.host,
-                    pricePerMessage = newCreateTribe.price_per_message?.let { Sat(it) },
-                    escrowAmount = newCreateTribe.escrow_amount?.let { Sat(it) },
+                    pricePerMessage = newCreateTribe.getPricePerMessageInSats().toSat(),
+                    escrowAmount = newCreateTribe.getEscrowAmountInSats().toSat(),
                     unlisted = if (newCreateTribe.unlisted == true) ChatUnlisted.True else ChatUnlisted.False,
                     privateTribe = if (newCreateTribe.private == true) ChatPrivate.True else ChatPrivate.False,
                     ownerPubKey = accountOwner.value?.nodePubKey,
@@ -1376,6 +1376,7 @@ abstract class SphinxRepository(
     override fun onPayments(payments: String) {
         applicationScope.launch(io) {
             val paymentsJson = payments.toPaymentsList(moshi)
+
             val paymentsReceived = paymentsJson?.mapNotNull {
                 it.msg_idx?.let { msgId ->
                     MessageId(msgId)
@@ -1396,26 +1397,53 @@ abstract class SphinxRepository(
                 getMessagesByPaymentHashes(it).firstOrNull()
             }
 
+            // Combine all retrieved messages from DB
             val combinedMessages: List<Message?> = paymentsReceivedMsgs.orEmpty() + paymentsSentMsgs.orEmpty()
-            val transactionDtoList = combinedMessages.mapNotNull { message ->
-                message?.takeIf { it.type !is MessageType.Invoice }?.let {
+
+            // Generate TransactionDto from the combinedMessages list or from the raw payments data
+            val transactionDtoList = paymentsJson?.map { payment ->
+                // Try to find corresponding DB message first
+                val dbMessage = combinedMessages.firstOrNull {
+                    it?.id?.value == payment.msg_idx || it?.paymentHash?.value == payment.rhash
+                }
+
+                dbMessage?.takeIf { it.type !is MessageType.Invoice }?.let { message ->
+                    // If found in DB, build TransactionDto using DB information
                     TransactionDto(
-                        it.id.value,
-                        it.chatId.value,
-                        it.type.value,
-                        it.sender.value,
-                        it.senderAlias?.value,
-                        it.receiver?.value,
-                        it.amount.value,
-                        it.paymentHash?.value,
-                        it.paymentRequest?.value,
-                        it.date,
-                        it.replyUUID?.value,
-                        it.errorMessage?.value
+                        id = message.id.value,
+                        chat_id = message.chatId.value,
+                        type = message.type.value,
+                        sender = message.sender.value,
+                        sender_alias = message.senderAlias?.value,
+                        receiver = message.receiver?.value,
+                        amount = message.amount.value,
+                        payment_hash = message.paymentHash?.value,
+                        payment_request = message.paymentRequest?.value,
+                        date = message.date,
+                        reply_uuid = message.replyUUID?.value,
+                        error_message = message.errorMessage?.value
+                    )
+                } ?: run {
+                    // If not found in DB, create TransactionDto with available information from the Payment object
+                    TransactionDto(
+                        id = payment.msg_idx ?: 0L,
+                        chat_id = null,
+                        type = MessageType.DirectPayment.value,
+                        sender = 0L,
+                        sender_alias = null,
+                        receiver = null,
+                        amount = payment.amt_msat?.milliSatsToSats()?.value ?: 0L,
+                        payment_hash = payment.rhash,
+                        payment_request = null,
+                        date = payment.ts?.toDateTime(),
+                        reply_uuid = null,
+                        error_message = null
                     )
                 }
-            }
-            transactionDtoState.value = transactionDtoList.sortedByDescending { it.date?.value }
+            }.orEmpty()
+
+            // Sort the transactions by date and set the result to the state
+            transactionDtoState.value = transactionDtoList.sortedByDescending { it.date?.value }.distinct()
         }
     }
 
@@ -1748,8 +1776,8 @@ abstract class SphinxRepository(
                                 createdAt = now.toDateTime(),
                                 groupKey = null,
                                 host = contactInfo.host?.toChatHost(),
-                                pricePerMessage = loadResponse.value.price_per_message.toSat(),
-                                escrowAmount = loadResponse.value.escrow_amount.toSat(),
+                                pricePerMessage = loadResponse.value.getPricePerMessageInSats().toSat(),
+                                escrowAmount = loadResponse.value.getEscrowAmountInSats().toSat(),
                                 unlisted = loadResponse.value.unlisted?.toChatUnlisted() ?: ChatUnlisted.False,
                                 privateTribe = loadResponse.value.private.toChatPrivate(),
                                 ownerPubKey = if (isAdmin) accountOwner.value?.nodePubKey else LightningNodePubKey(contactInfo.pubkey),
@@ -4134,7 +4162,7 @@ abstract class SphinxRepository(
                 date = DateTime.nowUTC().toDateTime(),
                 expirationDate = null,
                 messageContent = null,
-                status = MessageStatus.Confirmed,
+                status = MessageStatus.Pending,
                 seen = Seen.True,
                 senderAlias = null,
                 senderPic = null,
@@ -4205,18 +4233,6 @@ abstract class SphinxRepository(
 
                         queries.transaction {
                             upsertNewMessage(newPayment, queries, null)
-                        }
-                    }
-
-                    queries.transaction {
-                        sendPayment.chatId?.let { chatId ->
-
-                            updateChatNewLatestMessage(
-                                newPayment,
-                                chatId,
-                                latestMessageUpdatedTimeMap,
-                                queries
-                            )
                         }
                     }
                 }

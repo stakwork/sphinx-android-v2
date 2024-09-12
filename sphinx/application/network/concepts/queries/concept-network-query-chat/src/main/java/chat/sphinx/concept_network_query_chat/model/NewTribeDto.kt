@@ -71,6 +71,19 @@ data class NewTribeDto(
         return jsonAdapter.toJson(this)
     }
 
+    fun getPricePerMessageInSats(): Long {
+        return if (price_per_message == 0L) 0L else price_per_message / 1000
+    }
+
+    fun getPriceToJoinInSats(): Long {
+        return if (price_to_join == 0L) 0L else price_to_join / 1000
+    }
+
+    fun getEscrowAmountInSats(): Long {
+        return if (escrow_amount == 0L) 0L else escrow_amount / 1000
+    }
+
+
 }
 
 fun Long.escrowMillisToHours(): Long {

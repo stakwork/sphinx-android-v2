@@ -1,4 +1,4 @@
-package chat.sphinx.chat_common.util
+package chat.sphinx.highlighting_tool
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -15,7 +15,6 @@ import androidx.annotation.ColorInt
 import androidx.annotation.IntDef
 import androidx.annotation.RestrictTo
 import androidx.core.util.PatternsCompat
-import chat.sphinx.chat_common.R
 import chat.sphinx.wrapper_common.feed.FeedItemLink
 import chat.sphinx.wrapper_common.lightning.LightningNodePubKey
 import chat.sphinx.wrapper_common.lightning.VirtualLightningNodeAddress
@@ -168,8 +167,14 @@ object SphinxLinkify {
         }
         if (mask and MENTION != 0) {
             gatherLinks(
-                links, text, SphinxPatterns.MENTION, arrayOf(),
-                null, null, false, context.getColor(R.color.primaryBlue)
+                links,
+                text,
+                SphinxPatterns.MENTION,
+                arrayOf(),
+                null,
+                null,
+                false,
+                context.getColor(R.color.primaryBlue)
             )
         }
         pruneOverlaps(links, text)
@@ -206,6 +211,7 @@ object SphinxLinkify {
         }
 
         val t = text.text
+
         return if (t is Spannable) {
             if (addLinks(t, mask, context, onSphinxInteractionListener)) {
                 addLinkMovementMethod(text)
@@ -264,8 +270,11 @@ object SphinxLinkify {
 
     private fun gatherLinks(
         links: ArrayList<LinkSpec>,
-        s: Spannable, pattern: Pattern, schemes: Array<String?>,
-        matchFilter: MatchFilter?, transformFilter: TransformFilter?,
+        s: Spannable,
+        pattern: Pattern,
+        schemes: Array<String?>,
+        matchFilter: MatchFilter?,
+        transformFilter: TransformFilter?,
         underline: Boolean = true,
         @ColorInt color: Int? = null,
     ) {

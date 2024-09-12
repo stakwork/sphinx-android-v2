@@ -4,6 +4,7 @@ import android.content.Context
 import chat.sphinx.dashboard.R
 import chat.sphinx.dashboard.ui.adapter.DashboardChat.Active
 import chat.sphinx.dashboard.ui.adapter.DashboardChat.Inactive
+import chat.sphinx.highlighting_tool.replacingMarkdown
 import chat.sphinx.wrapper_chat.*
 import chat.sphinx.wrapper_common.*
 import chat.sphinx.wrapper_common.dashboard.ContactId
@@ -188,7 +189,7 @@ sealed class DashboardChat {
                     context.getString(R.string.decryption_error)
                 }
                 message.type.isMessage() -> {
-                    message.messageContentDecrypted?.value?.let { decrypted ->
+                    message.messageContentDecrypted?.value?.replacingMarkdown()?.let { decrypted ->
                         when {
                             message.giphyData != null -> {
                                 context.getString(

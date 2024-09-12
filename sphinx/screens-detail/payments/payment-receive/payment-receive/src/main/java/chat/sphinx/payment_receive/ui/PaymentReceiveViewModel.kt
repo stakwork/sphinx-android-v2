@@ -99,7 +99,6 @@ internal class PaymentReceiveViewModel @Inject constructor(
             sendPaymentRequest()
             return
         }
-
         viewModelScope.launch(mainImmediate) {
             val requestPayment = sendPaymentRequestBuilder.build()
 

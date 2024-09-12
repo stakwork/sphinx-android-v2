@@ -6,9 +6,11 @@ import android.os.ParcelFileDescriptor.MODE_READ_ONLY
 import chat.sphinx.chat_common.model.MessageLinkPreview
 import chat.sphinx.chat_common.ui.viewstate.InitialHolderViewState
 import chat.sphinx.chat_common.ui.viewstate.selected.MenuItemState
-import chat.sphinx.chat_common.util.SphinxLinkify
+import chat.sphinx.highlighting_tool.SphinxLinkify
+import chat.sphinx.highlighting_tool.boldTexts
 import chat.sphinx.highlighting_tool.highlightedTexts
-import chat.sphinx.highlighting_tool.replacingHighlightedDelimiters
+import chat.sphinx.highlighting_tool.markDownLinkTexts
+import chat.sphinx.highlighting_tool.replacingMarkdown
 import chat.sphinx.wrapper_chat.Chat
 import chat.sphinx.wrapper_chat.isConversation
 import chat.sphinx.wrapper_chat.isTribe
@@ -115,6 +117,7 @@ internal sealed class MessageHolderViewState(
                     this is Sent,
                     this is Sent && message.id.isProvisionalMessage && message.status.isPending(),
                     this is Sent && (message.status.isReceived() || message.status.isConfirmed()),
+                    message.isPaymentConfirmed(),
                     this is Sent && message.status.isFailed(),
                     message.messageContentDecrypted != null || message.messageMedia?.mediaKeyDecrypted != null,
                     message.date.messageTimeFormat(),
@@ -228,8 +231,10 @@ internal sealed class MessageHolderViewState(
             message.retrieveTextToShow()?.let { text ->
                 if (text.isNotEmpty()) {
                     LayoutState.Bubble.ContainerThird.Message(
-                        text = text.replacingHighlightedDelimiters(),
+                        text = text.replacingMarkdown(),
                         highlightedTexts = text.highlightedTexts(),
+                        boldTexts = text.boldTexts(),
+                        markdownLinkTexts = text.markDownLinkTexts(),
                         decryptionError = false,
                         isThread = isThread
                     )
@@ -241,6 +246,8 @@ internal sealed class MessageHolderViewState(
                     LayoutState.Bubble.ContainerThird.Message(
                         text = null,
                         highlightedTexts = emptyList(),
+                        boldTexts = emptyList(),
+                        markdownLinkTexts = emptyList(),
                         decryptionError = true,
                         isThread = isThread
                     )
@@ -377,7 +384,9 @@ internal sealed class MessageHolderViewState(
             if (message.type.isBotRes()) {
                 message.retrieveBotResponseHtmlString()?.let { html ->
                     LayoutState.Bubble.ContainerSecond.BotResponse(
-                        html
+                        html,
+                        html.boldTexts(),
+                        html.markDownLinkTexts()
                     )
                 }
             } else {

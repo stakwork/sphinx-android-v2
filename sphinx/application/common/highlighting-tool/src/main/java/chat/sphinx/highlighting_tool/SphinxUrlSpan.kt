@@ -1,4 +1,4 @@
-package chat.sphinx.chat_common.util
+package chat.sphinx.highlighting_tool
 
 import android.text.TextPaint
 import android.text.style.URLSpan
@@ -24,7 +24,7 @@ open class SphinxUrlSpan(
     url: String?,
     private val underlined: Boolean = true,
     @ColorInt private val linkColor: Int? = null,
-    private val onInteractionListener: OnInteractionListener
+    private val onInteractionListener: OnInteractionListener?
 ): URLSpan(url) {
 
     override fun updateDrawState(ds: TextPaint) {
@@ -37,19 +37,26 @@ open class SphinxUrlSpan(
     }
 
     override fun onClick(widget: View) {
-        if (onInteractionListener.longClickCounter.get() == 0) {
+        if (onInteractionListener == null) {
+            super.onClick(widget)
+            return
+        }
+
+        if (onInteractionListener?.longClickCounter?.get() == 0) {
             if (url.isSphinxUrl) {
-                onInteractionListener.onClick(url)
+                onInteractionListener?.onClick(url)
             } else {
                 super.onClick(widget)
             }
         } else {
-            onInteractionListener.longClickCounter.set(0)
+            onInteractionListener?.longClickCounter?.set(0)
         }
 
     }
 
-    abstract class OnInteractionListener(private val onLongClickListener: View.OnLongClickListener) : View.OnLongClickListener {
+    abstract class OnInteractionListener(
+        private val onLongClickListener: View.OnLongClickListener?
+    ) : View.OnLongClickListener {
         val longClickCounter = AtomicInteger(0)
 
         /**
@@ -62,7 +69,7 @@ open class SphinxUrlSpan(
         override fun onLongClick(view: View): Boolean {
             longClickCounter.incrementAndGet()
 
-            return onLongClickListener.onLongClick(view)
+            return onLongClickListener?.onLongClick(view) ?: false
         }
     }
 }

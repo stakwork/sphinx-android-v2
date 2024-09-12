@@ -80,7 +80,7 @@ internal class TransactionsViewModel @Inject constructor(
     init {
         viewModelScope.launch(mainImmediate) {
             loadTransactions(
-                getLastMessageDate() ?: lastMessageDate
+                System.currentTimeMillis()
             )
         }
         collectTransactions()

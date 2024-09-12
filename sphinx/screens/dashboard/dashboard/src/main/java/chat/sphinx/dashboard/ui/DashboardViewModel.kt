@@ -1257,37 +1257,54 @@ internal class DashboardViewModel @Inject constructor(
             }
 
             if (payeeLspPubKey == null || payeeLspPubKey != ownerLsp) {
-                val routerUrl = serverSettingsSharedPreferences.getString(ROUTER_URL, null)
 
-                if (routerUrl == null) {
-                    submitSideEffect(ChatListSideEffect.Notify(app.getString(R.string.router_url_not_found)))
-                    return@launch
-                }
-
-                networkQueryContact.getRoutingNodes(
-                    routerUrl,
-                    invoicePayeePubKey,
+                val isRouteAvailable = connectManagerRepository.isRouteAvailable(
+                    invoicePayeePubKey.value,
+                    null,
                     invoiceAmountMilliSat
-                ).collect { response ->
-                    when (response) {
-                        is LoadResponse.Loading -> {}
-                        is Response.Error -> {
-                            submitSideEffect(ChatListSideEffect.Notify(app.getString(R.string.error_getting_route)))
-                        }
-                        is Response.Success -> {
-                            try {
-                                val routerPubKey = serverSettingsSharedPreferences
-                                    .getString(ROUTER_PUBKEY, null)
-                                    ?: "true"
+                )
 
-                                connectManagerRepository.payInvoice(
-                                    lightningPaymentRequest,
-                                    response.value,
-                                    routerPubKey,
-                                    invoiceAmountMilliSat
-                                )
-                            } catch (e: Exception) {
+                if (isRouteAvailable) {
+                    connectManagerRepository.payInvoice(
+                        lightningPaymentRequest,
+                        null,
+                        null,
+                        invoiceAmountMilliSat
+                    )
+                } else {
+                    val routerUrl = serverSettingsSharedPreferences.getString(ROUTER_URL, null)
+
+                    if (routerUrl == null) {
+                        submitSideEffect(ChatListSideEffect.Notify(app.getString(R.string.router_url_not_found)))
+                        return@launch
+                    }
+
+                    networkQueryContact.getRoutingNodes(
+                        routerUrl,
+                        invoicePayeePubKey,
+                        invoiceAmountMilliSat
+                    ).collect { response ->
+                        when (response) {
+                            is LoadResponse.Loading -> {}
+                            is Response.Error -> {
                                 submitSideEffect(ChatListSideEffect.Notify(app.getString(R.string.error_getting_route)))
+                            }
+
+                            is Response.Success -> {
+                                try {
+                                    val routerPubKey = serverSettingsSharedPreferences
+                                        .getString(ROUTER_PUBKEY, null)
+                                        ?: "true"
+
+                                    connectManagerRepository.payInvoice(
+                                        lightningPaymentRequest,
+                                        response.value,
+                                        routerPubKey,
+                                        invoiceAmountMilliSat
+                                    )
+                                } catch (e: Exception) {
+                                    submitSideEffect(ChatListSideEffect.Notify(app.getString(R.string.error_getting_route)))
+                                }
                             }
                         }
                     }

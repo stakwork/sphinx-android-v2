@@ -102,6 +102,13 @@ interface ConnectManagerRepository {
         data: String? = null
     ): Boolean
 
+    fun isRouteAvailable(pubKey: String, routeHint: String?, milliSat: Long): Boolean
+
+    fun createInvoice(
+        amount: Long,
+        memo: String
+    ): Pair<String, String>? // invoice, paymentHash
+
     fun clearWebViewPreImage()
 
     suspend fun updateLspAndOwner(data: String) {}

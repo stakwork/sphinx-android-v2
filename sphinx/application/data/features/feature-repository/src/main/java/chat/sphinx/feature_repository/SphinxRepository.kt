@@ -4511,6 +4511,7 @@ abstract class SphinxRepository(
         val payeeLspPubKey = routeHint?.getLspPubKey()
         val ownerLspPubKey = owner?.routeHint?.getLspPubKey()
 
+
         return if (payeeLspPubKey == ownerLspPubKey) {
             sendKeySend(
                 pubKey.value,
@@ -4522,47 +4523,74 @@ abstract class SphinxRepository(
             )
             true
         } else {
-            if (routerUrl != null) {
-                var success = false
-                networkQueryContact.getRoutingNodes(
-                    routerUrl,
-                    pubKey,
-                    milliSatAmount?.value ?: 0
-                ).collect { response ->
-                    when (response) {
-                        is LoadResponse.Loading -> {}
-                        is Response.Error -> {
-                            success = false
-                        }
-                        is Response.Success -> {
-                            if (isJsonResponseEmpty(response.value)) {
-                                sendKeySend(
-                                    pubKey.value,
-                                    null,
-                                    milliSatAmount?.value ?: 0,
-                                    null,
-                                    routeHint?.value,
-                                    data
-                                )
-                            } else {
-                                sendKeySend(
-                                    pubKey.value,
-                                    response.value,
-                                    milliSatAmount?.value ?: 0,
-                                    routerPubKey,
-                                    routeHint?.value,
-                                    data
-                                )
+            val isAvailableRoute = isRouteAvailable(
+                pubKey.value,
+                routerPubKey,
+                milliSatAmount?.value ?: 0,
+            )
+            if (isAvailableRoute) {
+                sendKeySend(
+                    pubKey.value,
+                    null,
+                    milliSatAmount?.value ?: 0,
+                    null,
+                    routeHint?.value,
+                    data
+                )
+                true
+            } else {
+
+                if (routerUrl != null) {
+                    var success = false
+                    networkQueryContact.getRoutingNodes(
+                        routerUrl,
+                        pubKey,
+                        milliSatAmount?.value ?: 0
+                    ).collect { response ->
+                        when (response) {
+                            is LoadResponse.Loading -> {}
+                            is Response.Error -> {
+                                success = false
                             }
-                            success = true
+
+                            is Response.Success -> {
+                                if (isJsonResponseEmpty(response.value)) {
+                                    sendKeySend(
+                                        pubKey.value,
+                                        null,
+                                        milliSatAmount?.value ?: 0,
+                                        null,
+                                        routeHint?.value,
+                                        data
+                                    )
+                                } else {
+                                    sendKeySend(
+                                        pubKey.value,
+                                        response.value,
+                                        milliSatAmount?.value ?: 0,
+                                        routerPubKey,
+                                        routeHint?.value,
+                                        data
+                                    )
+                                }
+                                success = true
+                            }
                         }
                     }
+                    success
+                } else {
+                    false
                 }
-                success
-            } else {
-                false
             }
         }
+    }
+
+    override fun isRouteAvailable(pubKey: String, routeHint: String?, milliSat: Long): Boolean {
+        return connectManager.isRouteAvailable(pubKey, routeHint, milliSat)
+    }
+
+    override fun createInvoice(amount: Long, memo: String): Pair<String, String>? {
+        return connectManager.createInvoice(amount, memo)
     }
 
     private fun isJsonResponseEmpty(json: String?): Boolean {

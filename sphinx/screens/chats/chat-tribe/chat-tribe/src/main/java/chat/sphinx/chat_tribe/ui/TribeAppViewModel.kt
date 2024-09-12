@@ -697,10 +697,11 @@ internal class TribeAppViewModel @Inject constructor(
         val isAmountValid = paymentAmount != null
         val isBudgetSufficient = budget >= (paymentAmount ?: 0)
         val lightningPaymentRequest = webViewDto?.paymentRequest?.toLightningPaymentRequestOrNull()
+        val ownerLsp = contactRepository.accountOwner.value?.routeHint?.getLspPubKey()
 
         if (isAmountValid && isBudgetSufficient && lightningPaymentRequest != null) {
 
-            if (invoice?.retrieveLspPubKey() == contactRepository.accountOwner.value?.routeHint?.getLspPubKey()) {
+            if (invoice?.retrieveLspPubKey() == ownerLsp) {
                 connectManagerRepository.payInvoice(
                     lightningPaymentRequest,
                     endHops = null,
@@ -718,43 +719,68 @@ internal class TribeAppViewModel @Inject constructor(
                 sendWebAppMessage(sendPayment)
 
             } else {
-                val routerUrl = serverSettingsSharedPreferences.getString(ROUTER_URL, null)
-                if (invoicePubKey != null && routerUrl != null) {
-                    networkQueryContact.getRoutingNodes(
-                        routerUrl,
-                        invoicePubKey,
+                val isAvailableRoute = connectManagerRepository.isRouteAvailable(
+                    invoicePubKey?.value ?: "",
+                    null,
+                    paymentAmount ?: 0
+                )
+
+                if (isAvailableRoute) {
+                    connectManagerRepository.payInvoice(
+                        lightningPaymentRequest,
+                        endHops = null,
+                        routerPubKey = null,
                         paymentAmount ?: 0
-                    ).collect { response ->
-                        when (response) {
-                            is LoadResponse.Loading -> {}
-                            is Response.Error -> {}
-                            is Response.Success -> {
-                                try {
-                                    val routerPubKey = serverSettingsSharedPreferences
-                                        .getString(ROUTER_PUBKEY, null)
-                                        ?: "true"
+                    )
 
-                                    val nnPaymentRequest =
-                                        webViewDto.paymentRequest.toLightningPaymentRequestOrNull()
-                                            ?: return@collect
+                    val sendPayment = SendKeySend(
+                        type = webViewDto.type,
+                        application = webViewDto.application,
+                        password = password ?: "",
+                        success = true
+                    ).toJson(moshi)
 
-                                    connectManagerRepository.payInvoice(
-                                        paymentRequest = nnPaymentRequest,
-                                        response.value,
-                                        routerPubKey,
-                                        milliSatAmount = paymentAmount ?: 0,
-                                    )
+                    sendWebAppMessage(sendPayment)
+                } else {
+                    val routerUrl = serverSettingsSharedPreferences.getString(ROUTER_URL, null)
+                    if (invoicePubKey != null && routerUrl != null) {
+                        networkQueryContact.getRoutingNodes(
+                            routerUrl,
+                            invoicePubKey,
+                            paymentAmount ?: 0
+                        ).collect { response ->
+                            when (response) {
+                                is LoadResponse.Loading -> {}
+                                is Response.Error -> {}
+                                is Response.Success -> {
+                                    try {
+                                        val routerPubKey = serverSettingsSharedPreferences
+                                            .getString(ROUTER_PUBKEY, null)
+                                            ?: "true"
 
-                                    val sendPayment = SendKeySend(
-                                        type = webViewDto.type,
-                                        application = webViewDto.application,
-                                        password = password ?: "",
-                                        success = true
-                                    ).toJson(moshi)
+                                        val nnPaymentRequest =
+                                            webViewDto.paymentRequest.toLightningPaymentRequestOrNull()
+                                                ?: return@collect
 
-                                    sendWebAppMessage(sendPayment)
+                                        connectManagerRepository.payInvoice(
+                                            paymentRequest = nnPaymentRequest,
+                                            response.value,
+                                            routerPubKey,
+                                            milliSatAmount = paymentAmount ?: 0,
+                                        )
 
-                                } catch (e: Exception) { }
+                                        val sendPayment = SendKeySend(
+                                            type = webViewDto.type,
+                                            application = webViewDto.application,
+                                            password = password ?: "",
+                                            success = true
+                                        ).toJson(moshi)
+
+                                        sendWebAppMessage(sendPayment)
+
+                                    } catch (e: Exception) {
+                                    }
+                                }
                             }
                         }
                     }

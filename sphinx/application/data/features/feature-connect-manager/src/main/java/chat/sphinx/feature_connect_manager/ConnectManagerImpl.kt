@@ -42,6 +42,7 @@ import uniffi.sphinxrs.concatRoute
 import uniffi.sphinxrs.deleteMsgs
 import uniffi.sphinxrs.fetchMsgsBatch
 import uniffi.sphinxrs.fetchPings
+import uniffi.sphinxrs.findRoute
 import uniffi.sphinxrs.getDefaultTribeServer
 import uniffi.sphinxrs.getMsgsCounts
 import uniffi.sphinxrs.getMutes
@@ -1938,6 +1939,20 @@ class ConnectManagerImpl: ConnectManager()
             parseInvoice(invoice)
         } catch (e: Exception) {
             null
+        }
+    }
+
+    override fun isRouteAvailable(pubKey: String, routeHint: String?, milliSat: Long): Boolean {
+        return try {
+            findRoute(
+                getCurrentUserState(),
+                pubKey,
+                routeHint,
+                milliSat.toULong()
+            )
+            true
+        } catch (e: java.lang.Exception) {
+            false
         }
     }
 

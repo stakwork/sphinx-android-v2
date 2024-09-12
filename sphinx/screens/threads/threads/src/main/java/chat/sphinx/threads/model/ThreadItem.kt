@@ -1,6 +1,5 @@
 package chat.sphinx.threads.model
 
-import androidx.annotation.IntRange
 import chat.sphinx.chat_common.ui.viewstate.messageholder.ReplyUserHolder
 import chat.sphinx.wrapper_common.FileSize
 import chat.sphinx.wrapper_common.PhotoUrl
@@ -14,6 +13,8 @@ data class ThreadItem(
     val date: String,
     val message: String,
     val highlightedTexts: List<Pair<String, IntRange>>,
+    val boldTexts: List<Pair<String, IntRange>>,
+    val markdownLinkTexts: List<Pair<String, IntRange>>,
     val usersReplies: List<ReplyUserHolder>?,
     val usersCount: Int,
     val repliesAmount: String,

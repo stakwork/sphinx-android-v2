@@ -66,6 +66,7 @@ import chat.sphinx.concept_network_client_crypto.CryptoScheme
 import chat.sphinx.concept_repository_message.model.AttachmentInfo
 import chat.sphinx.concept_repository_message.model.SendMessage
 import chat.sphinx.concept_user_colors_helper.UserColorsHelper
+import chat.sphinx.highlighting_tool.replacingMarkdown
 import chat.sphinx.insetter_activity.InsetterActivity
 import chat.sphinx.insetter_activity.addKeyboardPadding
 import chat.sphinx.insetter_activity.addNavigationBarPadding
@@ -1157,7 +1158,7 @@ abstract class ChatFragment<
                     is ChatHeaderViewState.Initialized -> {
                         headerBinding.apply {
 
-                            textViewChatHeaderName.text = viewState.chatHeaderName
+                            textViewChatHeaderName.text = viewState.chatHeaderName.replacingMarkdown()
                             textViewChatHeaderLock.goneIfFalse(viewState.showLock)
 
                             Log.d("TimeTracker", "Chat contact/tribe name was displayed in ${System.currentTimeMillis() - timeTrackerStart} milliseconds")

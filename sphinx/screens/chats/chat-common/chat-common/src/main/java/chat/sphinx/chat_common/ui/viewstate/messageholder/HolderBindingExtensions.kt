@@ -28,8 +28,8 @@ import chat.sphinx.chat_common.ui.viewstate.audio.AudioMessageState
 import chat.sphinx.chat_common.ui.viewstate.audio.AudioPlayState
 import chat.sphinx.chat_common.util.AudioPlayerController
 import chat.sphinx.highlighting_tool.SphinxHighlightingTool
-import chat.sphinx.chat_common.util.SphinxLinkify
-import chat.sphinx.chat_common.util.SphinxUrlSpan
+import chat.sphinx.highlighting_tool.SphinxLinkify
+import chat.sphinx.highlighting_tool.SphinxUrlSpan
 import chat.sphinx.chat_common.util.VideoThumbnailUtil
 import chat.sphinx.concept_image_loader.*
 import chat.sphinx.concept_meme_server.MemeServerTokenHandler
@@ -280,10 +280,10 @@ internal fun  LayoutMessageHolderBinding.setView(
             setBubbleCallInvite(
                 viewState.bubbleCallInvite
             )
-            setBubbleBotResponse(
-                viewState.bubbleBotResponse,
-                onRowLayoutListener
-            )
+//            setBubbleBotResponse(
+//                viewState.bubbleBotResponse,
+//                onRowLayoutListener
+//            )
             setBubbleDirectPaymentLayout(
                 viewState.bubbleDirectPayment,
                 holderJobs,
@@ -1166,20 +1166,24 @@ internal inline fun LayoutMessageHolderBinding.setBubbleMessageLayout(
             )
             setTextColor(textColor)
 
-            SphinxHighlightingTool.addHighlights(
-                this,
-                message.highlightedTexts,
-                resources,
-                context
-            )
-
             if (onSphinxInteractionListener != null) {
                 SphinxLinkify.addLinks(
                     this,
-                    SphinxLinkify.ALL, includeMessageHolderBubble.root.context,
+                    SphinxLinkify.ALL,
+                    includeMessageHolderBubble.root.context,
                     onSphinxInteractionListener
                 )
             }
+
+            SphinxHighlightingTool.addMarkdowns(
+                this,
+                message.highlightedTexts,
+                message.boldTexts,
+                message.markdownLinkTexts,
+                onSphinxInteractionListener,
+                resources,
+                context
+            )
         }
     }
 }
@@ -1270,7 +1274,6 @@ internal fun LayoutMessageHolderBinding.setBubbleMessageLinkPreviewLayout(
                 includeMessageLinkPreviewUrl.root.gone
             }
             is NodeDescriptor -> {
-
                 includeMessageLinkPreviewTribe.root.gone
                 includeMessageLinkPreviewUrl.root.gone
 

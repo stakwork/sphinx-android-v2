@@ -50,6 +50,12 @@ import chat.sphinx.concept_image_loader.ImageLoader
 import chat.sphinx.concept_image_loader.ImageLoaderOptions
 import chat.sphinx.concept_image_loader.Transformation
 import chat.sphinx.concept_user_colors_helper.UserColorsHelper
+import chat.sphinx.highlighting_tool.SphinxHighlightingTool
+import chat.sphinx.highlighting_tool.SphinxUrlSpan
+import chat.sphinx.highlighting_tool.boldTexts
+import chat.sphinx.highlighting_tool.highlightedTexts
+import chat.sphinx.highlighting_tool.markDownLinkTexts
+import chat.sphinx.highlighting_tool.replacingMarkdown
 import chat.sphinx.insetter_activity.InsetterActivity
 import chat.sphinx.insetter_activity.addKeyboardPadding
 import chat.sphinx.insetter_activity.addNavigationBarPadding
@@ -712,7 +718,7 @@ internal class ChatTribeFragment: ChatFragment<
                         is PinedMessageDataViewState.Data -> {
                             binding.includeChatPinedMessageHeader.apply {
                                 root.goneIfFalse(true)
-                                textViewChatHeaderName.text = viewState.messageContent
+                                textViewChatHeaderName.text = viewState.messageContent.replacingMarkdown()
                             }
 
                             includeLayoutPinBottomTemplate.apply {
@@ -742,7 +748,17 @@ internal class ChatTribeFragment: ChatFragment<
                                 }
 
                                 includePinnedBottomMessageHolder.apply {
-                                    textViewPinnedBottomHeaderText.text = viewState.messageContent
+                                    textViewPinnedBottomHeaderText.text = viewState.messageContent.replacingMarkdown()
+
+                                    SphinxHighlightingTool.addMarkdowns(
+                                        textViewPinnedBottomHeaderText,
+                                        viewState.messageContent.highlightedTexts(),
+                                        viewState.messageContent.boldTexts(),
+                                        viewState.messageContent.markDownLinkTexts(),
+                                        null,
+                                        textViewPinnedBottomHeaderText.resources,
+                                        textViewPinnedBottomHeaderText.context
+                                    )
                                 }
                             }
                         }

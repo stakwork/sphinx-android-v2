@@ -267,8 +267,7 @@ inline fun Message.isUnPinAllowed(chatPinnedMessage: MessageUUID?): Boolean {
 
 @Suppress("NOTHING_TO_INLINE")
 inline fun Message.isPaymentConfirmed(): Boolean =
-    this.paymentHash != null && this.status is MessageStatus.Confirmed
-
+    (this.type.isDirectPayment() || this.type.isInvoicePayment()) && this.status is MessageStatus.Confirmed
 
 inline val Message.isBoostAllowed: Boolean
     get() = status.isReceived() &&

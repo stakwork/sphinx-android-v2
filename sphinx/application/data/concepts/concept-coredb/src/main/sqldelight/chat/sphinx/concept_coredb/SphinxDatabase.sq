@@ -829,6 +829,12 @@ AND type = 19
 ORDER BY id ASC
 LIMIT 1;
 
+messageGetAllPayments:
+SELECT *
+FROM messageDbo
+WHERE type = 3
+ORDER BY id ASC;
+
 messageGetByUUID:
 SELECT *
 FROM messageDbo
@@ -1013,13 +1019,15 @@ UPDATE messageDbo
 SET status = :status,
     payment_hash = :payment_hash,
     error_message = :error_message
-WHERE tag_message = ?;
+WHERE tag_message = ?
+AND ((type != 2) || (type = 2 AND status = 0));
 
 messageUpdateStatusByTag:
 UPDATE messageDbo
 SET status = :status,
     error_message = :error_message
-WHERE tag_message = ?;
+WHERE tag_message = ?
+AND ((type != 2) || (type = 2 AND status = 0));
 
 messageUpdateType:
 UPDATE messageDbo

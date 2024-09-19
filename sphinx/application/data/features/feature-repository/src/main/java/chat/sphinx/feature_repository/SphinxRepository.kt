@@ -8,7 +8,6 @@ import chat.sphinx.concept_meme_server.MemeServerTokenHandler
 import chat.sphinx.concept_network_query_chat.NetworkQueryChat
 import chat.sphinx.concept_network_query_chat.model.*
 import chat.sphinx.concept_network_query_contact.NetworkQueryContact
-import chat.sphinx.concept_network_query_contact.model.PostContactDto
 import chat.sphinx.concept_network_query_discover_tribes.NetworkQueryDiscoverTribes
 import chat.sphinx.concept_network_query_feed_search.NetworkQueryFeedSearch
 import chat.sphinx.concept_network_query_feed_search.model.toFeedSearchResult
@@ -28,8 +27,8 @@ import chat.sphinx.concept_repository_chat.ChatRepository
 import chat.sphinx.concept_repository_chat.model.AddMember
 import chat.sphinx.concept_repository_chat.model.CreateTribe
 import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
-import chat.sphinx.concept_repository_connect_manager.model.OwnerRegistrationState
 import chat.sphinx.concept_repository_connect_manager.model.NetworkStatus
+import chat.sphinx.concept_repository_connect_manager.model.OwnerRegistrationState
 import chat.sphinx.concept_repository_connect_manager.model.RestoreProcessState
 import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.concept_repository_dashboard.RepositoryDashboard
@@ -129,7 +128,6 @@ import chat.sphinx.wrapper_invite.InviteString
 import chat.sphinx.wrapper_io_utils.InputStreamProvider
 import chat.sphinx.wrapper_lightning.LightningServiceProvider
 import chat.sphinx.wrapper_lightning.NodeBalance
-import chat.sphinx.wrapper_lightning.NodeBalanceAll
 import chat.sphinx.wrapper_lightning.toWalletMnemonic
 import chat.sphinx.wrapper_message.*
 import chat.sphinx.wrapper_message.Msg.Companion.toMsg
@@ -163,11 +161,6 @@ import java.io.File
 import java.io.InputStream
 import java.security.SecureRandom
 import java.util.*
-import javax.management.monitor.StringMonitor
-import kotlin.collections.ArrayList
-import kotlin.collections.LinkedHashMap
-import kotlin.math.absoluteValue
-import kotlin.math.round
 
 
 abstract class SphinxRepository(
@@ -1100,9 +1093,19 @@ abstract class SphinxRepository(
             applicationScope.launch(io) {
                 getMessageById(messageId).collect { message ->
                     if (message != null) {
-                        connectManager.getReadMessages()
                         restoreMinIndex.value = null
                     }
+                }
+            }
+        }
+    }
+
+    override fun updatePaidInvoices() {
+        applicationScope.launch(io) {
+            val queries = coreDB.getSphinxDatabaseQueries()
+            queries.messageGetAllPayments().executeAsList()?.forEach { message ->
+                messageLock.withLock {
+                    queries.messageUpdateInvoiceAsPaidByPaymentHash(message.payment_hash)
                 }
             }
         }

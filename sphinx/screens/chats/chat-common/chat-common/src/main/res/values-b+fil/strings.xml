@@ -28,7 +28,7 @@
     <string name="today">Ngayon</string>
     <string name="request_expired">NAPAOSONG KAHILINGAN</string>
     <string name="request_expiration">MAG-E-EXPIRE SA: %s</string>
-    <string name="invoice_paid_on">Nabaryaran ang invoice noong %s</string>
+    <string name="invoice_paid_on">Invoice ng %s sats na binayaran noong %s</string>
     <string name="alert_confirm_pay_chat_invoice_title">Kumpirmahin ang Pagbabayad ng Invoice</string>
     <string name="alert_confirm_pay_chat_invoice_message">Sigurado ka bang gusto mong bayaran ang invoice na ito?</string>
     <string name="placeholder_display_name_message_type_attachment">Mensaheng May Kalakip  (Attachment)</string>

@@ -73,6 +73,7 @@ sealed class LayoutState private constructor() {
     data class InvoicePayment(
         val showSent: Boolean,
         val paymentDateString: String,
+        val amountString: String,
     ): LayoutState() {
         val showReceived: Boolean
             get() = !showSent

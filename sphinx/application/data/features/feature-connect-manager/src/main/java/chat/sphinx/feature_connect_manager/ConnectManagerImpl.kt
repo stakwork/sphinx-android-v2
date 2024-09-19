@@ -631,11 +631,17 @@ class ConnectManagerImpl: ConnectManager()
                 notifyListeners { onRestoreFinished() }
             }
 
+            updatePaidInvoices()
             getReadMessages()
             getMutedChats()
             getPings()
         }
     }
+
+    private fun updatePaidInvoices() {
+        notifyListeners { updatePaidInvoices() }
+    }
+
     private fun continueRestore(
         msgs: List<Msg>,
         topic: String?

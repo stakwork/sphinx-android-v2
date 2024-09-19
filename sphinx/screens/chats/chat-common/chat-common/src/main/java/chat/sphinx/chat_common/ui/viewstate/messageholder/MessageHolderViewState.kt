@@ -108,7 +108,7 @@ internal sealed class MessageHolderViewState(
             null
         } else {
             val isFirstBubble = (background is BubbleBackground.First)
-            val isInvoicePayment = (message.type.isInvoicePayment() && message.status.isConfirmed())
+            val isInvoicePayment = message.type.isInvoicePayment()
 
             if (isFirstBubble || isInvoicePayment) {
                 LayoutState.MessageStatusHeader(
@@ -116,7 +116,7 @@ internal sealed class MessageHolderViewState(
                     if (initialHolder is InitialHolderViewState.Initials) initialHolder.colorKey else message.getColorKey(),
                     this is Sent,
                     this is Sent && message.id.isProvisionalMessage && message.status.isPending(),
-                    this is Sent && (message.status.isReceived() || message.status.isConfirmed()),
+                    (this is Sent && (message.status.isReceived() || message.status.isConfirmed())) || (this !is Sent && message.type.isInvoice()),
                     message.isPaymentConfirmed(),
                     this is Sent && message.status.isFailed(),
                     message.messageContentDecrypted != null || message.messageMedia?.mediaKeyDecrypted != null,
@@ -171,7 +171,8 @@ internal sealed class MessageHolderViewState(
             if (message.type.isInvoicePayment()) {
                 LayoutState.InvoicePayment(
                     showSent = this is Sent,
-                    paymentDateString = message.date.invoicePaymentDateFormat()
+                    paymentDateString = message.date.invoicePaymentDateFormat(),
+                    amountString = message.amount.value.toString()
                 )
             } else {
                 null
@@ -206,15 +207,17 @@ internal sealed class MessageHolderViewState(
             null
         } else {
             if (message.type.isInvoice()) {
+                val isConfirmed = true
+
                 LayoutState.Bubble.ContainerSecond.Invoice(
-                    showSent = this is Sent,
+                    showSent = (this is Sent && !message.status.isConfirmed()) || (this !is Sent && message.status.isConfirmed()),
                     amount = message.amount,
                     text = message.retrieveInvoiceTextToShow() ?: "",
                     showPaidInvoiceBottomLine = message.isPaidInvoice,
                     hideBubbleArrows = !message.isExpiredInvoice() && !message.isPaidInvoice,
                     showPayButton = !message.isExpiredInvoice() && !message.isPaidInvoice && this is Received,
                     showDashedBorder = !message.isExpiredInvoice() && !message.isPaidInvoice,
-                    showExpiredLayout = message.isExpiredInvoice()
+                    showExpiredLayout = message.isExpiredInvoice() && !message.isPaidInvoice,
                 )
             } else {
                 null

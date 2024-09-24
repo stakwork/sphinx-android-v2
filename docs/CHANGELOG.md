@@ -1,5 +1,8 @@
 # ChangeLog
 
+## Version 1.0.0-alpha17 (2021-09-19)
+- Fixes invoices on chats
+
 ## Version 1.0.0-alpha16 (2021-09-12)
 - Fixes podcast player issues
 - Adds Bots support and markdown

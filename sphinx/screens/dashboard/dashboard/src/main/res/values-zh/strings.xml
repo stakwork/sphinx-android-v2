@@ -81,6 +81,7 @@
     <string name="dashboard_authorize_popup_title">是否授權: </string>
     <string name="dashboard_authorize_button">授權</string>
     <string name="dashboard_authorize_generic_error">授權外部來源時出錯，請稍後再試</string>
+    <string name="dashboard_authorize_success">您已登入成功</string>
 
     <string name="dashboard_redeem_sats_popup_title">從以下來源領取 %s sats:</string>
     <string name="dashboard_redeem_sats_button">確認</string>

@@ -81,6 +81,7 @@
     <string name="dashboard_authorize_popup_title">次で認証しますか:</string>
     <string name="dashboard_authorize_button">認証</string>
     <string name="dashboard_authorize_generic_error">外部ソースの承認中にエラーが発生しました。後でもう一度お試しください</string>
+    <string name="dashboard_authorize_success">ログインに成功しました</string>
 
     <string name="dashboard_redeem_sats_popup_title">以下から %s sats の利用:</string>
     <string name="dashboard_redeem_sats_button">確認</string>

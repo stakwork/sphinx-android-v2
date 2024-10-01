@@ -80,7 +80,7 @@ internal class OnBoardConnectViewModel @Inject constructor(
 
     companion object {
         const val BITCOIN_NETWORK_REG_TEST = "regtest"
-        const val BITCOIN_NETWORK_MAIN_NET = "mainnet"
+        const val BITCOIN_NETWORK_MAIN_NET = "bitcoin"
         const val BITCOIN = "bitcoin"
     }
 

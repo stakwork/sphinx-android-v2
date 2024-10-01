@@ -1,5 +1,8 @@
 # ChangeLog
 
+## Version 1.0.0-alpha18 (2021-10-01)
+- Fixes people site authentication
+
 ## Version 1.0.0-alpha17 (2021-09-19)
 - Fixes invoices on chats
 

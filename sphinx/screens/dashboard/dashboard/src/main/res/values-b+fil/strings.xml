@@ -81,6 +81,7 @@
     <string name="dashboard_authorize_popup_title">Gusto mo bang mag-authorize gamit ang:</string>
     <string name="dashboard_authorize_button">I-AUTHORIZE</string>
     <string name="dashboard_authorize_generic_error">May mali sa pag-authorize ng external source, pakisubukan muli mamaya</string>
+    <string name="dashboard_authorize_success">Matagumpay kang naka-log in</string>
 
     <string name="dashboard_redeem_sats_popup_title">I-redeem ang %s sats mula sa:</string>
     <string name="dashboard_redeem_sats_button">Kumpirmahin</string>

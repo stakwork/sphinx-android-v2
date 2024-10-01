@@ -27,4 +27,10 @@ abstract class NetworkQueryAuthorizeExternal {
         host: String,
         publicKey: String
     ): Flow<LoadResponse<PersonInfoDto, ResponseError>>
+
+    abstract fun createPeopleProfile(
+        host: String,
+        person: PersonInfoDto,
+        token: String
+    ): Flow<LoadResponse<PersonInfoDto, ResponseError>>
 }

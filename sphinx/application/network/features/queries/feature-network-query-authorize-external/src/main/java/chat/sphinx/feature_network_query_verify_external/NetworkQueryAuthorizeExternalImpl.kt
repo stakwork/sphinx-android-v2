@@ -16,6 +16,7 @@ class NetworkQueryAuthorizeExternalImpl(
         private const val ENDPOINT_SIGN_BASE_64 = "/signer/%s"
         private const val ENDPOINT_AUTHORIZE_EXTERNAL = "https://%s/verify/%s?token=%s"
         private const val ENDPOINT_GET_PERSON_INFO = "https://%s/person/%s"
+        private const val ENDPOINT_CREATE_PROFILE = "https://%s/person?token=%s"
         private const val ENDPOINT_REDEEM_SATS = "https://%s"
 
         private const val ENDPOINT_SERVER_URL = "https://%s"
@@ -71,5 +72,21 @@ class NetworkQueryAuthorizeExternalImpl(
                 publicKey
             ),
             responseJsonClass = PersonInfoDto::class.java,
+        )
+
+    override fun createPeopleProfile(
+        host: String,
+        person: PersonInfoDto,
+        token: String
+    ): Flow<LoadResponse<PersonInfoDto, ResponseError>> =
+        networkRelayCall.post(
+            url = String.format(
+                ENDPOINT_CREATE_PROFILE,
+                host,
+                token
+            ),
+            responseJsonClass = PersonInfoDto::class.java,
+            requestBodyJsonClass = PersonInfoDto::class.java,
+            requestBody = person,
         )
 }

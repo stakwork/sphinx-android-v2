@@ -1,6 +1,7 @@
 package chat.sphinx.dashboard.ui
 
 import android.app.Application
+import android.app.Person
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
@@ -16,6 +17,7 @@ import chat.sphinx.concept_network_query_people.model.isDeleteMethod
 import chat.sphinx.concept_network_query_people.model.isProfilePath
 import chat.sphinx.concept_network_query_people.model.isSaveMethod
 import chat.sphinx.concept_network_query_verify_external.NetworkQueryAuthorizeExternal
+import chat.sphinx.concept_network_query_verify_external.model.PersonInfoDto
 import chat.sphinx.concept_network_query_verify_external.model.VerifyExternalInfoDto
 import chat.sphinx.concept_repository_actions.ActionsRepository
 import chat.sphinx.concept_repository_chat.ChatRepository
@@ -197,6 +199,7 @@ internal class DashboardViewModel @Inject constructor(
         const val NETWORK_MIXER_IP = "network_mixer_ip"
         const val ROUTER_URL= "router_url"
         const val ROUTER_PUBKEY= "router_pubkey"
+        const val TRIBES_V1_URL = "tribes.sphinx.chat"
     }
 
     private val _hideBalanceStateFlow: MutableStateFlow<Int> by lazy {
@@ -881,10 +884,7 @@ internal class DashboardViewModel @Inject constructor(
                 deepLinkPopupViewStateContainer.updateViewState(
                     DeepLinkPopupViewState.ExternalAuthorizePopupProcessing
                 )
-
-                val token = connectManagerRepository.getSignedTimeStamps()
-
-                authorize(viewState.link.host, viewState.link.challenge, token)
+                authorize(viewState.link.host, viewState.link.challenge)
 
             } else if (viewState is DeepLinkPopupViewState.StakworkAuthorizePopup) {
                 deepLinkPopupViewStateContainer.updateViewState(
@@ -902,8 +902,16 @@ internal class DashboardViewModel @Inject constructor(
                         submitSideEffect(
                             ChatListSideEffect.Notify(response.cause.message)
                         )
+
+                        deepLinkPopupViewStateContainer.updateViewState(
+                            DeepLinkPopupViewState.PopupDismissed
+                        )
                     }
                     is Response.Success -> {
+                        deepLinkPopupViewStateContainer.updateViewState(
+                            DeepLinkPopupViewState.PopupDismissed
+                        )
+
                         val i = Intent(Intent.ACTION_VIEW)
                         i.flags = Intent.FLAG_ACTIVITY_NEW_TASK
                         i.data = Uri.parse(response.value)
@@ -917,52 +925,143 @@ internal class DashboardViewModel @Inject constructor(
                     )
                 )
             }
+        }
+    }
 
-            deepLinkPopupViewStateContainer.updateViewState(
-                DeepLinkPopupViewState.PopupDismissed
+    private suspend fun authenticationFailed() {
+        submitSideEffect(
+            ChatListSideEffect.Notify(
+                app.getString(R.string.dashboard_authorize_generic_error)
             )
-        }
-    }
-
-    private suspend fun requestNewTokenAndAuthorize(host: String, challenge: String) {
-        networkQueryAuthorizeExternal.requestNewChallenge(host).collect { loadResponse ->
-            if (loadResponse is Response.Success) {
-                val token = connectManagerRepository.getSignedTimeStamps() ?: return@collect
-                authorize(host, challenge, token)
-            }
-        }
-    }
-
-    private suspend fun authorize(host: String, challenge: String, token: String?) {
-        val sig = connectManagerRepository.getSignBase64(challenge)
-        val owner = getOwner()
-
-        val info = VerifyExternalInfoDto(
-            owner.nodePubKey?.value,
-            owner.alias?.value,
-            owner.photoUrl?.value,
-            owner.routeHint?.value,
-            0L,
-            sig,
         )
 
-        if (token != null) {
-            networkQueryAuthorizeExternal.authorizeExternal(
-                host,
-                challenge,
-                token,
-                info
+        deepLinkPopupViewStateContainer.updateViewState(
+            DeepLinkPopupViewState.PopupDismissed
+        )
+    }
+
+    private suspend fun authenticationSucceed() {
+        submitSideEffect(
+            ChatListSideEffect.Notify(
+                app.getString(R.string.dashboard_authorize_success)
+            )
+        )
+
+        deepLinkPopupViewStateContainer.updateViewState(
+            DeepLinkPopupViewState.PopupDismissed
+        )
+    }
+
+    private suspend fun authorize(host: String, challenge: String) {
+        val owner = getOwner()
+
+        owner.nodePubKey?.value?.let { publicKey ->
+            networkQueryAuthorizeExternal.getPersonInfo(
+                TRIBES_V1_URL,
+                publicKey
             ).collect { loadResponse ->
                 when(loadResponse) {
                     is LoadResponse.Loading -> {}
                     is Response.Error -> {
-                        requestNewTokenAndAuthorize(host, challenge)
+                        authenticationFailed()
                     }
                     is Response.Success -> {
-                        // server response
+                        createProfileFor(
+                            loadResponse.value,
+                            challenge,
+                            host
+                        )
                     }
                 }
             }
+        } ?: run {
+            authenticationFailed()
+        }
+    }
+
+    private suspend fun createProfileFor(
+        person: PersonInfoDto,
+        challenge: String,
+        host: String
+    ) {
+        val owner = getOwner()
+
+        owner.nodePubKey?.value?.let { publicKey ->
+            val userId = if (person.owner_pubkey == publicKey) person.id else null
+
+            val person = PersonInfoDto(
+                id = userId,
+                owner_pubkey = publicKey,
+                owner_alias = owner.alias?.value ?: "",
+                owner_contact_key = null,
+                owner_route_hint = owner.routeHint?.value ?: "",
+                img = owner.photoUrl?.value,
+                description = null,
+                price_to_meet = 0L
+            )
+
+            val token = connectManagerRepository.getSignedTimeStamps() ?: return
+
+            networkQueryAuthorizeExternal.createPeopleProfile(
+                TRIBES_V1_URL,
+                person,
+                token
+            ).collect { loadResponse ->
+                when(loadResponse) {
+                    is LoadResponse.Loading -> {}
+                    is Response.Error -> {
+                        authenticationFailed()
+                    }
+                    is Response.Success -> {
+                        authorizeWithChallenge(challenge, host)
+                    }
+                }
+            }
+        } ?: run {
+            authenticationFailed()
+        }
+    }
+
+    private suspend fun authorizeWithChallenge(
+        challenge: String,
+        host: String
+    ) {
+        val sig = connectManagerRepository.getSignBase64(challenge)
+
+        val token = connectManagerRepository.getSignedTimeStamps() ?: return
+
+        val owner = getOwner()
+
+        owner.nodePubKey?.value?.let { publicKey ->
+            val info = VerifyExternalInfoDto(
+                publicKey,
+                owner.alias?.value,
+                owner.photoUrl?.value,
+                owner.routeHint?.value,
+                0L,
+                sig,
+            )
+
+            if (token != null) {
+                networkQueryAuthorizeExternal.authorizeExternal(
+                    host,
+                    challenge,
+                    token,
+                    info
+                ).collect { loadResponse ->
+                    when(loadResponse) {
+                        is LoadResponse.Loading -> {}
+                        is Response.Error -> {
+                            authenticationFailed()
+                        }
+                        is Response.Success -> {
+                            authenticationSucceed()
+                        }
+                    }
+                }
+            }
+        } ?: run {
+            authenticationFailed()
         }
     }
 

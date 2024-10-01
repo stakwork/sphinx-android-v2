@@ -82,6 +82,7 @@
     <string name="dashboard_authorize_popup_title">¿Quieres autorizar a:</string>
     <string name="dashboard_authorize_button">AUTORIZAR</string>
     <string name="dashboard_authorize_generic_error">Ocurrió un error al intentar autorizar a una fuente externa. Por favor volvé a intentarlo más tarde</string>
+    <string name="dashboard_authorize_success">Has iniciado sesión correctamente</string>
 
     <string name="dashboard_redeem_sats_popup_title">Canjear %s sats de:</string>
     <string name="dashboard_redeem_sats_button">Confirmar</string>

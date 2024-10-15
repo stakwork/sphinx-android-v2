@@ -13,7 +13,7 @@
     <string name="failed_to_update_tribe">編輯 tribe 失敗</string>
     <string name="failed_to_load_tribe">載入 tribe 失敗</string>
     <string name="failed_to_process_image">團片上傳失敗</string>
-    <string name="list_on_tribes_sphinx_chat">開放 tribes.sphinx.chat 發布嗎?</string>
+    <string name="list_on_tribes_sphinx_chat">開放 tribes.v2.sphinx.chat 發布嗎?</string>
     <string name="name">名稱 *</string>
     <string name="image">圖片</string>
     <string name="description">說明 *</string>

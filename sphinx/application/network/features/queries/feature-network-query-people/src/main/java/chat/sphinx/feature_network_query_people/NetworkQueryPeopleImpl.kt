@@ -16,7 +16,7 @@ class NetworkQueryPeopleImpl(
 ): NetworkQueryPeople() {
 
     companion object {
-        private const val TRIBES_DEFAULT_SERVER_URL = "https://tribes.sphinx.chat"
+        private const val TRIBES_DEFAULT_SERVER_URL = "https://people.sphinx.chat"
         private const val LIQUID_DEFAULT_SERVER_URL = "https://liquid.sphinx.chat"
 
         private const val ENDPOINT_SAVE_KEY = "https://%s/save/%s"

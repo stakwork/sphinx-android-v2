@@ -510,8 +510,8 @@ abstract class ChatFragment<
             editTextChatFooter.addTextChangedListener { editable ->
                 //Do not toggle microphone and send icon if on attachment mode
                 if (viewModel.getFooterViewStateFlow().value !is FooterViewState.Attachment) {
-                    textViewChatFooterSend.goneIfTrue(editable.isNullOrEmpty() && !viewModel.isThreadChat())
-                    imageViewChatFooterMicrophone.goneIfFalse(editable.isNullOrEmpty() && !viewModel.isThreadChat())
+                    textViewChatFooterSend.goneIfTrue(editable?.trim().isNullOrEmpty())
+                    imageViewChatFooterMicrophone.goneIfFalse(editable?.trim().isNullOrEmpty())
                 }
             }
         }

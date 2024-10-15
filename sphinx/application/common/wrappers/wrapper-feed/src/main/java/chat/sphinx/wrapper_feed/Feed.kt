@@ -39,7 +39,7 @@ data class Feed(
 ) {
 
     companion object {
-        const val TRIBES_DEFAULT_SERVER_URL = "tribes.sphinx.chat"
+        const val TRIBES_DEFAULT_SERVER_URL = "people.sphinx.chat"
 
         @Suppress("ObjectPropertyName")
         private const val _17 = 17

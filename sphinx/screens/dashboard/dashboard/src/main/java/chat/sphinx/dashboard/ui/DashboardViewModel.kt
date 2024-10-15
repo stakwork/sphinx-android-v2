@@ -199,7 +199,7 @@ internal class DashboardViewModel @Inject constructor(
         const val NETWORK_MIXER_IP = "network_mixer_ip"
         const val ROUTER_URL= "router_url"
         const val ROUTER_PUBKEY= "router_pubkey"
-        const val TRIBES_V1_URL = "tribes.sphinx.chat"
+        const val TRIBES_V1_URL = "people.sphinx.chat"
     }
 
     private val _hideBalanceStateFlow: MutableStateFlow<Int> by lazy {

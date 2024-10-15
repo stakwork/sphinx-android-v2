@@ -20,7 +20,7 @@ class NetworkQueryFeedSearchImpl(
 ): NetworkQueryFeedSearch() {
 
     companion object {
-        private const val TRIBES_DEFAULT_SERVER_URL = "https://tribes.sphinx.chat"
+        private const val TRIBES_DEFAULT_SERVER_URL = "https://people.sphinx.chat"
 
         private const val ENDPOINT_PODCAST_SEARCH = "$TRIBES_DEFAULT_SERVER_URL/search_podcasts?q=%s"
         private const val ENDPOINT_YOUTUBE_SEARCH = "$TRIBES_DEFAULT_SERVER_URL/search_youtube?q=%s"

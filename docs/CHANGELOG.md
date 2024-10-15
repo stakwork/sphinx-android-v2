@@ -1,5 +1,9 @@
 # ChangeLog
 
+## Version 1.0.0-alpha19 (2021-10-15)
+- Fixes people site authentication
+- Fixes empty messages on chat 
+
 ## Version 1.0.0-alpha18 (2021-10-01)
 - Fixes people site authentication
 

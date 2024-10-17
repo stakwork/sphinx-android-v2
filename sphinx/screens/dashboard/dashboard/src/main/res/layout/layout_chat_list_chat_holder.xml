@@ -112,33 +112,6 @@
                 app:layout_constraintEnd_toEndOf="parent"/>
 
             <androidx.appcompat.widget.AppCompatTextView
-                android:id="@+id/text_view_chat_status"
-                android:layout_width="wrap_content"
-                android:layout_height="0dp"
-                android:fontFamily="@font/material_icons_regular"
-                android:gravity="center|start"
-                android:text="@string/material_icon_name_bolt"
-                android:textColor="@color/washedOutReceivedText"
-                android:textSize="15sp"
-                android:paddingTop="15dp"
-                app:layout_constraintBottom_toBottomOf="@+id/image_view_chat_holder_lock"
-                app:layout_constraintStart_toEndOf="@id/image_view_chat_holder_lock"
-                app:layout_constraintTop_toTopOf="@+id/text_view_dashboard_chat_holder_name" />
-
-            <ProgressBar
-                android:id="@+id/progress_bar_chat_status"
-                android:layout_width="@dimen/dashboard_progress_bar_status"
-                android:layout_height="0dp"
-                android:gravity="center|start"
-                android:indeterminate="true"
-                android:paddingTop="15dp"
-                android:indeterminateTint="@android:color/white"
-                android:progressBackgroundTint="@android:color/white"
-                app:layout_constraintBottom_toBottomOf="@+id/image_view_chat_holder_lock"
-                app:layout_constraintTop_toTopOf="@+id/image_view_chat_holder_lock"
-                app:layout_constraintStart_toEndOf="@id/text_view_chat_status" />
-
-            <androidx.appcompat.widget.AppCompatTextView
                 android:id="@+id/text_view_chat_holder_message_icon"
                 android:layout_width="wrap_content"
                 android:layout_height="0dp"
@@ -210,8 +183,7 @@
                 android:textColor="@color/secondaryText"
                 android:textSize="15sp"
                 android:gravity="center_vertical|start"
-                app:layout_constraintStart_toEndOf="@id/text_view_chat_holder_centered_name"
-                app:layout_constraintEnd_toEndOf="parent"/>
+                app:layout_constraintStart_toEndOf="@id/text_view_chat_holder_centered_name" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 

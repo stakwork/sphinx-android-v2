@@ -155,10 +155,6 @@ internal class ChatListViewModel @Inject constructor(
                                     .firstOrNull() ?: continue
 
                                 if (contact.status is ContactStatus.Pending) {
-                                    newList.add(
-                                        DashboardChat.Inactive.Conversation(contact)
-                                    )
-
                                     if (contact.isInviteContact()) {
                                         var contactInvite: Invite? = null
 
@@ -172,6 +168,10 @@ internal class ChatListViewModel @Inject constructor(
                                                 DashboardChat.Inactive.Invite(contact, contactInvite)
                                             )
                                         }
+                                    } else {
+                                        newList.add(
+                                            DashboardChat.Inactive.Conversation(contact)
+                                        )
                                     }
                                 }
 
@@ -233,15 +233,14 @@ internal class ChatListViewModel @Inject constructor(
             }
         }
 
-        if (args.isChatListTypeConversation) {
-            viewModelScope.launch(mainImmediate) {
-                delay(50L)
-                repositoryDashboard.getAllInvites.distinctUntilChanged().collect {
-                    updateChatListContacts(_contactsStateFlow.value)
-                }
-            }
-        }
-
+//        if (args.isChatListTypeConversation) {
+//            viewModelScope.launch(mainImmediate) {
+//                delay(50L)
+//                repositoryDashboard.getAllInvites.distinctUntilChanged().collect {
+//                    updateChatListContacts(_contactsStateFlow.value)
+//                }
+//            }
+//        }
 
         viewModelScope.launch(mainImmediate) {
             val owner = getOwner()

@@ -99,6 +99,7 @@ import chat.sphinx.wrapper_common.tribe.isValidTribeJoinLink
 import chat.sphinx.wrapper_common.tribe.toTribeJoinLink
 import chat.sphinx.wrapper_contact.Contact
 import chat.sphinx.wrapper_contact.ContactAlias
+import chat.sphinx.wrapper_contact.NewContact
 import chat.sphinx.wrapper_contact.avatarUrl
 import chat.sphinx.wrapper_contact.toContactAlias
 import chat.sphinx.wrapper_contact.toContactKey
@@ -870,8 +871,62 @@ internal class DashboardViewModel @Inject constructor(
         }
     }
 
-    fun connectToContact(message: String?) {
-        // TODO V2 implement connectToContact
+    fun connectToContact() {
+        val viewState = deepLinkPopupViewStateContainer.viewStateFlow.value
+
+        viewModelScope.launch(mainImmediate) {
+
+            deepLinkPopupViewStateContainer.updateViewState(
+                DeepLinkPopupViewState.PeopleConnectPopupProcessing
+            )
+
+            var errorMessage = app.getString(R.string.dashboard_connect_generic_error)
+
+            if (viewState is DeepLinkPopupViewState.PeopleConnectPopup) {
+                val alias = viewState.personInfoDto.owner_alias.toContactAlias() ?: ContactAlias(app.getString(R.string.unknown))
+                val photoUrl = viewState.personInfoDto.img?.toPhotoUrl()
+
+                viewState.personInfoDto.owner_pubkey.toLightningNodePubKey()?.let { pubKey ->
+                    viewState.personInfoDto.owner_route_hint?.toLightningRouteHint()?.let { routeHint ->
+
+                        val exitingContact = contactRepository.getContactByPubKey(pubKey).firstOrNull()
+
+                        if (exitingContact == null) {
+
+                            val newContact = NewContact(
+                                alias,
+                                pubKey,
+                                routeHint,
+                                photoUrl,
+                                false,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null
+                            )
+                            connectManagerRepository.createContact(newContact)
+
+                            deepLinkPopupViewStateContainer.updateViewState(
+                                DeepLinkPopupViewState.PopupDismissed
+                            )
+
+                            return@launch
+                        }
+                    } ?: run {
+                        errorMessage = app.getString(R.string.dashboard_connect_invalid_public_key)
+                    }
+                }
+            }
+
+            submitSideEffect(
+                ChatListSideEffect.Notify(errorMessage)
+            )
+
+            deepLinkPopupViewStateContainer.updateViewState(
+                DeepLinkPopupViewState.PopupDismissed
+            )
+        }
     }
 
     fun authorizeExternal() {

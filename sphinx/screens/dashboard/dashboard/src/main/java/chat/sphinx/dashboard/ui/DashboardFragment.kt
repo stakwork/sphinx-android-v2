@@ -461,9 +461,7 @@ internal class DashboardFragment : MotionLayoutFragment<
             }
 
             buttonConnect.setOnClickListener {
-                viewModel.connectToContact(
-                    editTextDashboardPeoplePopupMessage.text?.toString()
-                )
+                viewModel.connectToContact()
             }
         }
     }
@@ -891,9 +889,6 @@ internal class DashboardFragment : MotionLayoutFragment<
 
                             val alias = viewState.alias
                             textViewDashboardPeoplePopupName.text = alias
-
-                            editTextDashboardPeoplePopupMessage.hint = getString(R.string.dashboard_connect_initial_message_hint, alias)
-                            textViewDashboardPeoplePopupDescription.text = viewState.description
 
                             val priceToMeet = (viewState.priceToMeet).toSat()?.asFormattedString(appendUnit = true) ?: ""
                             textViewDashboardPeoplePopupPriceToMeet.text = getString(R.string.dashboard_connect_price_to_meet, priceToMeet)

@@ -94,6 +94,8 @@
     <string name="dashboard_connect_retrieve_person_data_error">無法獲取個人資料</string>
     <string name="dashboard_connect_message_empty">訊息不可以是空的</string>
     <string name="dashboard_connect_generic_error">連接使用者時出錯，請稍後再試</string>
+    <string name="dashboard_connect_existing_contact">您已經與此人連接</string>
+    <string name="dashboard_connect_invalid_public_key">公鑰無效</string>
 
     <string name="dashboard_network_disconnected_node_toast">節點已斷開</string>
     <string name="dashboard_network_connected_node_toast">已連接到節點</string>

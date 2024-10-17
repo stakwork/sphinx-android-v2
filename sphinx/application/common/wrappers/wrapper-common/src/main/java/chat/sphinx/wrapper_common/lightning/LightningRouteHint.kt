@@ -26,7 +26,7 @@ inline val String.isValidLightningRouteHint: Boolean
 value class LightningRouteHint(val value: String) {
 
     companion object {
-        const val REGEX = "[A-F0-9a-f]{66}(:|_)[0-9]+"
+        const val REGEX = "[A-F0-9a-f]{66}(_)[0-9]+"
     }
 
     init {

@@ -92,8 +92,9 @@
     <string name="dashboard_connect_initial_message_hint">Inisyal na mensahe kay %s</string>
     <string name="dashboard_connect_retrieve_person_data_error">Nabigo na i-retrieve ang impormasyon ng tao</string>
     <string name="dashboard_connect_message_empty">Hindi pwedeng walang laman ang mensahe</string>
-
     <string name="dashboard_connect_generic_error">May mali habang kumokonekta sa user, pakisubukan muli mamaya</string>
+    <string name="dashboard_connect_existing_contact">Naka konekta ka na sa taong ito</string>
+    <string name="dashboard_connect_invalid_public_key">Di-wastong Public Key</string>
 
     <string name="dashboard_network_disconnected_node_toast">Na-disconnect na node</string>
     <string name="dashboard_network_connected_node_toast">Kunektadong node</string>

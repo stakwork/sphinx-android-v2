@@ -200,47 +200,10 @@ internal class ChatListViewModel @Inject constructor(
                             }
                         }
                     }
-
-//                    if (contactsCollectionInitialized) {
-//                        withContext(default) {
-//                            for (contact in _contactsStateFlow.value) {
-//
-//                                if (!contactsAdded.contains(contact.id)) {
-//                                    if (contact.isInviteContact()) {
-//                                        var contactInvite: Invite? = null
-//
-//                                        contact.inviteId?.let { inviteId ->
-//                                            contactInvite = withContext(io) {
-//                                                repositoryDashboard.getInviteById(inviteId).firstOrNull()
-//                                            }
-//                                        }
-//                                        if (contactInvite != null) {
-//                                            newList.add(
-//                                                DashboardChat.Inactive.Invite(contact, contactInvite)
-//                                            )
-//                                            continue
-//                                        }
-//                                    }
-//                                    newList.add(
-//                                        DashboardChat.Inactive.Conversation(contact)
-//                                    )
-//                                }
-//                            }
-//                        }
-//                    }
                     chatViewStateContainer.updateDashboardChats(newList)
                 }
             }
         }
-
-//        if (args.isChatListTypeConversation) {
-//            viewModelScope.launch(mainImmediate) {
-//                delay(50L)
-//                repositoryDashboard.getAllInvites.distinctUntilChanged().collect {
-//                    updateChatListContacts(_contactsStateFlow.value)
-//                }
-//            }
-//        }
 
         viewModelScope.launch(mainImmediate) {
             val owner = getOwner()

@@ -1,5 +1,9 @@
 # ChangeLog
 
+## Version 1.0.0-alpha20 (2021-10-18)
+- Fixes adding contact from people site
+- Fixes UI issues on Dashboard
+
 ## Version 1.0.0-alpha19 (2021-10-15)
 - Fixes people site authentication
 - Fixes empty messages on chat 

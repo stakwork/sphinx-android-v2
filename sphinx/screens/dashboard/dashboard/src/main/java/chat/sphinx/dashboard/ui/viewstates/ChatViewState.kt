@@ -13,16 +13,19 @@ internal sealed class ChatViewState: ViewState<ChatViewState>() {
 
     abstract val list: List<DashboardChat>
     abstract val originalList: List<DashboardChat>
+    abstract val showProgressBar: Boolean
 
     class ListMode(
         override val list: List<DashboardChat>,
-        override val originalList: List<DashboardChat>
+        override val originalList: List<DashboardChat>,
+        override val showProgressBar: Boolean = false
     ): ChatViewState()
 
     class SearchMode(
         val filter: ChatFilter.FilterBy,
         override val list: List<DashboardChat>,
-        override val originalList: List<DashboardChat>
+        override val originalList: List<DashboardChat>,
+        override val showProgressBar: Boolean = false
     ): ChatViewState()
 }
 
@@ -61,7 +64,7 @@ private inline fun List<DashboardChat>.filterDashboardChats(
 // TODO: Need to preserve the original list when going between list and search modes.
 internal class ChatViewStateContainer(
     private val dispatchers: CoroutineDispatchers,
-): ViewStateContainer<ChatViewState>(ChatViewState.ListMode(emptyList(), emptyList())) {
+): ViewStateContainer<ChatViewState>(ChatViewState.ListMode(emptyList(), emptyList(), true)) {
 
     override fun updateViewState(viewState: ChatViewState) {
         throw IllegalStateException("Must utilize updateDashboardChats method")

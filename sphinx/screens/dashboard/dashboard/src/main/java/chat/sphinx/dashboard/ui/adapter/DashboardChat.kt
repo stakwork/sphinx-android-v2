@@ -434,73 +434,11 @@ sealed class DashboardChat {
 
             @ExperimentalStdlibApi
             override fun getMessageText(context: Context): String {
-
-                return when (invite?.status) {
-                    is InviteStatus.Pending -> {
-                        context.getString(
-                            R.string.last_message_description_looking_available_node,
-                            (contact.alias?.value ?: context.getString(R.string.unknown))
-                        )
-                    }
-                    is InviteStatus.Ready, InviteStatus.Delivered -> {
-                        context.getString(R.string.last_message_description_invite_ready)
-                    }
-                    is InviteStatus.InProgress -> {
-                        context.getString(
-                            R.string.last_message_description_invite_signing_on,
-                            getChatName(context)
-                        )
-                    }
-                    is InviteStatus.PaymentPending -> {
-                        context.getString(R.string.last_message_description_invite_tap_to_pay)
-                    }
-                    is InviteStatus.ProcessingPayment -> {
-                        context.getString(R.string.last_message_description_invite_payment_sent)
-                    }
-                    is InviteStatus.Complete -> {
-                        context.getString(R.string.last_message_description_invite_signup_complete)
-                    }
-                    is InviteStatus.Expired -> {
-                        context.getString(R.string.last_message_description_invite_expired)
-                    }
-
-                    null,
-                    is InviteStatus.Unknown -> {
-                        ""
-                    }
-                }
+                return context.getString(R.string.last_message_description_invite_ready)
             }
 
             fun getInviteIconAndColor(): Pair<Int, Int>? {
-
-                return when (invite?.status) {
-                    is InviteStatus.Pending -> {
-                        Pair(R.string.material_icon_name_invite_pending, R.color.sphinxOrange)
-                    }
-                    is InviteStatus.Ready, InviteStatus.Delivered -> {
-                        Pair(R.string.material_icon_name_invite_ready, R.color.primaryGreen)
-                    }
-                    is InviteStatus.InProgress -> {
-                        Pair(R.string.material_icon_name_invite_in_progress, R.color.primaryBlue)
-                    }
-                    is InviteStatus.PaymentPending -> {
-                        Pair(R.string.material_icon_name_invite_payment_pending, R.color.secondaryText)
-                    }
-                    is InviteStatus.ProcessingPayment -> {
-                        Pair(R.string.material_icon_name_invite_payment_sent, R.color.secondaryText)
-                    }
-                    is InviteStatus.Complete -> {
-                        Pair(R.string.material_icon_name_invite_complete, R.color.primaryGreen)
-                    }
-                    is InviteStatus.Expired -> {
-                        Pair(R.string.material_icon_name_invite_expired, R.color.primaryRed)
-                    }
-
-                    null,
-                    is InviteStatus.Unknown -> {
-                        null
-                    }
-                }
+                return Pair(R.string.material_icon_name_invite_ready, R.color.primaryGreen)
             }
 
             fun getInvitePrice(): Sat? {

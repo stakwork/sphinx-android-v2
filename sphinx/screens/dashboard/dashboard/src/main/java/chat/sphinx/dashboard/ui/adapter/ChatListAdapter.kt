@@ -330,33 +330,34 @@ internal class ChatListAdapter(
                 textViewDashboardChatHolderName.text = chatName
                 textViewChatHolderCenteredName.text = chatName
 
-
-//                val chatHasMessages = (dashboardChat as? DashboardChat.Active)?.message != null
-//                val activeChatOrInvite = ((dashboardChat is DashboardChat.Active && chatHasMessages) || dashboardChat is DashboardChat.Inactive.Invite)
-//                layoutConstraintDashboardChatHolderMessage.invisibleIfFalse(activeChatOrInvite)
-//                layoutConstraintDashboardChatNoMessageHolder.invisibleIfFalse(!activeChatOrInvite)
+                val chatHasMessages = (dashboardChat as? DashboardChat.Active)?.message != null
+                val activeChatOrInvite = ((dashboardChat is DashboardChat.Active && chatHasMessages) || dashboardChat is DashboardChat.Inactive.Invite)
+                layoutConstraintDashboardChatHolderMessage.invisibleIfFalse(activeChatOrInvite)
+                layoutConstraintDashboardChatNoMessageHolder.invisibleIfFalse(!activeChatOrInvite)
 
                 if (dashboardChat is DashboardChat.Active.Conversation) {
+                    imageViewChatHolderLock.visible
+                    imageViewChatHolderCenteredLock.visible
                     imageViewChatHolderLock.text = getString(R.string.material_icon_name_lock)
-                    progressBarChatStatus.gone
-                    textViewChatStatus.gone
+                    imageViewChatHolderCenteredLock.text = getString(R.string.material_icon_name_lock)
                 }
-                if (dashboardChat is DashboardChat.Inactive.Conversation) {
-                    imageViewChatHolderLock.text = getString(R.string.material_icon_name_lock_open)
-                    progressBarChatStatus.visible
-                    textViewChatStatus.visible
 
-                    textViewChatStatus.setTextColor(
-                        ContextCompat.getColor(
-                            binding.root.context,
-                            R.color.sphinxOrange
-                        )
-                    )
+                if (dashboardChat is DashboardChat.Inactive.Invite) {
+                    imageViewChatHolderLock.gone
+                    imageViewChatHolderCenteredLock.gone
+                }
+
+                if (dashboardChat is DashboardChat.Inactive.Conversation) {
+                    imageViewChatHolderLock.visible
+                    imageViewChatHolderCenteredLock.visible
+                    imageViewChatHolderLock.text = getString(R.string.material_icon_name_lock_open)
+                    imageViewChatHolderCenteredLock.text = getString(R.string.material_icon_name_lock_open)
                 }
                 if (dashboardChat is DashboardChat.Active.GroupOrTribe) {
+                    imageViewChatHolderLock.visible
+                    imageViewChatHolderCenteredLock.visible
                     imageViewChatHolderLock.text = getString(R.string.material_icon_name_lock)
-                    progressBarChatStatus.gone
-                    textViewChatStatus.gone
+                    imageViewChatHolderCenteredLock.text = getString(R.string.material_icon_name_lock)
                 }
 
                 // Time

@@ -94,6 +94,8 @@
     <string name="dashboard_connect_retrieve_person_data_error">人物情報の取得に失敗しました</string>
     <string name="dashboard_connect_message_empty">メッセージは空にできません</string>
     <string name="dashboard_connect_generic_error">ユーザーへの接続中にエラーが発生しました。後でもう一度お試しください</string>
+    <string name="dashboard_connect_existing_contact">既にこの人と繋がっています</string>
+    <string name="dashboard_connect_invalid_public_key">無効な公開鍵</string>
 
     <string name="dashboard_network_disconnected_node_toast">ノードが切断されました</string>
     <string name="dashboard_network_connected_node_toast">ノードが接続されました</string>

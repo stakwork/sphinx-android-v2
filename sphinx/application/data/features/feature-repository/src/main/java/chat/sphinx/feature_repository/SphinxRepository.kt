@@ -1108,7 +1108,7 @@ abstract class SphinxRepository(
     override fun updatePaidInvoices() {
         applicationScope.launch(io) {
             val queries = coreDB.getSphinxDatabaseQueries()
-            queries.messageGetAllPayments().executeAsList()?.forEach { message ->
+            queries.messageGetAllPayments().executeAsList().forEach { message ->
                 messageLock.withLock {
                     queries.messageUpdateInvoiceAsPaidByPaymentHash(message.payment_hash)
                 }
@@ -1137,21 +1137,10 @@ abstract class SphinxRepository(
 
                 val messageSender = msgSender.toMsgSender(moshi)
 
-                val contactInfo = if (fromMe == false) {
-                    messageSender
+                val contactTribePubKey = if (fromMe == true) {
+                    sentTo
                 } else {
-                    // Add
-                    MsgSender(
-                        sentTo,
-                        messageSender.route_hint,
-                        messageSender.alias,
-                        messageSender.photo_url,
-                        messageSender.person,
-                        messageSender.confirmed,
-                        messageSender.code,
-                        messageSender.host,
-                        messageSender.role
-                    )
+                    messageSender.pubkey
                 }
 
                 when (messageType) {
@@ -1180,7 +1169,7 @@ abstract class SphinxRepository(
                                 amount?.toSat()?.let { paidAmount ->
                                     sendMediaKeyOnPaidPurchase(
                                         message,
-                                        contactInfo,
+                                        messageSender,
                                         paidAmount
                                     )
                                 }
@@ -1214,6 +1203,7 @@ abstract class SphinxRepository(
                         upsertMqttMessage(
                             message,
                             messageSender,
+                            contactTribePubKey,
                             messageType,
                             messageUuid,
                             messageId,
@@ -1519,6 +1509,7 @@ abstract class SphinxRepository(
     override suspend fun upsertMqttMessage(
         msg: Msg,
         msgSender: MsgSender,
+        contactTribePubKey: String,
         msgType: MessageType,
         msgUuid: MessageUUID,
         msgIndex: MessageId,
@@ -1534,8 +1525,8 @@ abstract class SphinxRepository(
         tag: TagMessage?
     ) {
         val queries = coreDB.getSphinxDatabaseQueries()
-        val contact = msgSender.pubkey.toLightningNodePubKey()?.let { getContactByPubKey(it).firstOrNull() }
-        val chatTribe = msgSender.pubkey.toChatUUID()?.let { getChatByUUID(it).firstOrNull() }
+        val contact = contactTribePubKey.toLightningNodePubKey()?.let { getContactByPubKey(it).firstOrNull() }
+        val chatTribe = contactTribePubKey.toChatUUID()?.let { getChatByUUID(it).firstOrNull() }
         var messageMedia: MessageMediaDbo? = null
         val isTribe = contact == null
 

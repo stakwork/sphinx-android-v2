@@ -31,7 +31,6 @@ import javax.inject.Inject
 internal class OnBoardReadyViewModel @Inject constructor(
     dispatchers: CoroutineDispatchers,
     private val navigator: OnBoardReadyNavigator,
-    private val contactRepository: ContactRepository,
     private val lightningRepository: LightningRepository,
     private val onBoardStepHandler: OnBoardStepHandler,
 ): SideEffectViewModel<

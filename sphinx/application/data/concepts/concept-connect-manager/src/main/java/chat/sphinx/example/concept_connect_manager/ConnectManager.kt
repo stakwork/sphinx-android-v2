@@ -22,6 +22,8 @@ abstract class ConnectManager {
     abstract val restoreStateFlow: StateFlow<RestoreState?>
     abstract val msgsCountsState: MutableStateFlow<MsgsCounts?>
 
+    abstract fun setOwnerInfo(ownerInfo: OwnerInfo)
+
     // Account Management Methods
     abstract fun createAccount()
     abstract fun restoreAccount(
@@ -178,7 +180,7 @@ interface ConnectManagerListener {
 
     // Account Management Callbacks
     fun onUpdateUserState(userState: String)
-    fun onMnemonicWords(words: String)
+    fun onMnemonicWords(words: String, isRestore: Boolean)
     fun onOwnerRegistered(
         okKey: String,
         routeHint: String,

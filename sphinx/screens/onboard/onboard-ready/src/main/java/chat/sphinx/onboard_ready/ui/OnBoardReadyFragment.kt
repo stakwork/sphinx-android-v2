@@ -5,17 +5,14 @@ import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
-import androidx.navigation.fragment.navArgs
 import by.kirich1409.viewbindingdelegate.viewBinding
 import chat.sphinx.insetter_activity.InsetterActivity
 import chat.sphinx.insetter_activity.addNavigationBarPadding
 import chat.sphinx.insetter_activity.addStatusBarPadding
 import chat.sphinx.kotlin_response.LoadResponse
 import chat.sphinx.kotlin_response.Response
-import chat.sphinx.onboard_common.model.OnBoardInviterData
 import chat.sphinx.onboard_ready.R
 import chat.sphinx.onboard_ready.databinding.FragmentOnBoardReadyBinding
-import chat.sphinx.onboard_ready.navigation.inviterData
 import chat.sphinx.resources.SphinxToastUtils
 import dagger.hilt.android.AndroidEntryPoint
 import io.matthewnelson.android_feature_screens.navigation.CloseAppOnBackPress
@@ -37,8 +34,6 @@ internal class OnBoardReadyFragment: SideEffectFragment<
         FragmentOnBoardReadyBinding
         >(R.layout.fragment_on_board_ready)
 {
-    private val args: OnBoardReadyFragmentArgs by navArgs()
-    private val inviterData: OnBoardInviterData by lazy(LazyThreadSafetyMode.NONE) { args.inviterData }
 
     override val viewModel: OnBoardReadyViewModel by viewModels()
     override val binding: FragmentOnBoardReadyBinding by viewBinding(FragmentOnBoardReadyBinding::bind)

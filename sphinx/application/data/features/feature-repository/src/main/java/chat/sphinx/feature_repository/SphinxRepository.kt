@@ -701,13 +701,18 @@ abstract class SphinxRepository(
     override fun onUpdateUserState(userState: String) {
         userStateFlow.value = userState
     }
-    override fun onMnemonicWords(words: String) {
+    override fun onMnemonicWords(
+        words: String,
+        isRestore: Boolean
+    ) {
         applicationScope.launch(io) {
             words.toWalletMnemonic()?.let {
                 walletDataHandler.persistWalletMnemonic(it)
             }
         }
-        connectionManagerState.value = OwnerRegistrationState.MnemonicWords(words)
+        if (!isRestore) {
+            connectionManagerState.value = OwnerRegistrationState.MnemonicWords(words)
+        }
     }
     override fun onOwnerRegistered(
         okKey: String,
@@ -1107,7 +1112,7 @@ abstract class SphinxRepository(
     override fun updatePaidInvoices() {
         applicationScope.launch(io) {
             val queries = coreDB.getSphinxDatabaseQueries()
-            queries.messageGetAllPayments().executeAsList()?.forEach { message ->
+            queries.messageGetAllPayments().executeAsList().forEach { message ->
                 messageLock.withLock {
                     queries.messageUpdateInvoiceAsPaidByPaymentHash(message.payment_hash)
                 }
@@ -1136,21 +1141,10 @@ abstract class SphinxRepository(
 
                 val messageSender = msgSender.toMsgSender(moshi)
 
-                val contactInfo = if (fromMe == false) {
-                    messageSender
+                val contactTribePubKey = if (fromMe == true) {
+                    sentTo
                 } else {
-                    // Add
-                    MsgSender(
-                        sentTo,
-                        messageSender.route_hint,
-                        messageSender.alias,
-                        messageSender.photo_url,
-                        messageSender.person,
-                        messageSender.confirmed,
-                        messageSender.code,
-                        messageSender.host,
-                        messageSender.role
-                    )
+                    messageSender.pubkey
                 }
 
                 when (messageType) {
@@ -1179,7 +1173,7 @@ abstract class SphinxRepository(
                                 amount?.toSat()?.let { paidAmount ->
                                     sendMediaKeyOnPaidPurchase(
                                         message,
-                                        contactInfo,
+                                        messageSender,
                                         paidAmount
                                     )
                                 }
@@ -1212,7 +1206,8 @@ abstract class SphinxRepository(
 
                         upsertMqttMessage(
                             message,
-                            contactInfo,
+                            messageSender,
+                            contactTribePubKey,
                             messageType,
                             messageUuid,
                             messageId,
@@ -1527,6 +1522,7 @@ abstract class SphinxRepository(
     override suspend fun upsertMqttMessage(
         msg: Msg,
         msgSender: MsgSender,
+        contactTribePubKey: String,
         msgType: MessageType,
         msgUuid: MessageUUID,
         msgIndex: MessageId,
@@ -1542,8 +1538,9 @@ abstract class SphinxRepository(
         tag: TagMessage?
     ) {
         val queries = coreDB.getSphinxDatabaseQueries()
-        val contact = msgSender.pubkey.toLightningNodePubKey()?.let { getContactByPubKey(it).firstOrNull() }
-        val chatTribe = msgSender.pubkey.toChatUUID()?.let { getChatByUUID(it).firstOrNull() }
+        val contact = contactTribePubKey.toLightningNodePubKey()?.let { getContactByPubKey(it).firstOrNull() }
+        val owner = accountOwner.value
+        val chatTribe = contactTribePubKey.toChatUUID()?.let { getChatByUUID(it).firstOrNull() }
         var messageMedia: MessageMediaDbo? = null
         val isTribe = contact == null
 
@@ -1651,25 +1648,52 @@ abstract class SphinxRepository(
                 thread = null
             )
 
-            if (!fromMe) {
-                contact?.id?.let { contactId ->
+            contact?.id?.let { contactId ->
+                if (!fromMe) {
                     val lastMessageIndex = getLastMessage().firstOrNull()?.id?.value
                     val newMessageIndex = msgIndex.value
 
                     if (lastMessageIndex != null) {
                         if (lastMessageIndex < newMessageIndex) {
                             contactLock.withLock {
-                                msgSender.photo_url?.takeIf { it.isNotEmpty() && it != contact.photoUrl?.value }?.let {
-                                    queries.contactUpdatePhotoUrl(it.toPhotoUrl(), contactId)
-                                }
-                                msgSender.alias?.takeIf { it.isNotEmpty() && it != contact.alias?.value }?.let {
-                                    queries.contactUpdateAlias(it.toContactAlias(), contactId)
-                                }
+                                msgSender.photo_url?.takeIf { it.isNotEmpty() && it != contact.photoUrl?.value }
+                                    ?.let {
+                                        queries.contactUpdatePhotoUrl(it.toPhotoUrl(), contactId)
+                                    }
+                                msgSender.alias?.takeIf { it.isNotEmpty() && it != contact.alias?.value }
+                                    ?.let {
+                                        queries.contactUpdateAlias(it.toContactAlias(), contactId)
+                                    }
+                            }
+                        }
+                    }
+                } else {
+                    contactLock.withLock {
+                        if (owner != null) {
+                            if (owner.alias?.value == null) {
+                                msgSender.alias?.takeIf { it.isNotEmpty() && it != owner.alias?.value }
+                                    ?.let {
+                                        queries.contactUpdateAlias(it.toContactAlias(), owner.id)
+                                    }
+                            }
+
+                            if (owner.photoUrl?.value == null) {
+                                msgSender.photo_url?.takeIf { it.isNotEmpty() && it != owner.photoUrl?.value }
+                                    ?.let {
+                                        queries.contactUpdatePhotoUrl(it.toPhotoUrl(), owner.id)
+
+                                        connectManager.ownerInfoStateFlow.value?.let { ownerInfo ->
+                                            connectManager.setOwnerInfo(
+                                                ownerInfo.copy(picture = it)
+                                            )
+                                        }
+                                    }
                             }
                         }
                     }
                 }
             }
+
             if (msgType is MessageType.Payment) {
                 queries.messageUpdateInvoiceAsPaidByPaymentHash(
                     msg.paymentHash?.toLightningPaymentHash()
@@ -2371,50 +2395,27 @@ abstract class SphinxRepository(
     }
 
     override suspend fun updateOwner(
-        alias: String?, privatePhoto: PrivatePhoto?, tipAmount: Sat?
+        alias: String?,
+        privatePhoto: PrivatePhoto?,
+        tipAmount: Sat?
     ): Response<Any, ResponseError> {
         val queries = coreDB.getSphinxDatabaseQueries()
-        var response: Response<Any, ResponseError> = Response.Success(Any())
 
-        // TODO V2 updateOwner
-//        try {
-//            accountOwner.collect { owner ->
-//
-//                if (owner != null) {
-//                    networkQueryContact.updateContact(
-//                        owner.id,
-//                        PutContactDto(
-//                            alias = alias,
-//                            private_photo = privatePhoto?.isTrue(),
-//                            tip_amount = tipAmount?.value
-//                        )
-//                    ).collect { loadResponse ->
-//                        @Exhaustive
-//                        when (loadResponse) {
-//                            is LoadResponse.Loading -> {
-//                            }
-//                            is Response.Error -> {
-//                                response = loadResponse
-//                            }
-//                            is Response.Success -> {
-//                                contactLock.withLock {
-//                                    queries.transaction {
-//                                        upsertContact(loadResponse.value, queries)
-//                                    }
-//                                }
-//                                LOG.d(TAG, "Owner has been successfully updated")
-//                            }
-//                        }
-//                    }
-//
-//                    throw Exception()
-//                }
-//
-//            }
-//        } catch (e: Exception) {
-//        }
+        contactLock.withLock {
+            queries.contactUpdateOwnerInfo(
+                alias?.toContactAlias(),
+                privatePhoto ?: PrivatePhoto.False,
+                tipAmount
+            )
+        }
 
-        return response
+        connectManager.ownerInfoStateFlow.value?.let {
+            connectManager.setOwnerInfo(
+                it.copy(alias = alias)
+            )
+        }
+
+        return Response.Success(Any())
     }
 
     override suspend fun updateContact(
@@ -2597,6 +2598,12 @@ abstract class SphinxRepository(
                                         nnOwner.id,
                                     )
                                 }
+                            }
+
+                            connectManager.ownerInfoStateFlow.value?.let {
+                                connectManager.setOwnerInfo(
+                                    it.copy(picture = newUrl.value)
+                                )
                             }
                         } ?: throw IllegalStateException("Failed to retrieve account owner")
                     }

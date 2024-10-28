@@ -25,6 +25,7 @@ import chat.sphinx.kotlin_response.Response
 import chat.sphinx.kotlin_response.ResponseError
 import chat.sphinx.onboard_common.OnBoardStepHandler
 import chat.sphinx.onboard_common.model.OnBoardInviterData
+import chat.sphinx.onboard_common.model.OnBoardStep
 import chat.sphinx.onboard_common.model.RedemptionCode
 import chat.sphinx.onboard_connecting.R
 import chat.sphinx.onboard_connecting.navigation.OnBoardConnectingNavigator
@@ -79,6 +80,7 @@ internal class OnBoardConnectingViewModel @Inject constructor(
     private val networkQueryInvite: NetworkQueryInvite,
     private val networkQueryContact: NetworkQueryContact,
     private val connectManagerRepository: ConnectManagerRepository,
+    private val onBoardStepHandler: OnBoardStepHandler,
     val moshi: Moshi,
     private val app: Application
     ): MotionLayoutViewModel<
@@ -197,7 +199,8 @@ internal class OnBoardConnectingViewModel @Inject constructor(
         isProductionEnvironment: Boolean,
         routerUrl: String?,
         tribeServerHost: String?,
-        defaultTribe: String?
+        defaultTribe: String?,
+        isRestore: Boolean
     ) {
         viewModelScope.launch(mainImmediate) {
             networkQueryContact.getAccountConfig(isProductionEnvironment).collect { loadResponse ->
@@ -213,7 +216,12 @@ internal class OnBoardConnectingViewModel @Inject constructor(
                             storeDefaultTribe(it)
                         }
                         delay(100L)
-                        navigator.toOnBoardNameScreen()
+
+                        if (isRestore) {
+                            navigator.toOnBoardDesktopScreen()
+                        } else {
+                            navigator.toOnBoardNameScreen()
+                        }
                     }
                     is Response.Error -> {
                         submitSideEffect(
@@ -221,7 +229,11 @@ internal class OnBoardConnectingViewModel @Inject constructor(
                                 app.getString(R.string.connect_manager_set_router_url)
                             )
                         )
-                        navigator.toOnBoardNameScreen()
+                        if (isRestore) {
+                            navigator.toOnBoardDesktopScreen()
+                        } else {
+                            navigator.toOnBoardNameScreen()
+                        }
                     }
                 }
             }
@@ -365,6 +377,7 @@ internal class OnBoardConnectingViewModel @Inject constructor(
                     is OwnerRegistrationState.OwnerRegistered -> {
                         connectionState.mixerServerIp?.let { storeNetworkMixerIp(it) }
                         connectionState.defaultTribe?.let { storeDefaultTribe(it) }
+
                         storeEnvironmentType(connectionState.isProductionEnvironment)
 
                         val needsToFetchConfig = connectionState.routerUrl.isNullOrEmpty() || connectionState.tirbeServerHost.isNullOrEmpty()
@@ -374,13 +387,19 @@ internal class OnBoardConnectingViewModel @Inject constructor(
                                 isProductionEnvironment = connectionState.isProductionEnvironment,
                                 routerUrl = connectionState.routerUrl,
                                 tribeServerHost = connectionState.tirbeServerHost,
-                                defaultTribe = connectionState.defaultTribe
+                                defaultTribe = connectionState.defaultTribe,
+                                isRestore = connectionState.isRestoreAccount
                             )
                         } else {
                             connectionState.routerUrl?.let { storeRouterUrl(it) }
                             connectionState.tirbeServerHost?.let { storeTribeServerIp(it) }
                             delay(100L)
-                            navigator.toOnBoardNameScreen()
+
+                            if (connectionState.isRestoreAccount) {
+                                navigator.toOnBoardDesktopScreen()
+                            } else {
+                                navigator.toOnBoardNameScreen()
+                            }
                         }
                     }
                     else -> {}

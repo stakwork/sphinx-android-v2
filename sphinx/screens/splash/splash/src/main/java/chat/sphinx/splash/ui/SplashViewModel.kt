@@ -66,7 +66,7 @@ internal class SplashViewModel @Inject constructor(
                         navigator.toOnBoardPictureScreen(onBoardStep)
                     }
                     is OnBoardStep.Step4_Ready -> {
-                        navigator.toOnBoardReadyScreen(onBoardStep)
+                        navigator.toOnBoardReadyScreen()
                     }
                     null -> {
                         navigator.toDashboardScreen(
@@ -103,7 +103,7 @@ internal class SplashViewModel @Inject constructor(
                                         navigator.toOnBoardPictureScreen(onBoardStep)
                                     }
                                     is OnBoardStep.Step4_Ready -> {
-                                        navigator.toOnBoardReadyScreen(onBoardStep)
+                                        navigator.toOnBoardReadyScreen()
                                     }
                                     null -> {
                                         navigator.toDashboardScreen(updateBackgroundLoginTime = true)
@@ -133,7 +133,7 @@ internal class SplashViewModel @Inject constructor(
                             navigator.toOnBoardPictureScreen(onBoardStep)
                         }
                         is OnBoardStep.Step4_Ready -> {
-                            navigator.toOnBoardReadyScreen(onBoardStep)
+                            navigator.toOnBoardReadyScreen()
                         }
                         null -> {
                             delay(1000L) // need a slight delay for window to fully hand over to splash

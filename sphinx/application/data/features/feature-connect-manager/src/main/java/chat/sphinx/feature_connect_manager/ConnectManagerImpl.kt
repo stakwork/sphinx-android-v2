@@ -1155,7 +1155,10 @@ class ConnectManagerImpl: ConnectManager()
                 seed = mnemonicToSeed(words)
 
                 notifyListeners {
-                    onMnemonicWords(words)
+                    onMnemonicWords(
+                        words,
+                        restoreMnemonic != null
+                    )
                 }
             } catch (e: Exception) {
             }

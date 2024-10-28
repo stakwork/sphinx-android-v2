@@ -697,13 +697,18 @@ abstract class SphinxRepository(
     override fun onUpdateUserState(userState: String) {
         userStateFlow.value = userState
     }
-    override fun onMnemonicWords(words: String) {
+    override fun onMnemonicWords(
+        words: String,
+        isRestore: Boolean
+    ) {
         applicationScope.launch(io) {
             words.toWalletMnemonic()?.let {
                 walletDataHandler.persistWalletMnemonic(it)
             }
         }
-        connectionManagerState.value = OwnerRegistrationState.MnemonicWords(words)
+        if (!isRestore) {
+            connectionManagerState.value = OwnerRegistrationState.MnemonicWords(words)
+        }
     }
     override fun onOwnerRegistered(
         okKey: String,

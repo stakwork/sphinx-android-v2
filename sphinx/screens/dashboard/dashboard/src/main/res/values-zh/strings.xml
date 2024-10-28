@@ -164,4 +164,6 @@
 
     <string name="time_left">剩餘 %s</string>
     <string name="dashboard_invite_code_screen">INVITE CODE</string>
+
+    <string name="dashboard_enter_personal_info">輸入您的暱稱和可選的個人資料圖片\n完成您的個人資料設置</string>
 </resources>

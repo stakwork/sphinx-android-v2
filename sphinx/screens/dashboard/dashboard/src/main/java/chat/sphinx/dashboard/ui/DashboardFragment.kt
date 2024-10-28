@@ -624,6 +624,8 @@ internal class DashboardFragment : MotionLayoutFragment<
                     } else {
                         viewModel.fetchDeletedMessagesOnDb()
                         root.gone
+
+                        viewModel.finishSettingUpPersonalInfo()
                     }
                 }
             }

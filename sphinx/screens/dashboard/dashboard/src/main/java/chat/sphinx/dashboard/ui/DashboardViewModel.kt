@@ -1535,6 +1535,23 @@ internal class DashboardViewModel @Inject constructor(
         }
     }
 
+    fun finishSettingUpPersonalInfo() {
+        viewModelScope.launch(mainImmediate) {
+            val owner = getOwner()
+
+            if (owner.alias?.value?.isNullOrEmpty() == true) {
+                submitSideEffect(
+                    ChatListSideEffect.Notify(
+                        app.getString(R.string.dashboard_enter_personal_info)
+                    )
+                )
+
+                delay(1000L)
+                navDrawerNavigator.toProfileScreen()
+            }
+        }
+    }
+
     fun sendAppLog(appLog: String) {
         actionsRepository.setAppLog(appLog)
     }

@@ -17,6 +17,8 @@ abstract class OnBoardConnectingNavigator(
 
     abstract suspend fun toOnBoardMessageScreen(onBoardStep1: OnBoardStep.Step1_WelcomeMessage)
 
+    abstract suspend fun toOnBoardDesktopScreen()
+
     suspend fun popBackStack() {
         navigationDriver.submitNavigationRequest(PopBackStack())
     }

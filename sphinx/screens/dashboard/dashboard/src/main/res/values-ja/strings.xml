@@ -164,6 +164,8 @@
 
     <string name="time_left">残り%s</string>
     <string name="dashboard_invite_code_screen">INVITE CODE</string>
+
+    <string name="dashboard_enter_personal_info">ニックネームとオプションのプロフィール写真を入力して\nプロフィールの設定を完了します</string>
 </resources>
 
 

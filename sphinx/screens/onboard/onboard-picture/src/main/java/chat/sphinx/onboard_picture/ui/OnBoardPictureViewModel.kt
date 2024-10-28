@@ -58,13 +58,7 @@ internal class OnBoardPictureViewModel @Inject constructor(
         }
 
         nextScreenJob = viewModelScope.launch {
-            val step4 = onBoardStepHandler.persistOnBoardStep4Data(inviterData)
-
-            if (step4 != null) {
-                navigator.toOnBoardDesktopScreen(step4)
-            } else {
-                // TODO: Handle Persistence Error
-            }
+            navigator.toOnBoardDesktopScreen()
         }
     }
 

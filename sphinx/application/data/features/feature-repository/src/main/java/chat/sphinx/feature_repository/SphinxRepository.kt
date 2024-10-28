@@ -1208,7 +1208,7 @@ abstract class SphinxRepository(
 
                         upsertMqttMessage(
                             message,
-                            contactInfo,
+                            messageSender,
                             messageType,
                             messageUuid,
                             messageId,
@@ -1638,25 +1638,44 @@ abstract class SphinxRepository(
                 thread = null
             )
 
-            if (!fromMe) {
-                contact?.id?.let { contactId ->
+            contact?.id?.let { contactId ->
+                if (!fromMe) {
                     val lastMessageIndex = getLastMessage().firstOrNull()?.id?.value
                     val newMessageIndex = msgIndex.value
 
                     if (lastMessageIndex != null) {
                         if (lastMessageIndex < newMessageIndex) {
                             contactLock.withLock {
-                                msgSender.photo_url?.takeIf { it.isNotEmpty() && it != contact.photoUrl?.value }?.let {
-                                    queries.contactUpdatePhotoUrl(it.toPhotoUrl(), contactId)
-                                }
-                                msgSender.alias?.takeIf { it.isNotEmpty() && it != contact.alias?.value }?.let {
+                                msgSender.photo_url?.takeIf { it.isNotEmpty() && it != contact.photoUrl?.value }
+                                    ?.let {
+                                        queries.contactUpdatePhotoUrl(it.toPhotoUrl(), contactId)
+                                    }
+                                msgSender.alias?.takeIf { it.isNotEmpty() && it != contact.alias?.value }
+                                    ?.let {
+                                        queries.contactUpdateAlias(it.toContactAlias(), contactId)
+                                    }
+                            }
+                        }
+                    }
+                } else {
+                    contactLock.withLock {
+                        if (contact.alias?.value == null) {
+                            msgSender.alias?.takeIf { it.isNotEmpty() && it != contact.photoUrl?.value }
+                                ?.let {
                                     queries.contactUpdateAlias(it.toContactAlias(), contactId)
                                 }
-                            }
+                        }
+
+                        if (contact.photoUrl?.value == null) {
+                            msgSender.photo_url?.takeIf { it.isNotEmpty() && it != contact.photoUrl?.value }
+                                ?.let {
+                                    queries.contactUpdatePhotoUrl(it.toPhotoUrl(), contactId)
+                                }
                         }
                     }
                 }
             }
+
             if (msgType is MessageType.Payment) {
                 queries.messageUpdateInvoiceAsPaidByPaymentHash(
                     msg.paymentHash?.toLightningPaymentHash()

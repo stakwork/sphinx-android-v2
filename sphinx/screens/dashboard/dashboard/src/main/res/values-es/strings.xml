@@ -169,4 +169,6 @@
 
     <string name="time_left">Faltan %s</string>
     <string name="dashboard_invite_code_screen">CODIGO DE INVITACIÓN</string>
+
+    <string name="dashboard_enter_personal_info">Ingresa tu apodo y una foto de perfil opcional\npara terminar de configurar tu Perfil</string>
 </resources>

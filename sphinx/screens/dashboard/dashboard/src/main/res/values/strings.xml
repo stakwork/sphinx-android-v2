@@ -171,6 +171,6 @@
 
     <string name="dashboard_invite_code_screen">INVITE CODE</string>
 
-
+    <string name="dashboard_enter_personal_info">Enter your nickname and an optional profile picture\nto finish setting up your Profile</string>
 </resources>
 

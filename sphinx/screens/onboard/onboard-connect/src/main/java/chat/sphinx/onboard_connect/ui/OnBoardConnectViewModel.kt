@@ -225,17 +225,20 @@ internal class OnBoardConnectViewModel @Inject constructor(
                     connectManagerRepository.setMnemonicWords(redemptionCode.mnemonic)
 
                     // set network type
-                    submitSideEffect(OnBoardConnectSideEffect.CheckBitcoinNetwork(
-                        regTestCallback = {
-                            connectManagerRepository.setNetworkType(true)
-                        }, mainNetCallback = {
-                            connectManagerRepository.setNetworkType(false)
-                        }, callback = {
-                            viewModelScope.launch(mainImmediate) {
-                                presentLoginModal()
-                            }
-                        })
-                    )
+                    connectManagerRepository.setNetworkType(false)
+                    presentLoginModal()
+
+//                    submitSideEffect(OnBoardConnectSideEffect.CheckBitcoinNetwork(
+//                        regTestCallback = {
+//                            connectManagerRepository.setNetworkType(true)
+//                        }, mainNetCallback = {
+//                            connectManagerRepository.setNetworkType(false)
+//                        }, callback = {
+//                            viewModelScope.launch(mainImmediate) {
+//                                presentLoginModal()
+//                            }
+//                        })
+//                    )
                 }
             }
         } else {

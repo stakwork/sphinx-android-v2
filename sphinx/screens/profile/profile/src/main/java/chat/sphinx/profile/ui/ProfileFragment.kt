@@ -238,14 +238,6 @@ internal class ProfileFragment: SideEffectFragment<
             }
 
             includeProfileAdvancedContainerHolder.apply {
-                editTextProfileAdvancedContainerServerUrl.setOnFocusChangeListener { _, hasFocus ->
-                    if (hasFocus) {
-                        return@setOnFocusChangeListener
-                    }
-                    // TODO V2  Update sever URL
-                }
-
-                removeFocusOnEnter(editTextProfileAdvancedContainerServerUrl)
 
                 seekBarProfileAdvancedContainerPinTimeout.setOnSeekBarChangeListener(
                     object : SeekBar.OnSeekBarChangeListener {

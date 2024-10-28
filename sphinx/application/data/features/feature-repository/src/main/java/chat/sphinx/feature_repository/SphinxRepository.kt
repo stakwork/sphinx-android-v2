@@ -2382,50 +2382,20 @@ abstract class SphinxRepository(
     }
 
     override suspend fun updateOwner(
-        alias: String?, privatePhoto: PrivatePhoto?, tipAmount: Sat?
+        alias: String?,
+        privatePhoto: PrivatePhoto?,
+        tipAmount: Sat?
     ): Response<Any, ResponseError> {
         val queries = coreDB.getSphinxDatabaseQueries()
-        var response: Response<Any, ResponseError> = Response.Success(Any())
 
-        // TODO V2 updateOwner
-//        try {
-//            accountOwner.collect { owner ->
-//
-//                if (owner != null) {
-//                    networkQueryContact.updateContact(
-//                        owner.id,
-//                        PutContactDto(
-//                            alias = alias,
-//                            private_photo = privatePhoto?.isTrue(),
-//                            tip_amount = tipAmount?.value
-//                        )
-//                    ).collect { loadResponse ->
-//                        @Exhaustive
-//                        when (loadResponse) {
-//                            is LoadResponse.Loading -> {
-//                            }
-//                            is Response.Error -> {
-//                                response = loadResponse
-//                            }
-//                            is Response.Success -> {
-//                                contactLock.withLock {
-//                                    queries.transaction {
-//                                        upsertContact(loadResponse.value, queries)
-//                                    }
-//                                }
-//                                LOG.d(TAG, "Owner has been successfully updated")
-//                            }
-//                        }
-//                    }
-//
-//                    throw Exception()
-//                }
-//
-//            }
-//        } catch (e: Exception) {
-//        }
-
-        return response
+        contactLock.withLock {
+            queries.contactUpdateOwnerInfo(
+                alias?.toContactAlias(),
+                privatePhoto ?: PrivatePhoto.False,
+                tipAmount
+            )
+        }
+        return Response.Success(Any())
     }
 
     override suspend fun updateContact(

@@ -547,7 +547,8 @@ WHERE id = ?;
 contactUpdateOwnerInfo:
 UPDATE contactDbo
 SET alias = :alias,
-    photo_url = : photo_url
+    private_photo = :private_photo,
+    tip_amount = :tip_amount
 WHERE owner = 1;
 
 contactUpdateOwnerDeviceId:

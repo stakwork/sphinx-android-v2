@@ -1,5 +1,9 @@
 # ChangeLog
 
+## Version 1.0.0-alpha21 (2021-10-28)
+- Fixes issues on restore
+- Fixes routing issue when paying invoices
+
 ## Version 1.0.0-alpha20 (2021-10-18)
 - Fixes adding contact from people site
 - Fixes UI issues on Dashboard

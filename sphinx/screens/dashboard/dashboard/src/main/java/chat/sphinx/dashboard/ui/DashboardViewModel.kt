@@ -1403,6 +1403,8 @@ internal class DashboardViewModel @Inject constructor(
             }
 
             var payeeLspPubKey = invoiceBolt11.hop_hints?.getOrNull(0)?.substringBefore('_')
+            var payeeRouteHint = invoiceBolt11.hop_hints?.getOrNull((invoiceBolt11.hop_hints?.size ?: 1) - 1)
+            var payeeHasRouteHint = payeeRouteHint != null
             val ownerLsp = getOwner().routeHint?.getLspPubKey()
 
             if (payeeLspPubKey == null) {
@@ -1414,7 +1416,7 @@ internal class DashboardViewModel @Inject constructor(
 
                 val isRouteAvailable = connectManagerRepository.isRouteAvailable(
                     invoicePayeePubKey.value,
-                    null,
+                    payeeRouteHint,
                     invoiceAmountMilliSat
                 )
 
@@ -1423,7 +1425,13 @@ internal class DashboardViewModel @Inject constructor(
                         lightningPaymentRequest,
                         null,
                         null,
-                        invoiceAmountMilliSat
+                        invoiceAmountMilliSat,
+                        isSphinxInvoice = payeeHasRouteHint,
+                        callback = {
+                            viewModelScope.launch(mainImmediate) {
+                                submitSideEffect(ChatListSideEffect.Notify(app.getString(R.string.processing_invoice)))
+                            }
+                        }
                     )
                 } else {
                     val routerUrl = serverSettingsSharedPreferences.getString(ROUTER_URL, null)
@@ -1441,20 +1449,29 @@ internal class DashboardViewModel @Inject constructor(
                         when (response) {
                             is LoadResponse.Loading -> {}
                             is Response.Error -> {
-                                submitSideEffect(ChatListSideEffect.Notify(app.getString(R.string.error_getting_route)))
+                                if (payeeHasRouteHint) {
+                                    submitSideEffect(ChatListSideEffect.Notify(app.getString(R.string.error_getting_route)))
+                                } else {
+                                    connectManagerRepository.payInvoiceFromLSP(lightningPaymentRequest)
+                                }
                             }
 
                             is Response.Success -> {
                                 try {
                                     val routerPubKey = serverSettingsSharedPreferences
                                         .getString(ROUTER_PUBKEY, null)
-                                        ?: "true"
 
                                     connectManagerRepository.payInvoice(
                                         lightningPaymentRequest,
                                         response.value,
                                         routerPubKey,
-                                        invoiceAmountMilliSat
+                                        invoiceAmountMilliSat,
+                                        isSphinxInvoice = payeeHasRouteHint,
+                                        callback = {
+                                            viewModelScope.launch(mainImmediate) {
+                                                submitSideEffect(ChatListSideEffect.Notify(app.getString(R.string.processing_invoice)))
+                                            }
+                                        }
                                     )
                                 } catch (e: Exception) {
                                     submitSideEffect(ChatListSideEffect.Notify(app.getString(R.string.error_getting_route)))
@@ -1468,7 +1485,13 @@ internal class DashboardViewModel @Inject constructor(
                     lightningPaymentRequest,
                     null,
                     null,
-                    invoiceAmountMilliSat
+                    invoiceAmountMilliSat,
+                    isSphinxInvoice = payeeHasRouteHint,
+                    callback = {
+                        viewModelScope.launch(mainImmediate) {
+                            submitSideEffect(ChatListSideEffect.Notify(app.getString(R.string.processing_invoice)))
+                        }
+                    }
                 )
             }
         }

@@ -139,6 +139,7 @@
     <string name="invalid_invoice">Invalid invoice</string>
     <string name="router_url_not_found">Router URL not found</string>
     <string name="error_getting_route">Error getting route</string>
+    <string name="processing_invoice">Pinoproseso ang pagbabayad: Maaaring tumagal ng hanggang 60 segundo ang prosesong ito. Pagpasensyahan niyo na po</string>
     <string name="boost_amount_too_low">Ang halaga ng boost ay dapat higit sa 0</string>
     <string name="tribe_member_profile_send_sats">Magpadala ng Sats</string>
     <string name="tribe_member_profile_earn_badges">Kumita ng mga Badge</string>

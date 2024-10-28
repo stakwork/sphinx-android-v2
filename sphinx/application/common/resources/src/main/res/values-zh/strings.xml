@@ -66,6 +66,7 @@
     <string name="invalid_invoice">Invalid invoice</string>
     <string name="router_url_not_found">Router URL not found</string>
     <string name="error_getting_route">Error getting route</string>
+    <string name="processing_invoice">處理付款：此過程可能需要長達 60 秒。請耐心等待</string>
 
     <string name="tribe_member_profile_send_sats">發送Sats</string>
     <string name="tribe_member_profile_price_to_meet">見面價格：</string>

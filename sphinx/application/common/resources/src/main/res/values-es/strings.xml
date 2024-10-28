@@ -65,9 +65,11 @@
 
     <string name="balance_too_low">Balance demasiado bajo</string>
     <string name="boost_amount_too_low">El monto del Boost debe ser mayor a 0</string>
-    <string name="invalid_invoice_es">Factura inválida</string>
-    <string name="router_url_not_found_es">URL del enrutador no encontrada</string>
-    <string name="error_getting_route_es">Error al obtener la ruta</string>
+
+    <string name="invalid_invoice">Factura inválida</string>
+    <string name="router_url_not_found">URL del enrutador no encontrada</string>
+    <string name="error_getting_route">Error al obtener la ruta</string>
+    <string name="processing_invoice">Procesando el pago: este proceso podría demorar hasta 60 segundos. Por favor, tenga paciencia.</string>
 
     <string name="tribe_member_profile_send_sats">Enviar Sats</string>
     <string name="tribe_member_profile_price_to_meet">Monto para conectar:</string>

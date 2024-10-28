@@ -64,6 +64,7 @@ import uniffi.sphinxrs.mnemonicToSeed
 import uniffi.sphinxrs.mute
 import uniffi.sphinxrs.parseInvite
 import uniffi.sphinxrs.parseInvoice
+import uniffi.sphinxrs.pay
 import uniffi.sphinxrs.payInvoice
 import uniffi.sphinxrs.paymentHashFromInvoice
 import uniffi.sphinxrs.pingDone
@@ -1784,7 +1785,7 @@ class ConnectManagerImpl: ConnectManager()
     override fun processInvoicePayment(
         paymentRequest: String,
         milliSatAmount: Long
-    ) {
+    ): String? {
         try {
             val invoice = payInvoice(
                 ownerSeed!!,
@@ -1794,11 +1795,30 @@ class ConnectManagerImpl: ConnectManager()
                 milliSatAmount.toULong()
             )
             handleRunReturn(invoice)
+            return invoice.msgs.first()?.tag
         } catch (e: Exception) {
             notifyListeners {
                 onConnectManagerError(ConnectManagerError.PayInvoiceError)
             }
             Log.e("MQTT_MESSAGES", "processInvoicePayment ${e.message}")
+            return null
+        }
+    }
+
+    override fun payInvoiceFromLSP(paymentRequest: String) {
+        try {
+            val invoice = pay(
+                ownerSeed!!,
+                getTimestampInMilliseconds(),
+                getCurrentUserState(),
+                paymentRequest
+            )
+            handleRunReturn(invoice)
+        } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.PayInvoiceError)
+            }
+            Log.e("MQTT_MESSAGES", "payInvoiceFromLSP ${e.message}")
         }
     }
 

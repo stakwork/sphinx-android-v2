@@ -1539,7 +1539,7 @@ internal class DashboardViewModel @Inject constructor(
         viewModelScope.launch(mainImmediate) {
             val owner = getOwner()
 
-            if (owner.alias?.value?.isNullOrEmpty() == true) {
+            if (owner.alias?.value?.trim().isNullOrEmpty() == true) {
                 submitSideEffect(
                     ChatListSideEffect.Notify(
                         app.getString(R.string.dashboard_enter_personal_info)

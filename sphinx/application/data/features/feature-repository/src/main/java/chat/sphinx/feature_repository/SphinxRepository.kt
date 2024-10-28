@@ -261,6 +261,10 @@ abstract class SphinxRepository(
         MutableStateFlow(null)
     }
 
+    override val processingInvoice: MutableStateFlow<Pair<String, String>?> by lazy {
+        MutableStateFlow(null)
+    }
+
     override val webViewPreImage: MutableStateFlow<String?> by lazy {
         MutableStateFlow(null)
     }
@@ -1259,25 +1263,34 @@ abstract class SphinxRepository(
             val newSentStatus = sentStatus.toNewSentStatus(moshi)
             val queries = coreDB.getSphinxDatabaseQueries()
 
-            if (newSentStatus.isFailedMessage()) {
-                queries.messageUpdateStatusAndPaymentHashByTag(
-                    MessageStatus.Failed,
-                    newSentStatus.payment_hash?.toLightningPaymentHash(),
-                    newSentStatus.message?.toErrorMessage(),
-                    newSentStatus.tag?.toTagMessage()
-                )
+            if (newSentStatus.tag == processingInvoice.value?.second) {
+                if (newSentStatus.isFailedMessage()) {
+                    processingInvoice.value?.first?.toLightningPaymentRequestOrNull()?.let {
+                        payInvoiceFromLSP(it)
+                    }
+                }
+                processingInvoice.value = null
             } else {
-                queries.messageUpdateStatusAndPaymentHashByTag(
-                    MessageStatus.Received,
-                    newSentStatus.payment_hash?.toLightningPaymentHash(),
-                    newSentStatus.message?.toErrorMessage(),
-                    newSentStatus.tag?.toTagMessage()
-                )
+                if (newSentStatus.isFailedMessage()) {
+                    queries.messageUpdateStatusAndPaymentHashByTag(
+                        MessageStatus.Failed,
+                        newSentStatus.payment_hash?.toLightningPaymentHash(),
+                        newSentStatus.message?.toErrorMessage(),
+                        newSentStatus.tag?.toTagMessage()
+                    )
+                } else {
+                    queries.messageUpdateStatusAndPaymentHashByTag(
+                        MessageStatus.Received,
+                        newSentStatus.payment_hash?.toLightningPaymentHash(),
+                        newSentStatus.message?.toErrorMessage(),
+                        newSentStatus.tag?.toTagMessage()
+                    )
 
-                // Check if web view payment hash matches
-                if (newSentStatus.payment_hash == webViewPaymentHash.value) {
-                    webViewPreImage.value = newSentStatus.preimage
-                    webViewPaymentHash.value = null
+                    // Check if web view payment hash matches
+                    if (newSentStatus.payment_hash == webViewPaymentHash.value) {
+                        webViewPreImage.value = newSentStatus.preimage
+                        webViewPaymentHash.value = null
+                    }
                 }
             }
         }
@@ -1701,7 +1714,7 @@ abstract class SphinxRepository(
         }
     }
 
-    fun sendNewMessage(
+    private fun sendNewMessage(
         contact: String,
         messageContent: String,
         attachmentInfo: AttachmentInfo?,
@@ -4446,11 +4459,12 @@ abstract class SphinxRepository(
         endHops: String?,
         routerPubKey: String?,
         milliSatAmount: Long,
-        paymentHash: String?
+        isSphinxInvoice: Boolean,
+        paymentHash: String?,
+        callback: (() -> Unit)?
     ) {
         if (paymentHash != null) {
             webViewPaymentHash.value = paymentHash
-
         }
 
         if (endHops?.isNotEmpty() == true && routerPubKey != null) {
@@ -4460,10 +4474,28 @@ abstract class SphinxRepository(
                 milliSatAmount
             )
         }
-        connectManager.processInvoicePayment(
+        val tag = connectManager.processInvoicePayment(
             paymentRequest.value,
             milliSatAmount
         )
+
+        if (!isSphinxInvoice) {
+            tag?.let {
+                callback?.invoke()
+                processingInvoice.value = Pair(paymentRequest.value, it)
+
+                val timer = Timer("OneTimeTimer", true)
+                timer.schedule(object : TimerTask() {
+                    override fun run() {
+                        processingInvoice.value = null
+                    }
+                }, 60000)
+            }
+        }
+    }
+
+    override suspend fun payInvoiceFromLSP(paymentRequest: LightningPaymentRequest) {
+        connectManager.payInvoiceFromLSP(paymentRequest.value)
     }
 
     override suspend fun sendKeySend(

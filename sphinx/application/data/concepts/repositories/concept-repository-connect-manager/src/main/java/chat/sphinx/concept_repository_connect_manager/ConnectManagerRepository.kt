@@ -34,6 +34,7 @@ interface ConnectManagerRepository {
     val tribeMembersState: MutableStateFlow<TribeMembersResponse?>
     val restoreProgress: MutableStateFlow<Int?>
     val webViewPaymentHash: MutableStateFlow<String?>
+    val processingInvoice: MutableStateFlow<Pair<String, String>?>
     val webViewPreImage: MutableStateFlow<String?>
     val restoreMinIndex: MutableStateFlow<Long?>
 
@@ -82,8 +83,15 @@ interface ConnectManagerRepository {
         endHops: String?,
         routerPubKey: String?,
         milliSatAmount: Long,
-        paymentHash: String? = null
+        isSphinxInvoice: Boolean = true,
+        paymentHash: String? = null,
+        callback: (() -> Unit)? = null
     )
+
+    suspend fun payInvoiceFromLSP(
+        paymentRequest: LightningPaymentRequest
+    )
+
     suspend fun sendKeySend(
         pubKey: String,
         endHops: String?,

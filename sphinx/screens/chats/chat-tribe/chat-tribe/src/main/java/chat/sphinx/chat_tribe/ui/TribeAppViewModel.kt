@@ -369,7 +369,7 @@ internal class TribeAppViewModel @Inject constructor(
                                         null,
                                         null,
                                         milliSatAmount = convertToMilliSat(invoiceAmount),
-                                        paymentHash = paymentHash
+                                        paymentHash = paymentHash,
                                     )
                                     connectManagerRepository.webViewPreImage.collect { preimage ->
                                         if (preimage?.isNotEmpty() == true) {
@@ -422,10 +422,8 @@ internal class TribeAppViewModel @Inject constructor(
                                             is Response.Error -> {}
                                             is Response.Success -> {
                                                 try {
-                                                    val routerPubKey =
-                                                        serverSettingsSharedPreferences
+                                                    val routerPubKey = serverSettingsSharedPreferences
                                                             .getString(ROUTER_PUBKEY, null)
-                                                            ?: "true"
 
                                                     val nnPaymentRequest =
                                                         webViewDto.paymentRequest?.toLightningPaymentRequestOrNull()
@@ -438,7 +436,7 @@ internal class TribeAppViewModel @Inject constructor(
                                                         milliSatAmount = convertToMilliSat(
                                                             invoiceAmount
                                                         ),
-                                                        paymentHash = paymentHash
+                                                        paymentHash = paymentHash,
                                                     )
                                                     connectManagerRepository.webViewPreImage.collect { preimage ->
                                                         if (preimage?.isNotEmpty() == true) {
@@ -756,7 +754,6 @@ internal class TribeAppViewModel @Inject constructor(
                                     try {
                                         val routerPubKey = serverSettingsSharedPreferences
                                             .getString(ROUTER_PUBKEY, null)
-                                            ?: "true"
 
                                         val nnPaymentRequest =
                                             webViewDto.paymentRequest.toLightningPaymentRequestOrNull()

@@ -150,6 +150,10 @@ class ConnectManagerImpl: ConnectManager()
         MutableStateFlow(null)
     }
 
+    override fun setOwnerInfo(ownerInfo: OwnerInfo) {
+        _ownerInfoStateFlow.value = ownerInfo
+    }
+
     private var mixerIp: String?
         get() = _mixerIp?.let {
             if (isProductionEnvironment()) {

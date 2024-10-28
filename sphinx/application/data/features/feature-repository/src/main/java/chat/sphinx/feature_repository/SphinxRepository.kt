@@ -1526,6 +1526,7 @@ abstract class SphinxRepository(
     ) {
         val queries = coreDB.getSphinxDatabaseQueries()
         val contact = contactTribePubKey.toLightningNodePubKey()?.let { getContactByPubKey(it).firstOrNull() }
+        val owner = accountOwner.value
         val chatTribe = contactTribePubKey.toChatUUID()?.let { getChatByUUID(it).firstOrNull() }
         var messageMedia: MessageMediaDbo? = null
         val isTribe = contact == null
@@ -1655,18 +1656,26 @@ abstract class SphinxRepository(
                     }
                 } else {
                     contactLock.withLock {
-                        if (contact.alias?.value == null) {
-                            msgSender.alias?.takeIf { it.isNotEmpty() && it != contact.photoUrl?.value }
-                                ?.let {
-                                    queries.contactUpdateAlias(it.toContactAlias(), contactId)
-                                }
-                        }
+                        if (owner != null) {
+                            if (owner.alias?.value == null) {
+                                msgSender.alias?.takeIf { it.isNotEmpty() && it != owner.alias?.value }
+                                    ?.let {
+                                        queries.contactUpdateAlias(it.toContactAlias(), owner.id)
+                                    }
+                            }
 
-                        if (contact.photoUrl?.value == null) {
-                            msgSender.photo_url?.takeIf { it.isNotEmpty() && it != contact.photoUrl?.value }
-                                ?.let {
-                                    queries.contactUpdatePhotoUrl(it.toPhotoUrl(), contactId)
-                                }
+                            if (owner.photoUrl?.value == null) {
+                                msgSender.photo_url?.takeIf { it.isNotEmpty() && it != owner.photoUrl?.value }
+                                    ?.let {
+                                        queries.contactUpdatePhotoUrl(it.toPhotoUrl(), owner.id)
+
+                                        connectManager.ownerInfoStateFlow.value?.let { ownerInfo ->
+                                            connectManager.setOwnerInfo(
+                                                ownerInfo.copy(picture = it)
+                                            )
+                                        }
+                                    }
+                            }
                         }
                     }
                 }
@@ -2386,6 +2395,13 @@ abstract class SphinxRepository(
                 tipAmount
             )
         }
+
+        connectManager.ownerInfoStateFlow.value?.let {
+            connectManager.setOwnerInfo(
+                it.copy(alias = alias)
+            )
+        }
+
         return Response.Success(Any())
     }
 
@@ -2569,6 +2585,12 @@ abstract class SphinxRepository(
                                         nnOwner.id,
                                     )
                                 }
+                            }
+
+                            connectManager.ownerInfoStateFlow.value?.let {
+                                connectManager.setOwnerInfo(
+                                    it.copy(picture = newUrl.value)
+                                )
                             }
                         } ?: throw IllegalStateException("Failed to retrieve account owner")
                     }

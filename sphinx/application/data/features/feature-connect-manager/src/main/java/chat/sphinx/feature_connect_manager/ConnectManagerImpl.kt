@@ -664,7 +664,7 @@ class ConnectManagerImpl: ConnectManager()
 
                     msgsCountsState.value?.first_for_each_scid_highest_index?.let { highestIndex ->
                         if (nnHighestIndex < highestIndex) {
-                            fetchFirstMessagesPerKey(nnHighestIndex.plus(1L),null)
+                            fetchFirstMessagesPerKey(nnHighestIndex.plus(1L), msgsCountsState.value?.ok_key)
                         } else {
                             goToNextPhaseOrFinish()
                         }
@@ -676,7 +676,7 @@ class ConnectManagerImpl: ConnectManager()
                 val minIndex = msgs.minByOrNull { it.index?.toLong() ?: 0L }?.index?.toULong()
                 minIndex?.let { nnMinIndex ->
                     calculateMessageRestore()
-                    fetchMessagesOnRestoreAccount(nnMinIndex.minus(1u).toLong())
+                    fetchMessagesOnRestoreAccount(nnMinIndex.minus(1u).toLong(), msgsCountsState.value?.total)
 
                     notifyListeners {
                         onRestoreMinIndex(nnMinIndex.toLong())
@@ -929,11 +929,11 @@ class ConnectManagerImpl: ConnectManager()
         return null
     }
 
-    override fun fetchFirstMessagesPerKey(lastMsgIdx: Long, firstForEachScid: Long?) {
+    override fun fetchFirstMessagesPerKey(lastMsgIdx: Long, totalCount: Long?) {
         try {
             if (lastMsgIdx == 0L) {
                 _restoreStateFlow.value = RestoreState.RestoringContacts
-                setContactKeyTotal(firstForEachScid)
+                setContactKeyTotal(totalCount)
             }
 
             val limit = MSG_FIRST_PER_KEY_LIMIT
@@ -954,11 +954,14 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
-    override fun fetchMessagesOnRestoreAccount(totalHighestIndex: Long?) {
+    override fun fetchMessagesOnRestoreAccount(
+        totalHighestIndex: Long?,
+        totalMsgsCount: Long?
+    ) {
         try {
             if (restoreStateFlow.value !is RestoreState.RestoringMessages) {
                 _restoreStateFlow.value = RestoreState.RestoringMessages
-                setMessagesTotal(totalHighestIndex)
+                setMessagesTotal(totalMsgsCount)
             }
 
             val fetchMessages = fetchMsgsBatch(
@@ -2370,8 +2373,8 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
-    private fun setMessagesTotal(totalHighestIndex: Long?) {
-        totalHighestIndex?.let {
+    private fun setMessagesTotal(totalMsgs: Long?) {
+        totalMsgs?.let {
             restoreProgress.totalMessages = it.toInt()
         }
     }

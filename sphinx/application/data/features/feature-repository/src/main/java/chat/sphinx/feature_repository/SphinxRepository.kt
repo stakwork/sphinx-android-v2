@@ -341,7 +341,10 @@ abstract class SphinxRepository(
                     }
                     is RestoreProcessState.RestoreMessages -> {
                         delay(100L)
-                        connectManager.fetchMessagesOnRestoreAccount(msgCounts?.total_highest_index)
+                        connectManager.fetchMessagesOnRestoreAccount(
+                            msgCounts?.total_highest_index,
+                            msgCounts?.total
+                        )
                     }
                     else -> {}
                 }
@@ -866,18 +869,6 @@ abstract class SphinxRepository(
             }
         }
     }
-
-//    override fun onRestoreNextPageMessages(highestIndex: Long, limit: Int) {
-//        applicationScope.launch(io) {
-//            val nextHighestIndex = highestIndex.minus(limit)
-//            if (nextHighestIndex > 0) {
-//                delay(200L)
-//                connectManager.fetchMessagesOnRestoreAccount(nextHighestIndex)
-//            } else {
-//                // Restore complete
-//            }
-//        }
-//    }
 
     override fun onNewBalance(balance: Long) {
         applicationScope.launch(io) {
@@ -1448,7 +1439,7 @@ abstract class SphinxRepository(
                         payment_request = null,
                         date = payment.ts?.toDateTime(),
                         reply_uuid = null,
-                        error_message = null
+                        error_message = payment.error
                     )
                 }
             }.orEmpty()
@@ -1674,6 +1665,12 @@ abstract class SphinxRepository(
                                 msgSender.alias?.takeIf { it.isNotEmpty() && it != owner.alias?.value }
                                     ?.let {
                                         queries.contactUpdateAlias(it.toContactAlias(), owner.id)
+
+                                        connectManager.ownerInfoStateFlow.value?.let { ownerInfo ->
+                                            connectManager.setOwnerInfo(
+                                                ownerInfo.copy(alias = it)
+                                            )
+                                        }
                                     }
                             }
 
@@ -2851,6 +2848,12 @@ abstract class SphinxRepository(
             alias = alias,
             updatedAt = now
         )
+
+        connectManager.ownerInfoStateFlow.value?.let { ownerInfo ->
+            connectManager.setOwnerInfo(
+                ownerInfo.copy(alias = alias.value)
+            )
+        }
 
         if (updatedOwner != null) {
             applicationScope.launch(mainImmediate) {

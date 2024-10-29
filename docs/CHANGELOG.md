@@ -1,5 +1,9 @@
 # ChangeLog
 
+## Version 1.0.0-alpha22 (2021-10-29)
+- Fixes issues on restore
+- Fixes transactions history issues
+
 ## Version 1.0.0-alpha21 (2021-10-28)
 - Fixes issues on restore
 - Fixes routing issue when paying invoices

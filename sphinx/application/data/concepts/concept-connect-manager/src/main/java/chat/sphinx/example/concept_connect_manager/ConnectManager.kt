@@ -37,8 +37,8 @@ abstract class ConnectManager {
     abstract fun setNetworkType(isTestEnvironment: Boolean)
     abstract fun setOwnerDeviceId(deviceId: String, pushKey: String)
     abstract fun processChallengeSignature(challenge: String): String?
-    abstract fun fetchFirstMessagesPerKey(lastMsgIdx: Long, firstForEachScid: Long?)
-    abstract fun fetchMessagesOnRestoreAccount(totalHighestIndex: Long?)
+    abstract fun fetchFirstMessagesPerKey(lastMsgIdx: Long, totalCount: Long?)
+    abstract fun fetchMessagesOnRestoreAccount(totalHighestIndex: Long?, totalMsgsCount: Long?)
     abstract fun getAllMessagesCount()
     abstract fun initializeMqttAndSubscribe(
         serverUri: String,

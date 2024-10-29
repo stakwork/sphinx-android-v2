@@ -12,7 +12,8 @@ data class Payment(
     val rhash: String?,
     val ts: Long?,
     val remote: Boolean?,
-    val msg_idx: Long?
+    val msg_idx: Long?,
+    val error: String?
 ) {
     companion object {
         fun String.toPaymentsList(moshi: Moshi): List<Payment>? {

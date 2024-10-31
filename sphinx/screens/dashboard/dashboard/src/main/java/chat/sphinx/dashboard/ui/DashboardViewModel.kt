@@ -1,7 +1,6 @@
 package chat.sphinx.dashboard.ui
 
 import android.app.Application
-import android.app.Person
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
@@ -22,8 +21,8 @@ import chat.sphinx.concept_network_query_verify_external.model.VerifyExternalInf
 import chat.sphinx.concept_repository_actions.ActionsRepository
 import chat.sphinx.concept_repository_chat.ChatRepository
 import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
-import chat.sphinx.concept_repository_connect_manager.model.OwnerRegistrationState
 import chat.sphinx.concept_repository_connect_manager.model.NetworkStatus
+import chat.sphinx.concept_repository_connect_manager.model.OwnerRegistrationState
 import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.concept_repository_dashboard_android.RepositoryDashboardAndroid
 import chat.sphinx.concept_repository_feed.FeedRepository
@@ -76,7 +75,6 @@ import chat.sphinx.wrapper_common.isValidPeopleConnectLink
 import chat.sphinx.wrapper_common.lightning.LightningNodePubKey
 import chat.sphinx.wrapper_common.lightning.LightningPaymentRequest
 import chat.sphinx.wrapper_common.lightning.LightningRouteHint
-import chat.sphinx.wrapper_common.lightning.Sat
 import chat.sphinx.wrapper_common.lightning.getLspPubKey
 import chat.sphinx.wrapper_common.lightning.isValidLightningNodeLink
 import chat.sphinx.wrapper_common.lightning.isValidLightningNodePubKey
@@ -85,7 +83,6 @@ import chat.sphinx.wrapper_common.lightning.isValidVirtualNodeAddress
 import chat.sphinx.wrapper_common.lightning.toLightningNodePubKey
 import chat.sphinx.wrapper_common.lightning.toLightningPaymentRequestOrNull
 import chat.sphinx.wrapper_common.lightning.toLightningRouteHint
-import chat.sphinx.wrapper_common.lightning.toSat
 import chat.sphinx.wrapper_common.message.SphinxCallLink
 import chat.sphinx.wrapper_common.message.toSphinxCallLink
 import chat.sphinx.wrapper_common.toExternalAuthorizeLink
@@ -102,7 +99,6 @@ import chat.sphinx.wrapper_contact.ContactAlias
 import chat.sphinx.wrapper_contact.NewContact
 import chat.sphinx.wrapper_contact.avatarUrl
 import chat.sphinx.wrapper_contact.toContactAlias
-import chat.sphinx.wrapper_contact.toContactKey
 import chat.sphinx.wrapper_feed.Feed
 import chat.sphinx.wrapper_feed.isNewsletter
 import chat.sphinx.wrapper_feed.isPodcast
@@ -939,7 +935,7 @@ internal class DashboardViewModel @Inject constructor(
                 deepLinkPopupViewStateContainer.updateViewState(
                     DeepLinkPopupViewState.ExternalAuthorizePopupProcessing
                 )
-                authorize(viewState.link.host, viewState.link.challenge)
+                createProfileFor(viewState.link.host, viewState.link.challenge)
 
             } else if (viewState is DeepLinkPopupViewState.StakworkAuthorizePopup) {
                 deepLinkPopupViewStateContainer.updateViewState(
@@ -995,7 +991,10 @@ internal class DashboardViewModel @Inject constructor(
         )
     }
 
-    private suspend fun authenticationSucceed() {
+    private suspend fun authenticationSucceed(
+        host: String,
+        challenge: String
+    ) {
         submitSideEffect(
             ChatListSideEffect.Notify(
                 app.getString(R.string.dashboard_authorize_success)
@@ -1005,60 +1004,31 @@ internal class DashboardViewModel @Inject constructor(
         deepLinkPopupViewStateContainer.updateViewState(
             DeepLinkPopupViewState.PopupDismissed
         )
-    }
 
-    private suspend fun authorize(host: String, challenge: String) {
-        val owner = getOwner()
-
-        owner.nodePubKey?.value?.let { publicKey ->
-            networkQueryAuthorizeExternal.getPersonInfo(
-                TRIBES_V1_URL,
-                publicKey
-            ).collect { loadResponse ->
-                when(loadResponse) {
-                    is LoadResponse.Loading -> {}
-                    is Response.Error -> {
-                        authenticationFailed()
-                    }
-                    is Response.Success -> {
-                        createProfileFor(
-                            loadResponse.value,
-                            challenge,
-                            host
-                        )
-                    }
-                }
-            }
-        } ?: run {
-            authenticationFailed()
-        }
+        val url = "https://$host?challenge=$challenge"
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+        val appContext: Context = app.applicationContext
+        appContext.startActivity(intent)
     }
 
     private suspend fun createProfileFor(
-        person: PersonInfoDto,
-        challenge: String,
-        host: String
+        host: String,
+        challenge: String
     ) {
         val owner = getOwner()
 
         owner.nodePubKey?.value?.let { publicKey ->
-            val userId = if (person.owner_pubkey == publicKey) person.id else null
-
             val person = PersonInfoDto(
-                id = userId,
                 owner_pubkey = publicKey,
                 owner_alias = owner.alias?.value ?: "",
-                owner_contact_key = null,
                 owner_route_hint = owner.routeHint?.value ?: "",
-                img = owner.photoUrl?.value,
-                description = null,
-                price_to_meet = 0L
+                img = owner.photoUrl?.value
             )
 
             val token = connectManagerRepository.getSignedTimeStamps() ?: return
 
             networkQueryAuthorizeExternal.createPeopleProfile(
-                TRIBES_V1_URL,
+                host,
                 person,
                 token
             ).collect { loadResponse ->
@@ -1097,21 +1067,19 @@ internal class DashboardViewModel @Inject constructor(
                 sig,
             )
 
-            if (token != null) {
-                networkQueryAuthorizeExternal.authorizeExternal(
-                    host,
-                    challenge,
-                    token,
-                    info
-                ).collect { loadResponse ->
-                    when(loadResponse) {
-                        is LoadResponse.Loading -> {}
-                        is Response.Error -> {
-                            authenticationFailed()
-                        }
-                        is Response.Success -> {
-                            authenticationSucceed()
-                        }
+            networkQueryAuthorizeExternal.authorizeExternal(
+                host,
+                challenge,
+                token,
+                info
+            ).collect { loadResponse ->
+                when(loadResponse) {
+                    is LoadResponse.Loading -> {}
+                    is Response.Error -> {
+                        authenticationFailed()
+                    }
+                    is Response.Success -> {
+                        authenticationSucceed(host, challenge)
                     }
                 }
             }
@@ -1270,10 +1238,16 @@ internal class DashboardViewModel @Inject constructor(
                         tribesBadgeVisible = (unseenTribeMessagesCount ?: 0) > 0
                     )
                 }
+
+            repositoryDashboard.getUnseenActiveConversationMessagesCount()
+                .collect { unseenConversationMessagesCount ->
+                    updateTabsState(
+                        friendsBadgeVisible = (unseenConversationMessagesCount ?: 0) > 0
+                    )
+                }
         }
 
         viewModelScope.launch(mainImmediate) {
-
             chatListFooterButtonsViewStateContainer.updateViewState(
                 ChatListFooterButtonsViewState.ButtonsVisibility(
                     addFriendVisible = true,

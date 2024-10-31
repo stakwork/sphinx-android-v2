@@ -1,5 +1,8 @@
 # ChangeLog
 
+## Version 1.0.0-alpha23 (2021-10-31)
+- Fixes external authentication issues
+
 ## Version 1.0.0-alpha22 (2021-10-29)
 - Fixes issues on restore
 - Fixes transactions history issues

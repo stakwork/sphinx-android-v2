@@ -991,7 +991,10 @@ internal class DashboardViewModel @Inject constructor(
         )
     }
 
-    private suspend fun authenticationSucceed() {
+    private suspend fun authenticationSucceed(
+        host: String,
+        challenge: String
+    ) {
         submitSideEffect(
             ChatListSideEffect.Notify(
                 app.getString(R.string.dashboard_authorize_success)
@@ -1001,6 +1004,11 @@ internal class DashboardViewModel @Inject constructor(
         deepLinkPopupViewStateContainer.updateViewState(
             DeepLinkPopupViewState.PopupDismissed
         )
+
+        val url = "https://$host?challenge=$challenge"
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+        val appContext: Context = app.applicationContext
+        appContext.startActivity(intent)
     }
 
     private suspend fun createProfileFor(
@@ -1071,7 +1079,7 @@ internal class DashboardViewModel @Inject constructor(
                         authenticationFailed()
                     }
                     is Response.Success -> {
-                        authenticationSucceed()
+                        authenticationSucceed(host, challenge)
                     }
                 }
             }
@@ -1230,10 +1238,16 @@ internal class DashboardViewModel @Inject constructor(
                         tribesBadgeVisible = (unseenTribeMessagesCount ?: 0) > 0
                     )
                 }
+
+            repositoryDashboard.getUnseenActiveConversationMessagesCount()
+                .collect { unseenConversationMessagesCount ->
+                    updateTabsState(
+                        friendsBadgeVisible = (unseenConversationMessagesCount ?: 0) > 0
+                    )
+                }
         }
 
         viewModelScope.launch(mainImmediate) {
-
             chatListFooterButtonsViewStateContainer.updateViewState(
                 ChatListFooterButtonsViewState.ButtonsVisibility(
                     addFriendVisible = true,

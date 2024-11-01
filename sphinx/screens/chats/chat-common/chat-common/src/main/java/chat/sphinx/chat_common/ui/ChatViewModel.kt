@@ -3,6 +3,7 @@ package chat.sphinx.chat_common.ui
 import android.app.Application
 import android.content.ContentValues
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
@@ -2023,31 +2024,38 @@ abstract class ChatViewModel<ARGS : NavArgs>(
     }
 
     private fun joinCall(link: SphinxCallLink, audioOnly: Boolean) {
-        link.callServerUrl?.let { nnCallUrl ->
+        if (link.isJitsiLink) {
+            link.callServerUrl?.let { nnCallUrl ->
 
-            viewModelScope.launch(mainImmediate) {
+                viewModelScope.launch(mainImmediate) {
 
-                val owner = getOwner()
+                    val owner = getOwner()
 
-                val userInfo = JitsiMeetUserInfo()
-                userInfo.displayName = owner.alias?.value ?: ""
+                    val userInfo = JitsiMeetUserInfo()
+                    userInfo.displayName = owner.alias?.value ?: ""
 
-                owner.avatarUrl?.let { nnAvatarUrl ->
-                    userInfo.avatar = nnAvatarUrl
+                    owner.avatarUrl?.let { nnAvatarUrl ->
+                        userInfo.avatar = nnAvatarUrl
+                    }
+
+                    val options = JitsiMeetConferenceOptions.Builder()
+                        .setServerURL(nnCallUrl)
+                        .setRoom(link.callRoom)
+                        .setAudioMuted(false)
+                        .setVideoMuted(false)
+                        .setFeatureFlag("welcomepage.enabled", false)
+                        .setAudioOnly(audioOnly)
+                        .setUserInfo(userInfo)
+                        .build()
+
+                    JitsiMeetActivity.launch(app, options)
                 }
-
-                val options = JitsiMeetConferenceOptions.Builder()
-                    .setServerURL(nnCallUrl)
-                    .setRoom(link.callRoom)
-                    .setAudioMuted(false)
-                    .setVideoMuted(false)
-                    .setFeatureFlag("welcomepage.enabled", false)
-                    .setAudioOnly(audioOnly)
-                    .setUserInfo(userInfo)
-                    .build()
-
-                JitsiMeetActivity.launch(app, options)
             }
+        } else {
+            val url = link.value
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            app.applicationContext.startActivity(intent)
         }
     }
 

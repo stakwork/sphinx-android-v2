@@ -1,5 +1,8 @@
 # ChangeLog
 
+## Version 1.0.0-alpha24 (2021-11-01)
+- Changes to new meeting server
+
 ## Version 1.0.0-alpha23 (2021-10-31)
 - Fixes external authentication issues
 

@@ -1256,6 +1256,26 @@ internal class DashboardViewModel @Inject constructor(
                 )
             )
         }
+
+        setNewCallServer()
+    }
+
+    private fun setNewCallServer() {
+        viewModelScope.launch(mainImmediate) {
+            val appContext: Context = app.applicationContext
+            val serverUrlsSharedPreferences =
+                appContext.getSharedPreferences("server_urls", Context.MODE_PRIVATE)
+
+            withContext(dispatchers.io) {
+                serverUrlsSharedPreferences.edit()
+                    .putString(SphinxCallLink.CALL_SERVER_URL_KEY, SphinxCallLink.NEW_CALL_SERVER_URL)
+                    .let { editor ->
+                        if (!editor.commit()) {
+                            editor.apply()
+                        }
+                    }
+            }
+        }
     }
 
     fun initOwner() {

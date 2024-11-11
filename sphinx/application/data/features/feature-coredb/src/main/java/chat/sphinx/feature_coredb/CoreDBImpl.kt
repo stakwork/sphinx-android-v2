@@ -96,6 +96,7 @@ abstract class CoreDBImpl(private val moshi: Moshi): CoreDB() {
                     content_seen_atAdapter = DateTimeAdapter.getInstance(),
                     notifyAdapter = NotifyAdapter(),
                     pin_messageAdapter = PinMessageAdapter.getInstance(),
+                    second_brain_urlAdapter = SecondBrainUrlAdapter(),
                 ),
                 contactDboAdapter = ContactDbo.Adapter(
                     idAdapter = ContactIdAdapter.getInstance(),

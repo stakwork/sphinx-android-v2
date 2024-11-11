@@ -192,6 +192,9 @@ internal class CreateTribeFragment: SideEffectDetailFragment<
             editTextTribeAppUrl.addTextChangedListener {
                 viewModel.createTribeBuilder.setAppUrl(it.toString())
             }
+            editTextTribeSecondBrainUrl.addTextChangedListener {
+                viewModel.createTribeBuilder.setSecondBrainUrl(it.toString())
+            }
             editTextTribeFeedUrl.addTextChangedListener {
                 viewModel.createTribeBuilder.setFeedUrl(it.toString())
 
@@ -339,6 +342,7 @@ internal class CreateTribeFragment: SideEffectDetailFragment<
 
                 binding.editTextTribeAppUrl.setText(viewState.appUrl ?: "")
                 binding.editTextTribeFeedUrl.setText(viewState.feedUrl ?: "")
+                binding.editTextTribeSecondBrainUrl.setText(viewState.secondBrainUrl ?: "")
 
                 viewState.feedTypeDescriptionRes?.let { feedTypeDescriptionResource ->
                     binding.textViewTribeFeedContentTypeValue.text = getString(

@@ -90,4 +90,5 @@ data class Chat(
     val contentSeenAt: DateTime?,
     val pinedMessage: MessageUUID?,
     val notify: NotificationLevel?,
+    val secondBrainUrl: SecondBrainUrl?,
 )

@@ -12,6 +12,7 @@ import chat.sphinx.chat_tribe.model.SphinxWebViewDto.Companion.TYPE_GET_BUDGET
 import chat.sphinx.chat_tribe.model.SphinxWebViewDto.Companion.TYPE_KEYSEND
 import chat.sphinx.chat_tribe.model.SphinxWebViewDto.Companion.TYPE_GET_LSAT
 import chat.sphinx.chat_tribe.model.SphinxWebViewDto.Companion.TYPE_GET_PERSON_DATA
+import chat.sphinx.chat_tribe.model.SphinxWebViewDto.Companion.TYPE_GET_SECOND_BRAIN_LIST
 import chat.sphinx.chat_tribe.model.SphinxWebViewDto.Companion.TYPE_LSAT
 import chat.sphinx.chat_tribe.model.SphinxWebViewDto.Companion.TYPE_PAYMENT
 import chat.sphinx.chat_tribe.model.SphinxWebViewDto.Companion.TYPE_SET_BUDGET
@@ -56,6 +57,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -198,6 +200,9 @@ internal class TribeAppViewModel @Inject constructor(
                     TYPE_GET_BUDGET -> {
                         processGetBudget()
                     }
+                    TYPE_GET_SECOND_BRAIN_LIST -> {
+                        processGetSecondBrainList()
+                    }
                     else -> {}
                 }
             }
@@ -207,8 +212,6 @@ internal class TribeAppViewModel @Inject constructor(
     fun hideAuthorizePopup() {
         webViewViewStateContainer.updateViewState(WebViewViewState.Idle)
     }
-
-//
 
     fun processAuthorize() {
         hideAuthorizePopup()
@@ -550,6 +553,25 @@ internal class TribeAppViewModel @Inject constructor(
         ).toJson(moshi)
 
         sendWebAppMessage(sendLsat)
+    }
+
+    private fun processGetSecondBrainList() {
+        viewModelScope.launch {
+            val webViewDto = sphinxWebViewDtoStateFlow.value
+
+            val secondBrainList = chatRepository.getSecondBrainTribes().firstOrNull()
+                ?.filter { it?.secondBrainUrl != null && it.secondBrainUrl?.value?.isNotEmpty() == true }
+                ?.map { it!!.secondBrainUrl!!.value }
+
+            val sendPersonData = SendSecondBrainListData(
+                type = webViewDto?.type ?: "",
+                application = webViewDto?.application ?: "",
+                password = password ?: "",
+                secondBrainList = secondBrainList ?: emptyList()
+            ).toJson(moshi)
+
+            sendWebAppMessage(sendPersonData)
+        }
     }
 
     private fun sendWebAppMessage(message: String) {

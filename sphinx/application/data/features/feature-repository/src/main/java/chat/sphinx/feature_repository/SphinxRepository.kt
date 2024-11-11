@@ -468,7 +468,8 @@ abstract class SphinxRepository(
                 latestMessageId = null,
                 contentSeenAt = null,
                 pinedMessage = null,
-                notify = NotificationLevel.SeeAll
+                notify = NotificationLevel.SeeAll,
+                secondBrainUrl = null
             )
 
             chatLock.withLock {
@@ -946,7 +947,8 @@ abstract class SphinxRepository(
                                 latestMessageId = null,
                                 contentSeenAt = null,
                                 pinedMessage = loadResponse.value.pin?.toMessageUUID(),
-                                notify = NotificationLevel.SeeAll
+                                notify = NotificationLevel.SeeAll,
+                                secondBrainUrl = null
                             )
 
                             chatLock.withLock {
@@ -1343,7 +1345,8 @@ abstract class SphinxRepository(
                     latestMessageId = existingTribe?.latestMessageId,
                     contentSeenAt = existingTribe?.contentSeenAt,
                     pinedMessage = existingTribe?.pinedMessage,
-                    notify = NotificationLevel.SeeAll
+                    notify = NotificationLevel.SeeAll,
+                    secondBrainUrl = existingTribe?.secondBrainUrl
                 )
 
                 chatLock.withLock {
@@ -1826,7 +1829,8 @@ abstract class SphinxRepository(
                                 latestMessageId = null,
                                 contentSeenAt = null,
                                 pinedMessage = loadResponse.value.pin?.toMessageUUID(),
-                                notify = NotificationLevel.SeeAll
+                                notify = NotificationLevel.SeeAll,
+                                secondBrainUrl = loadResponse.value.second_brain_url?.toSecondBrainUrl()
                             )
 
                             messageLock.withLock {
@@ -2804,7 +2808,8 @@ abstract class SphinxRepository(
                 latestMessageId = null,
                 contentSeenAt = null,
                 pinedMessage = null,
-                notify = NotificationLevel.SeeAll
+                notify = NotificationLevel.SeeAll,
+                secondBrainUrl = null
             )
 
             contactLock.withLock {
@@ -3266,6 +3271,21 @@ abstract class SphinxRepository(
     override fun getMessageById(messageId: MessageId): Flow<Message?> = flow {
         val queries = coreDB.getSphinxDatabaseQueries()
         emitAll(getMessageByIdImpl(messageId, queries))
+    }
+
+    override fun getSecondBrainTribes(): Flow<List<Chat?>> = flow {
+        emitAll(
+            coreDB.getSphinxDatabaseQueries()
+                .chatGetSecondBrainTribes
+                .asFlow()
+                .mapToList(io)
+                .map { listChatDbo ->
+                    listChatDbo.map {
+                        chatDboPresenterMapper.mapFrom(it)
+                    }
+                }
+                .distinctUntilChanged()
+        )
     }
 
     override fun getMessagesByIds(messagesIds: List<MessageId>): Flow<List<Message?>> = flow {

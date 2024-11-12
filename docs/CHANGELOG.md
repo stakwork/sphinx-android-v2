@@ -1,5 +1,9 @@
 # ChangeLog
 
+## Version 1.0.0-alpha25 (2021-11-12)
+- Adds bounty transactions description on transactions history
+- Adds new javascript bridge message type
+
 ## Version 1.0.0-alpha24 (2021-11-01)
 - Changes to new meeting server
 

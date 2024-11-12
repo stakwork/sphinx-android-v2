@@ -25,7 +25,8 @@ internal sealed class TransactionHolderViewState(
     class Incoming(
         transaction: TransactionDto,
         invoice: Message?,
-        messageSenderName: String?
+        messageSenderName: String?,
+        val isBounty: Boolean
     ) : TransactionHolderViewState(
         transaction,
         invoice,

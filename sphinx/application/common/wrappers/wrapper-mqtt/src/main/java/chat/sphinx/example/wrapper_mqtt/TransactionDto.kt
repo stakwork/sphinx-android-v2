@@ -42,7 +42,7 @@ data class TransactionDto(
     }
 
     fun isBountyPayment(): Boolean {
-        return (message_content ?: "").isNotEmpty() && sender == 0L && receiver == 0L
+        return (message_content ?: "").isNotEmpty() && sender == -1L && receiver == 0L
     }
 
     fun getSenderId(): ContactId? {

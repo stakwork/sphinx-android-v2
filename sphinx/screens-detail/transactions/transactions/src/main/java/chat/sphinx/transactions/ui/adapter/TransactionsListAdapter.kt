@@ -198,6 +198,9 @@ internal class TransactionsListAdapter(
                     textViewTransactionAmount.text = amount
                     textViewTransactionAddress.text = senderReceiverName
 
+                    val isBounty = (t as? TransactionHolderViewState.Incoming)?.isBounty ?: false
+                    textViewTransactionAddress.isSingleLine = !isBounty
+
                     textViewTransactionHour.text = hourString
                     textViewTransactionDayOfMonth.text = dayOfMonthString
                     textViewTransactionDayOfWeek.text = dayOfWeekString

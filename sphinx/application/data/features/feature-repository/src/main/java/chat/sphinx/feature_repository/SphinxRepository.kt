@@ -1136,88 +1136,115 @@ abstract class SphinxRepository(
 
                 val messageType = msgType.toMessageType()
 
-                val messageSender = msgSender.toMsgSender(moshi)
+                msgSender.toMsgSenderNull(moshi)?.let { nnMessageSender ->
+                    val contactTribePubKey = if (fromMe == true) {
+                        sentTo
+                    } else {
+                        nnMessageSender.pubkey
+                    }
 
-                val contactTribePubKey = if (fromMe == true) {
-                    sentTo
-                } else {
-                    messageSender.pubkey
-                }
+                    when (messageType) {
+                        is MessageType.ContactKeyRecord -> {
+                            if (!isRestore) {
+                                saveNewContactRegistered(msgSender, date)
+                            }
+                        }
+                        else -> {
+                            val message = if (msg.isNotEmpty()) msg.toMsg(moshi) else Msg(
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null
+                            )
 
-                when (messageType) {
-                    is MessageType.ContactKeyRecord -> {
-                        if (!isRestore) {
-                            saveNewContactRegistered(msgSender, date)
+                            when (messageType) {
+                                is MessageType.Purchase.Processing -> {
+                                    amount?.toSat()?.let { paidAmount ->
+                                        sendMediaKeyOnPaidPurchase(
+                                            message,
+                                            nnMessageSender,
+                                            paidAmount
+                                        )
+                                    }
+                                }
+                                is MessageType.ContactKeyConfirmation -> {
+                                    saveNewContactRegistered(msgSender, date)
+                                }
+                                is MessageType.ContactKey -> {
+                                    saveNewContactRegistered(msgSender, date)
+                                }
+                                is MessageType.Delete -> {
+                                    msg.toMsg(moshi).replyUuid?.toMessageUUID()?.let { replyUuid ->
+                                        deleteMqttMessage(replyUuid)
+                                    }
+                                }
+                                else -> {}
+                            }
+
+                            val messageId = if (msgIndex.isNotEmpty()) MessageId(msgIndex.toLong()) else return@launch
+                            val messageUuid = msgUuid.toMessageUUID() ?: return@launch
+                            val originalUUID = message.originalUuid?.toMessageUUID()
+                            val timestamp = msgTimestamp?.toDateTime()
+                            val date = message.date?.toDateTime()
+                            val paymentRequest = message.invoice?.toLightningPaymentRequestOrNull()
+                            val bolt11 = paymentRequest?.let { Bolt11.decode(it) }
+                            val paymentHash = paymentRequest?.let {
+                                connectManager.retrievePaymentHash(it.value)?.toLightningPaymentHash()
+                            }
+                            val msgTag = tag?.toTagMessage()
+
+                            upsertMqttMessage(
+                                message,
+                                nnMessageSender,
+                                contactTribePubKey,
+                                messageType,
+                                messageUuid,
+                                messageId,
+                                message.amount?.milliSatsToSats(),
+                                originalUUID,
+                                timestamp,
+                                date,
+                                fromMe ?: false,
+                                amount?.toSat(),
+                                paymentRequest,
+                                paymentHash,
+                                bolt11,
+                                msgTag
+                            )
                         }
                     }
-                    else -> {
-                        val message = if (msg.isNotEmpty()) msg.toMsg(moshi) else Msg(
-                            null,
-                            null,
-                            null,
-                            null,
-                            null,
-                            null,
-                            null,
-                            null,
-                            null,
-                            null,
-                            null
-                        )
+                } ?: run {
+                    val message = if (msg.isNotEmpty()) msg.toMsg(moshi) else Msg(
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null
+                    )
 
-                        when (messageType) {
-                            is MessageType.Purchase.Processing -> {
-                                amount?.toSat()?.let { paidAmount ->
-                                    sendMediaKeyOnPaidPurchase(
-                                        message,
-                                        messageSender,
-                                        paidAmount
-                                    )
-                                }
-                            }
-                            is MessageType.ContactKeyConfirmation -> {
-                                saveNewContactRegistered(msgSender, date)
-                            }
-                            is MessageType.ContactKey -> {
-                                saveNewContactRegistered(msgSender, date)
-                            }
-                            is MessageType.Delete -> {
-                                msg.toMsg(moshi).replyUuid?.toMessageUUID()?.let { replyUuid ->
-                                    deleteMqttMessage(replyUuid)
-                                }
-                            }
-                            else -> {}
-                        }
+                    if (msgIndex.isNotEmpty() && message.content?.isNotEmpty() == true) {
+                        val messageId = MessageId(msgIndex.toLong())
 
-                        val messageId = if (msgIndex.isNotEmpty()) MessageId(msgIndex.toLong()) else return@launch
-                        val messageUuid = msgUuid.toMessageUUID() ?: return@launch
-                        val originalUUID = message.originalUuid?.toMessageUUID()
-                        val timestamp = msgTimestamp?.toDateTime()
-                        val date = message.date?.toDateTime()
-                        val paymentRequest = message.invoice?.toLightningPaymentRequestOrNull()
-                        val bolt11 = paymentRequest?.let { Bolt11.decode(it) }
-                        val paymentHash = paymentRequest?.let {
-                            connectManager.retrievePaymentHash(it.value)?.toLightningPaymentHash()
-                        }
-                        val msgTag = tag?.toTagMessage()
-
-                        upsertMqttMessage(
-                            message,
-                            messageSender,
-                            contactTribePubKey,
-                            messageType,
-                            messageUuid,
-                            messageId,
-                            message.amount?.milliSatsToSats(),
-                            originalUUID,
-                            timestamp,
-                            date,
-                            fromMe ?: false,
-                            amount?.toSat(),
-                            paymentRequest,
-                            paymentHash,
-                            bolt11,
-                            msgTag
+                        upsertGenericPaymentMsg(
+                            msg = message,
+                            msgType = msgType.toMessageType(),
+                            msgIndex = messageId,
+                            msgAmount = amount?.toSat(),
+                            timestamp = msgTimestamp?.toDateTime(),
+                            paymentHash = message.paymentHash?.toLightningPaymentHash()
                         )
                     }
                 }
@@ -1431,7 +1458,7 @@ abstract class SphinxRepository(
                         date = message.date,
                         reply_uuid = message.replyUUID?.value,
                         error_message = message.errorMessage?.value,
-                        message_content = message.messageContent?.value
+                        message_content = message.messageContentDecrypted?.value
                     )
                 } ?: run {
                     // If not found in DB, create TransactionDto with available information from the Payment object
@@ -1546,183 +1573,213 @@ abstract class SphinxRepository(
         var messageMedia: MessageMediaDbo? = null
         val isTribe = contact == null
 
-        if (contact != null || chatTribe != null) {
+        originalUuid?.let { uuid ->
+            queries.messageUpdateUUIDByUUID(msgUuid, uuid )
+        }
 
-            originalUuid?.let { uuid ->
-                queries.messageUpdateUUIDByUUID(msgUuid, uuid )
-            }
+        // On Conversation ChatId is contactId defined by the bindings,
+        // tribes use the auto-generated chatId
+        val chatId = when {
+            contact?.id?.value != null -> contact.id.value
+            chatTribe?.id?.value != null -> chatTribe.id.value
+            else -> 0L
+        }
 
-            // On Conversation ChatId is contactId defined by the bindings,
-            // tribes use the auto-generated chatId
-            val chatId = when {
-                contact?.id?.value != null -> contact.id.value
-                chatTribe?.id?.value != null -> chatTribe.id.value
-                else -> 0L
-            }
+        val existingMessage = queries.messageGetByUUID(msgUuid).executeAsOneOrNull()
+        val messageId = existingMessage?.id
 
-            val existingMessage = queries.messageGetByUUID(msgUuid).executeAsOneOrNull()
-            val messageId = existingMessage?.id
+        if (fromMe && messageId?.value != null && messageId.value < 0) {
+            val existingMessageMedia = messageId.let {
+                queries.messageMediaGetById(it).executeAsOneOrNull()
+            }?.copy(id = msgIndex)
 
-            if (fromMe && messageId?.value != null && messageId.value < 0) {
-                val existingMessageMedia = messageId.let {
-                    queries.messageMediaGetById(it).executeAsOneOrNull()
-                }?.copy(id = msgIndex)
-
-                existingMessageMedia?.let {
-                    messageLock.withLock {
-                        queries.messageMediaDeleteById(messageId)
-                    }
-                    messageMedia = existingMessageMedia
+            existingMessageMedia?.let {
+                messageLock.withLock {
+                    queries.messageMediaDeleteById(messageId)
                 }
-            } else {
-                msg.mediaToken?.toMediaToken()?.let { mediaToken ->
-
-                    messageMedia = MessageMediaDbo(
-                        msgIndex,
-                        ChatId(chatId),
-                        msg.mediaKey?.toMediaKey(),
-                        msg.mediaKey?.toMediaKeyDecrypted(),
-                        msg.mediaType?.toMediaType() ?: MediaType.Unknown(""),
-                        mediaToken,
-                        null,
-                        null
-                    )
-                }
+                messageMedia = existingMessageMedia
             }
+        } else {
+            msg.mediaToken?.toMediaToken()?.let { mediaToken ->
 
-            messageLock.withLock {
-                queries.messageDeleteByUUID(msgUuid)
-            }
-
-            val senderAlias = msgSender.alias?.toSenderAlias()
-
-            val status = when {
-                fromMe && existingMessage?.payment_request != null -> MessageStatus.Pending
-                fromMe && existingMessage?.payment_request == null -> MessageStatus.Confirmed
-                !fromMe && existingMessage?.payment_request != null -> MessageStatus.Pending
-                else -> MessageStatus.Received
-            }
-
-            val isTribeBoost = isTribe && msgType is MessageType.Boost
-            val amount = if (fromMe || isTribeBoost) msgAmount else realPaymentAmount
-
-            val now = DateTime.nowUTC().toDateTime()
-            val messageDate = if (isTribe) date ?: now else timestamp ?: now
-
-            val newMessage = NewMessage(
-                id = msgIndex,
-                uuid = msgUuid,
-                chatId = ChatId(chatId),
-                type = msgType,
-                sender = if (fromMe) ContactId(0) else contact?.id ?: ContactId(chatId) ,
-                receiver = ContactId(0),
-                amount = bolt11?.getSatsAmount() ?: existingMessage?.amount ?: amount ?: Sat(0L),
-                paymentRequest = existingMessage?.payment_request ?: paymentRequest,
-                paymentHash = existingMessage?.payment_hash ?: msg.paymentHash?.toLightningPaymentHash() ?: paymentHash,
-                date = messageDate,
-                expirationDate = existingMessage?.expiration_date ?: bolt11?.getExpiryTime()?.toDateTime(),
-                messageContent = null,
-                status = status,
-                seen = Seen.False,
-                senderAlias = senderAlias,
-                senderPic = msgSender.photo_url?.toPhotoUrl(),
-                originalMUID = null,
-                replyUUID = existingMessage?.reply_uuid ?: msg.replyUuid?.toReplyUUID(),
-                flagged = Flagged.False,
-                recipientAlias = null,
-                recipientPic = null,
-                person = null,
-                threadUUID = existingMessage?.thread_uuid ?: msg.threadUuid?.toThreadUUID(),
-                errorMessage = null,
-                tagMessage = existingMessage?.tag_message ?: tag,
-                isPinned = false,
-                messageContentDecrypted = if (msg.content?.isNotEmpty() == true) MessageContentDecrypted(msg.content!!) else null,
-                messageDecryptionError = false,
-                messageDecryptionException = null,
-                messageMedia = messageMedia?.let { MessageMediaDboWrapper(it) },
-                feedBoost = null,
-                callLinkMessage = null,
-                podcastClip = null,
-                giphyData = null,
-                reactions = null,
-                purchaseItems = null,
-                replyMessage = null,
-                thread = null
-            )
-
-            contact?.id?.let { contactId ->
-                if (!fromMe) {
-                    val lastMessageIndex = getLastMessage().firstOrNull()?.id?.value
-                    val newMessageIndex = msgIndex.value
-
-                    if (lastMessageIndex != null) {
-                        if (lastMessageIndex < newMessageIndex) {
-                            contactLock.withLock {
-                                msgSender.photo_url?.takeIf { it.isNotEmpty() && it != contact.photoUrl?.value }
-                                    ?.let {
-                                        queries.contactUpdatePhotoUrl(it.toPhotoUrl(), contactId)
-                                    }
-                                msgSender.alias?.takeIf { it.isNotEmpty() && it != contact.alias?.value }
-                                    ?.let {
-                                        queries.contactUpdateAlias(it.toContactAlias(), contactId)
-                                    }
-                            }
-                        }
-                    }
-                } else {
-                    contactLock.withLock {
-                        if (owner != null) {
-                            if (owner.alias?.value == null) {
-                                msgSender.alias?.takeIf { it.isNotEmpty() && it != owner.alias?.value }
-                                    ?.let {
-                                        queries.contactUpdateAlias(it.toContactAlias(), owner.id)
-
-                                        connectManager.ownerInfoStateFlow.value?.let { ownerInfo ->
-                                            connectManager.setOwnerInfo(
-                                                ownerInfo.copy(alias = it)
-                                            )
-                                        }
-                                    }
-                            }
-
-                            if (owner.photoUrl?.value == null) {
-                                msgSender.photo_url?.takeIf { it.isNotEmpty() && it != owner.photoUrl?.value }
-                                    ?.let {
-                                        queries.contactUpdatePhotoUrl(it.toPhotoUrl(), owner.id)
-
-                                        connectManager.ownerInfoStateFlow.value?.let { ownerInfo ->
-                                            connectManager.setOwnerInfo(
-                                                ownerInfo.copy(picture = it)
-                                            )
-                                        }
-                                    }
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (msgType is MessageType.Payment) {
-                queries.messageUpdateInvoiceAsPaidByPaymentHash(
-                    msg.paymentHash?.toLightningPaymentHash()
+                messageMedia = MessageMediaDbo(
+                    msgIndex,
+                    ChatId(chatId),
+                    msg.mediaKey?.toMediaKey(),
+                    msg.mediaKey?.toMediaKeyDecrypted(),
+                    msg.mediaType?.toMediaType() ?: MediaType.Unknown(""),
+                    mediaToken,
+                    null,
+                    null
                 )
             }
+        }
 
-            messageLock.withLock {
-                queries.transaction {
-                    upsertNewMessage(newMessage, queries, messageMedia?.file_name)
+        messageLock.withLock {
+            queries.messageDeleteByUUID(msgUuid)
+        }
 
-                    updateChatNewLatestMessage(
-                        newMessage,
-                        ChatId(chatId),
-                        latestMessageUpdatedTimeMap,
-                        queries
-                    )
+        val senderAlias = msgSender.alias?.toSenderAlias()
+
+        val status = when {
+            fromMe && existingMessage?.payment_request != null -> MessageStatus.Pending
+            fromMe && existingMessage?.payment_request == null -> MessageStatus.Confirmed
+            !fromMe && existingMessage?.payment_request != null -> MessageStatus.Pending
+            else -> MessageStatus.Received
+        }
+
+        val isTribeBoost = isTribe && msgType is MessageType.Boost
+        val amount = if (fromMe || isTribeBoost) msgAmount else realPaymentAmount
+
+        val now = DateTime.nowUTC().toDateTime()
+        val messageDate = if (isTribe) date ?: now else timestamp ?: now
+
+        val newMessage = NewMessage(
+            id = msgIndex,
+            uuid = msgUuid,
+            chatId = ChatId(chatId),
+            type = msgType,
+            sender = if (fromMe) ContactId(0) else contact?.id ?: ContactId(chatId) ,
+            receiver = ContactId(0),
+            amount = bolt11?.getSatsAmount() ?: existingMessage?.amount ?: amount ?: Sat(0L),
+            paymentRequest = existingMessage?.payment_request ?: paymentRequest,
+            paymentHash = existingMessage?.payment_hash ?: msg.paymentHash?.toLightningPaymentHash() ?: paymentHash,
+            date = messageDate,
+            expirationDate = existingMessage?.expiration_date ?: bolt11?.getExpiryTime()?.toDateTime(),
+            messageContent = null,
+            status = status,
+            seen = Seen.False,
+            senderAlias = senderAlias,
+            senderPic = msgSender.photo_url?.toPhotoUrl(),
+            originalMUID = null,
+            replyUUID = existingMessage?.reply_uuid ?: msg.replyUuid?.toReplyUUID(),
+            flagged = Flagged.False,
+            recipientAlias = null,
+            recipientPic = null,
+            person = null,
+            threadUUID = existingMessage?.thread_uuid ?: msg.threadUuid?.toThreadUUID(),
+            errorMessage = null,
+            tagMessage = existingMessage?.tag_message ?: tag,
+            isPinned = false,
+            messageContentDecrypted = if (msg.content?.isNotEmpty() == true) MessageContentDecrypted(msg.content!!) else null,
+            messageDecryptionError = false,
+            messageDecryptionException = null,
+            messageMedia = messageMedia?.let { MessageMediaDboWrapper(it) },
+            feedBoost = null,
+            callLinkMessage = null,
+            podcastClip = null,
+            giphyData = null,
+            reactions = null,
+            purchaseItems = null,
+            replyMessage = null,
+            thread = null
+        )
+
+        contact?.id?.let { contactId ->
+            if (!fromMe) {
+                val lastMessageIndex = getLastMessage().firstOrNull()?.id?.value
+                val newMessageIndex = msgIndex.value
+
+                if (lastMessageIndex != null) {
+                    if (lastMessageIndex < newMessageIndex) {
+                        contactLock.withLock {
+                            msgSender.photo_url?.takeIf { it.isNotEmpty() && it != contact.photoUrl?.value }
+                                ?.let {
+                                    queries.contactUpdatePhotoUrl(it.toPhotoUrl(), contactId)
+                                }
+                            msgSender.alias?.takeIf { it.isNotEmpty() && it != contact.alias?.value }
+                                ?.let {
+                                    queries.contactUpdateAlias(it.toContactAlias(), contactId)
+                                }
+                        }
+                    }
+                }
+            } else {
+                contactLock.withLock {
+                    if (owner != null) {
+                        if (owner.alias?.value == null) {
+                            msgSender.alias?.takeIf { it.isNotEmpty() && it != owner.alias?.value }
+                                ?.let {
+                                    queries.contactUpdateAlias(it.toContactAlias(), owner.id)
+
+                                    connectManager.ownerInfoStateFlow.value?.let { ownerInfo ->
+                                        connectManager.setOwnerInfo(
+                                            ownerInfo.copy(alias = it)
+                                        )
+                                    }
+                                }
+                        }
+
+                        if (owner.photoUrl?.value == null) {
+                            msgSender.photo_url?.takeIf { it.isNotEmpty() && it != owner.photoUrl?.value }
+                                ?.let {
+                                    queries.contactUpdatePhotoUrl(it.toPhotoUrl(), owner.id)
+
+                                    connectManager.ownerInfoStateFlow.value?.let { ownerInfo ->
+                                        connectManager.setOwnerInfo(
+                                            ownerInfo.copy(picture = it)
+                                        )
+                                    }
+                                }
+                        }
+                    }
                 }
             }
+        }
 
-            chatLock.withLock {
-                queries.chatUpdateSeen(Seen.False, ChatId(chatId))
+        if (msgType is MessageType.Payment) {
+            queries.messageUpdateInvoiceAsPaidByPaymentHash(
+                msg.paymentHash?.toLightningPaymentHash()
+            )
+        }
+
+        messageLock.withLock {
+            queries.transaction {
+                upsertNewMessage(newMessage, queries, messageMedia?.file_name)
+
+                updateChatNewLatestMessage(
+                    newMessage,
+                    ChatId(chatId),
+                    latestMessageUpdatedTimeMap,
+                    queries
+                )
+            }
+        }
+
+        chatLock.withLock {
+            queries.chatUpdateSeen(Seen.False, ChatId(chatId))
+        }
+    }
+
+    private suspend fun upsertGenericPaymentMsg(
+        msg: Msg,
+        msgType: MessageType,
+        msgIndex: MessageId,
+        msgAmount: Sat?,
+        timestamp: DateTime?,
+        paymentHash: LightningPaymentHash?,
+    ) {
+        val queries = coreDB.getSphinxDatabaseQueries()
+
+        val newMessage = NewMessage(
+            id = msgIndex,
+            chatId = ChatId(ChatId.NULL_CHAT_ID.toLong()),
+            type = msgType,
+            sender = ContactId(-1) ,
+            receiver = ContactId(0),
+            amount = msgAmount ?: Sat(0L),
+            paymentHash = paymentHash,
+            date = timestamp ?: DateTime.nowUTC().toDateTime(),
+            status = MessageStatus.Received,
+            seen = Seen.False,
+            flagged = Flagged.False,
+            messageContentDecrypted = if (msg.content?.isNotEmpty() == true) MessageContentDecrypted(msg.content!!) else null,
+            messageDecryptionError = false,
+        )
+
+        messageLock.withLock {
+            queries.transaction {
+                upsertNewMessage(newMessage, queries, null)
             }
         }
     }

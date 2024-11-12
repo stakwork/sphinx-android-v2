@@ -1,3 +1,3 @@
-import chat.sphinx.wrapper_common.chat.SecondBrainUrl;
+import chat.sphinx.wrapper_chat.SecondBrainUrl;
 
-ALTER TABLE chatDbo ADD COLUMN second_brain_url TEXT AS SecondBrainUrl;
+ALTER TABLE chatDbo ADD COLUMN second_brain_url TEXT AS SecondBrainUrl DEFAULT NULL;

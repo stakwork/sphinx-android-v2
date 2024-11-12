@@ -139,3 +139,13 @@ internal class NotifyAdapter: ColumnAdapter<NotificationLevel, Long> {
         return value.value.toLong()
     }
 }
+
+internal class SecondBrainUrlAdapter: ColumnAdapter<SecondBrainUrl, String> {
+    override fun decode(databaseValue: String): SecondBrainUrl {
+        return SecondBrainUrl(databaseValue)
+    }
+
+    override fun encode(value: SecondBrainUrl): String {
+        return value.value
+    }
+}

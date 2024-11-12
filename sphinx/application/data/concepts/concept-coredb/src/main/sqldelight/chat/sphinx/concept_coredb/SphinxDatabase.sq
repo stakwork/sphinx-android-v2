@@ -13,6 +13,7 @@ import chat.sphinx.wrapper_chat.ChatStatus;
 import chat.sphinx.wrapper_chat.ChatType;
 import chat.sphinx.wrapper_chat.ChatUnlisted;
 import chat.sphinx.wrapper_chat.NotificationLevel;
+import chat.sphinx.wrapper_chat.SecondBrainUrl;
 import chat.sphinx.wrapper_common.DateTime;
 import chat.sphinx.wrapper_common.PhotoUrl;
 import chat.sphinx.wrapper_common.Push;
@@ -159,7 +160,8 @@ CREATE TABLE chatDbo(
     latest_message_id           INTEGER         AS MessageId DEFAULT NULL,
     content_seen_at             INTEGER         AS DateTime,
     notify                      INTEGER         AS NotificationLevel,
-    pin_message                 TEXT            AS MessageUUID DEFAULT NULL
+    pin_message                 TEXT            AS MessageUUID DEFAULT NULL,
+    second_brain_url            TEXT            AS SecondBrainUrl DEFAULT NULL
 );
 
 chatUpdateNameAndStatus:
@@ -236,6 +238,11 @@ chatGetLastTribeId:
 SELECT MIN(id) FROM chatDbo
 WHERE type = 2
 AND id > 10000;
+
+chatGetSecondBrainTribes:
+SELECT *
+FROM chatDbo
+WHERE second_brain_url != '';
 
 chatUpsert {
     UPDATE chatDbo
@@ -346,7 +353,8 @@ SET price_per_message = :price_per_message,
     escrow_amount = :escrow_amount,
     name = :name,
     photo_url = :photo_url,
-    pin_message = :pin_message
+    pin_message = :pin_message,
+    second_brain_url = :second_brain_url
 WHERE id = ?;
 
 chatUpdateSeenByLastMessage:

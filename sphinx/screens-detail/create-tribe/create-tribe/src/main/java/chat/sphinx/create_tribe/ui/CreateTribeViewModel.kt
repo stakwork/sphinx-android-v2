@@ -182,6 +182,7 @@ internal class CreateTribeViewModel @Inject constructor(
                                     tribeInfo.getEscrowAmountInSats().toString(),
                                     convertMilliToHour(tribeInfo.escrow_millis).toString(),
                                     tribeInfo.app_url,
+                                    tribeInfo.second_brain_url,
                                     tribeInfo.feed_url,
                                     null,
                                     tribeInfo.unlisted,

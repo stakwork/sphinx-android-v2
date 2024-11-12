@@ -22,6 +22,7 @@ data class TribeDto(
     val private: Any?,
     val deleted: Any?,
     val app_url: String?,
+    val second_brain_url: String?,
     val feed_url: String?,
     val feed_type: Int?,
     val pin: String?,

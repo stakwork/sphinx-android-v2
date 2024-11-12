@@ -12,5 +12,6 @@ data class TribeData(
     val feedType: FeedType,
     val pin: MessageUUID?,
     val appUrl: AppUrl?,
+    val secondBrainUrl: SecondBrainUrl?,
     val badges: Array<String>
 )

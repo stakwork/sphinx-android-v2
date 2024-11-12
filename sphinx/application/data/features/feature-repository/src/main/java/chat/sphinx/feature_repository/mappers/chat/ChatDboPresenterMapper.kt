@@ -41,6 +41,7 @@ internal class ChatDboPresenterMapper(
             contentSeenAt = value.content_seen_at,
             notify = value.notify,
             pinedMessage = value.pin_message,
+            secondBrainUrl = value.second_brain_url,
         )
     }
 
@@ -71,6 +72,7 @@ internal class ChatDboPresenterMapper(
             content_seen_at = value.contentSeenAt,
             notify = value.notify,
             pin_message = value.pinedMessage,
+            second_brain_url = value.secondBrainUrl
         )
     }
 }

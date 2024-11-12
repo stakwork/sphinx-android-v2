@@ -16,6 +16,7 @@ data class PostGroupDto(
     val unlisted: Boolean? = false,
     val private: Boolean? = false,
     val app_url: String? = null,
+    val second_brain_url: String? = null,
     val feed_url: String? = null,
     val feed_type: Long? = 0L,
 )

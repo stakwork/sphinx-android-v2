@@ -22,9 +22,13 @@ import io.matthewnelson.android_feature_viewmodel.BaseViewModel
 import io.matthewnelson.android_feature_viewmodel.currentViewState
 import io.matthewnelson.android_feature_viewmodel.updateViewState
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
 import javax.inject.Inject
 
 @HiltViewModel
@@ -216,39 +220,56 @@ internal class TransactionsViewModel @Inject constructor(
         val transactionsHVSs: MutableList<TransactionHolderViewState> = currentViewState.list.toMutableList()
 
         if (transactionsHVSs.lastOrNull() is TransactionHolderViewState.Loader) {
-            transactionsHVSs.removeLast()
+            transactionsHVSs.removeAt(transactionsHVSs.lastIndex)
         }
 
         for (transaction in transactions) {
             val senderId = contactIdsMap[transaction.id]
             val senderAlias: String? = contactAliasMap[transaction.id]?.value ?: contactsMap[senderId?.value]?.alias?.value
 
-            if (transaction.isOutgoingPayment(owner.id)) {
-                transactionsHVSs.add(
-                    TransactionHolderViewState.Outgoing(
-                        transaction,
-                        null,
-                        senderAlias ?: "-",
-                    )
-                )
-            }
-            if (transaction.isIncomingPayment(owner.id)) {
+            if (transaction.isBountyPayment()) {
                 transactionsHVSs.add(
                     TransactionHolderViewState.Incoming(
                         transaction,
                         null,
-                        senderAlias ?: "-",
+                        withContext(Dispatchers.IO) {
+                            URLDecoder.decode(
+                                transaction.message_content,
+                                StandardCharsets.UTF_8.toString()
+                            )
+                        } ?: "-",
+                        true
                     )
                 )
-            }
-            if (transaction.isFailedPayment()) {
-                transactionsHVSs.add(
-                    TransactionHolderViewState.Failed.Closed(
-                        transaction,
-                        null,
-                        senderAlias ?: "-",
+            } else {
+                if (transaction.isOutgoingPayment(owner.id)) {
+                    transactionsHVSs.add(
+                        TransactionHolderViewState.Outgoing(
+                            transaction,
+                            null,
+                            senderAlias ?: transaction.message_content ?: "-",
+                        )
                     )
-                )
+                }
+                if (transaction.isIncomingPayment(owner.id)) {
+                    transactionsHVSs.add(
+                        TransactionHolderViewState.Incoming(
+                            transaction,
+                            null,
+                            senderAlias ?: "-",
+                            false
+                        )
+                    )
+                }
+                if (transaction.isFailedPayment()) {
+                    transactionsHVSs.add(
+                        TransactionHolderViewState.Failed.Closed(
+                            transaction,
+                            null,
+                            senderAlias ?: transaction.message_content ?: "-",
+                        )
+                    )
+                }
             }
         }
 

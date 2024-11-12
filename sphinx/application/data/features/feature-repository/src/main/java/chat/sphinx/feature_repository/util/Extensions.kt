@@ -187,6 +187,7 @@ inline fun TransactionCallbacks.updateNewChatTribeData(
     val name = tribe.name.toChatName()
     val photoUrl = tribe.img?.toPhotoUrl()
     val pinMessage = tribe.pin?.toMessageUUID()
+    val secondBrainUrl = tribe.second_brain_url?.toSecondBrainUrl()
 
     queries.chatUpdateTribeData(
         pricePerMessage,
@@ -194,6 +195,7 @@ inline fun TransactionCallbacks.updateNewChatTribeData(
         name,
         photoUrl,
         pinMessage,
+        secondBrainUrl,
         chatId,
     )
 
@@ -215,6 +217,7 @@ inline fun TransactionCallbacks.updateChatTribeData(
     val name = tribe.name.toChatName()
     val photoUrl = tribe.img?.toPhotoUrl()
     val pinMessage = tribe.pin?.toMessageUUID()
+    val secondBrainUrl = tribe.second_brain_url?.toSecondBrainUrl()
 
     queries.chatUpdateTribeData(
         pricePerMessage,
@@ -222,6 +225,7 @@ inline fun TransactionCallbacks.updateChatTribeData(
         name,
         photoUrl,
         pinMessage,
+        secondBrainUrl,
         chatId,
     )
 
@@ -290,7 +294,8 @@ inline fun TransactionCallbacks.upsertNewChat(
             chatName,
             chatPhotoUrl,
             pinedMessage,
-            chatId
+            null,
+            chatId,
         )
     }
 
@@ -383,7 +388,8 @@ inline fun TransactionCallbacks.upsertChat(
             chatName,
             chatPhotoUrl,
             pinedMessage,
-            chatId
+            null,
+            chatId,
         )
     }
 

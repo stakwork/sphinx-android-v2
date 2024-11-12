@@ -29,5 +29,6 @@ data class SphinxWebViewDto(
         const val TYPE_PAYMENT = "PAYMENT"
         const val TYPE_SIGN = "SIGN"
         const val TYPE_GET_PERSON_DATA = "GETPERSONDATA"
+        const val TYPE_GET_SECOND_BRAIN_LIST = "GETSECONDBRAINLIST"
     }
 }

@@ -23,6 +23,7 @@
     <string name="amount_to_stake_sats">ステーキング金額</string>
     <string name="time_to_stake_hours">ステーキング期間（時間）</string>
     <string name="app_url">アプリURL</string>
+    <string name="second_brain_url">セカンドブレインのURL</string>
     <string name="rss_feed_url">フィードURL</string>
     <string name="feed_content_type">フィードのコンテンツタイプ</string>
     <string name="approve_each_membership_request">参加申請を１件ずつ承認しますか？</string>

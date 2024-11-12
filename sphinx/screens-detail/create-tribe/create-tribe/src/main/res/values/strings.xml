@@ -23,6 +23,7 @@
     <string name="amount_to_stake_sats">Amount to Stake</string>
     <string name="time_to_stake_hours">Time to Stake (hours)</string>
     <string name="app_url">App Url</string>
+    <string name="second_brain_url">Second Brain Url</string>
     <string name="rss_feed_url">Feed URL</string>
     <string name="feed_content_type">Feed Content Type</string>
     <string name="approve_each_membership_request">Approve each membership request?</string>

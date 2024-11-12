@@ -3276,7 +3276,7 @@ abstract class SphinxRepository(
     override fun getSecondBrainTribes(): Flow<List<Chat?>> = flow {
         emitAll(
             coreDB.getSphinxDatabaseQueries()
-                .chatGetSecondBrainTribes
+                .chatGetSecondBrainTribes()
                 .asFlow()
                 .mapToList(io)
                 .map { listChatDbo ->

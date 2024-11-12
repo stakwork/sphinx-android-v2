@@ -1130,6 +1130,10 @@ abstract class SphinxRepository(
     ) {
         applicationScope.launch(io) {
             try {
+                if (msgIndex.toLong() == 2171L) {
+                    LOG.d(TAG, "onBountyPayment: ${msg}")
+                }
+
                 val messageType = msgType.toMessageType()
 
                 val messageSender = msgSender.toMsgSender(moshi)
@@ -1426,23 +1430,27 @@ abstract class SphinxRepository(
                         payment_request = message.paymentRequest?.value,
                         date = message.date,
                         reply_uuid = message.replyUUID?.value,
-                        error_message = message.errorMessage?.value
+                        error_message = message.errorMessage?.value,
+                        message_content = message.messageContent?.value
                     )
                 } ?: run {
                     // If not found in DB, create TransactionDto with available information from the Payment object
+                    val isIncoming = payment.msg_idx != null
+
                     TransactionDto(
                         id = payment.msg_idx ?: 0L,
                         chat_id = null,
                         type = MessageType.DirectPayment.value,
-                        sender = 0L,
+                        sender = if ((isIncoming)) -1 else 0,
                         sender_alias = null,
-                        receiver = null,
+                        receiver = if ((isIncoming)) 0 else -1,
                         amount = payment.amt_msat?.milliSatsToSats()?.value ?: 0L,
                         payment_hash = payment.rhash,
                         payment_request = null,
                         date = payment.ts?.toDateTime(),
                         reply_uuid = null,
-                        error_message = payment.error
+                        error_message = payment.error,
+                        message_content = null
                     )
                 }
             }.orEmpty()

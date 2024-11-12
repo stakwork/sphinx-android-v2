@@ -216,7 +216,7 @@ internal class TransactionsViewModel @Inject constructor(
         val transactionsHVSs: MutableList<TransactionHolderViewState> = currentViewState.list.toMutableList()
 
         if (transactionsHVSs.lastOrNull() is TransactionHolderViewState.Loader) {
-            transactionsHVSs.removeLast()
+            transactionsHVSs.removeAt(transactionsHVSs.lastIndex)
         }
 
         for (transaction in transactions) {
@@ -228,7 +228,7 @@ internal class TransactionsViewModel @Inject constructor(
                     TransactionHolderViewState.Outgoing(
                         transaction,
                         null,
-                        senderAlias ?: "-",
+                        senderAlias ?: transaction.message_content ?: "-",
                     )
                 )
             }
@@ -237,7 +237,7 @@ internal class TransactionsViewModel @Inject constructor(
                     TransactionHolderViewState.Incoming(
                         transaction,
                         null,
-                        senderAlias ?: "-",
+                        senderAlias ?: transaction.message_content ?: "-",
                     )
                 )
             }
@@ -246,7 +246,7 @@ internal class TransactionsViewModel @Inject constructor(
                     TransactionHolderViewState.Failed.Closed(
                         transaction,
                         null,
-                        senderAlias ?: "-",
+                        senderAlias ?: transaction.message_content ?: "-",
                     )
                 )
             }

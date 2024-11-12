@@ -161,7 +161,7 @@ CREATE TABLE chatDbo(
     content_seen_at             INTEGER         AS DateTime,
     notify                      INTEGER         AS NotificationLevel,
     pin_message                 TEXT            AS MessageUUID DEFAULT NULL,
-    second_brain_url            TEXT            AS SecondBrainUrl
+    second_brain_url            TEXT            AS SecondBrainUrl DEFAULT NULL
 );
 
 chatUpdateNameAndStatus:
@@ -242,7 +242,7 @@ AND id > 10000;
 chatGetSecondBrainTribes:
 SELECT *
 FROM chatDbo
-WHERE second_brain_url IS NOT NULL;
+WHERE second_brain_url != '';
 
 chatUpsert {
     UPDATE chatDbo

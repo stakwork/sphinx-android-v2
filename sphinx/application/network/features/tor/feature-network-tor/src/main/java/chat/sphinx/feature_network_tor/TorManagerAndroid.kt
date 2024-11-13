@@ -246,14 +246,12 @@ class TorManagerAndroid(
             return bool
         }
 
-        @Synchronized
         suspend fun dispatchRequirementChange(required: Boolean) {
             for (listener in listeners) {
                 listener.onTorRequirementChange(required)
             }
         }
 
-        @Synchronized
         suspend fun dispatchSocksProxyAddressChange(socksProxyAddress: SocksProxyAddress?) {
             for (listener in listeners) {
                 listener.onTorSocksProxyAddressChange(socksProxyAddress)

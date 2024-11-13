@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:background="@color/black"
     android:theme="@style/AppTheme.Fullscreen"
-    tools:context=".ui.activity.FullscreenVideoActivity">
+    tools:context=".ui.activity.full_screen_activity.FullscreenVideoActivity">
 
     <RelativeLayout
         android:layout_width="match_parent"

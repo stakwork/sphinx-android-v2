@@ -74,6 +74,14 @@ dependencies {
 
     api project(path: ':sphinx:screens-detail:camera:camera-view-model-coordinator')
 
+    //Live Kit
+    def livekit_version = "2.10.0"
+
+    implementation "io.livekit:livekit-android:$livekit_version"
+    // CameraX support with pinch to zoom, torch control, etc.
+    implementation "io.livekit:livekit-android-camerax:$livekit_version"
+
+
     api deps.androidx.recyclerView
     implementation deps.google.hilt
     kapt kaptDeps.google.hilt

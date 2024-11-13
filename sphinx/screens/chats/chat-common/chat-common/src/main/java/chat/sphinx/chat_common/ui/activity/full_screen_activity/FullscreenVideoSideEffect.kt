@@ -1,4 +1,4 @@
-package chat.sphinx.chat_common.ui.activity
+package chat.sphinx.chat_common.ui.activity.full_screen_activity
 
 import android.content.Context
 import chat.sphinx.resources.SphinxToastUtils

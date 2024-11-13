@@ -1,5 +1,6 @@
 package chat.sphinx.onboard_connecting.ui
 
+import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
@@ -235,6 +236,7 @@ internal class OnBoardConnectingViewModel @Inject constructor(
                             navigator.toOnBoardNameScreen()
                         }
                     }
+                    else -> {}
                 }
             }
         }
@@ -418,6 +420,7 @@ internal class OnBoardConnectingViewModel @Inject constructor(
         }
     }
 
+    @SuppressLint("StringFormatInvalid")
     private fun collectConnectManagerErrorState(){
         viewModelScope.launch(mainImmediate) {
             connectManagerRepository.connectManagerErrorState.collect { connectManagerError ->
@@ -468,6 +471,7 @@ internal class OnBoardConnectingViewModel @Inject constructor(
                             app.getString(R.string.connect_manager_fetch_first_message_error))
                         )
                     }
+                    else -> {}
                 }
             }
         }

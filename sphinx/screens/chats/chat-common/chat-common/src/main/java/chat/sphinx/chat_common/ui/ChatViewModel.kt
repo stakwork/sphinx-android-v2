@@ -1051,6 +1051,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                             app.getString(R.string.connect_manager_set_mute_error))
                         )
                     }
+                    else -> {}
                 }
             }
         }

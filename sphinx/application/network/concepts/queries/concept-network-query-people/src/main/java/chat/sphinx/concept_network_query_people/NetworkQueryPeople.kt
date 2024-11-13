@@ -35,4 +35,8 @@ abstract class NetworkQueryPeople {
         person: MessagePerson,
     ): Flow<LoadResponse<List<BadgeDto>, ResponseError>>
 
+    abstract fun getCallToken(
+        room: String,
+        alias: String
+    ): Flow<LoadResponse<CallTokenDto, ResponseError>>
 }

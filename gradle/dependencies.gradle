@@ -12,7 +12,7 @@ ext.versions = [
     'coil': '1.4.0',
     'coroutines': '1.6.4',
     'insetter': '0.6.1',
-    'lifecycle'  : '2.4.0',
+    'lifecycle'  : '2.6.1',
     'hilt'       : '2.47',
     'hiltJetpack': '1.0.0-alpha03',
     'kotlin'     : '1.8.20',
@@ -21,6 +21,9 @@ ext.versions = [
     'okhttp'     : '4.10.0',
     'sqlDelight' : '1.5.4',
     'toplAndroid': '2.1.2',
+    'livekit' : '2.10.0',
+    'groupie': '2.9.0',
+    'timberkt' : '1.5.1',
     'targetSdk'  : 34
 ]
 
@@ -141,7 +144,16 @@ ext.deps = [
     ],
     msgpack: [
         sdk: "com.ensarsarajcic.kotlinx:serialization-msgpack:0.5.0"
-    ]
+    ],
+    "livekit": [
+        sdk: "io.livekit:livekit-android:${versions.livekit}",
+        cameraX: "io.livekit:livekit-android-camerax:${versions.livekit}"
+    ],
+    "groupie": [
+        main: "com.github.lisawray.groupie:groupie:${versions.groupie}",
+        viewBinding: "com.github.lisawray.groupie:groupie-viewbinding:${versions.groupie}"
+    ],
+    "timberkt": "com.github.ajalt:timberkt:${versions.timberkt}"
 ]
 
 /**

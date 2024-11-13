@@ -17,6 +17,7 @@ import android.provider.OpenableColumns
 import android.util.Log
 import android.webkit.MimeTypeMap
 import androidx.annotation.CallSuper
+import androidx.core.content.ContextCompat.startActivity
 import androidx.core.view.inputmethod.InputConnectionCompat
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.SavedStateHandle
@@ -29,6 +30,8 @@ import chat.sphinx.chat_common.BuildConfig
 import chat.sphinx.chat_common.R
 import chat.sphinx.chat_common.model.*
 import chat.sphinx.chat_common.navigation.ChatNavigator
+import chat.sphinx.chat_common.ui.activity.call_activity.CallActivity
+import chat.sphinx.chat_common.ui.activity.call_activity.StressTest
 import chat.sphinx.chat_common.ui.viewstate.InitialHolderViewState
 import chat.sphinx.chat_common.ui.viewstate.attachment.AttachmentFullscreenViewState
 import chat.sphinx.chat_common.ui.viewstate.attachment.AttachmentSendViewState
@@ -2025,7 +2028,41 @@ abstract class ChatViewModel<ARGS : NavArgs>(
     }
 
     private fun joinCall(link: SphinxCallLink, audioOnly: Boolean) {
-        if (link.isJitsiLink) {
+        if (link.isLiveKitLink) {
+            viewModelScope.launch(mainImmediate) {
+                val owner = getOwner()
+
+                networkQueryPeople.getCallToken(
+                    room = link.callRoom,
+                    alias = owner.alias?.value ?: "Unknown"
+                ).collect { loadResponse ->
+                    when(loadResponse) {
+                        is LoadResponse.Loading -> {}
+                        is Response.Error -> {}
+                        is Response.Success -> {
+                            val appContext: Context = app.applicationContext
+
+                            val intent = Intent(appContext, CallActivity::class.java).apply {
+                                putExtra(
+                                    CallActivity.KEY_ARGS,
+                                    CallActivity.BundleArgs(
+                                        url = loadResponse.value.serverUrl,
+                                        token = loadResponse.value.participantToken,
+                                        e2eeOn = false,
+                                        e2eeKey = "",
+                                        stressTest = StressTest.None,
+                                        videoEnabled = !audioOnly
+                                    ),
+                                )
+                            }
+                            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+
+                            appContext.startActivity(intent)
+                        }
+                    }
+                }
+            }
+        } else if (link.isJitsiLink) {
             link.callServerUrl?.let { nnCallUrl ->
 
                 viewModelScope.launch(mainImmediate) {

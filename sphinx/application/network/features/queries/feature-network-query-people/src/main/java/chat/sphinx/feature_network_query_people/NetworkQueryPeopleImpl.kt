@@ -30,6 +30,7 @@ class NetworkQueryPeopleImpl(
         private const val ENDPOINT_TRIBE_DEACTIVATE_BADGE = "/remove_badge"
         private const val ENDPOINT_TRIBE_CREATE_BADGE = "/create_badge"
         private const val ENDPOINT_KNOWN_BADGES = "$LIQUID_DEFAULT_SERVER_URL/asset/filter"
+        private const val ENDPOINT_CALL_TOKEN = "https://chat.sphinx.chat/api/connection-details?roomName=%s&participantName=%s"
     }
 
     override fun getTribeMemberProfile(
@@ -81,5 +82,14 @@ class NetworkQueryPeopleImpl(
         networkRelayCall.getList(
             url = String.format(ENDPOINT_TRIBE_BADGES, person.host(), person.uuid()),
             responseJsonClass = BadgeDto::class.java,
+        )
+
+    override fun getCallToken(
+        room: String,
+        alias: String
+    ): Flow<LoadResponse<CallTokenDto, ResponseError>> =
+        networkRelayCall.get(
+            url = String.format(ENDPOINT_CALL_TOKEN, room, alias),
+            responseJsonClass = CallTokenDto::class.java,
         )
 }

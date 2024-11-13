@@ -6,6 +6,7 @@ plugins {
     id 'kotlin-android'
     id 'com.google.android.libraries.mapsplatform.secrets-gradle-plugin'
     id 'kotlin-kapt'
+    id 'kotlin-parcelize'
 }
 
 android {
@@ -74,12 +75,6 @@ dependencies {
 
     api project(path: ':sphinx:screens-detail:camera:camera-view-model-coordinator')
 
-    //Live Kit
-    def livekit_version = "2.10.0"
-
-    implementation "io.livekit:livekit-android:$livekit_version"
-    // CameraX support with pinch to zoom, torch control, etc.
-    implementation "io.livekit:livekit-android-camerax:$livekit_version"
 
 
     api deps.androidx.recyclerView
@@ -91,6 +86,12 @@ dependencies {
     implementation deps.giphy.sdk
     implementation deps.jitsi.sdk
     implementation deps.facebook.shimmer
+    implementation deps.livekit.sdk
+    implementation deps.livekit.cameraX
+    implementation deps.groupie.main
+    implementation deps.groupie.viewBinding
+    implementation deps.timberkt
+    implementation deps.androidx.lifecycle.processLifecycleOwner
 }
 
 secrets {

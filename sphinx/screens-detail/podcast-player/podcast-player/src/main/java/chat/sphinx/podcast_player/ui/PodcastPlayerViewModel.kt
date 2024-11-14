@@ -31,6 +31,7 @@ import chat.sphinx.concept_view_model_coordinator.ResponseHolder
 import chat.sphinx.feature_view_model_coordinator.RequestCatcher
 import chat.sphinx.kotlin_response.Response
 import chat.sphinx.podcast_player.R
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.podcast_player.coordinator.PodcastPlayerViewModelCoordinator
 import chat.sphinx.podcast_player.navigation.BackType
 import chat.sphinx.podcast_player.navigation.PodcastPlayerNavigator
@@ -547,14 +548,14 @@ internal class PodcastPlayerViewModel @Inject constructor(
                         (amount.value > balance.balance.value) -> {
                             submitSideEffect(
                                 PodcastPlayerSideEffect.Notify(
-                                    app.getString(R.string.balance_too_low)
+                                    app.getString(R_common.string.balance_too_low)
                                 )
                             )
                         }
                         (amount.value <= 0) -> {
                             submitSideEffect(
                                 PodcastPlayerSideEffect.Notify(
-                                    app.getString(R.string.boost_amount_too_low)
+                                    app.getString(R_common.string.boost_amount_too_low)
                                 )
                             )
                         }
@@ -741,7 +742,7 @@ internal class PodcastPlayerViewModel @Inject constructor(
                 episode.id,
                 episode.titleToShow,
                 episode.image?.value ?: "",
-                R.drawable.ic_podcast_type,
+                R_common.drawable.ic_podcast_type,
                 "Podcast",
                 episode.dateString,
                 duration,
@@ -769,7 +770,7 @@ internal class PodcastPlayerViewModel @Inject constructor(
             context.startActivity(
                 Intent.createChooser(
                     sharingIntent,
-                    app.getString(R.string.episode_detail_share_link)
+                    app.getString(R_common.string.episode_detail_share_link)
                 )
             )
         }
@@ -784,7 +785,7 @@ internal class PodcastPlayerViewModel @Inject constructor(
 
                 submitSideEffect(
                     PodcastPlayerSideEffect.Notify(
-                        app.getString(R.string.episode_detail_clipboard)
+                        app.getString(R_common.string.episode_detail_clipboard)
                     )
                 )
             }

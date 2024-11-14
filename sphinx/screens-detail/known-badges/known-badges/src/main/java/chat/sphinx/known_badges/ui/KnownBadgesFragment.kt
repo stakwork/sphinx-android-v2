@@ -17,6 +17,7 @@ import chat.sphinx.known_badges.adapter.KnownBadgesListAdapter
 import chat.sphinx.known_badges.adapter.KnownBadgesListFooterAdapter
 import chat.sphinx.known_badges.databinding.FragmentKnownBadgesBinding
 import chat.sphinx.screen_detail_fragment.SideEffectDetailFragment
+import chat.sphinx.resources.R as R_common
 import dagger.hilt.android.AndroidEntryPoint
 import io.matthewnelson.android_feature_screens.util.gone
 import io.matthewnelson.android_feature_screens.util.goneIfFalse
@@ -47,7 +48,7 @@ internal class KnownBadgesFragment: SideEffectDetailFragment<
             .addNavigationBarPadding(binding.layoutConstraintKnownBadgesFragment)
 
         binding.includeKnownBadgesHeader.apply {
-            textViewDetailScreenHeaderName.text = getString(R.string.known_badges_title)
+            textViewDetailScreenHeaderName.text = getString(R_common.string.known_badges_title)
 
             textViewDetailScreenClose.setOnClickListener {
                 lifecycleScope.launch(viewModel.mainImmediate) {

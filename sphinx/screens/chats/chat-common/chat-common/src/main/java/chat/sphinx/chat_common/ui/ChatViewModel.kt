@@ -28,6 +28,7 @@ import chat.sphinx.camera_view_model_coordinator.request.CameraRequest
 import chat.sphinx.camera_view_model_coordinator.response.CameraResponse
 import chat.sphinx.chat_common.BuildConfig
 import chat.sphinx.chat_common.R
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.chat_common.model.*
 import chat.sphinx.chat_common.navigation.ChatNavigator
 import chat.sphinx.chat_common.ui.activity.call_activity.CallActivity
@@ -167,7 +168,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
     val imageLoaderDefaults by lazy {
         ImageLoaderOptions.Builder()
-            .placeholderResId(R.drawable.ic_profile_avatar_circle)
+            .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
             .build()
     }
 
@@ -1016,42 +1017,42 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                 when (connectManagerError) {
                     is ConnectManagerError.SendMessageError -> {
                         submitSideEffect(ChatSideEffect.Notify(
-                            app.getString(R.string.connect_manager_send_message_error))
+                            app.getString(R_common.string.connect_manager_send_message_error))
                         )
                     }
                     is ConnectManagerError.PayContactInvoiceError -> {
                         submitSideEffect(ChatSideEffect.Notify(
-                            app.getString(R.string.connect_manager_pay_contact_invoice_error))
+                            app.getString(R_common.string.connect_manager_pay_contact_invoice_error))
                         )
                     }
                     is ConnectManagerError.PayInvoiceError -> {
                         submitSideEffect(ChatSideEffect.Notify(
-                            app.getString(R.string.connect_manager_pay_invoice_error))
+                            app.getString(R_common.string.connect_manager_pay_invoice_error))
                         )
                     }
                     is ConnectManagerError.PaymentHashError -> {
                         submitSideEffect(ChatSideEffect.Notify(
-                            app.getString(R.string.connect_manager_payment_hash_error))
+                            app.getString(R_common.string.connect_manager_payment_hash_error))
                         )
                     }
                     is ConnectManagerError.ReadMessageError -> {
                         submitSideEffect(ChatSideEffect.Notify(
-                            app.getString(R.string.connect_manager_read_message_error))
+                            app.getString(R_common.string.connect_manager_read_message_error))
                         )
                     }
                     is ConnectManagerError.SignBytesError -> {
                         submitSideEffect(ChatSideEffect.Notify(
-                            app.getString(R.string.connect_manager_sign_bytes_error))
+                            app.getString(R_common.string.connect_manager_sign_bytes_error))
                         )
                     }
                     is ConnectManagerError.MediaTokenError -> {
                         submitSideEffect(ChatSideEffect.Notify(
-                            app.getString(R.string.connect_manager_media_token_error))
+                            app.getString(R_common.string.connect_manager_media_token_error))
                         )
                     }
                     is ConnectManagerError.SetMuteError -> {
                         submitSideEffect(ChatSideEffect.Notify(
-                            app.getString(R.string.connect_manager_set_mute_error))
+                            app.getString(R_common.string.connect_manager_set_mute_error))
                         )
                     }
                     else -> {}
@@ -2412,7 +2413,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
                     if (price == null || price > balance.balance.value) {
                         submitSideEffect(
-                            ChatSideEffect.Notify(app.getString(R.string.balance_too_low))
+                            ChatSideEffect.Notify(app.getString(R_common.string.balance_too_low))
                         )
                     } else {
                         messageRepository.payAttachment(message)
@@ -2437,7 +2438,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                 getAccountBalance().firstOrNull()?.let { balance ->
                     if (message.amount.value > balance.balance.value) {
                         submitSideEffect(
-                            ChatSideEffect.Notify(app.getString(R.string.balance_too_low))
+                            ChatSideEffect.Notify(app.getString(R_common.string.balance_too_low))
                         )
                     } else {
                         connectManagerRepository.payContactPaymentRequest(message.paymentRequest)

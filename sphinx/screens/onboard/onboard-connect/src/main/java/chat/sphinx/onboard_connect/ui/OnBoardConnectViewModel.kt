@@ -22,6 +22,7 @@ import chat.sphinx.onboard_connect.navigation.OnBoardConnectNavigator
 import chat.sphinx.scanner_view_model_coordinator.request.ScannerRequest
 import chat.sphinx.scanner_view_model_coordinator.response.ScannerResponse
 import chat.sphinx.wrapper_invite.toValidInviteStringOrNull
+import chat.sphinx.resources.R as R_common
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.matthewnelson.android_feature_navigation.util.navArgs
 import io.matthewnelson.android_feature_viewmodel.SideEffectViewModel
@@ -320,8 +321,8 @@ internal class OnBoardConnectViewModel @Inject constructor(
     ) {
         viewModelScope.launch(mainImmediate) {
             submitSideEffect(OnBoardConnectSideEffect.SigningDeviceInfo(
-                app.getString(R.string.network_name_title),
-                app.getString(R.string.network_name_message)
+                app.getString(R_common.string.network_name_title),
+                app.getString(R_common.string.network_name_message)
             ) { networkName ->
                 if (networkName == null) {
                     viewModelScope.launch(mainImmediate) {
@@ -338,9 +339,9 @@ internal class OnBoardConnectViewModel @Inject constructor(
     override fun signingDevicePassword(networkName: String, callback: (String) -> Unit) {
         viewModelScope.launch(mainImmediate) {
             submitSideEffect(OnBoardConnectSideEffect.SigningDeviceInfo(
-                app.getString(R.string.network_password_title),
+                app.getString(R_common.string.network_password_title),
                 app.getString(
-                    R.string.network_password_message,
+                    R_common.string.network_password_message,
                     networkName ?: "-"
                 ),
                 inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
@@ -360,8 +361,8 @@ internal class OnBoardConnectViewModel @Inject constructor(
     override fun signingDeviceLightningNodeUrl(callback: (String) -> Unit) {
         viewModelScope.launch(mainImmediate) {
             submitSideEffect(OnBoardConnectSideEffect.SigningDeviceInfo(
-                app.getString(R.string.lightning_node_url_title),
-                app.getString(R.string.lightning_node_url_message),
+                app.getString(R_common.string.lightning_node_url_title),
+                app.getString(R_common.string.lightning_node_url_message),
             ) { lightningNodeUrl ->
                 viewModelScope.launch(mainImmediate) {
                     if (lightningNodeUrl == null) {
@@ -439,7 +440,7 @@ internal class OnBoardConnectViewModel @Inject constructor(
             if (words.size != 12 && words.size != 24) {
                 submitSideEffect(
                     OnBoardConnectSideEffect.Notify(
-                        app.getString(R.string.mnemonic_incorrect_length)
+                        app.getString(R_common.string.mnemonic_incorrect_length)
                     )
                 )
             }
@@ -453,7 +454,7 @@ internal class OnBoardConnectViewModel @Inject constructor(
             } else {
                 submitSideEffect(
                     OnBoardConnectSideEffect.Notify(
-                        app.getString(R.string.mnemonic_invalid_word)
+                        app.getString(R_common.string.mnemonic_invalid_word)
                     )
                 )
             }

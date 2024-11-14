@@ -16,6 +16,7 @@ import chat.sphinx.known_badges.databinding.LayoutKnownBadgesListItemHolderBindi
 import chat.sphinx.known_badges.ui.KnownBadgesViewModel
 import chat.sphinx.known_badges.ui.KnownBadgesViewState
 import chat.sphinx.wrapper_badge.Badge
+import chat.sphinx.resources.R as R_common
 import io.matthewnelson.android_feature_viewmodel.collectViewState
 import io.matthewnelson.android_feature_viewmodel.util.OnStopSupervisor
 import kotlinx.coroutines.Job
@@ -147,7 +148,7 @@ internal class KnownBadgesListAdapter(
 
     private val imageLoaderOptions: ImageLoaderOptions by lazy {
         ImageLoaderOptions.Builder()
-            .placeholderResId(R.drawable.sphinx_icon)
+            .placeholderResId(R_common.drawable.sphinx_icon)
             .build()
     }
 
@@ -175,7 +176,7 @@ internal class KnownBadgesListAdapter(
                     }
                 } ?: run {
                     imageViewBadgeImage.setImageDrawable(
-                        ContextCompat.getDrawable(root.context, R.drawable.ic_tribe)
+                        ContextCompat.getDrawable(root.context, R_common.drawable.ic_tribe)
                     )
                 }
 

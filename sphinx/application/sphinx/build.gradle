@@ -10,7 +10,10 @@ android {
     compileSdkVersion versions.compileSdk
     buildToolsVersion versions.buildTools
 
-    buildFeatures.viewBinding = true
+    buildFeatures {
+        buildConfig = true
+        viewBinding = true
+    }
     defaultConfig {
         applicationId "chat.sphinx.v2"
         minSdkVersion versions.minSdk
@@ -53,8 +56,8 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
     }
 
     // Needed for Tor

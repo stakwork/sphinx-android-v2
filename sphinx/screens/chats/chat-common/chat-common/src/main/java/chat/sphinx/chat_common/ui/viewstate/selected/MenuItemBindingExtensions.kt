@@ -4,6 +4,7 @@ import androidx.annotation.MainThread
 import androidx.core.content.ContextCompat
 import app.cash.exhaustive.Exhaustive
 import chat.sphinx.chat_common.R
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.chat_common.databinding.LayoutSelectedMessageBinding
 import chat.sphinx.chat_common.databinding.LayoutSelectedMessageMenuItemBinding
 import chat.sphinx.chat_common.ui.viewstate.messageholder.MessageHolderViewState
@@ -88,80 +89,80 @@ internal inline fun LayoutSelectedMessageMenuItemBinding.setMenuItem(item: MenuI
         textViewSelectedMessageMenuItemIcon.goneIfFalse(item.showTextIcon)
         imageViewSelectedMessageMenuItemIcon.goneIfFalse(item.showImageIcon)
 
-        textViewSelectedMessageMenuItemIcon.setTextColorExt(R.color.text)
-        textViewSelectedMessageMenuItem.setTextColorExt(R.color.text)
+        textViewSelectedMessageMenuItemIcon.setTextColorExt(R_common.color.text)
+        textViewSelectedMessageMenuItem.setTextColorExt(R_common.color.text)
 
         // TODO: Fix Material Icon setting (something's amiss with how they show up on screen)
         when (item) {
             is MenuItemState.Boost -> {
                 imageViewSelectedMessageMenuItemIcon.setImageDrawable(
-                    ContextCompat.getDrawable(root.context, R.drawable.ic_circular_boost_green)
+                    ContextCompat.getDrawable(root.context, R_common.drawable.ic_circular_boost_green)
                 )
                 textViewSelectedMessageMenuItem.text =
                     getString(R.string.selected_message_menu_item_boost)
             }
             is MenuItemState.CopyCallLink -> {
                 textViewSelectedMessageMenuItemIcon.text =
-                    getString(R.string.material_icon_name_message_action_copy_call_link)
+                    getString(R_common.string.material_icon_name_message_action_copy_call_link)
                 textViewSelectedMessageMenuItem.text =
                     getString(R.string.selected_message_menu_item_copy_call_link)
             }
             is MenuItemState.CopyLink -> {
                 textViewSelectedMessageMenuItemIcon.text =
-                    getString(R.string.material_icon_name_message_action_copy_link)
+                    getString(R_common.string.material_icon_name_message_action_copy_link)
                 textViewSelectedMessageMenuItem.text =
                     getString(R.string.selected_message_menu_item_copy_link)
             }
             is MenuItemState.CopyText -> {
                 textViewSelectedMessageMenuItemIcon.text =
-                    getString(R.string.material_icon_name_message_action_copy_text)
+                    getString(R_common.string.material_icon_name_message_action_copy_text)
                 textViewSelectedMessageMenuItem.text =
                     getString(R.string.selected_message_menu_item_copy_text)
             }
             is MenuItemState.Delete -> {
                 textViewSelectedMessageMenuItemIcon.apply {
-                    text = getString(R.string.material_icon_name_message_action_delete)
-                    setTextColorExt(R.color.primaryRed)
+                    text = getString(R_common.string.material_icon_name_message_action_delete)
+                    setTextColorExt(R_common.color.primaryRed)
                 }
                 textViewSelectedMessageMenuItem.apply {
                     text = getString(R.string.selected_message_menu_item_delete)
-                    setTextColorExt(R.color.primaryRed)
+                    setTextColorExt(R_common.color.primaryRed)
                 }
             }
             is MenuItemState.Reply -> {
                 textViewSelectedMessageMenuItemIcon.text =
-                    getString(R.string.material_icon_name_message_action_reply)
+                    getString(R_common.string.material_icon_name_message_action_reply)
                 textViewSelectedMessageMenuItem.text =
                     getString(R.string.selected_message_menu_item_reply)
             }
             is MenuItemState.SaveFile -> {
                 textViewSelectedMessageMenuItemIcon.text =
-                    getString(R.string.material_icon_name_message_action_save_file)
+                    getString(R_common.string.material_icon_name_message_action_save_file)
                 textViewSelectedMessageMenuItem.text =
                     getString(R.string.selected_message_menu_item_save_file)
             }
             is MenuItemState.Resend -> {
                 textViewSelectedMessageMenuItemIcon.text =
-                    getString(R.string.material_icon_name_message_action_resend)
+                    getString(R_common.string.material_icon_name_message_action_resend)
                 textViewSelectedMessageMenuItem.text =
                     getString(R.string.selected_message_menu_item_resend)
             }
             is MenuItemState.Flag -> {
                 textViewSelectedMessageMenuItemIcon.text =
-                    getString(R.string.material_icon_name_message_action_flag)
+                    getString(R_common.string.material_icon_name_message_action_flag)
                 textViewSelectedMessageMenuItem.text =
                     getString(R.string.selected_message_menu_item_flag)
             }
             is MenuItemState.PinMessage -> {
                 imageViewSelectedMessageMenuItemIcon.setImageDrawable(
-                    ContextCompat.getDrawable(root.context, R.drawable.ic_pin)
+                    ContextCompat.getDrawable(root.context, R_common.drawable.ic_pin)
                 )
                 textViewSelectedMessageMenuItem.text =
                     getString(R.string.selected_message_menu_item_pin)
             }
             is MenuItemState.UnpinMessage -> {
                 imageViewSelectedMessageMenuItemIcon.setImageDrawable(
-                    ContextCompat.getDrawable(root.context, R.drawable.ic_pin)
+                    ContextCompat.getDrawable(root.context, R_common.drawable.ic_pin)
                 )
                 textViewSelectedMessageMenuItem.text =
                     getString(R.string.selected_message_menu_item_unpin)

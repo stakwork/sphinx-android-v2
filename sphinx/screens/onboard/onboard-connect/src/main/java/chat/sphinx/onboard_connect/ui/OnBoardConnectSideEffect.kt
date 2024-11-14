@@ -14,6 +14,7 @@ import chat.sphinx.onboard_connect.ui.OnBoardConnectViewModel.Companion.BITCOIN_
 import chat.sphinx.resources.SphinxToastUtils
 import chat.sphinx.scanner_view_model_coordinator.response.ScannerResponse
 import chat.sphinx.wrapper_relay.RelayUrl
+import chat.sphinx.resources.R as R_common
 import io.matthewnelson.android_feature_toast_utils.show
 import io.matthewnelson.concept_views.sideeffect.SideEffect
 import java.util.Locale
@@ -63,12 +64,12 @@ internal sealed class OnBoardConnectSideEffect: SideEffect<Context>() {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
             )
-            params.leftMargin = value.resources.getDimensionPixelSize(R.dimen.default_layout_margin)
-            params.rightMargin = value.resources.getDimensionPixelSize(R.dimen.default_layout_margin)
+            params.leftMargin = value.resources.getDimensionPixelSize(R_common.dimen.default_layout_margin)
+            params.rightMargin = value.resources.getDimensionPixelSize(R_common.dimen.default_layout_margin)
             inputEditTextField.layoutParams = params
             container.addView(inputEditTextField)
 
-            val builder = AlertDialog.Builder(value, R.style.AlertDialogTheme)
+            val builder = AlertDialog.Builder(value, R_common.style.AlertDialogTheme)
             builder.setTitle(title)
             builder.setMessage(message)
             builder.setView(container)
@@ -93,11 +94,11 @@ internal sealed class OnBoardConnectSideEffect: SideEffect<Context>() {
         private val callback: () -> Unit,
     ): OnBoardConnectSideEffect() {
         override suspend fun execute(value: Context) {
-            val builder = AlertDialog.Builder(value, R.style.AlertDialogTheme)
-            builder.setTitle(value.getString(R.string.network_check_title))
-            builder.setMessage(value.getString(R.string.network_check_message))
-            builder.setNegativeButton(R.string.no) { _, _ -> }
-            builder.setPositiveButton(R.string.yes) { _, _ ->
+            val builder = AlertDialog.Builder(value, R_common.style.AlertDialogTheme)
+            builder.setTitle(value.getString(R_common.string.network_check_title))
+            builder.setMessage(value.getString(R_common.string.network_check_message))
+            builder.setNegativeButton(R_common.string.no) { _, _ -> }
+            builder.setPositiveButton(R_common.string.yes) { _, _ ->
                 callback.invoke()
             }
             builder.show()
@@ -109,15 +110,15 @@ internal sealed class OnBoardConnectSideEffect: SideEffect<Context>() {
         private val callback: () -> Unit,
     ): OnBoardConnectSideEffect() {
         override suspend fun execute(value: Context) {
-            val builder = AlertDialog.Builder(value, R.style.AlertDialogTheme)
-            builder.setTitle(value.getString(R.string.store_mnemonic))
+            val builder = AlertDialog.Builder(value, R_common.style.AlertDialogTheme)
+            builder.setTitle(value.getString(R_common.string.store_mnemonic))
             builder.setMessage(mnemonic)
             builder.setNeutralButton(android.R.string.copy) { _, _ ->
                 (value.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager)?.let { manager ->
                     val clipData = ClipData.newPlainText("mnemonic", mnemonic)
                     manager.setPrimaryClip(clipData)
 
-                    SphinxToastUtils().show(value, R.string.mnemonic_copied_to_clipboard)
+                    SphinxToastUtils().show(value, R_common.string.mnemonic_copied_to_clipboard)
                 }
                 callback.invoke()
             }
@@ -134,8 +135,8 @@ internal sealed class OnBoardConnectSideEffect: SideEffect<Context>() {
         private val callback: () -> Unit,
     ): OnBoardConnectSideEffect() {
         override suspend fun execute(value: Context) {
-            val builder = AlertDialog.Builder(value, R.style.AlertDialogTheme)
-            builder.setTitle(value.getString(R.string.select_bitcoin_network))
+            val builder = AlertDialog.Builder(value, R_common.style.AlertDialogTheme)
+            builder.setTitle(value.getString(R_common.string.select_bitcoin_network))
 
             val items = arrayOf(BITCOIN_NETWORK_REG_TEST.toCapitalized(), BITCOIN_NETWORK_MAIN_NET.toCapitalized())
             builder.setSingleChoiceItems(items, 1) { _, p1 ->
@@ -161,13 +162,13 @@ internal sealed class OnBoardConnectSideEffect: SideEffect<Context>() {
 
     object SendingSeedToHardware: OnBoardConnectSideEffect() {
         override suspend fun execute(value: Context) {
-            SphinxToastUtils().show(value, R.string.sending_seed)
+            SphinxToastUtils().show(value, R_common.string.sending_seed)
         }
     }
 
     object SigningDeviceSuccessfullySet: OnBoardConnectSideEffect() {
         override suspend fun execute(value: Context) {
-            SphinxToastUtils(true).show(value, R.string.signing_device_successfully_set)
+            SphinxToastUtils(true).show(value, R_common.string.signing_device_successfully_set)
         }
     }
 
@@ -177,7 +178,7 @@ internal sealed class OnBoardConnectSideEffect: SideEffect<Context>() {
         override suspend fun execute(value: Context) {
             SphinxToastUtils(true).show(
                 value,
-                value.getString(R.string.error_setting_up_signing_device, errorMessage)
+                value.getString(R_common.string.error_setting_up_signing_device, errorMessage)
             )
         }
     }

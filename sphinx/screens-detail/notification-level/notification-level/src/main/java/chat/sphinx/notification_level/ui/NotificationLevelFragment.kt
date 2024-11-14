@@ -17,6 +17,7 @@ import chat.sphinx.wrapper_chat.NotificationLevel
 import chat.sphinx.wrapper_chat.isMuteChat
 import chat.sphinx.wrapper_chat.isOnlyMentions
 import chat.sphinx.wrapper_chat.isSeeAll
+import chat.sphinx.resources.R as R_common
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.annotation.meta.Exhaustive
@@ -78,7 +79,7 @@ internal class NotificationLevelFragment: SideEffectDetailFragment<
     override suspend fun onViewStateFlowCollect(viewState: NotificationLevelViewState) {
         binding.apply {
 
-            val selectedColor = root.context.getColor(R.color.primaryBlue)
+            val selectedColor = root.context.getColor(R_common.color.primaryBlue)
             val unselectedColor = root.context.getColor(android.R.color.transparent)
 
             @Exhaustive

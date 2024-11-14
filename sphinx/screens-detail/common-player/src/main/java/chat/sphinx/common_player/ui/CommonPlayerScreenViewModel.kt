@@ -12,6 +12,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import app.cash.exhaustive.Exhaustive
 import chat.sphinx.common_player.R
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.common_player.navigation.CommonPlayerNavigator
 import chat.sphinx.common_player.viewstate.BoostAnimationViewState
 import chat.sphinx.common_player.viewstate.PlayerViewState
@@ -499,7 +500,7 @@ class CommonPlayerScreenViewModel @Inject constructor(
                 episode.id,
                 episode.titleToShow,
                 episode.image?.value ?: "",
-                R.drawable.ic_podcast_type,
+                R_common.drawable.ic_podcast_type,
                 "Podcast",
                 episode.dateString,
                 duration,
@@ -525,7 +526,7 @@ class CommonPlayerScreenViewModel @Inject constructor(
         context.startActivity(
             Intent.createChooser(
                 sharingIntent,
-                app.getString(R.string.episode_detail_share_link)
+                app.getString(R_common.string.episode_detail_share_link)
             )
         )
     }
@@ -538,7 +539,7 @@ class CommonPlayerScreenViewModel @Inject constructor(
             viewModelScope.launch(mainImmediate) {
                 submitSideEffect(
                     CommonPlayerScreenSideEffect.Notify.CopyClipboardLink(
-                        R.string.episode_detail_clipboard
+                        R_common.string.episode_detail_clipboard
                     )
                 )
             }

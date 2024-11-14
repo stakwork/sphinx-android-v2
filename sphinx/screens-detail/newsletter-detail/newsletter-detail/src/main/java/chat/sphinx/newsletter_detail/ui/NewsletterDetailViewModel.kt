@@ -15,6 +15,7 @@ import chat.sphinx.wrapper_common.feed.toFeedUrl
 import chat.sphinx.wrapper_common.feed.toSubscribed
 import chat.sphinx.wrapper_feed.Feed
 import chat.sphinx.wrapper_feed.FeedItem
+import chat.sphinx.resources.R as R_common
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.matthewnelson.android_feature_navigation.util.navArgs
 import io.matthewnelson.android_feature_viewmodel.BaseViewModel
@@ -91,7 +92,7 @@ internal class NewsletterDetailViewModel @Inject constructor(
         viewModelScope.launch(mainImmediate) {
             navigator.toWebViewDetail(
                 item?.feed?.chat?.id ?: item?.feed?.chatId,
-                app.getString(R.string.newsletter_article),
+                app.getString(R_common.string.newsletter_article),
                 item.enclosureUrl,
                 item.feedId,
                 item.id

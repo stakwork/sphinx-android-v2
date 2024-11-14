@@ -26,6 +26,7 @@ import chat.sphinx.wrapper_common.feed.FeedId
 import chat.sphinx.wrapper_common.message.MessageId
 import chat.sphinx.wrapper_common.toFileSize
 import chat.sphinx.wrapper_feed.FeedItem
+import chat.sphinx.resources.R as R_common
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.matthewnelson.android_feature_viewmodel.SideEffectViewModel
 import io.matthewnelson.android_feature_viewmodel.submitSideEffect
@@ -175,7 +176,7 @@ internal class ManageStorageViewModel @Inject constructor(
 
             if (!deleteResponse) {
                 submitSideEffect(
-                    StorageNotifySideEffect(app.getString(R.string.manage_storage_error_delete))
+                    StorageNotifySideEffect(app.getString(R_common.string.manage_storage_error_delete))
                 )
                 deleteItemNotificationViewStateContainer.updateViewState(DeleteTypeNotificationViewState.Closed)
             }

@@ -16,6 +16,7 @@ import chat.sphinx.payment_common.databinding.LayoutConstraintMessageBinding
 import chat.sphinx.payment_common.ui.PaymentFragment
 import chat.sphinx.payment_common.ui.viewstate.receive.PaymentReceiveViewState
 import chat.sphinx.payment_receive.R
+import chat.sphinx.payment_common.R as R_payment_common
 import chat.sphinx.payment_receive.databinding.FragmentPaymentReceiveBinding
 import chat.sphinx.resources.databinding.LayoutAmountPadBinding
 import dagger.hilt.android.AndroidEntryPoint
@@ -85,7 +86,7 @@ internal class PaymentReceiveFragment: PaymentFragment<
             is PaymentReceiveViewState.ChatPaymentRequest -> {
                 binding.includeConstraintFromContact.root.visible
                 binding.includeConstraintMessage.root.visible
-                binding.includeConstraintConfirmButton.buttonConfirm.text = getString(R.string.confirm_button)
+                binding.includeConstraintConfirmButton.buttonConfirm.text = getString(R_payment_common.string.confirm_button)
 
                 setupDestination(contact = viewState.contact)
             }
@@ -93,7 +94,7 @@ internal class PaymentReceiveFragment: PaymentFragment<
             is PaymentReceiveViewState.RequestLightningPayment -> {
                 binding.includeConstraintFromContact.root.invisible
                 binding.includeConstraintMessage.root.visible
-                binding.includeConstraintConfirmButton.buttonConfirm.text = getString(R.string.continue_button)
+                binding.includeConstraintConfirmButton.buttonConfirm.text = getString(R_payment_common.string.continue_button)
             }
 
             is PaymentReceiveViewState.ProcessingRequest -> {

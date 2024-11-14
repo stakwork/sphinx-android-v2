@@ -8,6 +8,7 @@ import androidx.lifecycle.LifecycleOwner
 import chat.sphinx.menu_bottom.databinding.LayoutMenuBottomBinding
 import chat.sphinx.menu_bottom.model.MenuBottomOption
 import chat.sphinx.menu_bottom.ui.BottomMenu
+import chat.sphinx.resources.R as R_common
 import io.matthewnelson.android_feature_viewmodel.util.OnStopSupervisor
 
 class BottomMenuPicture(
@@ -38,14 +39,14 @@ class BottomMenuPicture(
                 setOf(
                     MenuBottomOption(
                         text = R.string.bottom_menu_profile_pic_option_camera,
-                        textColor = R.color.primaryBlueFontColor,
+                        textColor = R_common.color.primaryBlueFontColor,
                         onClick = {
                             pictureMenuViewModel.pictureMenuHandler.updatePictureFromCamera()
                         }
                     ),
                     MenuBottomOption(
                         text = R.string.bottom_menu_profile_pic_option_photo_library,
-                        textColor = R.color.primaryBlueFontColor,
+                        textColor = R_common.color.primaryBlueFontColor,
                         onClick = {
                             contentChooserContract.launch("image/*")
                         }

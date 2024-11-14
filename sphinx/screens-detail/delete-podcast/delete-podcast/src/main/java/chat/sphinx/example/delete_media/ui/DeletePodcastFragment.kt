@@ -22,6 +22,7 @@ import chat.sphinx.insetter_activity.InsetterActivity
 import chat.sphinx.insetter_activity.addNavigationBarPadding
 import chat.sphinx.screen_detail_fragment.SideEffectDetailFragment
 import chat.sphinx.wrapper_common.calculateSize
+import chat.sphinx.resources.R as R_common
 import dagger.hilt.android.AndroidEntryPoint
 import io.matthewnelson.android_feature_screens.util.gone
 import io.matthewnelson.android_feature_screens.util.goneIfFalse
@@ -100,7 +101,7 @@ internal class DeletePodcastFragment: SideEffectDetailFragment<
 
     private fun setUpHeader() {
         binding.apply {
-            includeManageMediaElementHeader.textViewHeader.text = getString(R.string.podcasts)
+            includeManageMediaElementHeader.textViewHeader.text = getString(R_common.string.podcasts)
         }
     }
 
@@ -143,7 +144,7 @@ internal class DeletePodcastFragment: SideEffectDetailFragment<
                 }
 
                 binding.textViewPodcastNoFound.goneIfFalse(viewState.section.isEmpty())
-                binding.includeDeleteNotification.textViewDeleteDescription.text = getString(R.string.manage_storage_delete_description)
+                binding.includeDeleteNotification.textViewDeleteDescription.text = getString(R_common.string.manage_storage_delete_description)
 
                 if (viewState.section.isEmpty()) {
                     binding.includeManageMediaElementHeader.constraintLayoutDeleteElementContainerTrash.gone
@@ -189,7 +190,7 @@ internal class DeletePodcastFragment: SideEffectDetailFragment<
 
                 binding.includeDeleteNotification.textViewManageStorageFreeSpaceText.text =
                     String.format(
-                        getString(R.string.manage_storage_deleted_free_space),
+                        getString(R_common.string.manage_storage_deleted_free_space),
                         deleteSize.calculateSize()
                     )
             }

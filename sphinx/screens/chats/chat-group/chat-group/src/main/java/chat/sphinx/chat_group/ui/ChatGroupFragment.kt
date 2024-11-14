@@ -8,6 +8,7 @@ import by.kirich1409.viewbindingdelegate.viewBinding
 import chat.sphinx.chat_common.databinding.*
 import chat.sphinx.chat_common.ui.ChatFragment
 import chat.sphinx.chat_group.R
+import chat.sphinx.chat_common.R as R_chat_common
 import chat.sphinx.chat_group.databinding.FragmentChatGroupBinding
 import chat.sphinx.concept_image_loader.ImageLoader
 import chat.sphinx.concept_user_colors_helper.UserColorsHelper
@@ -49,7 +50,7 @@ internal class ChatGroupFragment: ChatFragment<
         LayoutSelectedMessageBinding::bind, R.id.include_chat_group_selected_message
     )
     override val selectedMessageHolderBinding: LayoutMessageHolderBinding by viewBinding(
-        LayoutMessageHolderBinding::bind, R.id.include_layout_message_holder_selected_message
+        LayoutMessageHolderBinding::bind, R_chat_common.id.include_layout_message_holder_selected_message
     )
     override val attachmentSendBinding: LayoutAttachmentSendPreviewBinding by viewBinding(
         LayoutAttachmentSendPreviewBinding::bind, R.id.include_chat_group_attachment_send_preview

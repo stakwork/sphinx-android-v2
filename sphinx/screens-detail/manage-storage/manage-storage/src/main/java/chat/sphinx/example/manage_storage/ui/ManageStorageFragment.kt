@@ -20,6 +20,7 @@ import chat.sphinx.insetter_activity.addNavigationBarPadding
 import chat.sphinx.manage.storage.R
 import chat.sphinx.manage.storage.databinding.FragmentManageStorageBinding
 import chat.sphinx.screen_detail_fragment.SideEffectDetailFragment
+import chat.sphinx.resources.R as R_common
 import dagger.hilt.android.AndroidEntryPoint
 import io.matthewnelson.android_feature_screens.util.gone
 import io.matthewnelson.android_feature_screens.util.visible
@@ -106,10 +107,10 @@ internal class ManageStorageFragment: SideEffectDetailFragment<
 
     private fun setUpHeader() {
         binding.apply {
-            includeManageStorageHeader.textViewHeader.text = getString(R.string.manage_storage)
+            includeManageStorageHeader.textViewHeader.text = getString(R_common.string.manage_storage)
             includeManageStorageHeader.constraintLayoutDeleteElementContainerTrash.gone
             includeLayoutChangeLimit.includeLayoutChangeStorageLimitDetail.includeManageChangeLimitHeader.apply {
-                textViewHeader.text = getString(R.string.manage_storage_limit)
+                textViewHeader.text = getString(R_common.string.manage_storage_limit)
                 constraintLayoutDeleteElementContainerTrash.gone
             }
         }
@@ -205,7 +206,7 @@ internal class ManageStorageFragment: SideEffectDetailFragment<
                                 storageLimitSeekBar.progress = viewState.storageLimit.seekBarProgress
                                 textViewManageStorageUsedNumber.text = viewState.storageLimit.usedStorage
                                 textViewManageStorageMax.text = viewState.storageLimit.freeStorage
-                                textViewManageStorageOccupiedNumber.text = viewState.storageLimit.userStorageLimit ?: getString(R.string.manage_storage_zero_gb)
+                                textViewManageStorageOccupiedNumber.text = viewState.storageLimit.userStorageLimit ?: getString(R_common.string.manage_storage_zero_gb)
                                 setChangeStorageLimitPercentage(includeProfileManageStorageBar.storageProgressUsed, viewState.storageLimit.progressBarPercentage)
                                 handleUndersizedLimit(viewState.storageLimit.undersized)
                             }
@@ -224,7 +225,7 @@ internal class ManageStorageFragment: SideEffectDetailFragment<
                         is DeleteTypeNotificationViewState.Closed -> {}
                         is DeleteTypeNotificationViewState.Open -> {
                             includeLayoutManageStorageDeleteDetails.
-                            textViewStorageDeleteHeader.text = String.format(getString(R.string.manage_storage_delete_item), viewState.type)
+                            textViewStorageDeleteHeader.text = String.format(getString(R_common.string.manage_storage_delete_item), viewState.type)
                         }
                     }
                     root.setTransitionDuration(300)
@@ -281,7 +282,7 @@ internal class ManageStorageFragment: SideEffectDetailFragment<
     private fun bindStorageInfo(viewState: ManageStorageViewState.StorageInfo) {
         binding.apply {
             textViewManageStorageOccupiedNumber.text = viewState.storageSize.usedStorage
-            textViewManageStorageFreeNumber.text = String.format(getString(R.string.manage_storage_free_space), viewState.storageSize.freeStorage)
+            textViewManageStorageFreeNumber.text = String.format(getString(R_common.string.manage_storage_free_space), viewState.storageSize.freeStorage)
             textViewManageStorageImagesNumber.text = viewState.storageSize.image
             textViewManageStorageVideoNumber.text = viewState.storageSize.video
             textViewManageStorageAudioNumber.text = viewState.storageSize.audio
@@ -296,28 +297,28 @@ internal class ManageStorageFragment: SideEffectDetailFragment<
             buttonChangeStorageLimit.visible
 
             storageProgressPointImages.backgroundTintList =
-                ContextCompat.getColorStateList(root.context, R.color.storageBarBlue)
+                ContextCompat.getColorStateList(root.context, R_common.color.storageBarBlue)
 
             storageProgressPointVideo.backgroundTintList =
-                ContextCompat.getColorStateList(root.context, R.color.storageBarPurple)
+                ContextCompat.getColorStateList(root.context, R_common.color.storageBarPurple)
 
             storageProgressPointAudio.backgroundTintList =
-                ContextCompat.getColorStateList(root.context, R.color.storageBarYellow)
+                ContextCompat.getColorStateList(root.context, R_common.color.storageBarYellow)
 
             storageProgressPointFiles.backgroundTintList =
-                ContextCompat.getColorStateList(root.context, R.color.primaryGreen)
+                ContextCompat.getColorStateList(root.context, R_common.color.primaryGreen)
 
             textViewManageStorageImagesText.setTextColor(
-                ContextCompat.getColorStateList(root.context, R.color.primaryText)
+                ContextCompat.getColorStateList(root.context, R_common.color.primaryText)
             )
             textViewManageStorageVideoText.setTextColor(
-                ContextCompat.getColorStateList(root.context, R.color.primaryText)
+                ContextCompat.getColorStateList(root.context, R_common.color.primaryText)
             )
             textViewManageStorageAudioText.setTextColor(
-                ContextCompat.getColorStateList(root.context, R.color.primaryText)
+                ContextCompat.getColorStateList(root.context, R_common.color.primaryText)
             )
             textViewManageStorageFilesText.setTextColor(
-                ContextCompat.getColorStateList(root.context, R.color.primaryText)
+                ContextCompat.getColorStateList(root.context, R_common.color.primaryText)
             )
 
             progressBarImages.gone
@@ -344,28 +345,28 @@ internal class ManageStorageFragment: SideEffectDetailFragment<
             buttonChangeStorageLimit.gone
 
             storageProgressPointImages.backgroundTintList =
-                ContextCompat.getColorStateList(root.context, R.color.placeholderText)
+                ContextCompat.getColorStateList(root.context, R_common.color.placeholderText)
 
             storageProgressPointVideo.backgroundTintList =
-                ContextCompat.getColorStateList(root.context, R.color.placeholderText)
+                ContextCompat.getColorStateList(root.context, R_common.color.placeholderText)
 
             storageProgressPointAudio.backgroundTintList =
-                ContextCompat.getColorStateList(root.context, R.color.placeholderText)
+                ContextCompat.getColorStateList(root.context, R_common.color.placeholderText)
 
             storageProgressPointFiles.backgroundTintList =
-                ContextCompat.getColorStateList(root.context, R.color.placeholderText)
+                ContextCompat.getColorStateList(root.context, R_common.color.placeholderText)
 
             textViewManageStorageImagesText.setTextColor(
-                ContextCompat.getColorStateList(root.context, R.color.placeholderText)
+                ContextCompat.getColorStateList(root.context, R_common.color.placeholderText)
             )
             textViewManageStorageVideoText.setTextColor(
-                ContextCompat.getColorStateList(root.context, R.color.placeholderText)
+                ContextCompat.getColorStateList(root.context, R_common.color.placeholderText)
             )
             textViewManageStorageAudioText.setTextColor(
-                ContextCompat.getColorStateList(root.context, R.color.placeholderText)
+                ContextCompat.getColorStateList(root.context, R_common.color.placeholderText)
             )
             textViewManageStorageFilesText.setTextColor(
-                ContextCompat.getColorStateList(root.context, R.color.placeholderText)
+                ContextCompat.getColorStateList(root.context, R_common.color.placeholderText)
             )
 
             constraintLayoutStorageCustomTypeContainer.gone
@@ -407,7 +408,7 @@ internal class ManageStorageFragment: SideEffectDetailFragment<
             if (undersized != null) {
                 changeStorageHeaderContainer.gone
                 changeStorageHeaderSaveLimitContainer.visible
-                textViewWarningUndersized.text = String.format(getString(R.string.manage_storage_limit_warning), undersized)
+                textViewWarningUndersized.text = String.format(getString(R_common.string.manage_storage_limit_warning), undersized)
             }
             else {
                 changeStorageHeaderContainer.visible

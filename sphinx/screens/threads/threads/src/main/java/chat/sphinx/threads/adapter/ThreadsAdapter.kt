@@ -23,6 +23,7 @@ import chat.sphinx.resources.getRandomHexCode
 import chat.sphinx.resources.getString
 import chat.sphinx.resources.setBackgroundRandomColor
 import chat.sphinx.threads.R
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.threads.databinding.ThreadsListItemHolderBinding
 import chat.sphinx.threads.model.ThreadItem
 import chat.sphinx.threads.ui.ThreadsViewModel
@@ -158,7 +159,7 @@ internal class ThreadsAdapter(
 
     private val imageLoaderOptions: ImageLoaderOptions by lazy {
         ImageLoaderOptions.Builder()
-            .placeholderResId(R.drawable.ic_profile_avatar_circle)
+            .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
             .transformation(Transformation.CircleCrop)
             .build()
     }
@@ -223,12 +224,12 @@ internal class ThreadsAdapter(
                 layoutLayoutChatImageSmallInitialHolder.apply {
                     textViewInitialsName.visible
                     textViewInitialsName.text =
-                        (threadItem.aliasAndColorKey.first?.value ?: root.context.getString(R.string.unknown)).getInitials()
+                        (threadItem.aliasAndColorKey.first?.value ?: root.context.getString(R_common.string.unknown)).getInitials()
                     imageViewChatPicture.gone
 
                     onStopSupervisor.scope.launch(viewModel.mainImmediate) {
                         textViewInitialsName.setBackgroundRandomColor(
-                            R.drawable.chat_initials_circle,
+                            R_common.drawable.chat_initials_circle,
                             Color.parseColor(
                                 threadItem.aliasAndColorKey.second?.let {
                                     userColorsHelper.getHexCodeForKey(
@@ -313,16 +314,16 @@ internal class ThreadsAdapter(
                 binding.includeMessageTypeFileAttachment.apply {
                     if (threadItem.fileAttachment != null) {
                         root.visible
-                        includeMessageTypeFileAttachment.root.setBackgroundResource(R.drawable.background_thread_file_attachment)
+                        includeMessageTypeFileAttachment.root.setBackgroundResource(R_common.drawable.background_thread_file_attachment)
                         layoutConstraintAttachmentFileDownloadButtonGroup.gone
 
                         progressBarAttachmentFileDownload.gone
                         buttonAttachmentFileDownload.visible
 
                         textViewAttachmentFileIcon.text = if (threadItem.fileAttachment.isPdf) {
-                            getString(chat.sphinx.chat_common.R.string.material_icon_name_file_pdf)
+                            getString(R_common.string.material_icon_name_file_pdf)
                         } else {
-                            getString(chat.sphinx.chat_common.R.string.material_icon_name_file_attachment)
+                            getString(R_common.string.material_icon_name_file_attachment)
                         }
 
                         textViewAttachmentFileName.text =
@@ -351,7 +352,7 @@ internal class ThreadsAdapter(
                         textViewAttachmentPlayPauseButton.visible
                         textViewAttachmentAudioRemainingDuration.gone
 
-                        includeMessageTypeAudioAttachment.root.setBackgroundResource(R.drawable.background_thread_file_attachment)
+                        includeMessageTypeAudioAttachment.root.setBackgroundResource(R_common.drawable.background_thread_file_attachment)
                     }
                     else {
                         root.gone
@@ -381,7 +382,7 @@ internal class ThreadsAdapter(
                             circularBorder.visible
                             textViewInitialsName.visible
                             textViewInitialsName.text =
-                                (user.alias?.value ?: root.context.getString(R.string.unknown)).getInitials()
+                                (user.alias?.value ?: root.context.getString(R_common.string.unknown)).getInitials()
                             imageViewChatPicture.gone
 
                             imageViewDefaultAlpha.gone
@@ -389,7 +390,7 @@ internal class ThreadsAdapter(
 
                             onStopSupervisor.scope.launch(viewModel.mainImmediate) {
                                 textViewInitialsName.setBackgroundRandomColor(
-                                    R.drawable.chat_initials_circle,
+                                    R_common.drawable.chat_initials_circle,
                                     Color.parseColor(
                                         userColorsHelper.getHexCodeForKey(
                                             user.colorKey,

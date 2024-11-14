@@ -1,6 +1,7 @@
 package chat.sphinx.chat_tribe.adapters
 
 import chat.sphinx.chat_tribe.R
+import chat.sphinx.resources.R as R_common
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.widget.ImageView
@@ -165,7 +166,7 @@ class BadgesItemAdapter (
                             imageViewBadgeImage,
                             imageUrl,
                             ImageLoaderOptions.Builder()
-                                .placeholderResId(R.drawable.sphinx_icon)
+                                .placeholderResId(R_common.drawable.sphinx_icon)
                                 .build()
                         )
 

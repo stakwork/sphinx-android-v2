@@ -21,6 +21,7 @@ import chat.sphinx.wrapper_common.feed.toFeedType
 import chat.sphinx.wrapper_feed.Feed
 import chat.sphinx.wrapper_podcast.FeedSearchResult
 import chat.sphinx.wrapper_podcast.FeedSearchResultRow
+import chat.sphinx.resources.R as R_common
 import io.matthewnelson.android_feature_screens.util.gone
 import io.matthewnelson.android_feature_screens.util.goneIfFalse
 import io.matthewnelson.android_feature_screens.util.visible
@@ -202,9 +203,9 @@ class FeedSearchAdapter(
             binding.apply {
                 val title: String = root.context.getString(
                     if (searchResults.getOrNull(position)?.isFollowingSection == true) {
-                        R.string.feed_search_following_section
+                        R_common.string.feed_search_following_section
                     } else {
-                        R.string.feed_search_directory_section
+                        R_common.string.feed_search_directory_section
                     }
                 )
                 sectionViewTitle = title
@@ -300,15 +301,15 @@ class FeedSearchAdapter(
 inline fun FeedSearchResult.getPlaceHolderImageRes(): Int =
     when (feedType.toInt().toFeedType()) {
         is FeedType.Podcast -> {
-            R.drawable.ic_podcast_placeholder
+            R_common.drawable.ic_podcast_placeholder
         }
         is FeedType.Video -> {
-            R.drawable.ic_video_placeholder
+            R_common.drawable.ic_video_placeholder
         }
         is FeedType.Newsletter -> {
-            R.drawable.ic_newsletter_placeholder
+            R_common.drawable.ic_newsletter_placeholder
         }
         else -> {
-            R.drawable.ic_podcast_placeholder
+            R_common.drawable.ic_podcast_placeholder
         }
     }

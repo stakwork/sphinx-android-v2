@@ -13,6 +13,7 @@ import chat.sphinx.concept_image_loader.Disposable
 import chat.sphinx.concept_image_loader.ImageLoader
 import chat.sphinx.concept_image_loader.ImageLoaderOptions
 import chat.sphinx.tribes_discover.R
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.tribes_discover.databinding.LayoutDiscoverTribeListItemHolderBinding
 import chat.sphinx.tribes_discover.ui.TribesDiscoverViewModel
 import chat.sphinx.resources.getString
@@ -129,7 +130,7 @@ internal class TribesDiscoverAdapter(
 
     private val imageLoaderOptions: ImageLoaderOptions by lazy {
         ImageLoaderOptions.Builder()
-            .placeholderResId(R.drawable.ic_tribe)
+            .placeholderResId(R_common.drawable.ic_tribe)
             .build()
     }
 
@@ -186,7 +187,7 @@ internal class TribesDiscoverAdapter(
                         }
                     } ?: run {
                         imageViewTribeImage.setImageDrawable(
-                            ContextCompat.getDrawable(root.context, R.drawable.ic_tribe)
+                            ContextCompat.getDrawable(root.context, R_common.drawable.ic_tribe)
                         )
                     }
 
@@ -196,10 +197,10 @@ internal class TribesDiscoverAdapter(
                     layoutButtonJoin.apply {
                         if (tribeDto.joined == true) {
                             textViewButtonSmall.text = getString(R.string.discover_tribes_open)
-                            layoutConstraintButtonSmall.background = ContextCompat.getDrawable(root.context, R.drawable.background_button_open)
+                            layoutConstraintButtonSmall.background = ContextCompat.getDrawable(root.context, R_common.drawable.background_button_open)
                         } else {
                             textViewButtonSmall.text = getString(R.string.discover_tribes_join)
-                            layoutConstraintButtonSmall.background = ContextCompat.getDrawable(root.context, R.drawable.background_button_join)
+                            layoutConstraintButtonSmall.background = ContextCompat.getDrawable(root.context, R_common.drawable.background_button_join)
                         }
                     }
                 }

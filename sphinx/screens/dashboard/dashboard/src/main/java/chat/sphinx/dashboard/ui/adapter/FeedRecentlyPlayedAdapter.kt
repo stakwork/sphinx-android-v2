@@ -21,6 +21,7 @@ import chat.sphinx.wrapper_common.lightning.LightningRouteHint
 import chat.sphinx.wrapper_common.time
 import chat.sphinx.wrapper_common.timeAgo
 import chat.sphinx.wrapper_feed.Feed
+import chat.sphinx.resources.R as R_common
 import io.matthewnelson.android_feature_screens.util.gone
 import io.matthewnelson.android_feature_screens.util.goneIfFalse
 import io.matthewnelson.android_feature_screens.util.visible
@@ -148,19 +149,19 @@ class FeedRecentlyPlayedAdapter(
 
     private val imagePodcastLoaderOptions: ImageLoaderOptions by lazy {
         ImageLoaderOptions.Builder()
-            .placeholderResId(R.drawable.ic_podcast_placeholder)
+            .placeholderResId(R_common.drawable.ic_podcast_placeholder)
             .build()
     }
 
     private val imageVideoLoaderOptions: ImageLoaderOptions by lazy {
         ImageLoaderOptions.Builder()
-            .placeholderResId(R.drawable.ic_video_placeholder)
+            .placeholderResId(R_common.drawable.ic_video_placeholder)
             .build()
     }
 
     private val imageNewsletterLoaderOptions: ImageLoaderOptions by lazy {
         ImageLoaderOptions.Builder()
-            .placeholderResId(R.drawable.ic_newsletter_placeholder)
+            .placeholderResId(R_common.drawable.ic_newsletter_placeholder)
             .build()
     }
 
@@ -253,15 +254,15 @@ class FeedRecentlyPlayedAdapter(
 inline fun Feed.getRecentlyPlaceHolderImageRes(): Int =
     when (feedType) {
         is FeedType.Podcast -> {
-            R.drawable.ic_podcast_placeholder
+            R_common.drawable.ic_podcast_placeholder
         }
         is FeedType.Video -> {
-            R.drawable.ic_video_placeholder
+            R_common.drawable.ic_video_placeholder
         }
         is FeedType.Newsletter -> {
-            R.drawable.ic_newsletter_placeholder
+            R_common.drawable.ic_newsletter_placeholder
         }
         else -> {
-            R.drawable.ic_podcast_placeholder
+            R_common.drawable.ic_podcast_placeholder
         }
     }

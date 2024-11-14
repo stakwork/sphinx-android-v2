@@ -38,6 +38,7 @@ import chat.sphinx.wrapper_common.lightning.toLightningNodePubKey
 import chat.sphinx.wrapper_common.lightning.toLightningRouteHint
 import chat.sphinx.wrapper_common.lightning.toVirtualLightningNodeAddress
 import chat.sphinx.wrapper_common.util.getInitials
+import chat.sphinx.resources.R as R_common
 import io.matthewnelson.android_feature_screens.util.gone
 import io.matthewnelson.android_feature_screens.util.visible
 import io.matthewnelson.android_feature_viewmodel.submitSideEffect
@@ -238,9 +239,9 @@ abstract class ContactFragment<
                     }
 
                     textViewDetailScreenSubscribe.backgroundTintList = if (sideEffect.subscribed) {
-                        ContextCompat.getColorStateList(root.context, R.color.secondaryText)
+                        ContextCompat.getColorStateList(root.context, R_common.color.secondaryText)
                     } else {
-                        ContextCompat.getColorStateList(root.context, R.color.primaryBlue)
+                        ContextCompat.getColorStateList(root.context, R_common.color.primaryBlue)
                     }
                 }
 
@@ -260,7 +261,7 @@ abstract class ContactFragment<
                             text = sideEffect.nickname?.getInitials() ?: ""
 
                             setBackgroundRandomColor(
-                                R.drawable.chat_initials_circle,
+                                R_common.drawable.chat_initials_circle,
                                 Color.parseColor(
                                     userColorsHelper.getHexCodeForKey(
                                         colorKey,
@@ -278,7 +279,7 @@ abstract class ContactFragment<
                             imageViewProfilePicture,
                             sideEffect.photoUrl.value,
                             ImageLoaderOptions.Builder()
-                                .placeholderResId(R.drawable.ic_profile_avatar_circle)
+                                .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
                                 .transformation(Transformation.CircleCrop)
                                 .build()
                         )

@@ -36,6 +36,7 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.viewbinding.ViewBinding
 import app.cash.exhaustive.Exhaustive
 import chat.sphinx.chat_common.R
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.chat_common.adapters.MessageListAdapter
 import chat.sphinx.chat_common.adapters.MessageListFooterAdapter
 import chat.sphinx.chat_common.databinding.*
@@ -534,7 +535,7 @@ abstract class ChatFragment<
                 viewModel.replyToMessage(null)
             }
 
-            root.setBackgroundColor(getColor(R.color.headerBG))
+            root.setBackgroundColor(getColor(R_common.color.headerBG))
         }
     }
 
@@ -545,7 +546,7 @@ abstract class ChatFragment<
                 setOf(
                     MenuBottomOption(
                         text = R.string.bottom_menu_more_option_call,
-                        textColor = R.color.primaryBlueFontColor,
+                        textColor = R_common.color.primaryBlueFontColor,
                         onClick = {
                             viewModel.moreOptionsMenuHandler.updateViewState(
                                 MenuBottomViewState.Closed
@@ -557,7 +558,7 @@ abstract class ChatFragment<
                     ),
                     MenuBottomOption(
                         text = R.string.bottom_menu_more_option_search,
-                        textColor = R.color.primaryBlueFontColor,
+                        textColor = R_common.color.primaryBlueFontColor,
                         onClick = {
                             lifecycleScope.launch(viewModel.mainImmediate) {
                                 viewModel.searchMessages(null)
@@ -566,7 +567,7 @@ abstract class ChatFragment<
                     ),
                     MenuBottomOption(
                         text = R.string.option_delete_user,
-                        textColor = R.color.primaryRed,
+                        textColor = R_common.color.primaryRed,
                         onClick = {
                             lifecycleScope.launch(viewModel.mainImmediate) {
                                 viewModel.confirmDeleteContact()
@@ -575,7 +576,7 @@ abstract class ChatFragment<
                     ),
                     MenuBottomOption(
                         text = R.string.option_block_user,
-                        textColor = R.color.primaryRed,
+                        textColor = R_common.color.primaryRed,
                         onClick = {
                             lifecycleScope.launch(viewModel.mainImmediate) {
                                viewModel.confirmToggleBlockContactState()
@@ -593,14 +594,14 @@ abstract class ChatFragment<
                 setOf(
                     MenuBottomOption(
                         text = R.string.bottom_menu_call_option_audio,
-                        textColor = R.color.primaryBlueFontColor,
+                        textColor = R_common.color.primaryBlueFontColor,
                         onClick = {
                             viewModel.sendCallInvite(true)
                         }
                     ),
                     MenuBottomOption(
                         text = R.string.bottom_menu_call_option_video_or_audio,
-                        textColor = R.color.primaryBlueFontColor,
+                        textColor = R_common.color.primaryBlueFontColor,
                         onClick = {
                             viewModel.sendCallInvite(false)
                         }
@@ -1043,7 +1044,7 @@ abstract class ChatFragment<
 
                             viewReplyBarLeading.setBackgroundColor(
                                 root.context.getColor(
-                                    R.color.washedOutReceivedText
+                                    R_common.color.washedOutReceivedText
                                 )
                             )
                         }
@@ -1065,10 +1066,10 @@ abstract class ChatFragment<
                                 textViewReplyTextOverlay.gone
 
                                 if (message.isAudioMessage) {
-                                    textViewReplyMessageLabel.text = getString(R.string.media_type_label_audio)
+                                    textViewReplyMessageLabel.text = getString(R_common.string.media_type_label_audio)
                                     textViewReplyMessageLabel.visible
 
-                                    textViewReplyTextOverlay.text = getString(R.string.material_icon_name_volume_up)
+                                    textViewReplyTextOverlay.text = getString(R_common.string.material_icon_name_volume_up)
                                     textViewReplyTextOverlay.visible
                                 } else {
                                     message.retrieveTextToShow()?.let { messageText ->
@@ -1169,12 +1170,12 @@ abstract class ChatFragment<
                                     if (muted) {
                                         imageLoader.load(
                                             headerBinding.imageViewChatHeaderMuted,
-                                            R.drawable.ic_baseline_notifications_off_24
+                                            R_common.drawable.ic_baseline_notifications_off_24
                                         )
                                     } else {
                                         imageLoader.load(
                                             headerBinding.imageViewChatHeaderMuted,
-                                            R.drawable.ic_baseline_notifications_24
+                                            R_common.drawable.ic_baseline_notifications_24
                                         )
                                     }
                                 } ?: gone
@@ -1183,11 +1184,11 @@ abstract class ChatFragment<
                             textViewChatHeaderConnectivity.apply {
                                 viewState.isChatAvailable.let { available ->
                                     if (available) {
-                                        setTextColorExt(R.color.primaryGreen)
-                                        textViewChatHeaderLock.text = getString(R.string.material_icon_name_lock)
+                                        setTextColorExt(R_common.color.primaryGreen)
+                                        textViewChatHeaderLock.text = getString(R_common.string.material_icon_name_lock)
                                     } else {
-                                        setTextColorExt(R.color.sphinxOrange)
-                                        textViewChatHeaderLock.text = getString(R.string.material_icon_name_lock_open)
+                                        setTextColorExt(R_common.color.sphinxOrange)
+                                        textViewChatHeaderLock.text = getString(R_common.string.material_icon_name_lock_open)
                                     }
                                 }
                             }
@@ -1226,7 +1227,7 @@ abstract class ChatFragment<
                                 visible
                                 text = viewState.initials
                                 setBackgroundRandomColor(
-                                    R.drawable.chat_initials_circle,
+                                    R_common.drawable.chat_initials_circle,
                                     Color.parseColor(
                                         userColorsHelper.getHexCodeForKey(
                                             viewState.colorKey,
@@ -1243,7 +1244,7 @@ abstract class ChatFragment<
                             lifecycleScope.launch(viewModel.mainImmediate) {
                                 val disposable = imageLoader.load(
                                     imageViewChatPicture,
-                                    R.drawable.ic_profile_avatar_circle,
+                                    R_common.drawable.ic_profile_avatar_circle,
                                 )
                                 headerInitialHolderViewStateDisposables.add(disposable)
                             }.let { job ->
@@ -1503,7 +1504,7 @@ abstract class ChatFragment<
                                     includePaidTextMessageSendPreview.root.gone
 
                                     textViewAttachmentSendHeaderName.text = getString(R.string.attachment_send_header_pdf)
-                                    textViewAttachmentFileIconPreview.text = getString(R.string.material_icon_name_file_pdf)
+                                    textViewAttachmentFileIconPreview.text = getString(R_common.string.material_icon_name_file_pdf)
 
                                     viewState.file?.let { nnFile ->
                                         val fileDescriptor = ParcelFileDescriptor.open(nnFile,
@@ -1565,7 +1566,7 @@ abstract class ChatFragment<
                                     includePaidTextMessageSendPreview.root.gone
 
                                     textViewAttachmentSendHeaderName.text = getString(R.string.attachment_send_header_file)
-                                    textViewAttachmentFileIconPreview.text = getString(R.string.material_icon_name_file_attachment)
+                                    textViewAttachmentFileIconPreview.text = getString(R_common.string.material_icon_name_file_attachment)
 
                                     viewState.file?.let { nnFile ->
                                         textViewAttachmentFileNamePreview.text = viewState.fileName?.value ?: nnFile.name
@@ -1782,8 +1783,8 @@ abstract class ChatFragment<
 
                             textViewChatSearchResultsFound.text = getString(R.string.results_found, viewState.messages.size)
 
-                            val enabledColor = ContextCompat.getColor(binding.root.context, R.color.text)
-                            val disabledColor = ContextCompat.getColor(binding.root.context, R.color.secondaryText)
+                            val enabledColor = ContextCompat.getColor(binding.root.context, R_common.color.text)
+                            val disabledColor = ContextCompat.getColor(binding.root.context, R_common.color.secondaryText)
 
                             val nextButtonEnable = viewState.index < viewState.messages.size - 1
                             textViewChatSearchNext.isEnabled = nextButtonEnable

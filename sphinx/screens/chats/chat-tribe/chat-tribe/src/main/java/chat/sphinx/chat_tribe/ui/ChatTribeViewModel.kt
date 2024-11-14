@@ -11,6 +11,9 @@ import chat.sphinx.chat_common.ui.ChatViewModel
 import chat.sphinx.chat_common.ui.viewstate.InitialHolderViewState
 import chat.sphinx.chat_common.ui.viewstate.menu.MoreMenuOptionsViewState
 import chat.sphinx.chat_tribe.R
+import chat.sphinx.chat_common.R as R_chat_common
+import chat.sphinx.resources.R as R_common
+import chat.sphinx.tribe_detail.R as R_tribe_detail
 import chat.sphinx.chat_tribe.model.TribeFeedData
 import chat.sphinx.chat_tribe.navigation.TribeChatNavigator
 import chat.sphinx.chat_tribe.ui.viewstate.*
@@ -345,9 +348,9 @@ class ChatTribeViewModel @Inject constructor(
     ) {
         viewModelScope.launch(mainImmediate) {
             val errorMessage = if (type.isMemberApprove()) {
-                app.getString(R.string.failed_to_approve_member)
+                app.getString(R_common.string.failed_to_approve_member)
             } else {
-                app.getString(R.string.failed_to_reject_member)
+                app.getString(R_common.string.failed_to_reject_member)
             }
 
             if (type.isMemberApprove() || type.isMemberReject()) {
@@ -386,9 +389,9 @@ class ChatTribeViewModel @Inject constructor(
             val response = chatRepository.pinMessage(chatId, message, isProductionEnvironment)
 
             if (response is Response.Success) {
-                showPinMessagePopup(app.getString(R.string.message_pinned))
+                showPinMessagePopup(app.getString(R_chat_common.string.message_pinned))
             } else {
-                submitSideEffect(ChatSideEffect.Notify(app.getString(R.string.pin_message_error)))
+                submitSideEffect(ChatSideEffect.Notify(app.getString(R_chat_common.string.pin_message_error)))
             }
         }
     }
@@ -405,9 +408,9 @@ class ChatTribeViewModel @Inject constructor(
                 val response = chatRepository.unPinMessage(chatId, nnMessage, isProductionEnvironment)
 
                 if (response is Response.Success) {
-                    showPinMessagePopup(app.getString(R.string.message_unpinned))
+                    showPinMessagePopup(app.getString(R_chat_common.string.message_unpinned))
                 } else {
-                    submitSideEffect(ChatSideEffect.Notify(app.getString(R.string.pin_message_error)))
+                    submitSideEffect(ChatSideEffect.Notify(app.getString(R_chat_common.string.pin_message_error)))
                 }
             }
         }
@@ -569,7 +572,7 @@ class ChatTribeViewModel @Inject constructor(
         viewModelScope.launch(mainImmediate) {
             val chat = getChat()
             val shareTribeURL = "sphinx.chat://?action=tribeV2&pubkey=${chat.uuid.value}&host=${tribeDefaultServerUrl}"
-            (chatNavigator as TribeChatNavigator).toShareTribeScreen(shareTribeURL, app.getString(R.string.qr_code_title))
+            (chatNavigator as TribeChatNavigator).toShareTribeScreen(shareTribeURL, app.getString(R_tribe_detail.string.qr_code_title))
         }
 
         moreOptionsMenuHandler.updateViewState(MenuBottomViewState.Closed)

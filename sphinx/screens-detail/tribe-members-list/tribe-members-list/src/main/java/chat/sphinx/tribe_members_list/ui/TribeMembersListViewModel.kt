@@ -14,6 +14,7 @@ import chat.sphinx.kotlin_response.LoadResponse
 import chat.sphinx.kotlin_response.Response
 import chat.sphinx.kotlin_response.ResponseError
 import chat.sphinx.tribe_members_list.R
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.tribe_members_list.navigation.TribeMembersListNavigator
 import chat.sphinx.tribe_members_list.ui.viewstate.TribeMemberHolderViewState
 import chat.sphinx.wrapper_common.dashboard.ChatId
@@ -117,7 +118,7 @@ internal class TribeMembersListViewModel @Inject constructor(
             } else {
                 submitSideEffect(
                     TribeMembersListSideEffect.Notify(
-                        app.getString(R.string.connect_manager_server_pubkey_error)
+                        app.getString(R_common.string.connect_manager_server_pubkey_error)
                     )
                 )
             }
@@ -254,13 +255,13 @@ internal class TribeMembersListViewModel @Inject constructor(
             if (type is MessageType.GroupAction.MemberApprove) {
                 submitSideEffect(
                     TribeMembersListSideEffect.Notify(
-                        app.getString(R.string.failed_to_approve_member)
+                        app.getString(R_common.string.failed_to_approve_member)
                     )
                 )
             } else if (type is MessageType.GroupAction.MemberReject) {
                 submitSideEffect(
                     TribeMembersListSideEffect.Notify(
-                        app.getString(R.string.failed_to_reject_member)
+                        app.getString(R_common.string.failed_to_reject_member)
                     )
                 )
             }

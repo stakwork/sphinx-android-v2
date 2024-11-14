@@ -35,6 +35,8 @@ import chat.sphinx.chat_common.ui.viewstate.messagereply.MessageReplyViewState
 import chat.sphinx.chat_common.ui.viewstate.thread.ThreadHeaderViewState
 import chat.sphinx.chat_common.util.VideoThumbnailUtil
 import chat.sphinx.chat_tribe.R
+import chat.sphinx.chat_common.R as R_chat_common
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.chat_tribe.adapters.BadgesItemAdapter
 import chat.sphinx.chat_tribe.adapters.MessageMentionsAdapter
 import chat.sphinx.chat_tribe.databinding.FragmentChatTribeBinding
@@ -391,7 +393,7 @@ internal class ChatTribeFragment: ChatFragment<
                 imageView,
                 photoUrl,
                 ImageLoaderOptions.Builder()
-                    .placeholderResId(R.drawable.sphinx_icon)
+                    .placeholderResId(R_common.drawable.sphinx_icon)
                     .transformation(Transformation.CircleCrop)
                     .build()
             )
@@ -512,8 +514,8 @@ internal class ChatTribeFragment: ChatFragment<
 
         menuOptions.add(
             MenuBottomOption(
-                text = chat.sphinx.chat_common.R.string.bottom_menu_more_option_call,
-                textColor = chat.sphinx.chat_common.R.color.primaryBlueFontColor,
+                text = R_chat_common.string.bottom_menu_more_option_call,
+                textColor = R_common.color.primaryBlueFontColor,
                 onClick = {
                     viewModel.moreOptionsMenuHandler.updateViewState(
                         MenuBottomViewState.Closed
@@ -527,8 +529,8 @@ internal class ChatTribeFragment: ChatFragment<
 
         menuOptions.add(
             MenuBottomOption(
-                text = chat.sphinx.chat_common.R.string.bottom_menu_more_option_notification,
-                textColor = chat.sphinx.chat_common.R.color.primaryBlueFontColor,
+                text = R_chat_common.string.bottom_menu_more_option_notification,
+                textColor = R_common.color.primaryBlueFontColor,
                 onClick = {
                     viewModel.navigateToNotificationLevel()
                 }
@@ -538,8 +540,8 @@ internal class ChatTribeFragment: ChatFragment<
         if (viewModel.moreOptionsMenuStateFlow.value is MoreMenuOptionsViewState.ShareTribeLinkAvailable) {
             menuOptions.add(
                 MenuBottomOption(
-                    text = chat.sphinx.chat_common.R.string.bottom_menu_more_option_share,
-                    textColor = chat.sphinx.chat_common.R.color.primaryBlueFontColor,
+                    text = R_chat_common.string.bottom_menu_more_option_share,
+                    textColor = R_common.color.primaryBlueFontColor,
                     onClick = {
                         viewModel.navigateToTribeShareScreen()
                     }
@@ -549,8 +551,8 @@ internal class ChatTribeFragment: ChatFragment<
 
         menuOptions.add(
             MenuBottomOption(
-                text = chat.sphinx.chat_common.R.string.bottom_menu_more_option_search,
-                textColor = chat.sphinx.chat_common.R.color.primaryBlueFontColor,
+                text = R_chat_common.string.bottom_menu_more_option_search,
+                textColor = R_common.color.primaryBlueFontColor,
                 onClick = {
                     lifecycleScope.launch(viewModel.mainImmediate) {
                         viewModel.searchMessages(null)
@@ -560,7 +562,7 @@ internal class ChatTribeFragment: ChatFragment<
         )
 
         bottomMenuMore.newBuilder(moreMenuBinding, viewLifecycleOwner)
-            .setHeaderText(chat.sphinx.chat_common.R.string.bottom_menu_more_header_text)
+            .setHeaderText(R_chat_common.string.bottom_menu_more_header_text)
             .setOptions(menuOptions)
             .build()
     }
@@ -588,7 +590,7 @@ internal class ChatTribeFragment: ChatFragment<
                                     imageViewProfilePicture,
                                     photoUrl.value,
                                     ImageLoaderOptions.Builder()
-                                        .placeholderResId(chat.sphinx.podcast_player.R.drawable.ic_profile_avatar_circle)
+                                        .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
                                         .transformation(Transformation.CircleCrop)
                                         .build()
                                 )
@@ -641,7 +643,7 @@ internal class ChatTribeFragment: ChatFragment<
                                     imageViewPodcastEpisode,
                                     imageUrl,
                                     ImageLoaderOptions.Builder()
-                                        .placeholderResId(chat.sphinx.podcast_player.R.drawable.ic_podcast_placeholder)
+                                        .placeholderResId(R_common.drawable.ic_podcast_placeholder)
                                         .build()
                                 )
                             }
@@ -729,7 +731,7 @@ internal class ChatTribeFragment: ChatFragment<
                                         messageHolderPinImageInitialHolder.imageViewChatPicture,
                                         senderPhotoUrl.value,
                                         ImageLoaderOptions.Builder()
-                                            .placeholderResId(chat.sphinx.podcast_player.R.drawable.ic_profile_avatar_circle)
+                                            .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
                                             .transformation(Transformation.CircleCrop)
                                             .build()
                                     )
@@ -810,7 +812,7 @@ internal class ChatTribeFragment: ChatFragment<
 
                                         senderInfo.third.let { colorKey ->
                                             setBackgroundRandomColor(
-                                                chat.sphinx.chat_common.R.drawable.chat_initials_circle,
+                                                R_common.drawable.chat_initials_circle,
                                                 Color.parseColor(
                                                     userColorsHelper.getHexCodeForKey(
                                                         colorKey,
@@ -828,7 +830,7 @@ internal class ChatTribeFragment: ChatFragment<
                                                 layoutContactInitialHolder.imageViewChatPicture,
                                                 photoUrl.value,
                                                 ImageLoaderOptions.Builder()
-                                                    .placeholderResId(chat.sphinx.podcast_player.R.drawable.ic_profile_avatar_circle)
+                                                    .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
                                                     .transformation(Transformation.CircleCrop)
                                                     .build()
                                             )
@@ -877,7 +879,7 @@ internal class ChatTribeFragment: ChatFragment<
                                 viewState.fileAttachment?.let { fileAttachment ->
                                     layoutConstraintMediaContainer.visible
                                     textViewAttachmentFileIcon.visible
-                                    textViewAttachmentFileIcon.text = getString(chat.sphinx.chat_common.R.string.material_icon_name_file_pdf)
+                                    textViewAttachmentFileIcon.text = getString(R_common.string.material_icon_name_file_pdf)
 
                                     (fileAttachment as? LayoutState.Bubble.ContainerSecond.FileAttachment.FileAvailable)?.let {
                                         threadOriginalMessageBinding?.textViewThreadMessageContent?.text = it.fileName?.value ?: "Unnamed File"
@@ -887,7 +889,7 @@ internal class ChatTribeFragment: ChatFragment<
                                 viewState.audioAttachment?.let { audioAttachment ->
                                     layoutConstraintMediaContainer.visible
                                     textViewAttachmentFileIcon.visible
-                                    textViewAttachmentFileIcon.text = getString(chat.sphinx.chat_common.R.string.material_icon_name_volume_up)
+                                    textViewAttachmentFileIcon.text = getString(R_common.string.material_icon_name_volume_up)
                                     threadOriginalMessageBinding?.textViewThreadMessageContent?.text = "Audio Clip"
                                 }
                             }
@@ -914,7 +916,7 @@ internal class ChatTribeFragment: ChatFragment<
                                 layoutBadgesArrowDownContainer.gone
                             }
 
-                            layoutConstraintTribeMemberContainer.layoutParams.height = resources.getDimensionPixelSize(R.dimen.tribe_member_collapsed_height)
+                            layoutConstraintTribeMemberContainer.layoutParams.height = resources.getDimensionPixelSize(R_common.dimen.tribe_member_collapsed_height)
                         }
                         is TribeMemberProfileViewState.FullScreen -> {
                             includeLayoutTribeProfileInfoContainer.apply {
@@ -946,14 +948,14 @@ internal class ChatTribeFragment: ChatFragment<
                         binding.includeChatTribeHeader.imageViewChatWebView.visible
 
                         binding.includeChatTribeHeader.imageViewChatWebView.setImageDrawable(
-                            ContextCompat.getDrawable(binding.root.context, R.drawable.ic_icon_web_view)
+                            ContextCompat.getDrawable(binding.root.context, R_common.drawable.ic_icon_web_view)
                         )
                     }
                     is WebAppViewState.AppAvailable.WebViewOpen.Loading -> {
                         binding.includeChatTribeHeader.imageViewChatWebView.visible
 
                         binding.includeChatTribeHeader.imageViewChatWebView.setImageDrawable(
-                            ContextCompat.getDrawable(binding.root.context, R.drawable.ic_icon_web_view_chat)
+                            ContextCompat.getDrawable(binding.root.context, R_common.drawable.ic_icon_web_view_chat)
                         )
 
                         tribeAppBinding.includeLayoutTribeAppDetails.layoutConstraintBudget.gone
@@ -1051,7 +1053,7 @@ internal class ChatTribeFragment: ChatFragment<
                                 textViewInitials.apply {
                                     text = viewState.memberName.value.getInitials()
                                     setBackgroundRandomColor(
-                                        chat.sphinx.chat_common.R.drawable.chat_initials_circle,
+                                        R_common.drawable.chat_initials_circle,
                                         Color.parseColor(
                                             userColorsHelper.getHexCodeForKey(
                                                 viewState.colorKey,
@@ -1068,7 +1070,7 @@ internal class ChatTribeFragment: ChatFragment<
                                         imageViewMemberProfilePicture,
                                         photoUrl.value,
                                         ImageLoaderOptions.Builder()
-                                            .placeholderResId(chat.sphinx.podcast_player.R.drawable.ic_profile_avatar_circle)
+                                            .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
                                             .transformation(Transformation.CircleCrop)
                                             .build()
                                     )
@@ -1106,7 +1108,7 @@ internal class ChatTribeFragment: ChatFragment<
                                             imageViewTribeProfilePicture,
                                             photoUrl,
                                             ImageLoaderOptions.Builder()
-                                                .placeholderResId(chat.sphinx.podcast_player.R.drawable.ic_profile_avatar_circle)
+                                                .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
                                                 .transformation(Transformation.CircleCrop)
                                                 .build()
                                         )

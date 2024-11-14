@@ -13,7 +13,10 @@ android {
     compileSdkVersion versions.compileSdk
     buildToolsVersion versions.buildTools
 
-    buildFeatures.viewBinding = true
+    buildFeatures {
+        buildConfig = true
+        viewBinding = true
+    }
 
     defaultConfig {
         minSdkVersion versions.minSdk
@@ -29,6 +32,7 @@ android {
             minifyEnabled false
         }
     }
+
     namespace 'chat.sphinx.chat_common'
 }
 

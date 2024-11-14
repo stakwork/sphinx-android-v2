@@ -6,6 +6,8 @@ import chat.sphinx.menu_bottom.model.MenuBottomDismiss
 import chat.sphinx.menu_bottom.model.MenuBottomOption
 import chat.sphinx.menu_bottom.ui.BottomMenu
 import chat.sphinx.resources.getString
+import chat.sphinx.resources.R as R_common
+import chat.sphinx.menu_bottom.R as R_menu_bottom
 import chat.sphinx.wrapper_common.lightning.LightningNodePubKey
 import chat.sphinx.wrapper_common.lightning.LightningRouteHint
 import io.matthewnelson.android_feature_viewmodel.util.OnStopSupervisor
@@ -26,14 +28,14 @@ class BottomScannerMenu(
         val menuBottomOptions = arrayListOf(
             MenuBottomOption(
                 text = R.string.bottom_menu_scanner_option_set_create_contact,
-                textColor = R.color.primaryBlueFontColor,
+                textColor = R_common.color.primaryBlueFontColor,
                 onClick = {
                     scannerMenuViewModel.createContact()
                 }
             ),
             MenuBottomOption(
                 text = R.string.bottom_menu_scanner_option_set_direct_payment,
-                textColor = R.color.primaryBlueFontColor,
+                textColor = R_common.color.primaryBlueFontColor,
                 onClick = {
                     scannerMenuViewModel.sendDirectPayment()
                 }
@@ -41,8 +43,8 @@ class BottomScannerMenu(
         )
 
         val menuDismiss = MenuBottomDismiss(
-            R.string.menu_bottom_cancel,
-            R.color.primaryRed) {
+            R_menu_bottom.string.menu_bottom_cancel,
+            R_common.color.primaryRed) {
             scannerMenuViewModel.scannerMenuDismiss()
         }
 

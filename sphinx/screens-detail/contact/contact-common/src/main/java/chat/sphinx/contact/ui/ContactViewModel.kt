@@ -21,6 +21,7 @@ import chat.sphinx.scanner_view_model_coordinator.response.ScannerResponse
 import chat.sphinx.wrapper_common.dashboard.ContactId
 import chat.sphinx.wrapper_common.lightning.*
 import chat.sphinx.wrapper_contact.ContactAlias
+import chat.sphinx.resources.R as R_common
 import com.squareup.moshi.Moshi
 import io.matthewnelson.android_feature_viewmodel.SideEffectViewModel
 import io.matthewnelson.android_feature_viewmodel.submitSideEffect
@@ -137,7 +138,7 @@ abstract class ContactViewModel<ARGS: NavArgs>(
         viewModelScope.launch(mainImmediate) {
             navigator.toQRCodeDetail(
                 nodePubKey,
-                app.getString(R.string.public_key),
+                app.getString(R_common.string.public_key),
                 ""
             )
         }

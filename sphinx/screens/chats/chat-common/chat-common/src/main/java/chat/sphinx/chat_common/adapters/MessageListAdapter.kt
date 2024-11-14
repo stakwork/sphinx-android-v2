@@ -15,6 +15,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import chat.sphinx.chat_common.R
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.chat_common.databinding.*
 import chat.sphinx.chat_common.model.NodeDescriptor
 import chat.sphinx.chat_common.model.TribeLink
@@ -753,7 +754,7 @@ internal class MessageListAdapter<ARGS : NavArgs>(
                     seekBarAttachmentAudio.setOnTouchListener { _, _ -> true }
                 }
 
-                includeMessageTypeFileAttachment.root.setBackgroundResource(R.drawable.background_thread_file_attachment)
+                includeMessageTypeFileAttachment.root.setBackgroundResource(R_common.drawable.background_thread_file_attachment)
             }
 
             onSphinxInteractionListener = object: SphinxUrlSpan.OnInteractionListener(null) {
@@ -815,11 +816,11 @@ internal class MessageListAdapter<ARGS : NavArgs>(
                         if (threadHeader.isExpanded) {
                             textViewThreadMessageContent.maxLines = Int.MAX_VALUE
                             textViewShowMore.text =
-                                getString(R.string.episode_description_show_less)
+                                getString(R_common.string.episode_description_show_less)
                         } else {
                             textViewThreadMessageContent.maxLines = 12
                             textViewShowMore.text =
-                                getString(R.string.episode_description_show_more)
+                                getString(R_common.string.episode_description_show_more)
                         }
                     }
                 })
@@ -835,7 +836,7 @@ internal class MessageListAdapter<ARGS : NavArgs>(
                                 text = (senderInfo?.second?.value ?: "")?.getInitials()
 
                                 setBackgroundRandomColor(
-                                    R.drawable.chat_initials_circle,
+                                    R_common.drawable.chat_initials_circle,
                                     Color.parseColor(
                                         userColorsHelper.getHexCodeForKey(
                                             it,
@@ -901,9 +902,9 @@ internal class MessageListAdapter<ARGS : NavArgs>(
 
                                 textViewAttachmentFileIcon.text =
                                     if (fileAttachment.isPdf) {
-                                        getString(chat.sphinx.chat_common.R.string.material_icon_name_file_pdf)
+                                        getString(R_common.string.material_icon_name_file_pdf)
                                     } else {
-                                        getString(chat.sphinx.chat_common.R.string.material_icon_name_file_attachment)
+                                        getString(R_common.string.material_icon_name_file_attachment)
                                     }
 
                                 textViewAttachmentFileName.text =
@@ -930,7 +931,7 @@ internal class MessageListAdapter<ARGS : NavArgs>(
                             (threadHeader.bubbleAudioAttachment as? LayoutState.Bubble.ContainerSecond.AudioAttachment.FileAvailable)?.let { audioAttachment ->
                                 binding.constraintMediaThreadContainer.visible
                                 root.visible
-                                includeMessageTypeAudioAttachment.root.setBackgroundResource(R.drawable.background_thread_file_attachment)
+                                includeMessageTypeAudioAttachment.root.setBackgroundResource(R_common.drawable.background_thread_file_attachment)
 
                                 onStopSupervisor.scope.launch(viewModel.io) {
                                     viewModel.audioPlayerController.getAudioState(audioAttachment)?.value?.let { state ->
@@ -964,7 +965,7 @@ internal class MessageListAdapter<ARGS : NavArgs>(
                                 layoutContactInitialHolder.imageViewChatPicture,
                                 photoUrl.value,
                                 ImageLoaderOptions.Builder()
-                                    .placeholderResId(R.drawable.ic_profile_avatar_circle)
+                                    .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
                                     .transformation(Transformation.CircleCrop)
                                     .build()
                             )

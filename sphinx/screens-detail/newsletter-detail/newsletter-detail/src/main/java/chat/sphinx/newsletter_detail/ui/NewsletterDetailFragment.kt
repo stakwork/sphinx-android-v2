@@ -16,6 +16,7 @@ import chat.sphinx.newsletter_detail.databinding.FragmentNewsletterDetailBinding
 import chat.sphinx.newsletter_detail.ui.adapter.NewsletterItemsFooterAdapter
 import chat.sphinx.newsletter_detail.ui.adapter.NewsletterItemsListAdapter
 import chat.sphinx.screen_detail_fragment.BaseDetailFragment
+import chat.sphinx.resources.R as R_common
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.annotation.meta.Exhaustive
@@ -90,7 +91,7 @@ internal class NewsletterDetailFragment: BaseDetailFragment<
                             imageViewNewsletterImage,
                             feedImage,
                             ImageLoaderOptions.Builder()
-                                .placeholderResId(R.drawable.ic_newsletter_placeholder)
+                                .placeholderResId(R_common.drawable.ic_newsletter_placeholder)
                                 .build()
                         )
                     }

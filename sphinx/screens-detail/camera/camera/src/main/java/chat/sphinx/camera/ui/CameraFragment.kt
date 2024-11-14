@@ -26,6 +26,8 @@ import androidx.lifecycle.lifecycleScope
 import app.cash.exhaustive.Exhaustive
 import by.kirich1409.viewbindingdelegate.viewBinding
 import chat.sphinx.camera.R
+import chat.sphinx.resources.R as R_common
+import com.example.android.camera.utils.R as R_camera
 import chat.sphinx.camera.databinding.FragmentCameraBinding
 import chat.sphinx.camera.model.CameraItem
 import chat.sphinx.camera.model.LensFacing
@@ -353,13 +355,13 @@ internal class CameraFragment: SideEffectDetailFragment<
                 AppCompatResources.getDrawable(requireContext(),
                     when (event) {
                         is VideoRecordEvent.Start -> {
-                            R.drawable.ic_shutter_recording
+                            R_camera.drawable.ic_shutter_recording
                         }
                         is VideoRecordEvent.Finalize-> {
-                            R.drawable.ic_shutter
+                            R_camera.drawable.ic_shutter
                         }
                         else -> {
-                            R.drawable.ic_shutter_recording
+                            R_camera.drawable.ic_shutter_recording
                         }
                     }
                 )
@@ -375,7 +377,7 @@ internal class CameraFragment: SideEffectDetailFragment<
     private fun resetUIAndState() {
         lifecycleScope.launch(viewModel.mainImmediate) {
             binding.includeCameraFooter.imageViewCameraFooterShutter.setImageDrawable(
-                AppCompatResources.getDrawable(requireContext(), R.drawable.ic_shutter)
+                AppCompatResources.getDrawable(requireContext(), R_camera.drawable.ic_shutter)
             )
 
             // TODO: Prompt user of reset
@@ -465,7 +467,7 @@ internal class CameraFragment: SideEffectDetailFragment<
                                         imageViewVideoPreviewPlayPause.setImageDrawable(
                                             AppCompatResources.getDrawable(
                                                 requireContext(),
-                                                R.drawable.ic_podcast_pause_circle
+                                                R_common.drawable.ic_podcast_pause_circle
                                             )
                                         )
                                     }
@@ -473,7 +475,7 @@ internal class CameraFragment: SideEffectDetailFragment<
                                         imageViewVideoPreviewPlayPause.setImageDrawable(
                                             AppCompatResources.getDrawable(
                                                 requireContext(),
-                                                R.drawable.ic_podcast_play_circle
+                                                R_common.drawable.ic_podcast_play_circle
                                             )
                                         )
                                     }
@@ -483,7 +485,7 @@ internal class CameraFragment: SideEffectDetailFragment<
                                             imageViewVideoPreviewPlayPause.setImageDrawable(
                                                 AppCompatResources.getDrawable(
                                                     requireContext(),
-                                                    R.drawable.ic_podcast_play_circle
+                                                    R_common.drawable.ic_podcast_play_circle
                                                 )
                                             )
                                         } else {
@@ -491,7 +493,7 @@ internal class CameraFragment: SideEffectDetailFragment<
                                             imageViewVideoPreviewPlayPause.setImageDrawable(
                                                 AppCompatResources.getDrawable(
                                                     requireContext(),
-                                                    R.drawable.ic_podcast_pause_circle
+                                                    R_common.drawable.ic_podcast_pause_circle
                                                 )
                                             )
                                         }

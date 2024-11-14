@@ -20,6 +20,7 @@ import androidx.recyclerview.widget.RecyclerView
 import by.kirich1409.viewbindingdelegate.viewBinding
 import chat.sphinx.concept_image_loader.ImageLoader
 import chat.sphinx.tribes_discover.R
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.tribes_discover.adapter.TribesDiscoverAdapter
 import chat.sphinx.tribes_discover.databinding.LayoutDiscoverTribesTagsBinding
 import chat.sphinx.tribes_discover.viewstate.DiscoverTribesTagsViewState
@@ -293,9 +294,9 @@ internal class TribesDiscoverFragment: SideEffectFragment<
                     ContextCompat.getColor(
                         element.root.context,
                         if (selected) {
-                            R.color.body
+                            R_common.color.body
                         } else {
-                            R.color.primaryText
+                            R_common.color.primaryText
                         }
                     )
                 )
@@ -323,9 +324,9 @@ internal class TribesDiscoverFragment: SideEffectFragment<
                 ContextCompat.getColor(
                     root.context,
                     if (tagsSelected) {
-                        R.color.body
+                        R_common.color.body
                     } else {
-                        R.color.primaryText
+                        R_common.color.primaryText
                     }
                 )
             )

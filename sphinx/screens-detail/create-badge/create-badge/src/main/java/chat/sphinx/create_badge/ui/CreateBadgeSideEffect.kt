@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.annotation.StringRes
 import chat.sphinx.create_badge.R
 import chat.sphinx.resources.SphinxToastUtils
+import chat.sphinx.resources.R as R_common
 import io.matthewnelson.android_feature_toast_utils.show
 import io.matthewnelson.concept_views.sideeffect.SideEffect
 
@@ -29,12 +30,12 @@ internal sealed class CreateBadgeSideEffect : SideEffect<Context>()  {
 
         object FailedToCreateBadge : Notify() {
             override val stringRes: Int
-                get() = R.string.badges_create_error
+                get() = R_common.string.badges_create_error
         }
 
         object FailedToChangeState : Notify() {
             override val stringRes: Int
-                get() = R.string.badges_state_error
+                get() = R_common.string.badges_state_error
         }
     }
 

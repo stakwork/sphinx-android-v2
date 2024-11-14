@@ -44,6 +44,7 @@ import chat.sphinx.wrapper_common.lightning.toSat
 import chat.sphinx.wrapper_common.util.getHHMMSSString
 import chat.sphinx.wrapper_podcast.Podcast
 import chat.sphinx.wrapper_podcast.PodcastEpisode
+import chat.sphinx.resources.R as R_common
 import dagger.hilt.android.AndroidEntryPoint
 import io.matthewnelson.android_feature_screens.ui.sideeffect.SideEffectFragment
 import io.matthewnelson.android_feature_screens.util.gone
@@ -412,9 +413,9 @@ internal class PodcastPlayerFragment : SideEffectFragment<
             textViewSubscribeButton.goneIfFalse(notLinkedToChat)
 
             textViewSubscribeButton.text = if (podcast.subscribed.isTrue()) {
-                getString(R.string.unsubscribe)
+                getString(R_common.string.unsubscribe)
             } else {
-                getString(R.string.subscribe)
+                getString(R_common.string.subscribe)
             }
 
             var currentEpisode: PodcastEpisode? = podcast.getCurrentEpisode()
@@ -431,7 +432,7 @@ internal class PodcastPlayerFragment : SideEffectFragment<
                     imageViewPodcastImage,
                     podcastImage,
                     ImageLoaderOptions.Builder()
-                        .placeholderResId(R.drawable.ic_podcast_placeholder)
+                        .placeholderResId(R_common.drawable.ic_podcast_placeholder)
                         .build()
                 )
             }
@@ -500,7 +501,7 @@ internal class PodcastPlayerFragment : SideEffectFragment<
                         imageViewProfilePicture,
                         photoUrl.value,
                         ImageLoaderOptions.Builder()
-                            .placeholderResId(R.drawable.ic_podcast_placeholder)
+                            .placeholderResId(R_common.drawable.ic_podcast_placeholder)
                             .transformation(Transformation.CircleCrop)
                             .build()
                     )
@@ -527,7 +528,7 @@ internal class PodcastPlayerFragment : SideEffectFragment<
             includeLayoutEpisodePlaybackControls.apply {
                 textViewPlayPauseButton.background =
                     ContextCompat.getDrawable(root.context,
-                        if (playing) R.drawable.ic_podcast_pause_circle else R.drawable.ic_podcast_play_circle
+                        if (playing) R_common.drawable.ic_podcast_pause_circle else R_common.drawable.ic_podcast_play_circle
                     )
             }
         }
@@ -542,7 +543,7 @@ internal class PodcastPlayerFragment : SideEffectFragment<
                     imageViewPodcastImage,
                     podcastImage,
                     ImageLoaderOptions.Builder()
-                        .placeholderResId(R.drawable.ic_podcast_placeholder)
+                        .placeholderResId(R_common.drawable.ic_podcast_placeholder)
                         .build()
                 )
             }
@@ -604,33 +605,33 @@ internal class PodcastPlayerFragment : SideEffectFragment<
 
     private fun showSpeedPopup() {
         binding.includeLayoutEpisodePlaybackControls.apply {
-            val wrapper: Context = ContextThemeWrapper(context, R.style.speedMenu)
+            val wrapper: Context = ContextThemeWrapper(context, R_common.style.speedMenu)
             val popup = PopupMenu(wrapper, textViewPlaybackSpeedButton)
-            popup.inflate(R.menu.speed_menu)
+            popup.inflate(R_common.menu.speed_menu)
 
             popup.setOnMenuItemClickListener { item: MenuItem? ->
                 when (item!!.itemId) {
-                    R.id.speed0_5 -> {
+                    R_common.id.speed0_5 -> {
                         textViewPlaybackSpeedButton.text = "0.5x"
                         viewModel.adjustSpeed(0.5)
                     }
-                    R.id.speed0_8 -> {
+                    R_common.id.speed0_8 -> {
                         textViewPlaybackSpeedButton.text = "0.8x"
                         viewModel.adjustSpeed(0.8)
                     }
-                    R.id.speed1 -> {
+                    R_common.id.speed1 -> {
                         textViewPlaybackSpeedButton.text = "1x"
                         viewModel.adjustSpeed(1.0)
                     }
-                    R.id.speed1_2 -> {
+                    R_common.id.speed1_2 -> {
                         textViewPlaybackSpeedButton.text = "1.2x"
                         viewModel.adjustSpeed(1.2)
                     }
-                    R.id.speed1_5 -> {
+                    R_common.id.speed1_5 -> {
                         textViewPlaybackSpeedButton.text = "1.5x"
                         viewModel.adjustSpeed(1.5)
                     }
-                    R.id.speed2_1 -> {
+                    R_common.id.speed2_1 -> {
                         textViewPlaybackSpeedButton.text = "2.1x"
                         viewModel.adjustSpeed(2.1)
                     }
@@ -687,7 +688,7 @@ internal class PodcastPlayerFragment : SideEffectFragment<
     private fun feedItemDetailsCommonInfoBinding(viewState: FeedItemDetailsViewState.Open) {
         binding.includeLayoutFeedItem.includeLayoutFeedItemDetails.apply {
             textViewMainEpisodeTitle.text = viewState.feedItemDetail?.header
-            imageViewItemRowEpisodeType.setImageDrawable(ContextCompat.getDrawable(root.context, viewState.feedItemDetail?.episodeTypeImage ?: R.drawable.ic_podcast_type))
+            imageViewItemRowEpisodeType.setImageDrawable(ContextCompat.getDrawable(root.context, viewState.feedItemDetail?.episodeTypeImage ?: R_common.drawable.ic_podcast_type))
             textViewEpisodeType.text = viewState.feedItemDetail?.episodeTypeText
             textViewEpisodeDate.text = viewState.feedItemDetail?.episodeDate
             textViewEpisodeDuration.text = viewState.feedItemDetail?.episodeDuration
@@ -699,7 +700,7 @@ internal class PodcastPlayerFragment : SideEffectFragment<
                         imageViewEpisodeDetailImage,
                         it,
                         ImageLoaderOptions.Builder()
-                            .placeholderResId(R.drawable.ic_podcast_placeholder)
+                            .placeholderResId(R_common.drawable.ic_podcast_placeholder)
                             .build()
                     )
                 }
@@ -720,14 +721,14 @@ internal class PodcastPlayerFragment : SideEffectFragment<
                     imageDownloadedEpisodeArrow.visible
                     progressBarEpisodeDownload.gone
                     buttonStop.gone
-                    textViewDownload.text = getString(R.string.episode_detail_erase)
+                    textViewDownload.text = getString(R_common.string.episode_detail_erase)
                 }
                 else {
                     buttonDownloadArrow.visible
                     imageDownloadedEpisodeArrow.gone
                     progressBarEpisodeDownload.gone
                     buttonStop.gone
-                    textViewDownload.text = getString(R.string.episode_detail_download)
+                    textViewDownload.text = getString(R_common.string.episode_detail_download)
                 }
             }
         }
@@ -738,11 +739,11 @@ internal class PodcastPlayerFragment : SideEffectFragment<
             if (viewState.feedItemDetail?.played == true) {
                 buttonCheckMarkPlayed.visible
                 buttonCheckMark.invisible
-                textViewCheckMark.text = getString(R.string.episode_detail_upplayed)
+                textViewCheckMark.text = getString(R_common.string.episode_detail_upplayed)
             } else {
                 buttonCheckMarkPlayed.invisible
                 buttonCheckMark.visible
-                textViewCheckMark.text = getString(R.string.episode_detail_played)
+                textViewCheckMark.text = getString(R_common.string.episode_detail_played)
             }
         }
     }

@@ -9,6 +9,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import chat.sphinx.common_player.R
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.common_player.ui.CommonPlayerScreenViewModel
 import chat.sphinx.common_player.viewstate.RecommendationsPodcastPlayerViewState
 import chat.sphinx.concept_connectivity_helper.ConnectivityHelper
@@ -150,19 +151,19 @@ class RecommendedItemsAdapter (
 
     private val imagePodcastLoaderOptions: ImageLoaderOptions by lazy {
         ImageLoaderOptions.Builder()
-            .placeholderResId(R.drawable.ic_podcast_placeholder)
+            .placeholderResId(R_common.drawable.ic_podcast_placeholder)
             .build()
     }
 
     private val imageVideoLoaderOptions: ImageLoaderOptions by lazy {
         ImageLoaderOptions.Builder()
-            .placeholderResId(R.drawable.ic_video_placeholder)
+            .placeholderResId(R_common.drawable.ic_video_placeholder)
             .build()
     }
 
     private val imageNewsletterLoaderOptions: ImageLoaderOptions by lazy {
         ImageLoaderOptions.Builder()
-            .placeholderResId(R.drawable.ic_newsletter_placeholder)
+            .placeholderResId(R_common.drawable.ic_newsletter_placeholder)
             .build()
     }
 
@@ -271,17 +272,17 @@ class RecommendedItemsAdapter (
                     layoutConstraintAlpha.visible
 
                     buttonPlayEpisode.setImageDrawable(
-                        ContextCompat.getDrawable(binding.root.context, R.drawable.ic_pause_episode)
+                        ContextCompat.getDrawable(binding.root.context, R_common.drawable.ic_pause_episode)
                     )
-                    textViewEpisodeHeader.setTextColor(ContextCompat.getColor(root.context, R.color.receivedIcon))
+                    textViewEpisodeHeader.setTextColor(ContextCompat.getColor(root.context, R_common.color.receivedIcon))
                 } else {
                     layoutConstraintAlpha.gone
 
                     buttonPlayEpisode.setImageDrawable(
-                        ContextCompat.getDrawable(binding.root.context, R.drawable.ic_play_episode)
+                        ContextCompat.getDrawable(binding.root.context, R_common.drawable.ic_play_episode)
                     )
                     buttonPlayEpisode.visible
-                    textViewEpisodeHeader.setTextColor(ContextCompat.getColor(root.context, R.color.primaryText))
+                    textViewEpisodeHeader.setTextColor(ContextCompat.getColor(root.context, R_common.color.primaryText))
                 }
 
                 onStopSupervisor.scope.launch(viewModel.mainImmediate) {
@@ -304,25 +305,25 @@ class RecommendedItemsAdapter (
 
 inline fun PodcastEpisode.getPlaceHolderImageRes(): Int {
     if (isMusicClip) {
-        return R.drawable.ic_podcast_placeholder
+        return R_common.drawable.ic_podcast_placeholder
     }
     if (isYouTubeVideo) {
-        return R.drawable.ic_video_placeholder
+        return R_common.drawable.ic_video_placeholder
     }
-    return R.drawable.ic_podcast_placeholder
+    return R_common.drawable.ic_podcast_placeholder
 }
 
 inline fun PodcastEpisode.getIconType(): Int {
     if (isTwitterSpace) {
-        return R.drawable.ic_twitter_space_type
+        return R_common.drawable.ic_twitter_space_type
     }
     if (isPodcast) {
-        return R.drawable.ic_podcast_type
+        return R_common.drawable.ic_podcast_type
     }
     if (isYouTubeVideo) {
-        return R.drawable.ic_youtube_type
+        return R_common.drawable.ic_youtube_type
     }
-    return R.drawable.ic_podcast_type
+    return R_common.drawable.ic_podcast_type
 }
 
 @Suppress("NOTHING_TO_INLINE")

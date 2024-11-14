@@ -14,6 +14,7 @@ import chat.sphinx.concept_image_loader.ImageLoaderOptions
 import chat.sphinx.concept_image_loader.Transformation
 import chat.sphinx.episode_detail.R
 import chat.sphinx.episode_detail.databinding.FragmentEpisodeDetailBinding
+import chat.sphinx.resources.R as R_common
 import dagger.hilt.android.AndroidEntryPoint
 import io.matthewnelson.android_feature_navigation.util.navArgs
 import io.matthewnelson.android_feature_screens.ui.base.BaseFragment
@@ -93,7 +94,7 @@ internal class EpisodeDetailFragment: SideEffectFragment<
                     imageViewEpisodeDetailImage,
                     viewState.episodeDetail.image,
                     ImageLoaderOptions.Builder()
-                        .placeholderResId(R.drawable.ic_podcast_placeholder)
+                        .placeholderResId(R_common.drawable.ic_podcast_placeholder)
                         .build()
                 )
             }
@@ -113,7 +114,7 @@ internal class EpisodeDetailFragment: SideEffectFragment<
                     imageDownloadedEpisodeArrow.visible
                     progressBarEpisodeDownload.gone
                     buttonStop.gone
-                    textViewDownload.text = getString(R.string.episode_detail_erase)
+                    textViewDownload.text = getString(R_common.string.episode_detail_erase)
 
                     binding.layoutConstraintDownloadRow.setOnClickListener {
                         viewModel.deleteDownloadedMedia()
@@ -124,7 +125,7 @@ internal class EpisodeDetailFragment: SideEffectFragment<
                     imageDownloadedEpisodeArrow.gone
                     progressBarEpisodeDownload.gone
                     buttonStop.gone
-                    textViewDownload.text = getString(R.string.episode_detail_download)
+                    textViewDownload.text = getString(R_common.string.episode_detail_download)
 
                     binding.layoutConstraintDownloadRow.setOnClickListener {
                         viewModel.downloadMedia()
@@ -142,11 +143,11 @@ internal class EpisodeDetailFragment: SideEffectFragment<
             if (viewState.episodeDetail.played) {
                 buttonCheckMarkPlayed.visible
                 buttonCheckMark.invisible
-                textViewCheckMark.text = getString(R.string.episode_detail_upplayed)
+                textViewCheckMark.text = getString(R_common.string.episode_detail_upplayed)
             } else {
                 buttonCheckMarkPlayed.invisible
                 buttonCheckMark.visible
-                textViewCheckMark.text = getString(R.string.episode_detail_played)
+                textViewCheckMark.text = getString(R_common.string.episode_detail_played)
             }
         }
     }

@@ -15,6 +15,7 @@ import chat.sphinx.wrapper_contact.Contact
 import chat.sphinx.wrapper_contact.getColorKey
 import chat.sphinx.wrapper_message.*
 import chat.sphinx.wrapper_message_media.MediaType
+import chat.sphinx.resources.R as R_common
 import kotlinx.coroutines.flow.Flow
 import chat.sphinx.wrapper_invite.Invite as InviteWrapper
 
@@ -186,7 +187,7 @@ sealed class DashboardChat {
                     )
                 }
                 message.messageDecryptionError -> {
-                    context.getString(R.string.decryption_error)
+                    context.getString(R_common.string.decryption_error)
                 }
                 message.type.isMessage() -> {
                     message.messageContentDecrypted?.value?.replacingMarkdown()?.let { decrypted ->
@@ -428,7 +429,7 @@ sealed class DashboardChat {
                 get() = null
 
             fun getChatName(context: Context): String {
-                val contactAlias = contact.alias?.value ?: context.getString(R.string.unknown)
+                val contactAlias = contact.alias?.value ?: context.getString(R_common.string.unknown)
                 return context.getString(R.string.last_message_description_invite, contactAlias)
             }
 
@@ -438,7 +439,7 @@ sealed class DashboardChat {
             }
 
             fun getInviteIconAndColor(): Pair<Int, Int>? {
-                return Pair(R.string.material_icon_name_invite_ready, R.color.primaryGreen)
+                return Pair(R_common.string.material_icon_name_invite_ready, R_common.color.primaryGreen)
             }
 
             fun getInvitePrice(): Sat? {

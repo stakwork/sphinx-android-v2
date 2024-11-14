@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.fragment.app.FragmentActivity
 import chat.sphinx.address_book.R
 import chat.sphinx.resources.SphinxToastUtils
+import chat.sphinx.resources.R as R_common
 import io.matthewnelson.android_feature_toast_utils.show
 import io.matthewnelson.concept_views.sideeffect.SideEffect
 
@@ -21,7 +22,7 @@ internal sealed class AddressBookSideEffect: SideEffect<FragmentActivity>() {
         override suspend fun execute(value: FragmentActivity) {
             val successMessage = value.getString(R.string.alert_confirm_delete_contact)
 
-            val builder = AlertDialog.Builder(value, R.style.AlertDialogTheme)
+            val builder = AlertDialog.Builder(value, R_common.style.AlertDialogTheme)
             builder.setTitle(value.getString(R.string.alert_confirm_delete_contact_title))
             builder.setMessage(successMessage)
             builder.setNegativeButton(android.R.string.cancel) { _,_ -> }
@@ -38,7 +39,7 @@ internal sealed class AddressBookSideEffect: SideEffect<FragmentActivity>() {
         private val message: String,
     ): AddressBookSideEffect() {
         override suspend fun execute(value: FragmentActivity) {
-            val builder = AlertDialog.Builder(value, R.style.AlertDialogTheme)
+            val builder = AlertDialog.Builder(value, R_common.style.AlertDialogTheme)
             builder.setTitle(title)
             builder.setMessage(message)
             builder.setNegativeButton(android.R.string.cancel) { _,_ -> }

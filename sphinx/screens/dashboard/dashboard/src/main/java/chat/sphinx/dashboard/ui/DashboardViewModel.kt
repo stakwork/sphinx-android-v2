@@ -104,6 +104,7 @@ import chat.sphinx.wrapper_feed.isNewsletter
 import chat.sphinx.wrapper_feed.isPodcast
 import chat.sphinx.wrapper_feed.isVideo
 import chat.sphinx.wrapper_lightning.NodeBalance
+import chat.sphinx.resources.R as R_common
 import com.squareup.moshi.Moshi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.matthewnelson.android_feature_navigation.util.navArgs
@@ -300,83 +301,83 @@ internal class DashboardViewModel @Inject constructor(
                 when (connectManagerError) {
                     is ConnectManagerError.GenerateXPubError -> {
                         submitSideEffect(ChatListSideEffect.Notify(
-                            app.getString(R.string.connect_manager_generate_xpub_error))
+                            app.getString(R_common.string.connect_manager_generate_xpub_error))
                         )
                     }
                     is ConnectManagerError.MqttConnectError -> {
                         submitSideEffect(ChatListSideEffect.Notify(
-                            String.format(app.getString(R.string.connect_manager_mqtt_connect_error), connectManagerError.error))
+                            String.format(app.getString(R_common.string.connect_manager_mqtt_connect_error), connectManagerError.error))
                         )
                     }
                     is ConnectManagerError.MqttClientError -> {
                         submitSideEffect(ChatListSideEffect.Notify(
-                            app.getString(R.string.connect_manager_mqtt_client_error))
+                            app.getString(R_common.string.connect_manager_mqtt_client_error))
                         )
                     }
                     is ConnectManagerError.MqttInitError -> {
                         submitSideEffect(ChatListSideEffect.Notify(
                             String.format(
-                            app.getString(R.string.connect_manager_mqtt_init_error), connectManagerError.logs))
+                            app.getString(R_common.string.connect_manager_mqtt_init_error), connectManagerError.logs))
                         )
                     }
                     is ConnectManagerError.JoinTribeError -> {
                         submitSideEffect(ChatListSideEffect.Notify(
-                            app.getString(R.string.connect_manager_join_tribe_error))
+                            app.getString(R_common.string.connect_manager_join_tribe_error))
                         )
                     }
                     is ConnectManagerError.CreateTribeError -> {
                         submitSideEffect(ChatListSideEffect.Notify(
-                            app.getString(R.string.connect_manager_create_tribe_error))
+                            app.getString(R_common.string.connect_manager_create_tribe_error))
                         )
                     }
                     is ConnectManagerError.CreateInviteError -> {
                         submitSideEffect(ChatListSideEffect.Notify(
-                            app.getString(R.string.connect_manager_create_invite_error))
+                            app.getString(R_common.string.connect_manager_create_invite_error))
                         )
                     }
                     is ConnectManagerError.DeleteInviteError -> {
                         submitSideEffect(ChatListSideEffect.Notify(
-                            app.getString(R.string.connect_manager_delete_invite_error))
+                            app.getString(R_common.string.connect_manager_delete_invite_error))
                         )
                     }
                     is ConnectManagerError.ConcatNodesError -> {
                         submitSideEffect(ChatListSideEffect.Notify(
-                            app.getString(R.string.connect_manager_concat_nodes_error))
+                            app.getString(R_common.string.connect_manager_concat_nodes_error))
                         )
                     }
                     is ConnectManagerError.CreateInvoiceError -> {
                         submitSideEffect(ChatListSideEffect.Notify(
-                            app.getString(R.string.connect_manager_create_invoice_error))
+                            app.getString(R_common.string.connect_manager_create_invoice_error))
                         )
                     }
                     is ConnectManagerError.GetReadMessagesError -> {
                         submitSideEffect(ChatListSideEffect.Notify(
-                            app.getString(R.string.connect_manager_get_read_messages_error))
+                            app.getString(R_common.string.connect_manager_get_read_messages_error))
                         )
                     }
                     is ConnectManagerError.SignBytesError -> {
                         submitSideEffect(ChatListSideEffect.Notify(
-                            app.getString(R.string.connect_manager_sign_bytes_error))
+                            app.getString(R_common.string.connect_manager_sign_bytes_error))
                         )
                     }
                     is ConnectManagerError.SendKeySendError -> {
                         submitSideEffect(ChatListSideEffect.Notify(
-                            app.getString(R.string.connect_manager_keysend_error))
+                            app.getString(R_common.string.connect_manager_keysend_error))
                         )
                     }
                     is ConnectManagerError.MqttReconnectError -> {
                         submitSideEffect(ChatListSideEffect.Notify(
-                            app.getString(R.string.connect_manager_mqtt_reconnect_error))
+                            app.getString(R_common.string.connect_manager_mqtt_reconnect_error))
                         )
                     }
                     is ConnectManagerError.XPubOrSignError -> {
                         submitSideEffect(ChatListSideEffect.Notify(
-                            app.getString(R.string.connect_manager_xpub_or_sign_error))
+                            app.getString(R_common.string.connect_manager_xpub_or_sign_error))
                         )
                     }
                     is ConnectManagerError.LoadTransactionsError -> {
                         submitSideEffect(ChatListSideEffect.Notify(
-                            app.getString(R.string.connect_manager_load_transactions_error))
+                            app.getString(R_common.string.connect_manager_load_transactions_error))
                         )
                     }
                     else -> {}
@@ -544,7 +545,7 @@ internal class DashboardViewModel @Inject constructor(
         viewModelScope.launch(mainImmediate) {
             submitSideEffect(
                 ChatListSideEffect.Notify(
-                    app.getString(R.string.signer_phone_connected_to_mqtt)
+                    app.getString(R_common.string.signer_phone_connected_to_mqtt)
                 )
             )
 
@@ -555,7 +556,7 @@ internal class DashboardViewModel @Inject constructor(
         viewModelScope.launch(mainImmediate) {
             submitSideEffect(
                 ChatListSideEffect.Notify(
-                    app.getString(R.string.signer_phone_error_mqtt)
+                    app.getString(R_common.string.signer_phone_error_mqtt)
                 )
             )
         }
@@ -879,7 +880,7 @@ internal class DashboardViewModel @Inject constructor(
             var errorMessage = app.getString(R.string.dashboard_connect_generic_error)
 
             if (viewState is DeepLinkPopupViewState.PeopleConnectPopup) {
-                val alias = viewState.personInfoDto.owner_alias.toContactAlias() ?: ContactAlias(app.getString(R.string.unknown))
+                val alias = viewState.personInfoDto.owner_alias.toContactAlias() ?: ContactAlias(app.getString(R_common.string.unknown))
                 val photoUrl = viewState.personInfoDto.img?.toPhotoUrl()
 
                 viewState.personInfoDto.owner_pubkey.toLightningNodePubKey()?.let { pubKey ->
@@ -1384,7 +1385,7 @@ internal class DashboardViewModel @Inject constructor(
 
             val invoiceAmount = invoiceBolt11.getSatsAmount()?.value
             if (invoiceAmount != null && invoiceAmount > balance.balance.value) {
-                submitSideEffect(ChatListSideEffect.Notify(app.getString(R.string.balance_too_low)))
+                submitSideEffect(ChatListSideEffect.Notify(app.getString(R_common.string.balance_too_low)))
                 return@launch
             }
 
@@ -1392,7 +1393,7 @@ internal class DashboardViewModel @Inject constructor(
             val invoiceAmountMilliSat = invoiceBolt11.getMilliSatsAmount()?.value
 
             if (invoicePayeePubKey == null || invoiceAmountMilliSat == null) {
-                 submitSideEffect(ChatListSideEffect.Notify(app.getString(R.string.invalid_invoice)))
+                 submitSideEffect(ChatListSideEffect.Notify(app.getString(R_common.string.invalid_invoice)))
                 return@launch
             }
 
@@ -1423,7 +1424,7 @@ internal class DashboardViewModel @Inject constructor(
                         isSphinxInvoice = payeeHasRouteHint,
                         callback = {
                             viewModelScope.launch(mainImmediate) {
-                                submitSideEffect(ChatListSideEffect.Notify(app.getString(R.string.processing_invoice)))
+                                submitSideEffect(ChatListSideEffect.Notify(app.getString(R_common.string.processing_invoice)))
                             }
                         }
                     )
@@ -1431,7 +1432,7 @@ internal class DashboardViewModel @Inject constructor(
                     val routerUrl = serverSettingsSharedPreferences.getString(ROUTER_URL, null)
 
                     if (routerUrl == null) {
-                        submitSideEffect(ChatListSideEffect.Notify(app.getString(R.string.router_url_not_found)))
+                        submitSideEffect(ChatListSideEffect.Notify(app.getString(R_common.string.router_url_not_found)))
                         return@launch
                     }
 
@@ -1444,7 +1445,7 @@ internal class DashboardViewModel @Inject constructor(
                             is LoadResponse.Loading -> {}
                             is Response.Error -> {
                                 if (payeeHasRouteHint) {
-                                    submitSideEffect(ChatListSideEffect.Notify(app.getString(R.string.error_getting_route)))
+                                    submitSideEffect(ChatListSideEffect.Notify(app.getString(R_common.string.error_getting_route)))
                                 } else {
                                     connectManagerRepository.payInvoiceFromLSP(lightningPaymentRequest)
                                 }
@@ -1463,12 +1464,12 @@ internal class DashboardViewModel @Inject constructor(
                                         isSphinxInvoice = payeeHasRouteHint,
                                         callback = {
                                             viewModelScope.launch(mainImmediate) {
-                                                submitSideEffect(ChatListSideEffect.Notify(app.getString(R.string.processing_invoice)))
+                                                submitSideEffect(ChatListSideEffect.Notify(app.getString(R_common.string.processing_invoice)))
                                             }
                                         }
                                     )
                                 } catch (e: Exception) {
-                                    submitSideEffect(ChatListSideEffect.Notify(app.getString(R.string.error_getting_route)))
+                                    submitSideEffect(ChatListSideEffect.Notify(app.getString(R_common.string.error_getting_route)))
                                 }
                             }
                         }
@@ -1483,7 +1484,7 @@ internal class DashboardViewModel @Inject constructor(
                     isSphinxInvoice = payeeHasRouteHint,
                     callback = {
                         viewModelScope.launch(mainImmediate) {
-                            submitSideEffect(ChatListSideEffect.Notify(app.getString(R.string.processing_invoice)))
+                            submitSideEffect(ChatListSideEffect.Notify(app.getString(R_common.string.processing_invoice)))
                         }
                     }
                 )

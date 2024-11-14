@@ -16,6 +16,7 @@ import chat.sphinx.highlighting_tool.markDownLinkTexts
 import chat.sphinx.highlighting_tool.replacingHighlightedDelimiters
 import chat.sphinx.highlighting_tool.replacingMarkdown
 import chat.sphinx.threads.R
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.threads.model.FileAttachment
 import chat.sphinx.threads.model.ThreadItem
 import chat.sphinx.threads.navigation.ThreadsNavigator
@@ -259,7 +260,7 @@ internal class ThreadsViewModel @Inject constructor(
             markdownLinkTexts = threadMessage.markDownLinkTexts(),
             usersReplies = createReplyUserHolders(repliesList, chat, owner),
             usersCount = repliesList?.size ?: 0,
-            repliesAmount = String.format(app.getString(R.string.replies_amount), messagesForThread?.drop(1)?.size?.toString() ?: "0"),
+            repliesAmount = String.format(app.getString(R_common.string.replies_amount), messagesForThread?.drop(1)?.size?.toString() ?: "0"),
             lastReplyDate = messagesForThread?.first()?.date?.timeAgo(),
             uuid = uuid ?: "",
             imageAttachment = imageAttachment,

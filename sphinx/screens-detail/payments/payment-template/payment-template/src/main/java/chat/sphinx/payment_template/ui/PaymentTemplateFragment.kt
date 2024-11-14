@@ -19,6 +19,7 @@ import chat.sphinx.concept_image_loader.ImageLoaderOptions
 import chat.sphinx.insetter_activity.InsetterActivity
 import chat.sphinx.insetter_activity.addNavigationBarPadding
 import chat.sphinx.payment_template.R
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.payment_template.databinding.FragmentPaymentTemplateBinding
 import chat.sphinx.payment_template.ui.adapter.PaymentTemplateAdapter
 import chat.sphinx.payment_template.ui.viewstate.PaymentTemplateViewState
@@ -195,7 +196,7 @@ internal class PaymentTemplateFragment: SideEffectFragment<
                     is SelectedTemplateViewState.Idle -> {
                         lifecycleScope.launch(viewModel.mainImmediate) {
                             binding.imageViewSelectedPaymentTemplate.setImageDrawable(
-                                ContextCompat.getDrawable(binding.root.context, R.drawable.ic_no_template_with_padding)
+                                ContextCompat.getDrawable(binding.root.context, R_common.drawable.ic_no_template_with_padding)
                             )
                         }.let { job ->
                             currentTemplateViewStateJob = job

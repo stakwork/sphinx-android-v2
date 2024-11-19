@@ -1,5 +1,8 @@
 # ChangeLog
 
+## Version 1.0.0-alpha27 (2021-11-19)
+- Adds Live Kit UI adjustments
+
 ## Version 1.0.0-alpha26 (2021-11-14)
 - Adds Live Kit SDK integration
 

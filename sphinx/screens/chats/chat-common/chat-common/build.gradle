@@ -84,6 +84,7 @@ dependencies {
     api deps.androidx.recyclerView
     implementation deps.google.hilt
     kapt kaptDeps.google.hilt
+    kapt kaptDeps.square.moshiCodegen
 
     implementation deps.square.okio
     implementation deps.square.moshi

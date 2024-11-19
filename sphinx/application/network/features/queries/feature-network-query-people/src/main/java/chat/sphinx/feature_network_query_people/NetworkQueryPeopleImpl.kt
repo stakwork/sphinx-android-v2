@@ -84,12 +84,22 @@ class NetworkQueryPeopleImpl(
             responseJsonClass = BadgeDto::class.java,
         )
 
-    override fun getCallToken(
+    override fun getLiveKitToken(
         room: String,
-        alias: String
-    ): Flow<LoadResponse<CallTokenDto, ResponseError>> =
-        networkRelayCall.get(
+        alias: String,
+        profilePictureUrl: String?
+    ): Flow<LoadResponse<CallTokenDto, ResponseError>> {
+        profilePictureUrl?.let {
+            return networkRelayCall.get(
+                url = String.format(ENDPOINT_CALL_TOKEN, room, alias) + "&metadata={\"profilePictureUrl\":\"${it}\"}",
+                responseJsonClass = CallTokenDto::class.java,
+            )
+        }
+        return networkRelayCall.get(
             url = String.format(ENDPOINT_CALL_TOKEN, room, alias),
             responseJsonClass = CallTokenDto::class.java,
         )
+
+    }
+
 }

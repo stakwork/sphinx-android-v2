@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.os.Parcelable
 import android.view.WindowManager
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -18,10 +19,23 @@ import chat.sphinx.chat_common.databinding.CallActivityBinding
 import chat.sphinx.chat_common.ui.activity.call_activity.dialog.showAudioProcessorSwitchDialog
 import chat.sphinx.chat_common.ui.activity.call_activity.dialog.showDebugMenuDialog
 import chat.sphinx.chat_common.ui.activity.call_activity.dialog.showSelectAudioDeviceDialog
+import chat.sphinx.concept_image_loader.ImageLoader
+import com.squareup.moshi.Moshi
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.parcelize.Parcelize
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class CallActivity : AppCompatActivity() {
+
+    private val moshi: Moshi by lazy {
+        Moshi.Builder().build()
+    }
+
+    @Inject
+    @Suppress("ProtectedInFinal")
+    protected lateinit var imageLoader: ImageLoader<ImageView>
 
     private val viewModel: CallViewModel by viewModelByFactory {
         val args = intent.getParcelableExtra<BundleArgs>(KEY_ARGS)
@@ -34,7 +48,7 @@ class CallActivity : AppCompatActivity() {
             e2eeKey = args.e2eeKey,
             videoEnabled = args.videoEnabled,
             stressTest = args.stressTest,
-            application = application,
+            application = application
         )
     }
     private lateinit var binding: CallActivityBinding
@@ -53,6 +67,7 @@ class CallActivity : AppCompatActivity() {
     @androidx.camera.camera2.interop.ExperimentalCamera2Interop
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         binding = CallActivityBinding.inflate(layoutInflater)
 
@@ -72,7 +87,14 @@ class CallActivity : AppCompatActivity() {
         lifecycleScope.launchWhenCreated {
             viewModel.participants
                 .collect { participants ->
-                    val items = participants.map { participant -> ParticipantItem(viewModel.room, participant) }
+                    val items = participants.map { participant ->
+                        ParticipantItem(
+                            viewModel.room,
+                            participant,
+                            moshi = moshi,
+                            imageLoader = imageLoader
+                        )
+                    }
                     audienceAdapter.update(items)
                 }
         }
@@ -86,7 +108,15 @@ class CallActivity : AppCompatActivity() {
         lifecycleScope.launchWhenCreated {
             viewModel.primarySpeaker.collectLatest { speaker ->
                 val items = listOfNotNull(speaker)
-                    .map { participant -> ParticipantItem(viewModel.room, participant, speakerView = true) }
+                    .map { participant ->
+                        ParticipantItem(
+                            viewModel.room,
+                            participant,
+                            speakerView = true,
+                            moshi = moshi,
+                            imageLoader = imageLoader
+                        )
+                    }
                 speakerAdapter.update(items)
             }
         }

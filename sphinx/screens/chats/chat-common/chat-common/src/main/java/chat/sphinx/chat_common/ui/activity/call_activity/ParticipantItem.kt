@@ -3,9 +3,14 @@
 package chat.sphinx.chat_common.ui.activity.call_activity
 
 import android.view.View
+import android.widget.ImageView
 import chat.sphinx.chat_common.R
 import chat.sphinx.chat_common.databinding.ParticipantItemBinding
+import chat.sphinx.concept_image_loader.ImageLoader
+import chat.sphinx.concept_image_loader.ImageLoaderOptions
+import chat.sphinx.concept_image_loader.Transformation
 import com.github.ajalt.timberkt.Timber
+import com.squareup.moshi.Moshi
 import com.xwray.groupie.viewbinding.BindableItem
 import com.xwray.groupie.viewbinding.GroupieViewHolder
 import io.livekit.android.room.Room
@@ -16,6 +21,7 @@ import io.livekit.android.room.track.LocalVideoTrack
 import io.livekit.android.room.track.Track
 import io.livekit.android.room.track.VideoTrack
 import io.livekit.android.util.flow
+import io.matthewnelson.android_feature_screens.util.goneIfTrue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -32,7 +38,16 @@ class ParticipantItem(
     private val room: Room,
     private val participant: Participant,
     private val speakerView: Boolean = false,
+    val moshi: Moshi,
+    val imageLoader: ImageLoader<ImageView>
 ) : BindableItem<ParticipantItemBinding>() {
+
+    val imageLoaderDefaults by lazy {
+        ImageLoaderOptions.Builder()
+            .placeholderResId(chat.sphinx.resources.R.drawable.ic_media_library)
+            .transformation(Transformation.CircleCrop)
+            .build()
+    }
 
     private var boundVideoTrack: VideoTrack? = null
     private var coroutineScope: CoroutineScope? = null
@@ -53,8 +68,28 @@ class ParticipantItem(
     override fun bind(viewBinding: ParticipantItemBinding, position: Int) {
         ensureCoroutineScope()
         coroutineScope?.launch {
-            participant::identity.flow.collect { identity ->
-                viewBinding.identityText.text = identity?.value
+            participant::name.flow.collect { name ->
+                if (name?.isNotEmpty() == true) {
+                    viewBinding.identityText.text = name
+                } else {
+                    viewBinding.identityText.text = participant::identity.flow.value?.value
+                }
+            }
+        }
+        coroutineScope?.launch {
+            participant::metadata.flow.collect { metadata ->
+                viewBinding.profilePicture.visibility = View.GONE
+
+                metadata?.toParticipantMetaDataOrNull(moshi)?.profilePictureUrl?.let {
+                    viewBinding.profilePicture.visibility = View.VISIBLE
+
+                    imageLoader.load(
+                        viewBinding.profilePicture,
+                        it,
+                        imageLoaderDefaults,
+                    )
+
+                }
             }
         }
         coroutineScope?.launch {

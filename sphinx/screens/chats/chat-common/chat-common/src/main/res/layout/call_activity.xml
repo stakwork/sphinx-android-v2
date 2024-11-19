@@ -8,7 +8,7 @@
         android:id="@+id/speaker_view"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:background="@color/no_video_background"
+        android:background="@color/body"
         app:layout_constraintBottom_toTopOf="@id/audience_row"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -140,4 +140,5 @@
             android:src="@drawable/dots_horizontal_circle_outline"
             app:tint="@android:color/white" />
     </LinearLayout>
+
 </androidx.constraintlayout.widget.ConstraintLayout>

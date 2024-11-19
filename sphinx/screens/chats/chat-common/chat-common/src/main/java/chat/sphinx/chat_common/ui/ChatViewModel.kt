@@ -2033,9 +2033,10 @@ abstract class ChatViewModel<ARGS : NavArgs>(
             viewModelScope.launch(mainImmediate) {
                 val owner = getOwner()
 
-                networkQueryPeople.getCallToken(
+                networkQueryPeople.getLiveKitToken(
                     room = link.callRoom,
-                    alias = owner.alias?.value ?: "Unknown"
+                    alias = owner.alias?.value ?: "Unknown",
+                    profilePictureUrl = owner.photoUrl?.value
                 ).collect { loadResponse ->
                     when(loadResponse) {
                         is LoadResponse.Loading -> {}

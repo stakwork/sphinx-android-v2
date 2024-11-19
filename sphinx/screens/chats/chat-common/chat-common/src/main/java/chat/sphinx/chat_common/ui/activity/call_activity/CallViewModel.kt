@@ -14,6 +14,7 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.viewModelScope
 import chat.sphinx.chat_common.ui.activity.call_activity.service.ForegroundService
 import com.github.ajalt.timberkt.Timber
+import com.squareup.moshi.Moshi
 import io.livekit.android.AudioOptions
 import io.livekit.android.LiveKit
 import io.livekit.android.LiveKitOverrides
@@ -55,7 +56,7 @@ class CallViewModel(
     val e2eeKey: String? = "",
     val videoEnabled: Boolean = false,
     val audioProcessorOptions: AudioProcessorOptions? = null,
-    val stressTest: StressTest = StressTest.None,
+    val stressTest: StressTest = StressTest.None
 ) : AndroidViewModel(application) {
 
     private fun getE2EEOptions(): E2EEOptions? {

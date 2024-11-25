@@ -1,5 +1,7 @@
 # ChangeLog
 
+## Version 1.0.0-alpha28 (2021-11-25)
+
 ## Version 1.0.0-alpha27 (2021-11-19)
 - Adds Live Kit UI adjustments
 

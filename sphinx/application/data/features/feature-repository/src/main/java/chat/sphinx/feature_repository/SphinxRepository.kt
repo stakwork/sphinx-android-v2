@@ -561,6 +561,7 @@ abstract class SphinxRepository(
                         connectionManagerState.value = OwnerRegistrationState.StoreRouterPubKey(nodes)
                         connectManager.addNodesFromResponse(nodes)
                     }
+                    else -> {}
                 }
             }
         }
@@ -763,6 +764,7 @@ abstract class SphinxRepository(
                             loadResponse.value.router
                         )
                     }
+                    else -> {}
                 }
             }
         }

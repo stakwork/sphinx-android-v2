@@ -14,6 +14,7 @@ import chat.sphinx.payment_common.ui.PaymentViewModel
 import chat.sphinx.payment_common.ui.viewstate.AmountViewState
 import chat.sphinx.payment_common.ui.viewstate.receive.PaymentReceiveViewState
 import chat.sphinx.payment_receive.R
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.payment_receive.navigation.PaymentReceiveNavigator
 import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_common.dashboard.ContactId
@@ -110,8 +111,8 @@ internal class PaymentReceiveViewModel @Inject constructor(
                 if (invoiceAndHash != null) {
                     paymentReceiveNavigator.toQRCodeDetail(
                         invoiceAndHash.first,
-                        app.getString(R.string.payment_request),
-                        app.getString(R.string.amount_n_sats, requestPayment.amount),
+                        app.getString(R_common.string.payment_request),
+                        app.getString(R_common.string.amount_n_sats, requestPayment.amount),
                         false
                     )
                     refreshViewState()
@@ -119,7 +120,7 @@ internal class PaymentReceiveViewModel @Inject constructor(
                     updateAmount("")
                 } else {
                     submitSideEffect(
-                        PaymentSideEffect.Notify(app.getString(R.string.failed_to_request_payment))
+                        PaymentSideEffect.Notify(app.getString(R_common.string.failed_to_request_payment))
                     )
                     refreshViewState()
 

@@ -6,6 +6,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import chat.sphinx.onboard_resources.R
 import chat.sphinx.resources.SphinxToastUtils
+import chat.sphinx.resources.R as R_common
 import io.matthewnelson.android_feature_toast_utils.show
 import io.matthewnelson.concept_views.sideeffect.SideEffect
 
@@ -66,15 +67,15 @@ internal sealed class OnBoardConnectingSideEffect: SideEffect<Context>() {
         private val callback: () -> Unit,
     ): OnBoardConnectingSideEffect() {
         override suspend fun execute(value: Context) {
-            val builder = AlertDialog.Builder(value, R.style.AlertDialogTheme)
-            builder.setTitle(value.getString(R.string.store_mnemonic))
+            val builder = AlertDialog.Builder(value, R_common.style.AlertDialogTheme)
+            builder.setTitle(value.getString(R_common.string.store_mnemonic))
             builder.setMessage(mnemonic)
             builder.setNeutralButton(android.R.string.copy) { _, _ ->
                 (value.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager)?.let { manager ->
                     val clipData = ClipData.newPlainText("mnemonic", mnemonic)
                     manager.setPrimaryClip(clipData)
 
-                    SphinxToastUtils().show(value, R.string.mnemonic_copied_to_clipboard)
+                    SphinxToastUtils().show(value, R_common.string.mnemonic_copied_to_clipboard)
                 }
                 callback.invoke()
             }

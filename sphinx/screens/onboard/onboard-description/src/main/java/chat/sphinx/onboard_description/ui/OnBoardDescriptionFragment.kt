@@ -15,6 +15,8 @@ import chat.sphinx.insetter_activity.addNavigationBarPadding
 import chat.sphinx.insetter_activity.addStatusBarPadding
 import chat.sphinx.onboard_description.R
 import chat.sphinx.onboard_description.databinding.FragmentOnBoardDescriptionBinding
+import chat.sphinx.resources.R as R_common
+import chat.sphinx.onboard_resources.R as R_onboard_resources
 import dagger.hilt.android.AndroidEntryPoint
 import io.matthewnelson.android_feature_screens.ui.sideeffect.SideEffectFragment
 import io.matthewnelson.android_feature_viewmodel.currentViewState
@@ -63,10 +65,10 @@ internal class OnBoardDescriptionFragment: SideEffectFragment<
                     imageViewOnboardDescription.setImageDrawable(
                         ContextCompat.getDrawable(
                             binding.root.context,
-                            R.drawable.new_user_description
+                            R_common.drawable.new_user_description
                         )
                     )
-                    textViewOnboardDescription.text = getString(R.string.on_board_paste_connection_code)
+                    textViewOnboardDescription.text = getString(R_onboard_resources.string.on_board_paste_connection_code)
                 }
             }
             is OnBoardDescriptionViewState.ExistingUser -> {
@@ -74,10 +76,10 @@ internal class OnBoardDescriptionFragment: SideEffectFragment<
                     imageViewOnboardDescription.setImageDrawable(
                         ContextCompat.getDrawable(
                             binding.root.context,
-                            R.drawable.existing_user_description
+                            R_common.drawable.existing_user_description
                         )
                     )
-                    textViewOnboardDescription.text = getString(R.string.on_board_paste_keys)
+                    textViewOnboardDescription.text = getString(R_onboard_resources.string.on_board_paste_keys)
                 }
             }
         }

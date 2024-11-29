@@ -18,6 +18,7 @@ import chat.sphinx.wrapper_common.calculateTotalSize
 import chat.sphinx.wrapper_common.feed.FeedId
 import chat.sphinx.wrapper_feed.Feed
 import chat.sphinx.wrapper_feed.FeedItem
+import chat.sphinx.resources.R as R_common
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.matthewnelson.android_feature_navigation.util.navArgs
 import io.matthewnelson.android_feature_viewmodel.SideEffectViewModel
@@ -109,7 +110,7 @@ internal class DeletePodcastDetailViewModel @Inject constructor(
                 )
 
                 submitSideEffect(
-                    DeleteDetailNotifySideEffect(app.getString(R.string.manage_storage_error_delete))
+                    DeleteDetailNotifySideEffect(app.getString(R_common.string.manage_storage_error_delete))
                 )
             }
         }
@@ -132,7 +133,7 @@ internal class DeletePodcastDetailViewModel @Inject constructor(
                     )
 
                     submitSideEffect(
-                        DeleteDetailNotifySideEffect(app.getString(R.string.manage_storage_error_delete))
+                        DeleteDetailNotifySideEffect(app.getString(R_common.string.manage_storage_error_delete))
                     )
                 }
             }

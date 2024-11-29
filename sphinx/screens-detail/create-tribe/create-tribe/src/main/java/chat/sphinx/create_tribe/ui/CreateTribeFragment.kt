@@ -24,6 +24,7 @@ import chat.sphinx.menu_bottom.ui.MenuBottomViewState
 import chat.sphinx.menu_bottom_profile_pic.BottomMenuPicture
 import chat.sphinx.screen_detail_fragment.SideEffectDetailFragment
 import chat.sphinx.wrapper_common.feed.FeedType
+import chat.sphinx.resources.R as R_common
 import dagger.hilt.android.AndroidEntryPoint
 import io.matthewnelson.android_feature_screens.util.gone
 import io.matthewnelson.android_feature_screens.util.goneIfFalse
@@ -264,7 +265,7 @@ internal class CreateTribeFragment: SideEffectDetailFragment<
             binding.imageViewTribePicture.setImageDrawable(
                 ContextCompat.getDrawable(
                 binding.root.context,
-                R.drawable.ic_tribe
+                    R_common.drawable.ic_tribe
             ))
             return
         }
@@ -274,7 +275,7 @@ internal class CreateTribeFragment: SideEffectDetailFragment<
                 binding.imageViewTribePicture,
                 url,
                 ImageLoaderOptions.Builder()
-                    .placeholderResId(R.drawable.ic_tribe)
+                    .placeholderResId(R_common.drawable.ic_tribe)
                     .transformation(Transformation.CircleCrop)
                     .build()
             )

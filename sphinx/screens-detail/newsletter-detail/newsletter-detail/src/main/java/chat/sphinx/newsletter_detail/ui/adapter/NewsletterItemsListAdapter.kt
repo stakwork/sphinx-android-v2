@@ -16,6 +16,7 @@ import chat.sphinx.newsletter_detail.ui.NewsletterDetailViewState
 import chat.sphinx.newsletter_detail.R
 import chat.sphinx.wrapper_common.hhmmElseDate
 import chat.sphinx.wrapper_feed.FeedItem
+import chat.sphinx.resources.R as R_common
 import io.matthewnelson.android_feature_viewmodel.collectViewState
 import io.matthewnelson.android_feature_viewmodel.util.OnStopSupervisor
 import kotlinx.coroutines.Job
@@ -157,7 +158,7 @@ internal class NewsletterItemsListAdapter(
 
     private val imageLoaderOptions: ImageLoaderOptions by lazy {
         ImageLoaderOptions.Builder()
-            .placeholderResId(R.drawable.ic_newsletter_placeholder)
+            .placeholderResId(R_common.drawable.ic_newsletter_placeholder)
             .build()
     }
 

@@ -16,6 +16,7 @@ import chat.sphinx.concept_image_loader.Transformation
 import chat.sphinx.concept_user_colors_helper.UserColorsHelper
 import chat.sphinx.detail_resources.databinding.LayoutDetailScreenHeaderBinding
 import chat.sphinx.payment_common.R
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.payment_common.databinding.LayoutConstraintAmountBinding
 import chat.sphinx.payment_common.databinding.LayoutConstraintConfirmButtonBinding
 import chat.sphinx.payment_common.databinding.LayoutConstraintFromContactBinding
@@ -107,7 +108,7 @@ abstract class PaymentFragment<
                     (contact?.getColorKey() ?: memberColorKey)?.let { colorKey ->
                         lifecycleScope.launch(viewModel.mainImmediate) {
                             setBackgroundRandomColor(
-                                R.drawable.chat_initials_circle,
+                                R_common.drawable.chat_initials_circle,
                                 Color.parseColor(
                                     userColorsHelper.getHexCodeForKey(
                                         colorKey,
@@ -129,7 +130,7 @@ abstract class PaymentFragment<
                             imageViewContactPicture,
                             img,
                             ImageLoaderOptions.Builder()
-                                .placeholderResId(R.drawable.ic_profile_avatar_circle)
+                                .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
                                 .transformation(Transformation.CircleCrop)
                                 .build()
                         )

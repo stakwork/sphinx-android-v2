@@ -29,6 +29,7 @@ import chat.sphinx.wrapper_feed.FeedItemDuration
 import chat.sphinx.wrapper_podcast.Podcast
 import chat.sphinx.wrapper_podcast.PodcastEpisode
 import chat.sphinx.wrapper_podcast.toHrAndMin
+import chat.sphinx.resources.R as R_common
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.matthewnelson.android_feature_navigation.util.navArgs
 import io.matthewnelson.android_feature_viewmodel.*
@@ -217,7 +218,7 @@ internal class EpisodeDescriptionViewModel @Inject constructor(
                     manager.setPrimaryClip(clipData)
                     submitSideEffect(
                         EpisodeDescriptionSideEffect.Notify(
-                            app.getString(R.string.episode_detail_clipboard)
+                            app.getString(R_common.string.episode_detail_clipboard)
                         )
                     )
                 }

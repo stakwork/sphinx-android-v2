@@ -5,22 +5,25 @@ ext.versions = [
     'buildTools': "30.0.3",
     'compileSdk': 34,
     'minSdk': 23,
-    'androidGradle': '7.4.2',
+    'androidGradle': '8.0.0',
     'arch': '2.1.0',
     'camera': '1.1.0-alpha10',
     'cameraView': '1.0.0-alpha30',
     'coil': '1.4.0',
     'coroutines': '1.6.4',
     'insetter': '0.6.1',
-    'lifecycle'  : '2.4.0',
-    'hilt'       : '2.42',
+    'lifecycle'  : '2.6.1',
+    'hilt'       : '2.47',
     'hiltJetpack': '1.0.0-alpha03',
-    'kotlin'     : '1.6.21',
-    'moshi'      : '1.13.0',
+    'kotlin'     : '1.8.20',
+    'moshi'      : '1.14.0',
     'navigation' : '2.5.3',
     'okhttp'     : '4.10.0',
     'sqlDelight' : '1.5.4',
     'toplAndroid': '2.1.2',
+    'livekit' : '2.10.0',
+    'groupie': '2.9.0',
+    'timberkt' : '1.5.1',
     'targetSdk'  : 34
 ]
 
@@ -109,7 +112,7 @@ ext.deps = [
     sqlCipher: "net.zetetic:android-database-sqlcipher:4.4.3",
     sqlRequery: "com.github.requery:sqlite-android:3.36.0",
     square: [
-        okio: "com.squareup.okio:okio:2.10.0",
+        okio: "com.squareup.okio:okio:3.6.0",
         okhttp: "com.squareup.okhttp3:okhttp:${versions.okhttp}",
         okhttpLogging: "com.squareup.okhttp3:logging-interceptor:${versions.okhttp}",
         moshi: "com.squareup.moshi:moshi-kotlin:${versions.moshi}",
@@ -141,7 +144,16 @@ ext.deps = [
     ],
     msgpack: [
         sdk: "com.ensarsarajcic.kotlinx:serialization-msgpack:0.5.0"
-    ]
+    ],
+    "livekit": [
+        sdk: "io.livekit:livekit-android:${versions.livekit}",
+        cameraX: "io.livekit:livekit-android-camerax:${versions.livekit}"
+    ],
+    "groupie": [
+        main: "com.github.lisawray.groupie:groupie:${versions.groupie}",
+        viewBinding: "com.github.lisawray.groupie:groupie-viewbinding:${versions.groupie}"
+    ],
+    "timberkt": "com.github.ajalt:timberkt:${versions.timberkt}"
 ]
 
 /**

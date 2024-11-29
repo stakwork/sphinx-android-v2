@@ -19,6 +19,7 @@ import chat.sphinx.wrapper_common.feed.FeedItemLink
 import chat.sphinx.wrapper_common.lightning.LightningNodePubKey
 import chat.sphinx.wrapper_common.lightning.VirtualLightningNodeAddress
 import chat.sphinx.wrapper_common.tribe.TribeJoinLink
+import chat.sphinx.resources.R as R_common
 import java.util.*
 import java.util.regex.Matcher
 import java.util.regex.Pattern
@@ -174,7 +175,7 @@ object SphinxLinkify {
                 null,
                 null,
                 false,
-                context.getColor(R.color.primaryBlue)
+                context.getColor(R_common.color.primaryBlue)
             )
         }
         pruneOverlaps(links, text)
@@ -301,7 +302,7 @@ object SphinxLinkify {
         context: Context,
         onSphinxInteractionListener: SphinxUrlSpan.OnInteractionListener,
     ) {
-        val span = SphinxUrlSpan(linkSpec.url, linkSpec.underline, linkSpec.color ?: context.getColor(R.color.primaryBlue), onSphinxInteractionListener)
+        val span = SphinxUrlSpan(linkSpec.url, linkSpec.underline, linkSpec.color ?: context.getColor(R_common.color.primaryBlue), onSphinxInteractionListener)
         text.setSpan(span, linkSpec.start, linkSpec.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
     }
 

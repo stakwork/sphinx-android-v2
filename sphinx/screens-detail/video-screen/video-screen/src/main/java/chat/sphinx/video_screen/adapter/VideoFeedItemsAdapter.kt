@@ -16,6 +16,7 @@ import chat.sphinx.resources.databinding.LayoutEpisodeGenericListItemHolderBindi
 import chat.sphinx.resources.getColor
 import chat.sphinx.resources.getString
 import chat.sphinx.video_screen.R
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.video_screen.ui.VideoFeedScreenViewModel
 import chat.sphinx.video_screen.ui.viewstate.VideoFeedScreenViewState
 import chat.sphinx.wrapper_common.feed.isYoutubeVideo
@@ -154,7 +155,7 @@ internal class VideoFeedItemsAdapter (
 
     private val imageLoaderOptions: ImageLoaderOptions by lazy {
         ImageLoaderOptions.Builder()
-            .placeholderResId(R.drawable.ic_video_placeholder)
+            .placeholderResId(R_common.drawable.ic_video_placeholder)
             .build()
     }
 
@@ -239,7 +240,7 @@ internal class VideoFeedItemsAdapter (
                     }
                 }
 
-                imageViewItemRowEpisodeType.setImageDrawable(ContextCompat.getDrawable(root.context, R.drawable.ic_youtube_type))
+                imageViewItemRowEpisodeType.setImageDrawable(ContextCompat.getDrawable(root.context, R_common.drawable.ic_youtube_type))
 
             }
         }

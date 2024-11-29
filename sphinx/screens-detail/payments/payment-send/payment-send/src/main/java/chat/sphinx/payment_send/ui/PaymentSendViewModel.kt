@@ -18,6 +18,7 @@ import chat.sphinx.payment_common.ui.PaymentViewModel
 import chat.sphinx.payment_common.ui.viewstate.AmountViewState
 import chat.sphinx.payment_common.ui.viewstate.send.PaymentSendViewState
 import chat.sphinx.payment_send.R
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.payment_send.navigation.PaymentSendNavigator
 import chat.sphinx.scanner_view_model_coordinator.request.ScannerRequest
 import chat.sphinx.scanner_view_model_coordinator.response.ScannerResponse
@@ -202,7 +203,7 @@ internal class PaymentSendViewModel @Inject constructor(
                     } else {
                         submitSideEffect(
                             PaymentSideEffect.Notify(
-                                app.getString(R.string.error_payment_empty_router)
+                                app.getString(R_common.string.error_payment_empty_router)
                             )
                         )
                     }
@@ -234,7 +235,7 @@ internal class PaymentSendViewModel @Inject constructor(
                             PaymentSideEffect.Notify(
                                 app.getString(
                                     if (updatedAmount > balance.balance.value) {
-                                        R.string.balance_too_low
+                                        R_common.string.balance_too_low
                                     } else {
                                         R.string.amount_too_high
                                     }

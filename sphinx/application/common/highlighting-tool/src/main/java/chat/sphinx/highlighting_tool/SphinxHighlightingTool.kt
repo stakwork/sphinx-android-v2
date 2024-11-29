@@ -14,6 +14,7 @@ import android.text.style.TypefaceSpan
 import android.text.style.URLSpan
 import android.widget.TextView
 import androidx.core.content.res.ResourcesCompat
+import chat.sphinx.resources.R as R_common
 import java.util.*
 
 
@@ -48,7 +49,7 @@ object SphinxHighlightingTool {
 
             if (t is Spannable) {
                 for (highlightedText in highlightedTexts) {
-                    ResourcesCompat.getFont(context, R.font.roboto_light)?.let { typeface ->
+                    ResourcesCompat.getFont(context, R_common.font.roboto_light)?.let { typeface ->
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                             t.setSpan(
                                 TypefaceSpan(typeface),
@@ -60,7 +61,7 @@ object SphinxHighlightingTool {
                     }
 
                     t.setSpan(
-                        BackgroundColorSpan(resources.getColor(R.color.highlightedTextBackground)),
+                        BackgroundColorSpan(resources.getColor(R_common.color.highlightedTextBackground)),
                         highlightedText.second.first,
                         highlightedText.second.last,
                         Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
@@ -82,7 +83,7 @@ object SphinxHighlightingTool {
                 val spannable: Spannable = SpannableString(text.text)
 
                 for (highlightedText in highlightedTexts) {
-                    ResourcesCompat.getFont(context, R.font.roboto_light)?.let { typeface ->
+                    ResourcesCompat.getFont(context, R_common.font.roboto_light)?.let { typeface ->
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                             spannable.setSpan(
                                 TypefaceSpan(typeface),
@@ -94,7 +95,7 @@ object SphinxHighlightingTool {
                     }
 
                     spannable.setSpan(
-                        BackgroundColorSpan(resources.getColor(R.color.highlightedTextBackground)),
+                        BackgroundColorSpan(resources.getColor(R_common.color.highlightedTextBackground)),
                         highlightedText.second.first,
                         highlightedText.second.last,
                         Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
@@ -120,7 +121,7 @@ object SphinxHighlightingTool {
 
             if (t is Spannable) {
                 for (boldText in boldTexts) {
-                    ResourcesCompat.getFont(context, R.font.roboto_black)?.let { typeface ->
+                    ResourcesCompat.getFont(context, R_common.font.roboto_black)?.let { typeface ->
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                             t.setSpan(
                                 TypefaceSpan(typeface),
@@ -137,7 +138,7 @@ object SphinxHighlightingTool {
                 val spannable: Spannable = SpannableString(text.text)
 
                 for (boldText in boldTexts) {
-                    ResourcesCompat.getFont(context, R.font.roboto_black)?.let { typeface ->
+                    ResourcesCompat.getFont(context, R_common.font.roboto_black)?.let { typeface ->
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                             spannable.setSpan(
                                 TypefaceSpan(typeface),
@@ -162,7 +163,7 @@ object SphinxHighlightingTool {
                         linkText.first,
                         true,
                         context.getColor(
-                            R.color.primaryBlue
+                            R_common.color.primaryBlue
                         ),
                         onSphinxInteractionListener
                     )
@@ -185,7 +186,7 @@ object SphinxHighlightingTool {
                         linkText.first,
                         true,
                         context.getColor(
-                            R.color.primaryBlue
+                            R_common.color.primaryBlue
                         ),
                         onSphinxInteractionListener
                     )

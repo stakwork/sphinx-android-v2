@@ -6,6 +6,7 @@ import android.content.Context
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import chat.sphinx.logger.SphinxLogger
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.notification.SphinxNotificationManager.Companion.CHANNEL_DESCRIPTION
 import chat.sphinx.notification.SphinxNotificationManager.Companion.CHANNEL_ID
 
@@ -40,7 +41,7 @@ class SphinxNotificationManagerImpl(
             context,
             CHANNEL_ID,
         )
-            .setSmallIcon(R.drawable.sphinx_white_notification)
+            .setSmallIcon(R_common.drawable.sphinx_white_notification)
             .setContentText(message)
             .setContentTitle(title)
 

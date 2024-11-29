@@ -14,6 +14,7 @@ import chat.sphinx.kotlin_response.LoadResponse
 import chat.sphinx.kotlin_response.Response
 import chat.sphinx.wrapper_badge.Badge
 import chat.sphinx.wrapper_badge.BadgeTemplate
+import chat.sphinx.resources.R as R_common
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.matthewnelson.android_feature_navigation.util.navArgs
 import io.matthewnelson.android_feature_viewmodel.SideEffectViewModel
@@ -79,7 +80,7 @@ internal class CreateBadgeViewModel @Inject constructor(
 
     val imageLoaderDefaults by lazy {
         ImageLoaderOptions.Builder()
-            .placeholderResId(R.drawable.ic_tribe)
+            .placeholderResId(R_common.drawable.ic_tribe)
             .transformation(Transformation.CircleCrop)
             .build()
     }

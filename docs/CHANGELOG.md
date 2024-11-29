@@ -1,5 +1,13 @@
 # ChangeLog
 
+## Version 1.0.0-alpha28 (2021-11-25)
+
+## Version 1.0.0-alpha27 (2021-11-19)
+- Adds Live Kit UI adjustments
+
+## Version 1.0.0-alpha26 (2021-11-14)
+- Adds Live Kit SDK integration
+
 ## Version 1.0.0-alpha25 (2021-11-12)
 - Adds bounty transactions description on transactions history
 - Adds new javascript bridge message type

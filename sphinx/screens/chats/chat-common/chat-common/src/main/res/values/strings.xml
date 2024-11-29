@@ -203,4 +203,13 @@
 
     <string name="cancel_search">CANCEL</string>
 
+    <string name="app_name" translatable="false">livekit-android</string>
+    <string name="connect" translatable="false">Connect</string>
+    <string name="token" translatable="false">Token</string>
+    <string name="e2ee_key_str" translatable="false">E2EE Key</string>
+    <string name="e2ee_enabled_str" translatable="false">Enable E2EE</string>
+    <string name="url" translatable="false">URL</string>
+    <string name="save_values" translatable="false">Save Values</string>
+    <string name="reset_values" translatable="false">Reset Values</string>
+
 </resources>

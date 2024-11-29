@@ -27,6 +27,7 @@ import chat.sphinx.insetter_activity.addNavigationBarPadding
 import chat.sphinx.resources.inputMethodManager
 import chat.sphinx.screen_detail_fragment.SideEffectDetailFragment
 import chat.sphinx.web_view.R
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.web_view.databinding.FragmentWebViewBinding
 import chat.sphinx.wrapper_common.PhotoUrl
 import chat.sphinx.wrapper_common.lightning.Sat
@@ -57,7 +58,7 @@ internal class WebViewFragment: SideEffectDetailFragment<
 
     private val imageLoaderOptions: ImageLoaderOptions by lazy {
         ImageLoaderOptions.Builder()
-            .placeholderResId(R.drawable.ic_profile_avatar_circle)
+            .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
             .transformation(Transformation.CircleCrop)
             .build()
     }

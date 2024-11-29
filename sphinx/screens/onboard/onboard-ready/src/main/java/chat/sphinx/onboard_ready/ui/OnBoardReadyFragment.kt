@@ -12,6 +12,7 @@ import chat.sphinx.insetter_activity.addStatusBarPadding
 import chat.sphinx.kotlin_response.LoadResponse
 import chat.sphinx.kotlin_response.Response
 import chat.sphinx.onboard_ready.R
+import chat.sphinx.onboard_resources.R as R_onboard_resources
 import chat.sphinx.onboard_ready.databinding.FragmentOnBoardReadyBinding
 import chat.sphinx.resources.SphinxToastUtils
 import dagger.hilt.android.AndroidEntryPoint
@@ -47,14 +48,14 @@ internal class OnBoardReadyFragment: SideEffectFragment<
             .enableDoubleTapToClose(viewLifecycleOwner, SphinxToastUtils())
             .addCallback(viewLifecycleOwner, requireActivity())
 
-        binding.balanceTextView.text = getString(R.string.sphinx_ready_loading_balance)
+        binding.balanceTextView.text = getString(R_onboard_resources.string.sphinx_ready_loading_balance)
 
         lifecycleScope.launch(viewModel.mainImmediate) {
             viewModel.getBalances().collect { nodeBalance ->
                 val balance = nodeBalance?.balance?.value
 
                 if (balance != null) {
-                    binding.balanceTextView.text = String.format(getString(R.string.sphinx_ready_balance_label), balance)
+                    binding.balanceTextView.text = String.format(getString(R_onboard_resources.string.sphinx_ready_balance_label), balance)
                 }
             }
         }

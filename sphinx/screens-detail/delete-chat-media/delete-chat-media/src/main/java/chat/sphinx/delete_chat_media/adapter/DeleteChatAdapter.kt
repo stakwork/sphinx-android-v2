@@ -20,6 +20,7 @@ import chat.sphinx.delete_chat_media.ui.DeleteChatMediaViewModel
 import chat.sphinx.delete_chat_media.viewstate.DeleteChatMediaViewState
 import chat.sphinx.resources.getRandomHexCode
 import chat.sphinx.resources.setBackgroundRandomColor
+import chat.sphinx.resources.R as R_common
 import io.matthewnelson.android_feature_screens.util.gone
 import io.matthewnelson.android_feature_screens.util.visible
 import io.matthewnelson.android_feature_viewmodel.util.OnStopSupervisor
@@ -148,7 +149,7 @@ internal class DeleteChatAdapter(
 
     private val imageLoaderOptions: ImageLoaderOptions by lazy {
         ImageLoaderOptions.Builder()
-            .placeholderResId(R.drawable.ic_profile_avatar_circle)
+            .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
             .build()
     }
 
@@ -199,7 +200,7 @@ internal class DeleteChatAdapter(
                                 visible
                                 text = chatItem.initials.initials
                                 setBackgroundRandomColor(
-                                    R.drawable.chat_initials_circle,
+                                    R_common.drawable.chat_initials_circle,
                                     Color.parseColor(
                                         userColorsHelper.getHexCodeForKey(
                                             chatItem.initials.colorKey,

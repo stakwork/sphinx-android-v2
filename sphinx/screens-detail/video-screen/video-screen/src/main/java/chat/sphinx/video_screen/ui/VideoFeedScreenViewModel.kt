@@ -18,6 +18,7 @@ import chat.sphinx.concept_repository_lightning.LightningRepository
 import chat.sphinx.concept_repository_media.RepositoryMedia
 import chat.sphinx.concept_repository_message.MessageRepository
 import chat.sphinx.video_screen.R
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.video_screen.navigation.VideoScreenNavigator
 import chat.sphinx.video_screen.ui.viewstate.BoostAnimationViewState
 import chat.sphinx.video_screen.ui.viewstate.SelectedVideoViewState
@@ -312,14 +313,14 @@ internal open class VideoFeedScreenViewModel(
                             (amount.value > balance.balance.value) -> {
                                 submitSideEffect(
                                     VideoFeedScreenSideEffect.Notify(
-                                        app.getString(R.string.balance_too_low)
+                                        app.getString(R_common.string.balance_too_low)
                                     )
                                 )
                             }
                             (amount.value <= 0) -> {
                                 submitSideEffect(
                                     VideoFeedScreenSideEffect.Notify(
-                                        app.getString(R.string.boost_amount_too_low)
+                                        app.getString(R_common.string.boost_amount_too_low)
                                     )
                                 )
                             }
@@ -375,7 +376,7 @@ internal open class VideoFeedScreenViewModel(
                 video.id,
                 video.titleToShow,
                 video.thumbnailUrlToShow?.value ?: "",
-                R.drawable.ic_youtube_type,
+                R_common.drawable.ic_youtube_type,
                 "Youtube",
                 video.datePublished?.hhmmElseDate() ?: "",
                 video.duration?.value?.toInt().toString(),
@@ -402,7 +403,7 @@ internal open class VideoFeedScreenViewModel(
         context.startActivity(
             Intent.createChooser(
                 sharingIntent,
-                app.getString(R.string.episode_detail_share_link)
+                app.getString(R_common.string.episode_detail_share_link)
             )
         )
     }
@@ -414,7 +415,7 @@ internal open class VideoFeedScreenViewModel(
 
             viewModelScope.launch(mainImmediate) {
                 submitSideEffect(
-                    VideoFeedScreenSideEffect.Notify((app.getString(R.string.episode_detail_clipboard))
+                    VideoFeedScreenSideEffect.Notify((app.getString(R_common.string.episode_detail_clipboard))
                     )
                 )
             }

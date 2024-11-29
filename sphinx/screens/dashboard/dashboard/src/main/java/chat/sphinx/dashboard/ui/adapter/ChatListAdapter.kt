@@ -26,6 +26,7 @@ import chat.sphinx.wrapper_common.invite.*
 import chat.sphinx.wrapper_common.lightning.asFormattedString
 import chat.sphinx.wrapper_common.util.getInitials
 import chat.sphinx.wrapper_message.*
+import chat.sphinx.resources.R as R_common
 import io.matthewnelson.android_feature_screens.util.gone
 import io.matthewnelson.android_feature_screens.util.goneIfFalse
 import io.matthewnelson.android_feature_screens.util.goneIfTrue
@@ -199,7 +200,7 @@ internal class ChatListAdapter(
 
     private val imageLoaderOptions: ImageLoaderOptions by lazy {
         ImageLoaderOptions.Builder()
-            .placeholderResId(R.drawable.ic_profile_avatar_circle)
+            .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
             .build()
     }
 
@@ -273,8 +274,8 @@ internal class ChatListAdapter(
                 // Set Defaults
                 layoutConstraintChatHolderBorder.goneIfFalse(position != dashboardChats.lastIndex)
                 textViewDashboardChatHolderName.setTextColorExt(android.R.color.white)
-                textViewChatHolderMessage.setTextColorExt(R.color.placeholderText)
-                textViewChatHolderMessage.setTextFont(R.font.roboto_regular)
+                textViewChatHolderMessage.setTextColorExt(R_common.color.placeholderText)
+                textViewChatHolderMessage.setTextFont(R_common.font.roboto_regular)
                 textViewDashboardChatHolderBadgeCount.invisibleIfFalse(false)
 
                 // Image
@@ -308,7 +309,7 @@ internal class ChatListAdapter(
                                             )
                                         )
                                     },
-                                    R.drawable.chat_initials_circle
+                                    R_common.drawable.chat_initials_circle
                                 )
                         }
                     }
@@ -322,9 +323,9 @@ internal class ChatListAdapter(
                     dashboardChat.chatName
                 } else {
                     // Should never make it here, but just in case...
-                    textViewDashboardChatHolderName.setTextColorExt(R.color.primaryRed)
-                    textViewChatHolderCenteredName.setTextColorExt(R.color.primaryRed)
-                    root.context.getString(R.string.null_name_error)
+                    textViewDashboardChatHolderName.setTextColorExt(R_common.color.primaryRed)
+                    textViewChatHolderCenteredName.setTextColorExt(R_common.color.primaryRed)
+                    root.context.getString(R_common.string.null_name_error)
                 }
 
                 textViewDashboardChatHolderName.text = chatName
@@ -338,8 +339,8 @@ internal class ChatListAdapter(
                 if (dashboardChat is DashboardChat.Active.Conversation) {
                     imageViewChatHolderLock.visible
                     imageViewChatHolderCenteredLock.visible
-                    imageViewChatHolderLock.text = getString(R.string.material_icon_name_lock)
-                    imageViewChatHolderCenteredLock.text = getString(R.string.material_icon_name_lock)
+                    imageViewChatHolderLock.text = getString(R_common.string.material_icon_name_lock)
+                    imageViewChatHolderCenteredLock.text = getString(R_common.string.material_icon_name_lock)
                 }
 
                 if (dashboardChat is DashboardChat.Inactive.Invite) {
@@ -350,14 +351,14 @@ internal class ChatListAdapter(
                 if (dashboardChat is DashboardChat.Inactive.Conversation) {
                     imageViewChatHolderLock.visible
                     imageViewChatHolderCenteredLock.visible
-                    imageViewChatHolderLock.text = getString(R.string.material_icon_name_lock_open)
-                    imageViewChatHolderCenteredLock.text = getString(R.string.material_icon_name_lock_open)
+                    imageViewChatHolderLock.text = getString(R_common.string.material_icon_name_lock_open)
+                    imageViewChatHolderCenteredLock.text = getString(R_common.string.material_icon_name_lock_open)
                 }
                 if (dashboardChat is DashboardChat.Active.GroupOrTribe) {
                     imageViewChatHolderLock.visible
                     imageViewChatHolderCenteredLock.visible
-                    imageViewChatHolderLock.text = getString(R.string.material_icon_name_lock)
-                    imageViewChatHolderCenteredLock.text = getString(R.string.material_icon_name_lock)
+                    imageViewChatHolderLock.text = getString(R_common.string.material_icon_name_lock)
+                    imageViewChatHolderCenteredLock.text = getString(R_common.string.material_icon_name_lock)
                 }
 
                 // Time
@@ -367,13 +368,13 @@ internal class ChatListAdapter(
                 val messageText = dashboardChat.getMessageText(root.context)
                 val hasUnseenMessages = dashboardChat.hasUnseenMessages()
 
-                if (messageText == root.context.getString(R.string.decryption_error)) {
-                    textViewChatHolderMessage.setTextColorExt(R.color.primaryRed)
+                if (messageText == root.context.getString(R_common.string.decryption_error)) {
+                    textViewChatHolderMessage.setTextColorExt(R_common.color.primaryRed)
                 } else {
-                    textViewChatHolderMessage.setTextColorExt(if (hasUnseenMessages) R.color.text else R.color.placeholderText)
+                    textViewChatHolderMessage.setTextColorExt(if (hasUnseenMessages) R_common.color.text else R_common.color.placeholderText)
                 }
 
-                textViewChatHolderMessage.setTextFont(if (hasUnseenMessages) R.font.roboto_bold else R.font.roboto_regular)
+                textViewChatHolderMessage.setTextFont(if (hasUnseenMessages) R_common.font.roboto_bold else R_common.font.roboto_regular)
 
                 textViewChatHolderMessage.text = messageText
                 textViewChatHolderMessage.goneIfTrue(messageText.isEmpty())
@@ -403,8 +404,8 @@ internal class ChatListAdapter(
 
                     if (nnDashboardChat is DashboardChat.Inactive.Invite) {
                         textViewChatHolderTime.gone
-                        textViewChatHolderMessage.setTextFont(R.font.roboto_bold)
-                        textViewChatHolderMessage.setTextColorExt(R.color.text)
+                        textViewChatHolderMessage.setTextFont(R_common.font.roboto_bold)
+                        textViewChatHolderMessage.setTextColorExt(R_common.color.text)
 
                         layoutConstraintDashboardChatHolderContact.gone
                         layoutConstraintDashboardChatHolderInvite.visible
@@ -441,9 +442,9 @@ internal class ChatListAdapter(
                                 alpha = if (chatIsMutedOrOnlyMentions) 0.2f else 1.0f
 
                                 backgroundTintList = binding.getColorStateList(if (chatIsMutedOrOnlyMentions) {
-                                        R.color.washedOutReceivedText
+                                        R_common.color.washedOutReceivedText
                                     } else {
-                                        R.color.primaryBlue
+                                        R_common.color.primaryBlue
                                     }
                                 )
                             }

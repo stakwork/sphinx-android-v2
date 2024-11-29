@@ -14,6 +14,7 @@ import chat.sphinx.concept_repository_lightning.LightningRepository
 import chat.sphinx.concept_repository_media.RepositoryMedia
 import chat.sphinx.concept_repository_message.MessageRepository
 import chat.sphinx.web_view.R
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.web_view.navigation.WebViewNavigator
 import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_common.feed.toFeedId
@@ -199,14 +200,14 @@ internal class WebViewViewModel @Inject constructor(
                             (amount.value > balance.balance.value) -> {
                                 submitSideEffect(
                                     WebViewSideEffect.Notify(
-                                        app.getString(R.string.balance_too_low)
+                                        app.getString(R_common.string.balance_too_low)
                                     )
                                 )
                             }
                             (amount.value <= 0) -> {
                                 submitSideEffect(
                                     WebViewSideEffect.Notify(
-                                        app.getString(R.string.boost_amount_too_low)
+                                        app.getString(R_common.string.boost_amount_too_low)
                                     )
                                 )
                             }

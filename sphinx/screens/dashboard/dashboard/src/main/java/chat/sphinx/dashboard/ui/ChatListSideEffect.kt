@@ -4,6 +4,7 @@ import android.app.AlertDialog
 import android.content.Context
 import chat.sphinx.dashboard.R
 import chat.sphinx.resources.SphinxToastUtils
+import chat.sphinx.resources.R as R_common
 import io.matthewnelson.android_feature_toast_utils.show
 import io.matthewnelson.concept_views.sideeffect.SideEffect
 import java.util.Locale
@@ -26,7 +27,7 @@ sealed class ChatListSideEffect: SideEffect<Context>() {
         override suspend fun execute(value: Context) {
             val successMessage = value.getString(R.string.alert_confirm_pay_invite_message, amount)
 
-            val builder = AlertDialog.Builder(value, R.style.AlertDialogTheme)
+            val builder = AlertDialog.Builder(value, R_common.style.AlertDialogTheme)
             builder.setTitle(value.getString(R.string.alert_confirm_pay_invite_title))
             builder.setMessage(successMessage)
             builder.setNegativeButton(android.R.string.cancel) { _,_ -> }
@@ -46,7 +47,7 @@ sealed class ChatListSideEffect: SideEffect<Context>() {
             val memo = if (memo.isEmpty()) "-" else memo
             val successMessage = value.getString(R.string.alert_confirm_pay_invoice_message, amount, memo)
 
-            val builder = AlertDialog.Builder(value, R.style.AlertDialogTheme)
+            val builder = AlertDialog.Builder(value, R_common.style.AlertDialogTheme)
             builder.setTitle(value.getString(R.string.alert_confirm_pay_invoice_title))
             builder.setMessage(successMessage)
             builder.setNegativeButton(android.R.string.cancel) { _,_ -> }
@@ -61,7 +62,7 @@ sealed class ChatListSideEffect: SideEffect<Context>() {
         private val callback: () -> Unit
     ): ChatListSideEffect() {
         override suspend fun execute(value: Context) {
-            val builder = AlertDialog.Builder(value, R.style.AlertDialogTheme)
+            val builder = AlertDialog.Builder(value, R_common.style.AlertDialogTheme)
             builder.setTitle(value.getString(R.string.alert_confirm_delete_invite_title))
             builder.setMessage(value.getString(R.string.alert_confirm_delete_invite_message))
             builder.setNegativeButton(android.R.string.cancel) { _,_ -> }

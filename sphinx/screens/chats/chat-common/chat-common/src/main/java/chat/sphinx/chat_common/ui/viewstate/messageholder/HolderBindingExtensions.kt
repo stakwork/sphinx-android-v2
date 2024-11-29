@@ -16,6 +16,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.updateLayoutParams
 import app.cash.exhaustive.Exhaustive
 import chat.sphinx.chat_common.R
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.chat_common.adapters.MessageListAdapter
 import chat.sphinx.chat_common.databinding.LayoutMessageHolderBinding
 import chat.sphinx.chat_common.databinding.LayoutMessageTypeAttachmentAudioBinding
@@ -251,7 +252,7 @@ internal fun  LayoutMessageHolderBinding.setView(
                         imageView,
                         url,
                         ImageLoaderOptions.Builder()
-                            .placeholderResId(R.drawable.ic_profile_avatar_circle)
+                            .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
                             .transformation(Transformation.CircleCrop)
                             .build()
                     )
@@ -297,7 +298,7 @@ internal fun  LayoutMessageHolderBinding.setView(
                         imageView,
                         url,
                         ImageLoaderOptions.Builder()
-                            .placeholderResId(R.drawable.ic_profile_avatar_circle)
+                            .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
                             .transformation(Transformation.CircleCrop)
                             .build()
                     )
@@ -333,7 +334,7 @@ internal fun  LayoutMessageHolderBinding.setView(
                         imageView, 
                         url,
                         ImageLoaderOptions.Builder()
-                            .placeholderResId(R.drawable.ic_profile_avatar_circle)
+                            .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
                             .transformation(Transformation.CircleCrop)
                             .build()    
                     )
@@ -513,10 +514,10 @@ internal inline fun LayoutMessageHolderBinding.setBubbleDirectPaymentLayout(
                         userColorsHelper.getHexCodeForKey(directPayment.recipientColorKey, root.context.getRandomHexCode())
                     )
 
-                    textViewRecipientInitials.text = (directPayment.recipientAlias?.value ?: getString(R.string.unknown)).getInitials()
+                    textViewRecipientInitials.text = (directPayment.recipientAlias?.value ?: getString(R_common.string.unknown)).getInitials()
                     textViewRecipientInitials.setInitialsColor(
                         initialsColor,
-                        R.drawable.chat_initials_circle
+                        R_common.drawable.chat_initials_circle
                     )
                 }.let { job ->
                     holderJobs.add(job)
@@ -574,9 +575,9 @@ internal inline fun LayoutMessageHolderBinding.setBubbleInvoiceLayout(
             imageViewQrIconLeading.setImageDrawable(
                 AppCompatResources.getDrawable(root.context,
                     if (invoice.showExpiredLayout) {
-                        R.drawable.qr_code_error
+                        R_common.drawable.qr_code_error
                     } else {
-                        R.drawable.ic_qr_code
+                        R_common.drawable.ic_qr_code
                     }
                 )
             )
@@ -589,9 +590,9 @@ internal inline fun LayoutMessageHolderBinding.setBubbleInvoiceLayout(
 
             val amountAndUnitColor = ContextCompat.getColor(root.context,
                 if (invoice.showExpiredLayout) {
-                    if (invoice.showReceived) R.color.washedOutReceivedText else R.color.washedOutSentText
+                    if (invoice.showReceived) R_common.color.washedOutReceivedText else R_common.color.washedOutSentText
                 } else {
-                    R.color.text
+                    R_common.color.text
                 }
             )
 
@@ -679,7 +680,7 @@ internal fun LayoutMessageHolderBinding.setBubbleBackground(
 
                 val textWidth = viewState.bubbleMessage?.let { nnBubbleMessage ->
                     (includeMessageHolderBubble.textViewMessageText.paint.measureText(
-                        nnBubbleMessage.text ?: getString(R.string.decryption_error)
+                        nnBubbleMessage.text ?: getString(R_common.string.decryption_error)
                     ) + (defaultMargins * 2)).toInt()
                 } ?: 0
 
@@ -791,7 +792,7 @@ internal inline fun LayoutMessageHolderBinding.setSearchHighlightedStatus(
 ) {
     root.setBackgroundColor(
         if (searchStatus != null) {
-            root.context.getColor(R.color.lightDivider)
+            root.context.getColor(R_common.color.lightDivider)
         } else {
             root.context.getColor(android.R.color.transparent)
         }
@@ -853,12 +854,12 @@ internal inline fun LayoutMessageHolderBinding.setStatusHeader(
                 val boltColor = if (statusHeader.showGrayBoltIcon) {
                     ContextCompat.getColor(
                         root.context,
-                        R.color.amp_gray
+                        R_common.color.secondaryText
                     )
                 } else {
                     ContextCompat.getColor(
                         root.context,
-                        R.color.primaryGreen
+                        R_common.color.primaryGreen
                     )
                 }
 
@@ -1163,11 +1164,11 @@ internal inline fun LayoutMessageHolderBinding.setBubbleMessageLayout(
 
             maxLines = if (message.isThread) 2 else Integer.MAX_VALUE
             visible
-            text = message.text ?: getString(R.string.decryption_error)
+            text = message.text ?: getString(R_common.string.decryption_error)
 
             val textColor = ContextCompat.getColor(
                 root.context,
-                if (message.decryptionError) R.color.primaryRed else R.color.textMessages
+                if (message.decryptionError) R_common.color.primaryRed else R_common.color.textMessages
             )
             setTextColor(textColor)
 
@@ -1268,7 +1269,7 @@ internal fun LayoutMessageHolderBinding.setBubbleMessageLinkPreviewLayout(
 
         val placeHolderAndTextColor = ContextCompat.getColor(
             root.context,
-            if (viewState.isReceived) R.color.secondaryText else R.color.secondaryTextSent
+            if (viewState.isReceived) R_common.color.secondaryText else R_common.color.secondaryTextSent
         )
 
         @Exhaustive
@@ -1293,7 +1294,7 @@ internal fun LayoutMessageHolderBinding.setBubbleMessageLinkPreviewLayout(
 
                     imageViewMessageLinkPreviewContactAvatar.setColorFilter(placeHolderAndTextColor, android.graphics.PorterDuff.Mode.SRC_IN)
                     imageViewMessageLinkPreviewContactAvatar.setImageDrawable(
-                        AppCompatResources.getDrawable(root.context, R.drawable.ic_add_contact)
+                        AppCompatResources.getDrawable(root.context, R_common.drawable.ic_add_contact)
                     )
 
                     viewLinkPreviewTribeDashedBorder.background = AppCompatResources.getDrawable(
@@ -1308,7 +1309,7 @@ internal fun LayoutMessageHolderBinding.setBubbleMessageLinkPreviewLayout(
                             viewState.retrieveLinkPreview() as? LayoutState.Bubble.ContainerThird.LinkPreview.ContactPreview
 
                         if (state != null) {
-                            textViewMessageLinkPreviewNewContactLabel.text = state.alias?.value ?: getString(R.string.new_contact)
+                            textViewMessageLinkPreviewNewContactLabel.text = state.alias?.value ?: getString(R_common.string.new_contact)
                             state.photoUrl?.let { nnPhotoUrl ->
 
                                 imageViewMessageLinkPreviewContactAvatar.clearColorFilter()
@@ -1318,7 +1319,7 @@ internal fun LayoutMessageHolderBinding.setBubbleMessageLinkPreviewLayout(
                                         imageViewMessageLinkPreviewContactAvatar,
                                         nnPhotoUrl.value,
                                         ImageLoaderOptions.Builder()
-                                            .placeholderResId(R.drawable.ic_add_contact)
+                                            .placeholderResId(R_common.drawable.ic_add_contact)
                                             .transformation(Transformation.CircleCrop)
                                             .build(),
                                     )
@@ -1358,7 +1359,7 @@ internal fun LayoutMessageHolderBinding.setBubbleMessageLinkPreviewLayout(
                     imageViewMessageLinkPreviewTribe.setColorFilter(placeHolderAndTextColor, android.graphics.PorterDuff.Mode.SRC_IN)
 
                     imageViewMessageLinkPreviewTribe.setImageDrawable(
-                        AppCompatResources.getDrawable(root.context, R.drawable.ic_tribe)
+                        AppCompatResources.getDrawable(root.context, R_common.drawable.ic_tribe)
                     )
 
                     viewLinkPreviewTribeDashedBorder.background = AppCompatResources.getDrawable(
@@ -1392,7 +1393,7 @@ internal fun LayoutMessageHolderBinding.setBubbleMessageLinkPreviewLayout(
                                         imageViewMessageLinkPreviewTribe,
                                         url.value,
                                         ImageLoaderOptions.Builder()
-                                            .placeholderResId(R.drawable.ic_tribe)
+                                            .placeholderResId(R_common.drawable.ic_tribe)
                                             .transformation(Transformation.RoundedCorners(Px(5f),Px(5f),Px(5f),Px(5f)))
                                             .build(),
                                     )
@@ -1526,8 +1527,8 @@ internal inline fun LayoutMessageHolderBinding.setBubbleBotResponse(
         } else {
             root.visible
 
-            val textColorString = getColorHexCode(R.color.text)
-            val backgroundColorString = getColorHexCode(R.color.receivedMsgBG)
+            val textColorString = getColorHexCode(R_common.color.text)
+            val backgroundColorString = getColorHexCode(R_common.color.receivedMsgBG)
 
             val htmlPrefix = "<head><meta name=\"viewport\" content=\"width=device-width, height=device-height, shrink-to-fit=YES\"></head><body style=\"font-family: 'Roboto', sans-serif; color: $textColorString; margin:0px !important; padding:0px!important; background: $backgroundColorString;\"><div id=\"bot-response-container\" style=\"background: $backgroundColorString;\">"
             val htmlSuffix = "</div></body>"
@@ -1564,9 +1565,9 @@ internal inline fun LayoutMessageHolderBinding.setBubblePaidMessageReceivedDetai
 
             @ColorRes
             val backgroundTintResId = if (paidDetails.purchaseStatus is PurchaseStatus.Denied) {
-                R.color.primaryRed
+                R_common.color.primaryRed
             } else {
-                R.color.primaryGreen
+                R_common.color.primaryGreen
             }
 
             @DrawableRes
@@ -1603,10 +1604,10 @@ internal inline fun LayoutMessageHolderBinding.setBubblePaidMessageReceivedDetai
 
             val statusIcon: String = when (paidDetails.purchaseStatus) {
                 PurchaseStatus.Accepted -> {
-                    getString(R.string.material_icon_name_payment_accepted)
+                    getString(R_common.string.material_icon_name_payment_accepted)
                 }
                 PurchaseStatus.Denied -> {
-                    getString(R.string.material_icon_name_payment_denied)
+                    getString(R_common.string.material_icon_name_payment_denied)
                 }
                 else -> {
                     ""
@@ -1805,14 +1806,14 @@ internal inline fun LayoutMessageTypeAttachmentAudioBinding.setAudioAttachmentLa
             progressBarAttachmentAudioFileLoading.gone
             textViewAttachmentAudioFailure.gone
 
-            textViewAttachmentPlayPauseButton.text = getString(R.string.material_icon_name_play_button)
+            textViewAttachmentPlayPauseButton.text = getString(R_common.string.material_icon_name_play_button)
             textViewAttachmentPlayPauseButton.visible
         }
         AudioPlayState.Playing -> {
             progressBarAttachmentAudioFileLoading.gone
             textViewAttachmentAudioFailure.gone
 
-            textViewAttachmentPlayPauseButton.text = getString(R.string.material_icon_name_pause_button)
+            textViewAttachmentPlayPauseButton.text = getString(R_common.string.material_icon_name_pause_button)
             textViewAttachmentPlayPauseButton.visible
 
         }
@@ -1889,14 +1890,14 @@ internal inline fun LayoutMessageTypePodcastClipBinding.setPodcastClipLayoutForS
             textViewPodcastClipFailure.gone
             progressBarPodcastClipLoading.gone
 
-            textViewPodcastClipPlayPauseButton.text = getString(R.string.material_icon_name_play_button)
+            textViewPodcastClipPlayPauseButton.text = getString(R_common.string.material_icon_name_play_button)
             layoutConstraintPlayPauseButton.visible
         }
         AudioPlayState.Playing -> {
             textViewPodcastClipFailure.gone
             progressBarPodcastClipLoading.gone
 
-            textViewPodcastClipPlayPauseButton.text = getString(R.string.material_icon_name_pause_button)
+            textViewPodcastClipPlayPauseButton.text = getString(R_common.string.material_icon_name_pause_button)
             layoutConstraintPlayPauseButton.visible
         }
     }
@@ -1977,9 +1978,9 @@ internal inline fun LayoutMessageHolderBinding.setBubbleFileAttachment(
                 buttonAttachmentFileDownload.visible
 
                 textViewAttachmentFileIcon.text = if (fileAttachment.isPdf) {
-                    getString(R.string.material_icon_name_file_pdf)
+                    getString(R_common.string.material_icon_name_file_pdf)
                 } else {
-                    getString(R.string.material_icon_name_file_attachment)
+                    getString(R_common.string.material_icon_name_file_attachment)
                 }
 
                 textViewAttachmentFileName.text = fileAttachment.fileName?.value ?: "File.txt"
@@ -1997,7 +1998,7 @@ internal inline fun LayoutMessageHolderBinding.setBubbleFileAttachment(
             is LayoutState.Bubble.ContainerSecond.FileAttachment.FileUnavailable -> {
                 root.visible
 
-                textViewAttachmentFileIcon.text = getString(R.string.material_icon_name_file_attachment)
+                textViewAttachmentFileIcon.text = getString(R_common.string.material_icon_name_file_attachment)
 
                 textViewAttachmentFileName.text = if (fileAttachment.pendingPayment) {
                     getString(R.string.paid_file_pay_to_unlock)
@@ -2052,9 +2053,9 @@ internal inline fun LayoutMessageHolderBinding.setBubbleReactionBoosts(
             imageViewBoostMessageIcon.setImageDrawable(
                 AppCompatResources.getDrawable(root.context,
                     if (activeIcon) {
-                        R.drawable.ic_boost_green
+                        R_common.drawable.ic_boost_green
                     } else {
-                        R.drawable.ic_boost_grey
+                        R_common.drawable.ic_boost_grey
                     }
                 )
             )
@@ -2062,18 +2063,18 @@ internal inline fun LayoutMessageHolderBinding.setBubbleReactionBoosts(
             includeBoostAmountTextGroup.apply {
                 val textSizeInPixels = root.context.resources.getDimension(
                     if (boost.showSent) {
-                        R.dimen.default_text_size_small_headline
+                        R_common.dimen.default_text_size_small_headline
                     } else {
-                        R.dimen.default_text_size_sub_headline
+                        R_common.dimen.default_text_size_sub_headline
                     }
                 )
                 textViewSatsAmount.textSize = Px(textSizeInPixels).toSp(root.context).value
 
                 textViewSatsAmount.setTextFont(
                     if (boost.showSent) {
-                        R.font.roboto_medium
+                        R_common.font.roboto_medium
                     } else {
-                        R.font.roboto_regular
+                        R_common.font.roboto_regular
                     }
                 )
 
@@ -2148,12 +2149,12 @@ internal inline fun LayoutMessageHolderBinding.setReactionBoostSender(
             imageHolderBinding.apply {
 
                 textViewInitialsName.visible
-                textViewInitialsName.text = (boostSenderHolder.alias?.value ?: root.context.getString(R.string.unknown)).getInitials()
+                textViewInitialsName.text = (boostSenderHolder.alias?.value ?: root.context.getString(R_common.string.unknown)).getInitials()
                 imageViewChatPicture.gone
 
                 lifecycleScope.launch(dispatchers.mainImmediate) {
                     textViewInitialsName.setBackgroundRandomColor(
-                        R.drawable.chat_initials_circle,
+                        R_common.drawable.chat_initials_circle,
                         Color.parseColor(
                             userColorsHelper.getHexCodeForKey(
                                 boostSenderHolder.colorKey,
@@ -2214,7 +2215,7 @@ internal inline fun LayoutMessageHolderBinding.setReplyRow(
                 backgroundContainer.setBackgroundResource(rowBackground)
 
                 val text = (replyUserHolder?.alias?.value ?: root.context.getString(
-                    R.string.unknown
+                    R_common.string.unknown
                 )).getInitials()
 
                 textViewInitialsName.visible
@@ -2223,7 +2224,7 @@ internal inline fun LayoutMessageHolderBinding.setReplyRow(
 
                 lifecycleScope.launch(dispatchers.mainImmediate) {
                     textViewInitialsName.setBackgroundRandomColor(
-                        R.drawable.chat_initials_circle,
+                        R_common.drawable.chat_initials_circle,
                         Color.parseColor(
                             userColorsHelper.getHexCodeForKey(
                                 replyUserHolder!!.colorKey,
@@ -2476,21 +2477,21 @@ internal inline fun LayoutMessageHolderBinding.setBubbleReplyMessage(
             // Only used in the footer when replying to a message
             textViewReplyClose.gone
 
-            viewReplyBarLeading.setBackgroundColor(root.context.getColor(R.color.lightPurple))
+            viewReplyBarLeading.setBackgroundColor(root.context.getColor(R_common.color.lightPurple))
 
             layoutConstraintMessageReplyDividerBottom.setBackgroundColor(root.context.getColor(
                 if (replyMessage.showReceived) {
-                    R.color.replyDividerReceived
+                    R_common.color.replyDividerReceived
                 } else {
-                    R.color.replyDividerSent
+                    R_common.color.replyDividerSent
                 }
             ))
 
             textViewReplyMessageLabel.setTextColor(root.context.getColor(
                 if (replyMessage.showReceived) {
-                    R.color.washedOutReceivedText
+                    R_common.color.washedOutReceivedText
                 } else {
-                    R.color.washedOutSentText
+                    R_common.color.washedOutSentText
                 }
             ))
 
@@ -2511,10 +2512,10 @@ internal inline fun LayoutMessageHolderBinding.setBubbleReplyMessage(
             }
 
             if (replyMessage.isAudio) {
-                textViewReplyTextOverlay.text = getString(R.string.material_icon_name_volume_up)
+                textViewReplyTextOverlay.text = getString(R_common.string.material_icon_name_volume_up)
                 textViewReplyTextOverlay.visible
 
-                textViewReplyMessageLabel.text = getString(R.string.media_type_label_audio)
+                textViewReplyMessageLabel.text = getString(R_common.string.media_type_label_audio)
                 textViewReplyMessageLabel.goneIfFalse(true)
             } else {
                 textViewReplyMessageLabel.text = replyMessage.text

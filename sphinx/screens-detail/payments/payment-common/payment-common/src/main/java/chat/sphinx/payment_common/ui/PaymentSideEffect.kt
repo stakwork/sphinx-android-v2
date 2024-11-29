@@ -4,6 +4,7 @@ import android.app.AlertDialog
 import android.view.HapticFeedbackConstants
 import androidx.fragment.app.FragmentActivity
 import chat.sphinx.payment_common.R
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.resources.SphinxToastUtils
 import io.matthewnelson.android_feature_toast_utils.show
 import io.matthewnelson.concept_views.sideeffect.SideEffect
@@ -27,7 +28,7 @@ sealed class PaymentSideEffect: SideEffect<FragmentActivity>() {
         override suspend fun execute(value: FragmentActivity) {
             val successMessage = value.getString(R.string.alert_confirm_payment_send_message, amount, destination)
 
-            val builder = AlertDialog.Builder(value, R.style.AlertDialogTheme)
+            val builder = AlertDialog.Builder(value, R_common.style.AlertDialogTheme)
             builder.setTitle(value.getString(R.string.alert_confirm_payment_send_title))
             builder.setMessage(successMessage)
             builder.setNegativeButton(android.R.string.cancel) { _,_ -> }

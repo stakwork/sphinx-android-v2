@@ -1,6 +1,8 @@
 package chat.sphinx.activitymain.navigation.navigators.primary
 
 import chat.sphinx.activitymain.R
+import chat.sphinx.dashboard.R as R_dashboard
+import chat.sphinx.chat_tribe.R as R_chat_tribe
 import chat.sphinx.activitymain.navigation.drivers.DetailNavigationDriver
 import chat.sphinx.activitymain.navigation.drivers.PrimaryNavigationDriver
 import chat.sphinx.chat_contact.navigation.ToChatContactScreen
@@ -99,7 +101,7 @@ internal class TribeChatNavigatorImpl @Inject constructor(
             ToChatContactScreen(
                 chatId = chatId,
                 contactId = contactId,
-                popUpToId = R.id.navigation_dashboard_fragment,
+                popUpToId = R_dashboard.id.navigation_dashboard_fragment,
                 popUpToInclusive = false,
             )
         )
@@ -109,7 +111,7 @@ internal class TribeChatNavigatorImpl @Inject constructor(
         navigationDriver.submitNavigationRequest(
             ToChatGroupScreen(
                 chatId = chatId,
-                popUpToId = R.id.navigation_dashboard_fragment,
+                popUpToId = R_dashboard.id.navigation_dashboard_fragment,
                 popUpToInclusive = false,
             )
         )
@@ -120,7 +122,7 @@ internal class TribeChatNavigatorImpl @Inject constructor(
             ToChatTribeScreen(
                 chatId = chatId,
                 threadUUID = threadUUID,
-                popUpToId = R.id.navigation_dashboard_fragment,
+                popUpToId = R_dashboard.id.navigation_dashboard_fragment,
                 popUpToInclusive = false,
             )
         )
@@ -131,7 +133,7 @@ internal class TribeChatNavigatorImpl @Inject constructor(
             ToChatTribeScreen(
                 chatId = chatId,
                 threadUUID = threadUUID,
-                popUpToId = R.id.navigation_chat_tribe_fragment,
+                popUpToId = R_chat_tribe.id.navigation_chat_tribe_fragment,
                 popUpToInclusive = false,
             )
         )
@@ -165,7 +167,7 @@ internal class TribeChatNavigatorImpl @Inject constructor(
         navigationDriver.submitNavigationRequest(
             ToThreads(
                 chatId = chatId,
-                popUpToId = R.id.navigation_chat_tribe_fragment,
+                popUpToId = R_chat_tribe.id.navigation_chat_tribe_fragment,
                 popUpToInclusive = false,
             )
         )

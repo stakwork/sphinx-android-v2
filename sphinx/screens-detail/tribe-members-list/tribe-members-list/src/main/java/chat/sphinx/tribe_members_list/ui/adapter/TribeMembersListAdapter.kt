@@ -14,6 +14,7 @@ import chat.sphinx.concept_image_loader.ImageLoaderOptions
 import chat.sphinx.concept_image_loader.Transformation
 import chat.sphinx.resources.setBackgroundRandomColor
 import chat.sphinx.tribe_members_list.R
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.tribe_members_list.databinding.LayoutTribeMemberHolderBinding
 import chat.sphinx.tribe_members_list.ui.TribeMembersListViewModel
 import chat.sphinx.tribe_members_list.ui.TribeMembersListViewState
@@ -43,7 +44,7 @@ internal class TribeMembersListAdapter(
 
     private val imageLoaderOptions: ImageLoaderOptions by lazy {
         ImageLoaderOptions.Builder()
-            .placeholderResId(R.drawable.ic_profile_avatar_circle)
+            .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
             .transformation(Transformation.CircleCrop)
             .build()
     }

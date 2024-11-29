@@ -6,13 +6,17 @@ plugins {
     id 'kotlin-android'
     id 'com.google.android.libraries.mapsplatform.secrets-gradle-plugin'
     id 'kotlin-kapt'
+    id 'kotlin-parcelize'
 }
 
 android {
     compileSdkVersion versions.compileSdk
     buildToolsVersion versions.buildTools
 
-    buildFeatures.viewBinding = true
+    buildFeatures {
+        buildConfig = true
+        viewBinding = true
+    }
 
     defaultConfig {
         minSdkVersion versions.minSdk
@@ -28,6 +32,7 @@ android {
             minifyEnabled false
         }
     }
+
     namespace 'chat.sphinx.chat_common'
 }
 
@@ -74,15 +79,24 @@ dependencies {
 
     api project(path: ':sphinx:screens-detail:camera:camera-view-model-coordinator')
 
+
+
     api deps.androidx.recyclerView
     implementation deps.google.hilt
     kapt kaptDeps.google.hilt
+    kapt kaptDeps.square.moshiCodegen
 
     implementation deps.square.okio
     implementation deps.square.moshi
     implementation deps.giphy.sdk
     implementation deps.jitsi.sdk
     implementation deps.facebook.shimmer
+    implementation deps.livekit.sdk
+    implementation deps.livekit.cameraX
+    implementation deps.groupie.main
+    implementation deps.groupie.viewBinding
+    implementation deps.timberkt
+    implementation deps.androidx.lifecycle.processLifecycleOwner
 }
 
 secrets {

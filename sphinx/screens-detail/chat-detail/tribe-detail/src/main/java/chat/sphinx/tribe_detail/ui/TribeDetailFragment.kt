@@ -31,6 +31,7 @@ import chat.sphinx.tribe_detail.databinding.FragmentTribeDetailBinding
 import chat.sphinx.wrapper_chat.fixedAlias
 import chat.sphinx.wrapper_chat.isTribeOwnedByAccount
 import chat.sphinx.wrapper_common.eeemmddhmma
+import chat.sphinx.resources.R as R_common
 import dagger.hilt.android.AndroidEntryPoint
 import io.matthewnelson.android_feature_screens.ui.sideeffect.SideEffectFragment
 import io.matthewnelson.android_feature_screens.util.gone
@@ -309,7 +310,7 @@ internal class TribeDetailFragment: SideEffectFragment<
                             imageViewProfilePicture.setImageDrawable(
                                 ContextCompat.getDrawable(
                                     binding.root.context,
-                                    R.drawable.ic_profile_avatar_circle
+                                    R_common.drawable.ic_profile_avatar_circle
                                 )
                             )
                         }

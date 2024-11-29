@@ -35,6 +35,7 @@ import chat.sphinx.wrapper_contact.Contact
 import chat.sphinx.wrapper_contact.PrivatePhoto
 import chat.sphinx.wrapper_lightning.NodeBalance
 import com.squareup.moshi.Moshi
+import chat.sphinx.resources.R as R_common
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.matthewnelson.android_feature_viewmodel.SideEffectViewModel
 import io.matthewnelson.android_feature_viewmodel.submitSideEffect
@@ -287,7 +288,7 @@ internal class ProfileViewModel @Inject constructor(
         } else {
             updateViewState(
                 ProfileViewState.Advanced(
-                    app.getString(R.string.setup_signing_device)
+                    app.getString(R_common.string.setup_signing_device)
                 )
             )
         }

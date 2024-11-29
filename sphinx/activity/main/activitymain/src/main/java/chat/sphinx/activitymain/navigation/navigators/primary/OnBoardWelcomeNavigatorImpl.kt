@@ -1,6 +1,6 @@
 package chat.sphinx.activitymain.navigation.navigators.primary
 
-import chat.sphinx.activitymain.R
+import chat.sphinx.onboard_description.R as R_onboard
 import chat.sphinx.activitymain.navigation.drivers.PrimaryNavigationDriver
 import chat.sphinx.onboard_description.navigation.ToOnBoardDescriptionScreen
 import chat.sphinx.onboard_welcome.navigation.OnBoardWelcomeNavigator
@@ -12,7 +12,7 @@ internal class OnBoardWelcomeNavigatorImpl @Inject constructor(
 
     override suspend fun toOnBoardDescriptionScreen(newUser: Boolean) {
         navigationDriver.submitNavigationRequest(
-            ToOnBoardDescriptionScreen(popUpToId = R.id.on_board_description_nav_graph, newUser)
+            ToOnBoardDescriptionScreen(popUpToId = R_onboard.id.on_board_description_nav_graph, newUser)
         )
     }
 }

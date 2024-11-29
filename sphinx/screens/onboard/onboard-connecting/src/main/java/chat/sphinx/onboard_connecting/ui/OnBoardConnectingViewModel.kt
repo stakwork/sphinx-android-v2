@@ -1,5 +1,6 @@
 package chat.sphinx.onboard_connecting.ui
 
+import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
@@ -35,6 +36,7 @@ import chat.sphinx.wrapper_invite.toValidInviteStringOrNull
 import chat.sphinx.wrapper_relay.*
 import chat.sphinx.wrapper_rsa.RsaPrivateKey
 import chat.sphinx.wrapper_rsa.RsaPublicKey
+import chat.sphinx.resources.R as R_common
 import com.squareup.moshi.Moshi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.matthewnelson.android_feature_navigation.util.navArgs
@@ -226,7 +228,7 @@ internal class OnBoardConnectingViewModel @Inject constructor(
                     is Response.Error -> {
                         submitSideEffect(
                             OnBoardConnectingSideEffect.Notify(
-                                app.getString(R.string.connect_manager_set_router_url)
+                                app.getString(R_common.string.connect_manager_set_router_url)
                             )
                         )
                         if (isRestore) {
@@ -235,6 +237,7 @@ internal class OnBoardConnectingViewModel @Inject constructor(
                             navigator.toOnBoardNameScreen()
                         }
                     }
+                    else -> {}
                 }
             }
         }
@@ -418,56 +421,58 @@ internal class OnBoardConnectingViewModel @Inject constructor(
         }
     }
 
+    @SuppressLint("StringFormatInvalid")
     private fun collectConnectManagerErrorState(){
         viewModelScope.launch(mainImmediate) {
             connectManagerRepository.connectManagerErrorState.collect { connectManagerError ->
                 when (connectManagerError) {
                     is ConnectManagerError.GenerateXPubError -> {
                         submitSideEffect(OnBoardConnectingSideEffect.Notify(
-                            app.getString(R.string.connect_manager_generate_xpub_error))
+                            app.getString(R_common.string.connect_manager_generate_xpub_error))
                         )
                     }
                     is ConnectManagerError.GenerateMnemonicError -> {
                         submitSideEffect(OnBoardConnectingSideEffect.Notify(
-                            app.getString(R.string.connect_manager_generate_mnemonic_error))
+                            app.getString(R_common.string.connect_manager_generate_mnemonic_error))
                         )
                     }
                     is ConnectManagerError.ProcessInviteError -> {
                         submitSideEffect(OnBoardConnectingSideEffect.Notify(
-                            app.getString(R.string.connect_manager_process_invite_error))
+                            app.getString(R_common.string.connect_manager_process_invite_error))
                         )
                     }
                     is ConnectManagerError.MqttConnectError -> {
                         submitSideEffect(OnBoardConnectingSideEffect.Notify(
-                            String.format(app.getString(R.string.connect_manager_mqtt_connect_error), connectManagerError.error))
+                            String.format(app.getString(R_common.string.connect_manager_mqtt_connect_error), connectManagerError.error))
                         )
                     }
                     is ConnectManagerError.SubscribeOwnerError -> {
                         submitSideEffect(OnBoardConnectingSideEffect.Notify(
-                            app.getString(R.string.connect_manager_subscribe_owner_error))
+                            app.getString(R_common.string.connect_manager_subscribe_owner_error))
                         )
                     }
                     is ConnectManagerError.MqttClientError -> {
                         submitSideEffect(OnBoardConnectingSideEffect.Notify(
-                            app.getString(R.string.connect_manager_mqtt_client_error))
+                            app.getString(R_common.string.connect_manager_mqtt_client_error))
                         )
                     }
                     is ConnectManagerError.MqttInitError -> {
                         submitSideEffect(OnBoardConnectingSideEffect.Notify(
                             String.format(
-                                app.getString(R.string.connect_manager_mqtt_init_error), connectManagerError.logs))
+                                app.getString(R_common.string.connect_manager_mqtt_init_error), connectManagerError.logs))
                         )
                     }
                     is ConnectManagerError.FetchMessageError -> {
                         submitSideEffect(OnBoardConnectingSideEffect.Notify(
-                            app.getString(R.string.connect_manager_fetch_message_error))
+                            app.getString(R_common.string.connect_manager_fetch_message_error))
                         )
                     }
                     is ConnectManagerError.FetchFirstMessageError -> {
                         submitSideEffect(OnBoardConnectingSideEffect.Notify(
-                            app.getString(R.string.connect_manager_fetch_first_message_error))
+                            app.getString(R_common.string.connect_manager_fetch_first_message_error))
                         )
                     }
+                    else -> {}
                 }
             }
         }

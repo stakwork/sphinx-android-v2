@@ -6,6 +6,7 @@ import chat.sphinx.menu_bottom.databinding.LayoutMenuBottomBinding
 import chat.sphinx.menu_bottom.model.MenuBottomOption
 import chat.sphinx.menu_bottom.ui.BottomMenu
 import chat.sphinx.menu_bottom.ui.MenuBottomViewState
+import chat.sphinx.resources.R as R_common
 import io.matthewnelson.android_feature_viewmodel.util.OnStopSupervisor
 
 class PhoneSignerMethodMenu(
@@ -31,7 +32,7 @@ class PhoneSignerMethodMenu(
                 setOf(
                     MenuBottomOption(
                         text = R.string.bottom_menu_phone_signer_method_generate,
-                        textColor = R.color.primaryBlueFontColor,
+                        textColor = R_common.color.primaryBlueFontColor,
                         onClick = {
                             phoneSignerMethodMenuViewModel.generateSeed()
                             viewStateContainer.updateViewState(MenuBottomViewState.Closed)
@@ -39,7 +40,7 @@ class PhoneSignerMethodMenu(
                     ),
                     MenuBottomOption(
                         text = R.string.bottom_menu_phone_signer_method_import,
-                        textColor = R.color.primaryBlueFontColor,
+                        textColor = R_common.color.primaryBlueFontColor,
                         onClick = {
                             phoneSignerMethodMenuViewModel.importSeed()
                             viewStateContainer.updateViewState(MenuBottomViewState.Closed)

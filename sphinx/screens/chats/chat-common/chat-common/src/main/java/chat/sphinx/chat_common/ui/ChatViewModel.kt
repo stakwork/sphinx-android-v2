@@ -17,6 +17,7 @@ import android.provider.OpenableColumns
 import android.util.Log
 import android.webkit.MimeTypeMap
 import androidx.annotation.CallSuper
+import androidx.core.content.ContextCompat.startActivity
 import androidx.core.view.inputmethod.InputConnectionCompat
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.SavedStateHandle
@@ -27,8 +28,11 @@ import chat.sphinx.camera_view_model_coordinator.request.CameraRequest
 import chat.sphinx.camera_view_model_coordinator.response.CameraResponse
 import chat.sphinx.chat_common.BuildConfig
 import chat.sphinx.chat_common.R
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.chat_common.model.*
 import chat.sphinx.chat_common.navigation.ChatNavigator
+import chat.sphinx.chat_common.ui.activity.call_activity.CallActivity
+import chat.sphinx.chat_common.ui.activity.call_activity.StressTest
 import chat.sphinx.chat_common.ui.viewstate.InitialHolderViewState
 import chat.sphinx.chat_common.ui.viewstate.attachment.AttachmentFullscreenViewState
 import chat.sphinx.chat_common.ui.viewstate.attachment.AttachmentSendViewState
@@ -164,7 +168,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
     val imageLoaderDefaults by lazy {
         ImageLoaderOptions.Builder()
-            .placeholderResId(R.drawable.ic_profile_avatar_circle)
+            .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
             .build()
     }
 
@@ -1013,44 +1017,45 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                 when (connectManagerError) {
                     is ConnectManagerError.SendMessageError -> {
                         submitSideEffect(ChatSideEffect.Notify(
-                            app.getString(R.string.connect_manager_send_message_error))
+                            app.getString(R_common.string.connect_manager_send_message_error))
                         )
                     }
                     is ConnectManagerError.PayContactInvoiceError -> {
                         submitSideEffect(ChatSideEffect.Notify(
-                            app.getString(R.string.connect_manager_pay_contact_invoice_error))
+                            app.getString(R_common.string.connect_manager_pay_contact_invoice_error))
                         )
                     }
                     is ConnectManagerError.PayInvoiceError -> {
                         submitSideEffect(ChatSideEffect.Notify(
-                            app.getString(R.string.connect_manager_pay_invoice_error))
+                            app.getString(R_common.string.connect_manager_pay_invoice_error))
                         )
                     }
                     is ConnectManagerError.PaymentHashError -> {
                         submitSideEffect(ChatSideEffect.Notify(
-                            app.getString(R.string.connect_manager_payment_hash_error))
+                            app.getString(R_common.string.connect_manager_payment_hash_error))
                         )
                     }
                     is ConnectManagerError.ReadMessageError -> {
                         submitSideEffect(ChatSideEffect.Notify(
-                            app.getString(R.string.connect_manager_read_message_error))
+                            app.getString(R_common.string.connect_manager_read_message_error))
                         )
                     }
                     is ConnectManagerError.SignBytesError -> {
                         submitSideEffect(ChatSideEffect.Notify(
-                            app.getString(R.string.connect_manager_sign_bytes_error))
+                            app.getString(R_common.string.connect_manager_sign_bytes_error))
                         )
                     }
                     is ConnectManagerError.MediaTokenError -> {
                         submitSideEffect(ChatSideEffect.Notify(
-                            app.getString(R.string.connect_manager_media_token_error))
+                            app.getString(R_common.string.connect_manager_media_token_error))
                         )
                     }
                     is ConnectManagerError.SetMuteError -> {
                         submitSideEffect(ChatSideEffect.Notify(
-                            app.getString(R.string.connect_manager_set_mute_error))
+                            app.getString(R_common.string.connect_manager_set_mute_error))
                         )
                     }
+                    else -> {}
                 }
             }
         }
@@ -2024,7 +2029,42 @@ abstract class ChatViewModel<ARGS : NavArgs>(
     }
 
     private fun joinCall(link: SphinxCallLink, audioOnly: Boolean) {
-        if (link.isJitsiLink) {
+        if (link.isLiveKitLink) {
+            viewModelScope.launch(mainImmediate) {
+                val owner = getOwner()
+
+                networkQueryPeople.getLiveKitToken(
+                    room = link.callRoom,
+                    alias = owner.alias?.value ?: "Unknown",
+                    profilePictureUrl = owner.photoUrl?.value
+                ).collect { loadResponse ->
+                    when(loadResponse) {
+                        is LoadResponse.Loading -> {}
+                        is Response.Error -> {}
+                        is Response.Success -> {
+                            val appContext: Context = app.applicationContext
+
+                            val intent = Intent(appContext, CallActivity::class.java).apply {
+                                putExtra(
+                                    CallActivity.KEY_ARGS,
+                                    CallActivity.BundleArgs(
+                                        url = loadResponse.value.serverUrl,
+                                        token = loadResponse.value.participantToken,
+                                        e2eeOn = false,
+                                        e2eeKey = "",
+                                        stressTest = StressTest.None,
+                                        videoEnabled = !audioOnly
+                                    ),
+                                )
+                            }
+                            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+
+                            appContext.startActivity(intent)
+                        }
+                    }
+                }
+            }
+        } else if (link.isJitsiLink) {
             link.callServerUrl?.let { nnCallUrl ->
 
                 viewModelScope.launch(mainImmediate) {
@@ -2374,7 +2414,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
                     if (price == null || price > balance.balance.value) {
                         submitSideEffect(
-                            ChatSideEffect.Notify(app.getString(R.string.balance_too_low))
+                            ChatSideEffect.Notify(app.getString(R_common.string.balance_too_low))
                         )
                     } else {
                         messageRepository.payAttachment(message)
@@ -2399,7 +2439,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                 getAccountBalance().firstOrNull()?.let { balance ->
                     if (message.amount.value > balance.balance.value) {
                         submitSideEffect(
-                            ChatSideEffect.Notify(app.getString(R.string.balance_too_low))
+                            ChatSideEffect.Notify(app.getString(R_common.string.balance_too_low))
                         )
                     } else {
                         connectManagerRepository.payContactPaymentRequest(message.paymentRequest)

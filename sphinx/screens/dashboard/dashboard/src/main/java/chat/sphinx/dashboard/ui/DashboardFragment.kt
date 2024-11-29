@@ -40,6 +40,7 @@ import chat.sphinx.wrapper_common.chat.PushNotificationLink
 import chat.sphinx.wrapper_common.lightning.*
 import chat.sphinx.wrapper_lightning.NodeBalance
 import chat.sphinx.wrapper_view.Px
+import chat.sphinx.resources.R as R_common
 import com.google.android.material.tabs.TabLayoutMediator
 import dagger.hilt.android.AndroidEntryPoint
 import io.matthewnelson.android_feature_screens.ui.motionlayout.MotionLayoutFragment
@@ -545,7 +546,7 @@ internal class DashboardFragment : MotionLayoutFragment<
                             dashboardHeader.textViewDashboardHeaderNetwork.setTextColor(
                                 ContextCompat.getColor(
                                     binding.root.context,
-                                    R.color.primaryRed
+                                    R_common.color.primaryRed
                                 )
                             )
                         }
@@ -556,7 +557,7 @@ internal class DashboardFragment : MotionLayoutFragment<
                             dashboardHeader.textViewDashboardHeaderNetwork.setTextColor(
                                 ContextCompat.getColor(
                                     binding.root.context,
-                                    R.color.primaryGreen
+                                    R_common.color.primaryGreen
                                 )
                             )
                         }
@@ -618,8 +619,8 @@ internal class DashboardFragment : MotionLayoutFragment<
                             progressBarRestore.progress = response
                             buttonStopRestore.isEnabled = false
                             buttonStopRestore.backgroundTintList =
-                                if (false) ContextCompat.getColorStateList(root.context, R.color.primaryBlue)
-                                else ContextCompat.getColorStateList(root.context, R.color.secondaryTextInverted)
+                                if (false) ContextCompat.getColorStateList(root.context, R_common.color.primaryBlue)
+                                else ContextCompat.getColorStateList(root.context, R_common.color.secondaryTextInverted)
                         }
                         root.visible
                     } else {
@@ -643,7 +644,7 @@ internal class DashboardFragment : MotionLayoutFragment<
                             binding.layoutDashboardNavDrawer.navDrawerImageViewUserProfilePicture,
                             url,
                             ImageLoaderOptions.Builder()
-                                .placeholderResId(R.drawable.ic_profile_avatar_circle)
+                                .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
                                 .build()
                         )
                     } ?: binding.layoutDashboardNavDrawer
@@ -651,7 +652,7 @@ internal class DashboardFragment : MotionLayoutFragment<
                         .setImageDrawable(
                             ContextCompat.getDrawable(
                                 binding.root.context,
-                                R.drawable.ic_profile_avatar_circle
+                                R_common.drawable.ic_profile_avatar_circle
                             )
                         )
                     binding.layoutDashboardNavDrawer.navDrawerTextViewProfileName.text =
@@ -714,14 +715,14 @@ internal class DashboardFragment : MotionLayoutFragment<
                         feedTab?.findViewById<TextView>(R.id.text_view_tab_title)?.setTextColor(
                             ContextCompat.getColor(
                                 binding.root.context,
-                                if (viewState.feedActive) R.color.text else R.color.secondaryText
+                                if (viewState.feedActive) R_common.color.text else R_common.color.secondaryText
                             )
                         )
 
                         friendsTab?.findViewById<TextView>(R.id.text_view_tab_title)?.setTextColor(
                             ContextCompat.getColor(
                                 binding.root.context,
-                                if (viewState.friendsActive) R.color.text else R.color.secondaryText
+                                if (viewState.friendsActive) R_common.color.text else R_common.color.secondaryText
                             )
                         )
 
@@ -732,7 +733,7 @@ internal class DashboardFragment : MotionLayoutFragment<
                         tribesTab?.findViewById<TextView>(R.id.text_view_tab_title)?.setTextColor(
                             ContextCompat.getColor(
                                 binding.root.context,
-                                if (viewState.tribesActive) R.color.text else R.color.secondaryText
+                                if (viewState.tribesActive) R_common.color.text else R_common.color.secondaryText
                             )
                         )
 
@@ -772,7 +773,7 @@ internal class DashboardFragment : MotionLayoutFragment<
                                     imageViewPodcastEpisode,
                                     imageUrl,
                                     ImageLoaderOptions.Builder()
-                                        .placeholderResId(R.drawable.ic_podcast_placeholder)
+                                        .placeholderResId(R_common.drawable.ic_podcast_placeholder)
                                         .build()
                                 )
                             }
@@ -906,7 +907,7 @@ internal class DashboardFragment : MotionLayoutFragment<
                                         imageViewProfilePicture,
                                         url,
                                         ImageLoaderOptions.Builder()
-                                            .placeholderResId(R.drawable.ic_profile_avatar_circle)
+                                            .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
                                             .transformation(Transformation.CircleCrop)
                                             .build()
                                     ).also {
@@ -919,7 +920,7 @@ internal class DashboardFragment : MotionLayoutFragment<
                             } ?: imageViewProfilePicture.setImageDrawable(
                                 ContextCompat.getDrawable(
                                     binding.root.context,
-                                    R.drawable.ic_profile_avatar_circle
+                                    R_common.drawable.ic_profile_avatar_circle
                                 )
                             )
 

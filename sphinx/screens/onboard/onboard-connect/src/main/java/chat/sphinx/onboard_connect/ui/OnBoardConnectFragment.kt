@@ -27,6 +27,10 @@ import chat.sphinx.onboard_connect.viewstate.MnemonicDialogViewState
 import chat.sphinx.onboard_connect.viewstate.MnemonicWordsViewState
 import chat.sphinx.onboard_connect.viewstate.OnBoardConnectSubmitButtonViewState
 import chat.sphinx.onboard_connect.viewstate.OnBoardConnectViewState
+import chat.sphinx.resources.R as R_common
+import chat.sphinx.menu_bottom_signer.R as R_menu_signer
+import chat.sphinx.menu_bottom_phone_signer_method.R as R_menu_signer_method
+import chat.sphinx.onboard_resources.R as R_onboard_resources
 import dagger.hilt.android.AndroidEntryPoint
 import io.matthewnelson.android_feature_screens.ui.sideeffect.SideEffectFragment
 import io.matthewnelson.android_feature_screens.util.gone
@@ -113,13 +117,13 @@ internal class OnBoardConnectFragment: SideEffectFragment<
         }
 
         bottomMenuSigner.initialize(
-            R.string.bottom_menu_signer_header_text,
+            R_menu_signer.string.bottom_menu_signer_header_text,
             binding.includeLayoutMenuBottomSigner,
             viewLifecycleOwner
         )
 
         phoneSignerMethodMenu.initialize(
-            R.string.bottom_menu_phone_signer_method_header_text,
+            R_menu_signer_method.string.bottom_menu_phone_signer_method_header_text,
             binding.includeLayoutMenuBottomPhoneSignerMethod,
             viewLifecycleOwner
         )
@@ -205,16 +209,16 @@ internal class OnBoardConnectFragment: SideEffectFragment<
             is OnBoardConnectViewState.Idle -> { }
             is OnBoardConnectViewState.NewUser -> {
                 binding.apply {
-                    textViewOnboardConnectTitle.text = getString(R.string.on_board_new_user)
-                    editTextCodeInput.hint = getString(R.string.on_board_connect_paste_connection_code)
+                    textViewOnboardConnectTitle.text = getString(R_onboard_resources.string.on_board_new_user)
+                    editTextCodeInput.hint = getString(R_onboard_resources.string.on_board_connect_paste_connection_code)
                     imageButtonScanner.visible
 //                    layoutConstrainSkipContainer.visible
                 }
             }
             is OnBoardConnectViewState.ExistingUser -> {
                 binding.apply {
-                    textViewOnboardConnectTitle.text = getString(R.string.on_board_connect)
-                    editTextCodeInput.hint = getString(R.string.on_board_connect_paste_keys)
+                    textViewOnboardConnectTitle.text = getString(R_onboard_resources.string.on_board_connect)
+                    editTextCodeInput.hint = getString(R_onboard_resources.string.on_board_connect_paste_keys)
                     imageButtonScanner.gone
                 }
             }
@@ -233,7 +237,7 @@ internal class OnBoardConnectFragment: SideEffectFragment<
                             buttonSubmit.background.colorFilter = PorterDuffColorFilter(
                                 ContextCompat.getColor(
                                     root.context,
-                                    R.color.on_board_submit_disabled_button
+                                    R_onboard_resources.color.on_board_submit_disabled_button
                                 ),
                                 PorterDuff.Mode.SRC_IN
                             )
@@ -248,7 +252,7 @@ internal class OnBoardConnectFragment: SideEffectFragment<
                             buttonSubmit.background.colorFilter = PorterDuffColorFilter(
                                 ContextCompat.getColor(
                                     root.context,
-                                    R.color.primaryBlue
+                                    R_common.color.primaryBlue
                                 ),
                                 PorterDuff.Mode.SRC_IN
                             )

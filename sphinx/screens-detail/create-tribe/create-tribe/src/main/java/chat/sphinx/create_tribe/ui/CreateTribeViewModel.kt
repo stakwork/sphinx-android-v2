@@ -21,6 +21,7 @@ import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.menu_bottom_profile_pic.PictureMenuHandler
 import chat.sphinx.menu_bottom_profile_pic.PictureMenuViewModel
 import chat.sphinx.wrapper_common.lightning.LightningNodePubKey
+import chat.sphinx.resources.R as R_common
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.matthewnelson.android_feature_navigation.util.navArgs
 import io.matthewnelson.android_feature_viewmodel.SideEffectViewModel
@@ -120,7 +121,7 @@ internal class CreateTribeViewModel @Inject constructor(
 
     val imageLoaderDefaults by lazy {
         ImageLoaderOptions.Builder()
-            .placeholderResId(R.drawable.ic_media_library)
+            .placeholderResId(R_common.drawable.ic_media_library)
             .transformation(Transformation.CircleCrop)
             .build()
     }

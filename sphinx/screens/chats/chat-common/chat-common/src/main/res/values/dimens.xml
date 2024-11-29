@@ -183,4 +183,9 @@
 
     <!-- Thread -->
     <dimen name="thread_height">256dp</dimen>
+
+    <!-- Live Kit -->
+    <dimen name="control_size">40dp</dimen>
+    <dimen name="control_padding">4dp</dimen>
+    <dimen name="identity_bar_padding">4dp</dimen>
 </resources>

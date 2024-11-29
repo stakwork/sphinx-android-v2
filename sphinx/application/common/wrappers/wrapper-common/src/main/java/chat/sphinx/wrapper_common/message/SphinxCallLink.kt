@@ -89,6 +89,9 @@ value class SphinxCallLink(val value: String) {
     inline val isJitsiLink: Boolean
         get() = value.isValidJitsiCallLink
 
+    inline val isLiveKitLink: Boolean
+        get() = value.isValidLiveKitCallLink
+
     inline val callServerUrl : URL?
         get() {
             return try {

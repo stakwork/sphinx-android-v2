@@ -24,6 +24,7 @@ import chat.sphinx.example.delete_media_detail.viewstate.DeleteMediaDetailViewSt
 import chat.sphinx.insetter_activity.InsetterActivity
 import chat.sphinx.insetter_activity.addNavigationBarPadding
 import chat.sphinx.screen_detail_fragment.SideEffectDetailFragment
+import chat.sphinx.resources.R as R_common
 import dagger.hilt.android.AndroidEntryPoint
 import io.matthewnelson.android_feature_screens.util.gone
 import io.matthewnelson.android_feature_screens.util.goneIfFalse
@@ -170,7 +171,7 @@ internal class DeletePodcastDetailFragment: SideEffectDetailFragment<
                         constraintLayoutDeleteElementContainerTrash.goneIfFalse(viewState.episodes.isNotEmpty())
 
                         includeLayoutDeleteAllNotificationScreen.textViewDeleteDescription.text =
-                            getString(R.string.manage_storage_delete_description)
+                            getString(R_common.string.manage_storage_delete_description)
 
                         if (viewState.episodes.isEmpty()) {
                             constraintLayoutDeleteElementContainerTrash.gone
@@ -189,7 +190,7 @@ internal class DeletePodcastDetailFragment: SideEffectDetailFragment<
                     when (viewState) {
                         is DeleteItemNotificationViewState.Closed -> {}
                         is DeleteItemNotificationViewState.Open -> {
-                            includeLayoutManageStorageDeleteDetails.textViewStorageDeleteHeader.text = String.format(getString(R.string.manage_storage_delete_item), viewState.feedItem.titleToShow)
+                            includeLayoutManageStorageDeleteDetails.textViewStorageDeleteHeader.text = String.format(getString(R_common.string.manage_storage_delete_item), viewState.feedItem.titleToShow)
                         }
                     }
                     root.setTransitionDuration(300)
@@ -230,7 +231,7 @@ internal class DeletePodcastDetailFragment: SideEffectDetailFragment<
 
                 binding.includeLayoutDeleteAllNotificationScreen.textViewManageStorageFreeSpaceText.text =
                     String.format(
-                        getString(R.string.manage_storage_deleted_free_space),
+                        getString(R_common.string.manage_storage_deleted_free_space),
                         deleteSize
                     )
             }

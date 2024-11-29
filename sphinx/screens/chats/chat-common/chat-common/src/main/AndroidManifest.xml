@@ -4,10 +4,20 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <application>
         <activity
-            android:name=".ui.activity.FullscreenVideoActivity"
+            android:name=".ui.activity.full_screen_activity.FullscreenVideoActivity"
             android:configChanges="orientation|keyboardHidden|screenSize"
             android:exported="true"
             android:theme="@style/AppTheme.Fullscreen" />
+
+        <activity android:name=".ui.activity.call_activity.CallActivity"
+            android:configChanges="orientation|keyboardHidden|screenSize"
+            android:exported="true"
+            android:theme="@style/AppTheme.Fullscreen"/>
+
+        <service
+            android:name=".ui.activity.call_activity.service.ForegroundService"
+            android:foregroundServiceType="mediaPlayback|camera|microphone"
+            android:exported="false" />
     </application>
 
 </manifest>

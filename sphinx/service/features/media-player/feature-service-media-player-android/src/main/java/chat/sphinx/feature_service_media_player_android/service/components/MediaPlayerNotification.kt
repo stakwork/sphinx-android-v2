@@ -15,6 +15,7 @@ import chat.sphinx.concept_service_media.MediaPlayerServiceController
 import chat.sphinx.concept_service_media.MediaPlayerServiceState
 import chat.sphinx.feature_service_media_player_android.R
 import chat.sphinx.feature_service_media_player_android.service.MediaPlayerService
+import chat.sphinx.resources.R as R_common
 import java.math.BigInteger
 import java.security.SecureRandom
 
@@ -99,7 +100,7 @@ internal class MediaPlayerNotification(
             .setGroupSummary(false)
             .setOngoing(false)
             .setOnlyAlertOnce(true)
-            .setSmallIcon(R.drawable.sphinx_white_notification)
+            .setSmallIcon(R_common.drawable.sphinx_white_notification)
             .setSound(null)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setWhen(startTime)

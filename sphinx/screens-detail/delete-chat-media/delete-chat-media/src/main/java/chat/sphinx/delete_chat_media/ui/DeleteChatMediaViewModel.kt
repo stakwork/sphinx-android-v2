@@ -22,6 +22,7 @@ import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_common.toFileSize
 import chat.sphinx.wrapper_common.util.getInitials
 import chat.sphinx.wrapper_message_media.MessageMedia
+import chat.sphinx.resources.R as R_common
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.matthewnelson.android_feature_viewmodel.SideEffectViewModel
 import io.matthewnelson.android_feature_viewmodel.submitSideEffect
@@ -145,7 +146,7 @@ internal class DeleteChatMediaViewModel @Inject constructor(
                         deleteChatNotificationViewStateContainer.updateViewState(DeleteChatNotificationViewState.Closed)
 
                         submitSideEffect(
-                            DeleteNotifySideEffect(app.getString(R.string.manage_storage_error_delete))
+                            DeleteNotifySideEffect(app.getString(R_common.string.manage_storage_error_delete))
                         )
                     }
                 }

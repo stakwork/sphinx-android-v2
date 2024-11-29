@@ -19,6 +19,7 @@ import chat.sphinx.wrapper_feed.DownloadableFeedItem
 import chat.sphinx.wrapper_feed.FeedItem
 import chat.sphinx.wrapper_feed.toFeedTitle
 import chat.sphinx.wrapper_podcast.PodcastEpisode
+import chat.sphinx.resources.R as R_common
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.matthewnelson.android_feature_navigation.util.navArgs
 import io.matthewnelson.android_feature_viewmodel.*
@@ -160,7 +161,7 @@ internal class EpisodeDetailViewModel @Inject constructor(
 
             viewModelScope.launch(mainImmediate) {
                 submitSideEffect(
-                    EpisodeDetailSideEffect(app.getString(R.string.episode_detail_clipboard))
+                    EpisodeDetailSideEffect(app.getString(R_common.string.episode_detail_clipboard))
                 )
             }
         }
@@ -174,7 +175,7 @@ internal class EpisodeDetailViewModel @Inject constructor(
 
         return Intent.createChooser(
             sharingIntent,
-            app.getString(R.string.episode_detail_share_link)
+            app.getString(R_common.string.episode_detail_share_link)
         )
     }
 

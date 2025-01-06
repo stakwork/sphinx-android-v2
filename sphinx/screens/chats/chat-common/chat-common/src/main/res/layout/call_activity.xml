@@ -111,6 +111,16 @@
         app:layout_constraintBottom_toBottomOf="parent">
 
         <ImageView
+            android:id="@+id/pipMode"
+            android:layout_width="@dimen/control_size"
+            android:layout_height="@dimen/control_size"
+            android:layout_weight="1"
+            android:background="?android:attr/selectableItemBackground"
+            android:padding="@dimen/control_padding"
+            android:src="@drawable/picture_in_picture_in"
+            app:tint="@android:color/white" />
+
+        <ImageView
             android:id="@+id/audio_select"
             android:layout_width="@dimen/control_size"
             android:layout_height="@dimen/control_size"

@@ -1,9 +1,13 @@
 package chat.sphinx.chat_common.ui.activity.call_activity
 
 import android.app.Activity
+import android.app.PictureInPictureParams
 import android.media.projection.MediaProjectionManager
+import android.os.Build
 import android.os.Bundle
 import android.os.Parcelable
+import android.util.Rational
+import android.view.View
 import android.view.WindowManager
 import android.widget.EditText
 import android.widget.ImageView
@@ -206,6 +210,43 @@ class CallActivity : AppCompatActivity() {
         binding.debugMenu.setOnClickListener {
             showDebugMenuDialog(viewModel)
         }
+
+        binding.pipMode.setOnClickListener {
+            enterPictureInPictureMode()
+        }
+    }
+
+    override fun onUserLeaveHint() {
+        // Trigger PiP mode when the user presses the home button or switches apps
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val aspectRatio = Rational(9, 16) // Aspect ratio of the PiP window
+            val pipParams = PictureInPictureParams.Builder()
+                .setAspectRatio(aspectRatio)
+                .build()
+            enterPictureInPictureMode(pipParams)
+
+            binding.controlsBox.visibility = android.view.View.GONE
+            binding.controlsBox2.visibility = android.view.View.GONE
+            binding.audienceRow.visibility = android.view.View.GONE
+
+        }
+    }
+
+    // Function to start Picture-in-Picture mode
+    @Deprecated("Deprecated in Java")
+    override fun enterPictureInPictureMode() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val aspectRatio = Rational(9, 16) // Define the aspect ratio of the PiP window
+            val pipParams = PictureInPictureParams.Builder()
+                .setAspectRatio(aspectRatio)  // Set aspect ratio
+                .build()
+            enterPictureInPictureMode(pipParams)
+
+            binding.controlsBox.visibility = android.view.View.GONE
+            binding.controlsBox2.visibility = android.view.View.GONE
+            binding.audienceRow.visibility = android.view.View.GONE
+
+        }
     }
 
     override fun onResume() {
@@ -224,6 +265,10 @@ class CallActivity : AppCompatActivity() {
                 Toast.makeText(this@CallActivity, "Data received: $it", Toast.LENGTH_LONG).show()
             }
         }
+
+        binding.controlsBox.visibility = View.VISIBLE
+        binding.controlsBox2.visibility = View.VISIBLE
+        binding.audienceRow.visibility = View.VISIBLE
     }
 
     private fun requestMediaProjection() {

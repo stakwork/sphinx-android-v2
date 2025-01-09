@@ -1,11 +1,11 @@
 @file:OptIn(ExperimentalCoroutinesApi::class)
 
-package chat.sphinx.chat_common.ui.activity.call_activity
+package com.example.call_activity
 
 import android.view.View
 import android.widget.ImageView
-import chat.sphinx.chat_common.R
-import chat.sphinx.chat_common.databinding.ParticipantItemBinding
+import chat.sphinx.call_activity.R
+import chat.sphinx.call_activity.databinding.ParticipantItemBinding
 import chat.sphinx.concept_image_loader.ImageLoader
 import chat.sphinx.concept_image_loader.ImageLoaderOptions
 import chat.sphinx.concept_image_loader.Transformation
@@ -21,7 +21,6 @@ import io.livekit.android.room.track.LocalVideoTrack
 import io.livekit.android.room.track.Track
 import io.livekit.android.room.track.VideoTrack
 import io.livekit.android.util.flow
-import io.matthewnelson.android_feature_screens.util.goneIfTrue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

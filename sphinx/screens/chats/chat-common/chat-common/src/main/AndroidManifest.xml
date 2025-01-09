@@ -15,7 +15,7 @@
             android:exported="true"
             android:theme="@style/AppTheme.Fullscreen" />
 
-        <activity android:name=".ui.activity.call_activity.CallActivity"
+        <activity android:name="com.example.call_activity.CallActivity"
             android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation|keyboardHidden"
             android:resizeableActivity="true"
             android:supportsPictureInPicture="true"
@@ -23,7 +23,7 @@
             android:theme="@style/AppTheme.Fullscreen"/>
 
         <service
-            android:name=".ui.activity.call_activity.service.ForegroundService"
+            android:name="com.example.call_activity.service.ForegroundService"
             android:foregroundServiceType="mediaPlayback|camera|microphone"
             android:exported="false" />
     </application>

@@ -1,4 +1,4 @@
-package chat.sphinx.chat_common.ui.activity.call_activity
+package com.example.call_activity
 
 import android.annotation.SuppressLint
 import android.app.Application
@@ -12,9 +12,8 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.viewModelScope
-import chat.sphinx.chat_common.ui.activity.call_activity.service.ForegroundService
+import com.example.call_activity.service.ForegroundService
 import com.github.ajalt.timberkt.Timber
-import com.squareup.moshi.Moshi
 import io.livekit.android.AudioOptions
 import io.livekit.android.LiveKit
 import io.livekit.android.LiveKitOverrides

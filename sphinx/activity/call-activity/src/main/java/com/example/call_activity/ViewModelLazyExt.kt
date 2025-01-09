@@ -1,4 +1,4 @@
-package chat.sphinx.chat_common.ui.activity.call_activity
+package com.example.call_activity
 
 import androidx.activity.viewModels
 import androidx.fragment.app.FragmentActivity

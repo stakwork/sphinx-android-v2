@@ -1,10 +1,10 @@
-package chat.sphinx.chat_common.ui.activity.call_activity.dialog
+package com.example.call_activity.dialog
 
 import android.R
 import android.app.Activity
 import android.app.AlertDialog
 import android.widget.ArrayAdapter
-import chat.sphinx.chat_common.ui.activity.call_activity.CallViewModel
+import com.example.call_activity.CallViewModel
 
 fun Activity.showSelectAudioDeviceDialog(callViewModel: CallViewModel) {
     val builder = with(AlertDialog.Builder(this)) {

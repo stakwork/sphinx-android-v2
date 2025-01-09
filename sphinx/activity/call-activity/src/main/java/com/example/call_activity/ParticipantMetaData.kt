@@ -1,4 +1,4 @@
-package chat.sphinx.chat_common.ui.activity.call_activity
+package com.example.call_activity
 
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.JsonDataException

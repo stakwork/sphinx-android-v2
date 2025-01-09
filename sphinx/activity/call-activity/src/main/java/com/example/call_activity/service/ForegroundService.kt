@@ -1,4 +1,4 @@
-package chat.sphinx.chat_common.ui.activity.call_activity.service
+package com.example.call_activity.service
 
 import android.app.NotificationChannel
 import android.app.NotificationManager

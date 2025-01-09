@@ -1,4 +1,4 @@
-package chat.sphinx.chat_common.ui.activity.call_activity
+package com.example.call_activity
 
 import android.app.Activity
 import android.app.PictureInPictureParams
@@ -17,12 +17,12 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import chat.sphinx.call_activity.R
+import chat.sphinx.call_activity.databinding.CallActivityBinding
 import com.xwray.groupie.GroupieAdapter
-import chat.sphinx.chat_common.R
-import chat.sphinx.chat_common.databinding.CallActivityBinding
-import chat.sphinx.chat_common.ui.activity.call_activity.dialog.showAudioProcessorSwitchDialog
-import chat.sphinx.chat_common.ui.activity.call_activity.dialog.showDebugMenuDialog
-import chat.sphinx.chat_common.ui.activity.call_activity.dialog.showSelectAudioDeviceDialog
+import com.example.call_activity.dialog.showAudioProcessorSwitchDialog
+import com.example.call_activity.dialog.showDebugMenuDialog
+import com.example.call_activity.dialog.showSelectAudioDeviceDialog
 import chat.sphinx.concept_image_loader.ImageLoader
 import com.squareup.moshi.Moshi
 import dagger.hilt.android.AndroidEntryPoint

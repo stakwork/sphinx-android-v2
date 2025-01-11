@@ -220,7 +220,7 @@ class CallViewModel(
 
     private suspend fun connectToRoom() {
         try {
-            room.e2eeOptions = getE2EEOptions()
+            room. .e2eeOptions = getE2EEOptions()
             room.connect(
                 url = url,
                 token = token,

@@ -211,5 +211,7 @@
     <string name="url" translatable="false">URL</string>
     <string name="save_values" translatable="false">Save Values</string>
     <string name="reset_values" translatable="false">Reset Values</string>
+    <string name="back_to_chat">Chat</string>
+    <string name="list_participants">Participants</string>
 
 </resources>

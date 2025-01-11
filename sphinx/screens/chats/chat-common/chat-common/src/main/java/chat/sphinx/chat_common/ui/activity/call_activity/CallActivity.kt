@@ -6,16 +6,19 @@ import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Parcelable
+import android.util.Log
 import android.util.Rational
 import android.view.View
 import android.view.WindowManager
 import android.widget.EditText
 import android.widget.ImageView
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.xwray.groupie.GroupieAdapter
 import chat.sphinx.chat_common.R
@@ -24,6 +27,7 @@ import chat.sphinx.chat_common.ui.activity.call_activity.dialog.showAudioProcess
 import chat.sphinx.chat_common.ui.activity.call_activity.dialog.showDebugMenuDialog
 import chat.sphinx.chat_common.ui.activity.call_activity.dialog.showSelectAudioDeviceDialog
 import chat.sphinx.concept_image_loader.ImageLoader
+import com.google.android.material.internal.FlowLayout
 import com.squareup.moshi.Moshi
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
@@ -149,7 +153,7 @@ class CallActivity : AppCompatActivity() {
         }
 
         binding.flipCamera.setOnClickListener { viewModel.flipCamera() }
-        viewModel.screenshareEnabled.observe(this) { enabled ->
+        /* viewModel.screenshareEnabled.observe(this) { enabled ->
             binding.screenShare.setOnClickListener {
                 if (enabled) {
                     viewModel.stopScreenCapture()
@@ -189,15 +193,15 @@ class CallActivity : AppCompatActivity() {
 
         binding.enhancedNs.setOnClickListener {
             showAudioProcessorSwitchDialog(viewModel)
-        }
+        }*/
 
         binding.exit.setOnClickListener { finish() }
 
-        // Controls row 2
+
         binding.audioSelect.setOnClickListener {
             showSelectAudioDeviceDialog(viewModel)
         }
-        lifecycleScope.launchWhenCreated {
+        /* lifecycleScope.launchWhenCreated {
             viewModel.permissionAllowed.collect { allowed ->
                 val resource = if (allowed) R.drawable.account_cancel_outline else R.drawable.account_cancel
                 binding.permissions.setImageResource(resource)
@@ -205,7 +209,7 @@ class CallActivity : AppCompatActivity() {
         }
         binding.permissions.setOnClickListener {
             viewModel.toggleSubscriptionPermissions()
-        }
+        }*/
 
         binding.debugMenu.setOnClickListener {
             showDebugMenuDialog(viewModel)
@@ -214,6 +218,35 @@ class CallActivity : AppCompatActivity() {
         binding.pipMode.setOnClickListener {
             enterPictureInPictureMode()
         }
+
+        binding.listParticipants.setOnClickListener {
+            lifecycleScope.launchWhenCreated {
+                // Collect participants list only when the button is clicked
+                viewModel.participants.collect { participants ->
+
+                    // Only show BottomSheet when user clicks the button
+                    val bottomSheet = ParticipantsBottomSheetFragment(participants)
+                    bottomSheet.show(supportFragmentManager, bottomSheet.tag)
+                }
+            }
+        }
+
+
+        lifecycleScope.launchWhenCreated {
+            viewModel.participants.collect { participants ->
+                // Update the participant count on the badge
+                val participantCountBadge = findViewById<TextView>(R.id.participantCountBadge)
+                if (participants.isNotEmpty()) {
+                    // Show badge and set the count
+                    participantCountBadge.visibility = View.VISIBLE
+                    participantCountBadge.text = participants.size.toString()
+                } else {
+                    // Hide badge if no participants
+                    participantCountBadge.visibility = View.GONE
+                }
+            }
+        }
+
     }
 
     override fun onUserLeaveHint() {

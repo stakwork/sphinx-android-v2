@@ -6,4 +6,5 @@
     <color name="no_video_participant">#5A8BFF</color>
     <color name="no_video_background">#00153C</color>
     <color name="call_icons_background">#404140</color>
+    <color name="toggle_icons">#221A1E</color>
 </resources>

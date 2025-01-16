@@ -31,6 +31,8 @@ import io.livekit.android.room.participant.RemoteParticipant
 import io.livekit.android.room.track.CameraPosition
 import io.livekit.android.room.track.LocalScreencastVideoTrack
 import io.livekit.android.room.track.LocalVideoTrack
+import io.livekit.android.room.track.RemoteAudioTrack
+import io.livekit.android.room.track.RemoteVideoTrack
 import io.livekit.android.room.track.Track
 import io.livekit.android.room.track.video.CameraCapturerUtils
 import io.livekit.android.util.LKLog
@@ -220,7 +222,7 @@ class CallViewModel(
 
     private suspend fun connectToRoom() {
         try {
-            room. .e2eeOptions = getE2EEOptions()
+            room.e2eeOptions = getE2EEOptions()
             room.connect(
                 url = url,
                 token = token,

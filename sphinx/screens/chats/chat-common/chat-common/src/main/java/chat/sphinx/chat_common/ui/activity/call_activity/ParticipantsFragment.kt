@@ -8,7 +8,6 @@ import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.ImageView
 import android.widget.TextView
-import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import chat.sphinx.chat_common.R
 import chat.sphinx.chat_common.databinding.BottomSheetBinding
@@ -36,6 +35,7 @@ class ParticipantsBottomSheetFragment(
     ): View? {
         val binding = BottomSheetBinding.inflate(inflater, container, false)
 
+        // Initialize adapter and pass the ViewModel
         adapter = ParticipantAdapter(requireContext(), participants, imageLoader, lifecycleScope)
         binding.listView.adapter = adapter
 
@@ -50,8 +50,8 @@ class ParticipantsBottomSheetFragment(
     class ParticipantAdapter(
         context: Context,
         private val participants: List<Participant>,
-        private val imageLoader: ImageLoader<ImageView>,  // Inject ImageLoader
-        private val lifecycleScope: androidx.lifecycle.LifecycleCoroutineScope // Pass lifecycleScope to manage coroutines
+        private val imageLoader: ImageLoader<ImageView>,
+        private val lifecycleScope: androidx.lifecycle.LifecycleCoroutineScope
     ) : ArrayAdapter<Participant>(context, 0, participants) {
 
         override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
@@ -61,16 +61,22 @@ class ParticipantsBottomSheetFragment(
             val nameTextView: TextView = view.findViewById(R.id.participantName)
             val cameraStatusImageView: ImageView = view.findViewById(R.id.cameraStatus)
             val micStatusImageView: ImageView = view.findViewById(R.id.micStatus)
-            val profileImageView: ImageView = view.findViewById(R.id.profileImageView) // Ensure this is in the layout
+            val profileImageView: ImageView = view.findViewById(R.id.profileImageView)
 
             nameTextView.text = participant?.name
 
-            // Set the camera and mic status
-            cameraStatusImageView.setImageResource(
-                if (participant?.isCameraEnabled() == true) R.drawable.outline_videocam_24 else R.drawable.outline_videocam_off_24
-            )
+            if (participant?.isCameraEnabled() == true) {
+
+                cameraStatusImageView.visibility = View.VISIBLE
+                cameraStatusImageView.setImageResource(R.drawable.camera)
+            } else {
+
+                cameraStatusImageView.visibility = View.GONE
+            }
+
+
             micStatusImageView.setImageResource(
-                if (participant?.isMicrophoneEnabled() == true) R.drawable.outline_mic_24 else R.drawable.outline_mic_off_24
+                if (participant?.isMicrophoneEnabled() == true) R.drawable.mic else R.drawable.mic_off
             )
 
             // Load profile picture using ImageLoader
@@ -78,42 +84,14 @@ class ParticipantsBottomSheetFragment(
             val participantMetaData = metaDataJson?.toParticipantMetaDataOrNull(Moshi.Builder().build())
 
             participantMetaData?.profilePictureUrl?.let { imageUrl ->
-                // Use lifecycleScope to launch the coroutine in the correct scope
                 lifecycleScope.launch {
                     imageLoader.load(profileImageView, imageUrl)
                 }
             } ?: run {
-                // If no profile picture URL, set a default image
                 profileImageView.setImageResource(chat.sphinx.resources.R.drawable.ic_baseline_person_32)
             }
 
-            // Set OnClickListeners for camera and mic
-            cameraStatusImageView.setOnClickListener {
-                // Toggle camera status (this example assumes a toggle function exists)
-                if (participant != null) {
-                    toggleCameraStatus(participant)
-                }
-            }
-
-            micStatusImageView.setOnClickListener {
-                // Toggle mic status (this example assumes a toggle function exists)
-                if (participant != null) {
-                    toggleMicStatus(participant)
-                }
-            }
-
             return view
-        }
-        private fun toggleCameraStatus(participant: Participant) {
-            // Logic for toggling camera (update participant's camera state)
-            // Example: You would call your ViewModel or some method here to update the participant's camera state
-            //participant.toggleCamera()  // You need to implement this or call a relevant method
-        }
-
-        private fun toggleMicStatus(participant: Participant) {
-            // Logic for toggling microphone (update participant's mic state)
-            // Example: You would call your ViewModel or some method here to update the participant's mic state
-            //participant.toggleMic()  // You need to implement this or call a relevant method
         }
     }
 }

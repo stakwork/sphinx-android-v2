@@ -6,28 +6,23 @@ import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Parcelable
-import android.util.Log
 import android.util.Rational
 import android.view.View
 import android.view.WindowManager
-import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.xwray.groupie.GroupieAdapter
 import chat.sphinx.chat_common.R
 import chat.sphinx.chat_common.databinding.CallActivityBinding
-import chat.sphinx.chat_common.ui.activity.call_activity.dialog.showAudioProcessorSwitchDialog
 import chat.sphinx.chat_common.ui.activity.call_activity.dialog.showDebugMenuDialog
 import chat.sphinx.chat_common.ui.activity.call_activity.dialog.showSelectAudioDeviceDialog
 import chat.sphinx.concept_image_loader.ImageLoader
-import com.google.android.material.internal.FlowLayout
 import com.squareup.moshi.Moshi
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
@@ -134,23 +129,41 @@ class CallActivity : AppCompatActivity() {
             binding.camera.setOnClickListener { viewModel.setCameraEnabled(!enabled) }
             binding.camera.setImageResource(
                 if (enabled) {
-                    R.drawable.outline_videocam_24
+                    R.drawable.camera
                 } else {
-                    R.drawable.outline_videocam_off_24
-                },
+                    R.drawable.camera_off
+                }
             )
+
+            binding.camera.backgroundTintList = if (enabled) {
+                null
+            } else {
+
+                ContextCompat.getColorStateList(this, R.color.toggle_icons)
+            }
+
+
             binding.flipCamera.isEnabled = enabled
         }
         viewModel.micEnabled.observe(this) { enabled ->
             binding.mic.setOnClickListener { viewModel.setMicEnabled(!enabled) }
             binding.mic.setImageResource(
                 if (enabled) {
-                    R.drawable.outline_mic_24
+                    R.drawable.mic
                 } else {
-                    R.drawable.outline_mic_off_24
-                },
+                    R.drawable.mic_off
+                }
             )
+
+
+            binding.mic.backgroundTintList = if (enabled) {
+                null
+            } else {
+
+                ContextCompat.getColorStateList(this, R.color.toggle_icons)
+            }
         }
+
 
         binding.flipCamera.setOnClickListener { viewModel.flipCamera() }
         /* viewModel.screenshareEnabled.observe(this) { enabled ->

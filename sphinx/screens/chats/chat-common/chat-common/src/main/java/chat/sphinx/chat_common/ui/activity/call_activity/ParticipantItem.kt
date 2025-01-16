@@ -99,6 +99,8 @@ class ParticipantItem(
                 } else {
                     hideFocus(viewBinding)
                 }
+
+                viewBinding.micOn.visibility = if (isSpeaking) View.INVISIBLE else View.VISIBLE
             }
         }
         coroutineScope?.launch {
@@ -113,13 +115,9 @@ class ParticipantItem(
                 }
                 .collect { muted ->
                     viewBinding.muteIndicator.visibility = if (muted) View.VISIBLE else View.INVISIBLE
-                }
-        }
-        coroutineScope?.launch {
-            participant::connectionQuality.flow
-                .collect { quality ->
-                    viewBinding.connectionQuality.visibility =
-                        if (quality == ConnectionQuality.POOR) View.VISIBLE else View.INVISIBLE
+
+                    viewBinding.micOn.visibility = if (muted) View.INVISIBLE else View.VISIBLE
+
                 }
         }
 
@@ -220,10 +218,13 @@ private fun View.visibleOrInvisible(visible: Boolean) {
 
 private fun showFocus(binding: ParticipantItemBinding) {
     binding.speakingIndicator.visibility = View.VISIBLE
+    binding.speakingNow.visibility = View.VISIBLE
 }
 
 private fun hideFocus(binding: ParticipantItemBinding) {
     binding.speakingIndicator.visibility = View.INVISIBLE
+    binding.speakingNow.visibility = View.INVISIBLE
+
 }
 
 private inline fun <T, R> Flow<T?>.flatMapLatestOrNull(

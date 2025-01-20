@@ -138,14 +138,14 @@ class CallActivity : AppCompatActivity() {
             if (enabled) {
                 binding.camera.clearColorFilter()
             } else {
-                binding.camera.setColorFilter(ContextCompat.getColor(this, chat.sphinx.resources.R.color.pdfRed)) // Apply red tint when off
+                binding.camera.setColorFilter(ContextCompat.getColor(this, chat.sphinx.resources.R.color.disabled_icons_color)) // Apply red tint when off
             }
 
             binding.camera.backgroundTintList = if (enabled) {
                 null
             } else {
 
-                ContextCompat.getColorStateList(this, chat.sphinx.resources.R.color.primaryRed)
+                ContextCompat.getColorStateList(this, chat.sphinx.resources.R.color.badgeRed_2)
             }
 
             binding.flipCamera.visibility = if (enabled) {
@@ -170,7 +170,7 @@ class CallActivity : AppCompatActivity() {
             if (enabled) {
                 binding.mic.clearColorFilter()
             } else {
-                binding.mic.setColorFilter(ContextCompat.getColor(this, chat.sphinx.resources.R.color.pdfRed)) // Apply red tint when off
+                binding.mic.setColorFilter(ContextCompat.getColor(this, chat.sphinx.resources.R.color.disabled_icons_color)) // Apply red tint when off
             }
 
 
@@ -178,7 +178,7 @@ class CallActivity : AppCompatActivity() {
                 null
             } else {
 
-                ContextCompat.getColorStateList(this, chat.sphinx.resources.R.color.primaryRed)
+                ContextCompat.getColorStateList(this, chat.sphinx.resources.R.color.badgeRed_2)
             }
         }
 

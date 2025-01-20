@@ -12,11 +12,14 @@ import androidx.lifecycle.lifecycleScope
 import chat.sphinx.chat_common.R
 import chat.sphinx.chat_common.databinding.BottomSheetBinding
 import chat.sphinx.concept_image_loader.ImageLoader
+import chat.sphinx.resources.setBackgroundRandomColor
+import chat.sphinx.wrapper_common.util.getInitials
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.squareup.moshi.Moshi
 import io.livekit.android.room.participant.Participant
 import kotlinx.coroutines.launch
 import dagger.hilt.android.AndroidEntryPoint
+import java.util.Locale
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -35,9 +38,17 @@ class ParticipantsBottomSheetFragment(
     ): View? {
         val binding = BottomSheetBinding.inflate(inflater, container, false)
 
-        // Initialize adapter and pass the ViewModel
+
         adapter = ParticipantAdapter(requireContext(), participants, imageLoader, lifecycleScope)
         binding.listView.adapter = adapter
+
+        // Set participant count text
+        val participantCountTextView: TextView = binding.root.findViewById(R.id.participantCountText)
+        if (participants.size == 1) {
+            participantCountTextView.text = getString(R.string.one_participant)
+        } else {
+            participantCountTextView.text = getString(R.string.participant_count, participants.size)
+        }
 
         binding.closeButton.setOnClickListener {
             dismiss()
@@ -46,7 +57,7 @@ class ParticipantsBottomSheetFragment(
         return binding.root
     }
 
-    // Custom Adapter for ListView
+
     class ParticipantAdapter(
         context: Context,
         private val participants: List<Participant>,
@@ -62,33 +73,45 @@ class ParticipantsBottomSheetFragment(
             val cameraStatusImageView: ImageView = view.findViewById(R.id.cameraStatus)
             val micStatusImageView: ImageView = view.findViewById(R.id.micStatus)
             val profileImageView: ImageView = view.findViewById(R.id.profileImageView)
+            val textViewInitials: TextView = view.findViewById(R.id.textViewInitials)
 
             nameTextView.text = participant?.name
 
             if (participant?.isCameraEnabled() == true) {
-
                 cameraStatusImageView.visibility = View.VISIBLE
                 cameraStatusImageView.setImageResource(R.drawable.camera)
             } else {
-
                 cameraStatusImageView.visibility = View.GONE
             }
-
 
             micStatusImageView.setImageResource(
                 if (participant?.isMicrophoneEnabled() == true) R.drawable.mic else R.drawable.mic_off
             )
 
-            // Load profile picture using ImageLoader
             val metaDataJson = participant?.metadata
             val participantMetaData = metaDataJson?.toParticipantMetaDataOrNull(Moshi.Builder().build())
 
             participantMetaData?.profilePictureUrl?.let { imageUrl ->
+                profileImageView.setImageDrawable(null)
                 lifecycleScope.launch {
                     imageLoader.load(profileImageView, imageUrl)
+                    profileImageView.visibility = View.VISIBLE
+                    textViewInitials.visibility = View.GONE
                 }
             } ?: run {
-                profileImageView.setImageResource(chat.sphinx.resources.R.drawable.ic_baseline_person_32)
+                val initials = participant?.name?.getInitials()
+                profileImageView.apply {
+                    visibility = View.GONE
+                }
+
+                textViewInitials.apply {
+                    visibility = View.VISIBLE
+                    if (!initials.isNullOrEmpty()) {
+
+                        text = initials.toUpperCase(Locale.getDefault())
+                    }
+                    setBackgroundRandomColor(R.drawable.circle_icon_4)
+                }
             }
 
             return view

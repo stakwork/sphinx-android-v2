@@ -135,11 +135,23 @@ class CallActivity : AppCompatActivity() {
                 }
             )
 
+            if (enabled) {
+                binding.camera.clearColorFilter()
+            } else {
+                binding.camera.setColorFilter(ContextCompat.getColor(this, chat.sphinx.resources.R.color.pdfRed)) // Apply red tint when off
+            }
+
             binding.camera.backgroundTintList = if (enabled) {
                 null
             } else {
 
-                ContextCompat.getColorStateList(this, R.color.toggle_icons)
+                ContextCompat.getColorStateList(this, chat.sphinx.resources.R.color.primaryRed)
+            }
+
+            binding.flipCamera.visibility = if (enabled) {
+                View.VISIBLE
+            } else {
+                View.GONE
             }
 
 
@@ -155,12 +167,18 @@ class CallActivity : AppCompatActivity() {
                 }
             )
 
+            if (enabled) {
+                binding.mic.clearColorFilter()
+            } else {
+                binding.mic.setColorFilter(ContextCompat.getColor(this, chat.sphinx.resources.R.color.pdfRed)) // Apply red tint when off
+            }
+
 
             binding.mic.backgroundTintList = if (enabled) {
                 null
             } else {
 
-                ContextCompat.getColorStateList(this, R.color.toggle_icons)
+                ContextCompat.getColorStateList(this, chat.sphinx.resources.R.color.primaryRed)
             }
         }
 

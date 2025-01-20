@@ -18,25 +18,40 @@
         android:src="@drawable/ic_baseline_person_32" />
 
     <TextView
+        android:id="@+id/textViewInitials"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:gravity="center"
+        android:textSize="16sp"
+        android:layout_marginEnd="16dp"
+        android:visibility="gone"
+        android:textColor="@android:color/white"
+        android:layout_gravity="center"
+        android:clipToOutline="true"
+        android:outlineProvider="background"
+        android:scaleType="centerCrop"/>
+
+    <TextView
         android:id="@+id/participantName"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:text=""
         android:textSize="16sp"
-        android:layout_weight="1"/>
+        android:layout_weight="1"
+        android:textColor="@android:color/white"/>
 
     <!-- Camera Status -->
     <ImageView
         android:id="@+id/cameraStatus"
-        android:layout_width="24dp"
-        android:layout_height="24dp"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
         android:layout_margin="16dp"
         android:src="@drawable/camera" />
 
     <!-- Mic Status -->
     <ImageView
         android:id="@+id/micStatus"
-        android:layout_width="24dp"
-        android:layout_height="24dp"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
         android:src="@drawable/mic" />
 </LinearLayout>

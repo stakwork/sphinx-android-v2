@@ -17,17 +17,22 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
-        <ImageView
+        <TextView
+            android:id="@+id/profile_initials"
             android:layout_width="60dp"
             android:layout_height="60dp"
+            android:background="@drawable/circle_icon_4"
             android:layout_gravity="center"
-            android:src="@drawable/outline_videocam_off_24"
-            app:tint="@color/secondaryText" />
+            android:textSize="16sp"
+            android:clipToOutline="true"
+            android:outlineProvider="background"
+            android:visibility="gone"
+            android:gravity="center"/>
 
         <ImageView
             android:id="@+id/profile_picture"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
             android:layout_gravity="center"
             android:layout_margin="@dimen/default_medium_layout_margin"
             android:visibility="visible" />

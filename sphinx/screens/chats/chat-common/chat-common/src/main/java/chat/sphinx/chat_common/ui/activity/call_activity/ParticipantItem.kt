@@ -9,6 +9,8 @@ import chat.sphinx.chat_common.databinding.ParticipantItemBinding
 import chat.sphinx.concept_image_loader.ImageLoader
 import chat.sphinx.concept_image_loader.ImageLoaderOptions
 import chat.sphinx.concept_image_loader.Transformation
+import chat.sphinx.resources.setBackgroundRandomColor
+import chat.sphinx.wrapper_common.util.getInitials
 import com.github.ajalt.timberkt.Timber
 import com.squareup.moshi.Moshi
 import com.xwray.groupie.viewbinding.BindableItem
@@ -33,6 +35,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 class ParticipantItem(
     private val room: Room,
@@ -89,7 +92,18 @@ class ParticipantItem(
                         imageLoaderDefaults,
                     )
 
+                } ?: run {
+                    val initials = participant.name?.getInitials()
+
+                    viewBinding.profileInitials.apply {
+                        visibility = View.VISIBLE
+                        if (!initials.isNullOrEmpty()) {
+                            text = initials.toUpperCase(Locale.getDefault())
+                        }
+                        setBackgroundRandomColor(R.drawable.circle_icon_4)
+                    }
                 }
+
             }
         }
         coroutineScope?.launch {

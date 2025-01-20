@@ -10,9 +10,9 @@
         android:layout_height="0dp"
         android:background="@color/body"
         app:layout_constraintBottom_toTopOf="@id/audience_row"
-        app:layout_constraintTop_toBottomOf="@id/controls_box"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent">
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/controls_box">
 
     </androidx.recyclerview.widget.RecyclerView>
 
@@ -21,8 +21,8 @@
         android:layout_width="match_parent"
         android:layout_height="120dp"
         app:layout_constraintBottom_toTopOf="@id/controls_box2"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 
     <!-- Top Controls Box -->
     <LinearLayout
@@ -34,58 +34,55 @@
         app:layout_constraintTop_toTopOf="parent">
 
 
-    <ImageView
-        android:id="@+id/pipMode"
-        android:layout_width="28dp"
-        android:layout_height="28dp"
-        android:layout_gravity="center"
-        android:padding="@dimen/control_padding"
-        android:src="@drawable/baseline_arrow_back_24"
-        app:tint="@android:color/white" />
+        <ImageView
+            android:id="@+id/pipMode"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:padding="@dimen/control_padding"
+            android:src="@drawable/baseline_arrow_back_24"
+            app:tint="@android:color/white" />
 
-    <TextView
-        android:id="@+id/chatText"
-        android:layout_width="36dp"
-        android:layout_height="16dp"
-        android:layout_marginStart="16dp"
-        android:text="@string/back_to_chat"
-        android:textColor="@android:color/white"
-        android:gravity="center_vertical"
-        android:layout_gravity="center_vertical" />
+        <TextView
+            android:id="@+id/chatText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:text="@string/back_to_chat"
+            android:textColor="@android:color/white" />
 
-    <Space
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_weight="1" />
+        <Space
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1" />
 
 
-    <ImageView
-        android:id="@+id/audio_select"
-        android:layout_width="28dp"
-        android:layout_height="28dp"
-        android:layout_margin="2dp"
-        android:padding="@dimen/control_padding"
-        android:src="@drawable/volume_up_48px"
-        app:tint="@android:color/white" />
+        <ImageView
+            android:id="@+id/audio_select"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_margin="2dp"
+            android:padding="@dimen/control_padding"
+            android:src="@drawable/volume_up_48px"
+            app:tint="@android:color/white" />
 
-    <ImageView
-        android:id="@+id/flip_camera"
-        android:layout_width="28dp"
-        android:layout_height="28dp"
-        android:layout_margin="2dp"
-        android:padding="@dimen/control_padding"
-        android:src="@drawable/solid_flip_camera"
-        app:tint="@android:color/white" />
+        <ImageView
+            android:id="@+id/flip_camera"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_margin="2dp"
+            android:padding="@dimen/control_padding"
+            android:src="@drawable/solid_flip_camera"
+            app:tint="@android:color/white" />
 
-    <ImageView
-        android:id="@+id/debug_menu"
-        android:layout_width="28dp"
-        android:layout_height="28dp"
-        android:layout_margin="2dp"
-        android:padding="@dimen/control_padding"
-        android:src="@drawable/three_dots_vertical"
-        app:tint="@android:color/white" />
-</LinearLayout>
+        <ImageView
+            android:id="@+id/debug_menu"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_margin="2dp"
+            android:padding="@dimen/control_padding"
+            android:src="@drawable/three_dots_vertical"
+            app:tint="@android:color/white" />
+    </LinearLayout>
 
 
     <!-- Bottom Controls Box -->
@@ -95,74 +92,100 @@
         android:layout_height="64dp"
         android:gravity="center"
         android:orientation="horizontal"
-        app:layout_constraintBottom_toBottomOf="parent">
-
-        <ImageView
-            android:id="@+id/camera"
-            android:layout_width="54dp"
-            android:layout_height="54dp"
-            android:layout_margin="12dp"
-            android:background="@drawable/circle_icon_2"
-            android:clipToOutline="true"
-            android:outlineProvider="background"
-            android:padding="8dp"
-            android:src="@drawable/camera"
-            app:tint="@android:color/white" />
-
-        <ImageView
-            android:id="@+id/mic"
-            android:layout_width="54dp"
-            android:layout_height="54dp"
-            android:layout_margin="12dp"
-            android:background="@drawable/circle_icon_2"
-            android:clipToOutline="true"
-            android:outlineProvider="background"
-            android:padding="8dp"
-            android:src="@drawable/mic"
-            app:tint="@android:color/white" />
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toStartOf="parent">
 
         <FrameLayout
-            android:layout_width="54dp"
+            android:layout_width="0dp"
             android:layout_height="54dp"
+            android:layout_weight="1"
             android:layout_gravity="center"
-            android:layout_margin="12dp">
+            android:layout_margin="0dp">
 
             <ImageView
-                android:id="@+id/listParticipants"
+                android:id="@+id/camera"
                 android:layout_width="54dp"
                 android:layout_height="54dp"
+                android:layout_margin="0dp"
                 android:layout_gravity="center"
                 android:background="@drawable/circle_icon_2"
                 android:clipToOutline="true"
                 android:outlineProvider="background"
-                android:padding="8dp"
-                android:src="@drawable/group"
+                android:padding="16dp"
+                android:src="@drawable/camera"
                 app:tint="@android:color/white" />
-
-            <TextView
-                android:id="@+id/participantCountBadge"
-                android:layout_width="22dp"
-                android:layout_height="21dp"
-                android:layout_gravity="top|end"
-                android:background="@drawable/circle_icon_3"
-                android:gravity="center"
-                android:textColor="@android:color/black"
-                android:textSize="12sp"
-                android:visibility="gone" />
         </FrameLayout>
 
-        <ImageView
-            android:id="@+id/exit"
-            android:layout_width="80dp"
+        <FrameLayout
+            android:layout_width="0dp"
             android:layout_height="54dp"
-            android:layout_margin="12dp"
-            android:background="@drawable/circle_icon"
-            android:clipToOutline="true"
-            android:outlineProvider="background"
-            android:padding="16dp"
-            android:src="@drawable/call_end" />
+            android:layout_weight="1"
+            android:layout_gravity="center"
+            android:layout_margin="0dp">
+
+            <ImageView
+                android:id="@+id/mic"
+                android:layout_width="54dp"
+                android:layout_height="54dp"
+                android:layout_margin="0dp"
+                android:layout_gravity="center"
+                android:background="@drawable/circle_icon_2"
+                android:clipToOutline="true"
+                android:outlineProvider="background"
+                android:padding="12dp"
+                android:src="@drawable/mic"
+                app:tint="@android:color/white" />
+        </FrameLayout>
+
+    <FrameLayout
+        android:layout_width="0dp"
+        android:layout_height="54dp"
+        android:layout_weight="1"
+        android:layout_gravity="center"
+        android:layout_margin="0dp">
+
+    <ImageView
+        android:id="@+id/listParticipants"
+        android:layout_width="54dp"
+        android:layout_height="54dp"
+        android:layout_gravity="center"
+        android:background="@drawable/circle_icon_2"
+        android:clipToOutline="true"
+        android:outlineProvider="background"
+        android:padding="12dp"
+        android:src="@drawable/group"
+        app:tint="@android:color/white" />
+
+    <TextView
+        android:id="@+id/participantCountBadge"
+        android:layout_width="22dp"
+        android:layout_height="21dp"
+        android:layout_gravity="top|end"
+        android:background="@drawable/circle_icon_3"
+        android:layout_alignTop="@id/listParticipants"
+        android:layout_alignEnd="@id/listParticipants"
+        android:layout_marginEnd="16dp"
+        android:gravity="center"
+        android:textColor="@android:color/black"
+        android:textSize="12sp"
+        android:visibility="gone" />
+</FrameLayout>
+
+    <ImageView
+    android:id="@+id/exit"
+    android:layout_width="0dp"
+    android:layout_height="54dp"
+    android:layout_margin="0dp"
+    android:background="@drawable/circle_icon"
+    android:clipToOutline="true"
+    android:outlineProvider="background"
+    android:padding="20dp"
+    android:layout_weight="1"
+    android:src="@drawable/call_end" />
+
     </LinearLayout>
 
 
-
-</androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>

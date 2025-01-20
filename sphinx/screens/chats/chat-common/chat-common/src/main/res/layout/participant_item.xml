@@ -99,7 +99,7 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="32dp"
         android:ellipsize="end"
-        android:maxLines="2"
+        android:maxLines="1"
         app:layout_constraintBottom_toBottomOf="@id/identity_bar"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="@id/identity_bar"

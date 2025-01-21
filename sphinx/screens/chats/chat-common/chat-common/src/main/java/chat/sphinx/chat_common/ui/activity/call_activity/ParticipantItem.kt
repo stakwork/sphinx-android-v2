@@ -9,6 +9,8 @@ import chat.sphinx.chat_common.databinding.ParticipantItemBinding
 import chat.sphinx.concept_image_loader.ImageLoader
 import chat.sphinx.concept_image_loader.ImageLoaderOptions
 import chat.sphinx.concept_image_loader.Transformation
+import chat.sphinx.resources.setBackgroundRandomColor
+import chat.sphinx.wrapper_common.util.getInitials
 import com.github.ajalt.timberkt.Timber
 import com.squareup.moshi.Moshi
 import com.xwray.groupie.viewbinding.BindableItem
@@ -33,6 +35,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 class ParticipantItem(
     private val room: Room,
@@ -89,7 +92,18 @@ class ParticipantItem(
                         imageLoaderDefaults,
                     )
 
+                } ?: run {
+                    val initials = participant.name?.getInitials()
+
+                    viewBinding.profileInitials.apply {
+                        visibility = View.VISIBLE
+                        if (!initials.isNullOrEmpty()) {
+                            text = initials.toUpperCase(Locale.getDefault())
+                        }
+                        setBackgroundRandomColor(R.drawable.circle_icon_4)
+                    }
                 }
+
             }
         }
         coroutineScope?.launch {
@@ -99,6 +113,8 @@ class ParticipantItem(
                 } else {
                     hideFocus(viewBinding)
                 }
+
+                viewBinding.micOn.visibility = if (isSpeaking) View.INVISIBLE else View.VISIBLE
             }
         }
         coroutineScope?.launch {
@@ -113,13 +129,9 @@ class ParticipantItem(
                 }
                 .collect { muted ->
                     viewBinding.muteIndicator.visibility = if (muted) View.VISIBLE else View.INVISIBLE
-                }
-        }
-        coroutineScope?.launch {
-            participant::connectionQuality.flow
-                .collect { quality ->
-                    viewBinding.connectionQuality.visibility =
-                        if (quality == ConnectionQuality.POOR) View.VISIBLE else View.INVISIBLE
+
+                    viewBinding.micOn.visibility = if (muted) View.INVISIBLE else View.VISIBLE
+
                 }
         }
 
@@ -220,10 +232,13 @@ private fun View.visibleOrInvisible(visible: Boolean) {
 
 private fun showFocus(binding: ParticipantItemBinding) {
     binding.speakingIndicator.visibility = View.VISIBLE
+    binding.speakingNow.visibility = View.VISIBLE
 }
 
 private fun hideFocus(binding: ParticipantItemBinding) {
     binding.speakingIndicator.visibility = View.INVISIBLE
+    binding.speakingNow.visibility = View.INVISIBLE
+
 }
 
 private inline fun <T, R> Flow<T?>.flatMapLatestOrNull(

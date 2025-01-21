@@ -129,4 +129,7 @@
     <color name="randomColor18">#FFBA70</color>
     <color name="randomColor19">#5078F2</color>
     <color name="randomColor20">#618AFF</color>
+
+    <color name="disabled_icons_color">#FF6F6F</color>
+    <color name="badgeRed_2">#2AFF5252</color>
 </resources>

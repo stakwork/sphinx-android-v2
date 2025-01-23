@@ -54,6 +54,8 @@ internal class TransactionsViewModel @Inject constructor(
     private var loadedItems: Int = 0
     private var lastMessageDate: Long = System.currentTimeMillis()
 
+    private var succeededPaymentHashes: MutableList<String> = mutableListOf()
+
     private suspend fun getOwnerContact(): Contact {
         return contactRepository.accountOwner.value.let { contact ->
             if (contact != null) {
@@ -110,10 +112,19 @@ internal class TransactionsViewModel @Inject constructor(
 
     private fun collectTransactions(){
         viewModelScope.launch(mainImmediate) {
+
             connectManagerRepository.transactionDtoState.collect { transactionsDto ->
-                if (!transactionsDto.isNullOrEmpty()) {
+
+                succeededPaymentHashes += (transactionsDto ?: mutableListOf())
+                    .filter { it.isSucceededPayment() }
+                    .mapNotNull { it.payment_hash }
+
+                val transactionsToShow = (transactionsDto ?: mutableListOf())
+                    .filter { it.isSucceededPayment() || (it.payment_hash == null) || (it.isFailedPayment() && !succeededPaymentHashes.contains(it.payment_hash)) }
+
+                if (transactionsToShow.isNotEmpty()) {
                     val firstPage = (page == 0)
-                    val lastItemDate =  transactionsDto.lastOrNull()?.date?.value?.time ?: lastMessageDate
+                    val lastItemDate =  transactionsToShow.lastOrNull()?.date?.value?.time ?: lastMessageDate
 
                     if (lastMessageDate == lastItemDate) {
                         loading = false
@@ -122,11 +133,11 @@ internal class TransactionsViewModel @Inject constructor(
                     }
 
                     lastMessageDate = lastItemDate
-                    loadedItems = loadedItems.plus(transactionsDto.size)
+                    loadedItems = loadedItems.plus(transactionsToShow.size)
 
                     updateViewState(
                         TransactionsViewState.ListMode(
-                            processTransactions(transactionsDto.distinct(), getOwnerContact()),
+                            processTransactions(transactionsToShow.distinct(), getOwnerContact()),
                             false,
                             firstPage
                         )

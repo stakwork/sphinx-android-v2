@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="back_to_chat">Chat</string>
+    <string name="one_participant">1 Participant</string>
+    <string name="participant_count">%d Participants</string>
+</resources>

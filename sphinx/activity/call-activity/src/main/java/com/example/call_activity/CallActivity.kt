@@ -9,21 +9,20 @@ import android.os.Parcelable
 import android.util.Rational
 import android.view.View
 import android.view.WindowManager
-import android.widget.EditText
 import android.widget.ImageView
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
-import chat.sphinx.call_activity.R
 import chat.sphinx.call_activity.databinding.CallActivityBinding
 import com.xwray.groupie.GroupieAdapter
-import com.example.call_activity.dialog.showAudioProcessorSwitchDialog
+import chat.sphinx.call_activity.R
+import chat.sphinx.concept_image_loader.ImageLoader
 import com.example.call_activity.dialog.showDebugMenuDialog
 import com.example.call_activity.dialog.showSelectAudioDeviceDialog
-import chat.sphinx.concept_image_loader.ImageLoader
 import com.squareup.moshi.Moshi
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
@@ -128,28 +127,63 @@ class CallActivity : AppCompatActivity() {
         // Controls setup
         viewModel.cameraEnabled.observe(this) { enabled ->
             binding.camera.setOnClickListener { viewModel.setCameraEnabled(!enabled) }
+
             binding.camera.setImageResource(
                 if (enabled) {
-                    R.drawable.outline_videocam_24
+                    R.drawable.camera
                 } else {
-                    R.drawable.outline_videocam_off_24
-                },
+                    R.drawable.camera_off
+                }
             )
+
+            if (enabled) {
+                binding.camera.clearColorFilter()
+            } else {
+                binding.camera.setColorFilter(ContextCompat.getColor(this, R.color.disabled_icons_color)) // Apply red tint when off
+            }
+
+            binding.camera.background = if (enabled) {
+                ContextCompat.getDrawable(this, R.drawable.circle_icon_call_button)
+            } else {
+                ContextCompat.getDrawable(this, R.drawable.circle_icon_call_button_disabled)
+            }
+
+            binding.flipCamera.visibility = if (enabled) {
+                View.VISIBLE
+            } else {
+                View.GONE
+            }
+
+
             binding.flipCamera.isEnabled = enabled
         }
         viewModel.micEnabled.observe(this) { enabled ->
             binding.mic.setOnClickListener { viewModel.setMicEnabled(!enabled) }
             binding.mic.setImageResource(
                 if (enabled) {
-                    R.drawable.outline_mic_24
+                    R.drawable.mic
                 } else {
-                    R.drawable.outline_mic_off_24
-                },
+                    R.drawable.mic_off
+                }
             )
+
+            if (enabled) {
+                binding.mic.clearColorFilter()
+            } else {
+                binding.mic.setColorFilter(ContextCompat.getColor(this, R.color.disabled_icons_color)) // Apply red tint when off
+            }
+
+            binding.mic.background = if (enabled) {
+                ContextCompat.getDrawable(this, R.drawable.circle_icon_call_button)
+            } else {
+                ContextCompat.getDrawable(this, R.drawable.circle_icon_call_button_disabled)
+            }
         }
 
+
         binding.flipCamera.setOnClickListener { viewModel.flipCamera() }
-        viewModel.screenshareEnabled.observe(this) { enabled ->
+
+        /* viewModel.screenshareEnabled.observe(this) { enabled ->
             binding.screenShare.setOnClickListener {
                 if (enabled) {
                     viewModel.stopScreenCapture()
@@ -189,15 +223,15 @@ class CallActivity : AppCompatActivity() {
 
         binding.enhancedNs.setOnClickListener {
             showAudioProcessorSwitchDialog(viewModel)
-        }
+        }*/
 
         binding.exit.setOnClickListener { finish() }
 
-        // Controls row 2
-        binding.audioSelect.setOnClickListener {
-            showSelectAudioDeviceDialog(viewModel)
-        }
-        lifecycleScope.launchWhenCreated {
+
+//        binding.audioSelect.setOnClickListener {
+//            showSelectAudioDeviceDialog(viewModel)
+//        }
+        /* lifecycleScope.launchWhenCreated {
             viewModel.permissionAllowed.collect { allowed ->
                 val resource = if (allowed) R.drawable.account_cancel_outline else R.drawable.account_cancel
                 binding.permissions.setImageResource(resource)
@@ -205,15 +239,44 @@ class CallActivity : AppCompatActivity() {
         }
         binding.permissions.setOnClickListener {
             viewModel.toggleSubscriptionPermissions()
-        }
+        }*/
 
         binding.debugMenu.setOnClickListener {
             showDebugMenuDialog(viewModel)
         }
 
-        binding.pipMode.setOnClickListener {
+        binding.pipButtonContainer.setOnClickListener {
             enterPictureInPictureMode()
         }
+
+        binding.listParticipants.setOnClickListener {
+            lifecycleScope.launchWhenCreated {
+                // Collect participants list only when the button is clicked
+                viewModel.participants.collect { participants ->
+
+                    // Only show BottomSheet when user clicks the button
+                    val bottomSheet = ParticipantsBottomSheetFragment(participants)
+                    bottomSheet.show(supportFragmentManager, bottomSheet.tag)
+                }
+            }
+        }
+
+
+        lifecycleScope.launchWhenCreated {
+            viewModel.participants.collect { participants ->
+                // Update the participant count on the badge
+                val participantCountBadge = findViewById<TextView>(R.id.participantCountBadge)
+                if (participants.isNotEmpty()) {
+                    // Show badge and set the count
+                    participantCountBadge.visibility = View.VISIBLE
+                    participantCountBadge.text = participants.size.toString()
+                } else {
+                    // Hide badge if no participants
+                    participantCountBadge.visibility = View.GONE
+                }
+            }
+        }
+
     }
 
     override fun onUserLeaveHint() {
@@ -245,7 +308,6 @@ class CallActivity : AppCompatActivity() {
             binding.controlsBox.visibility = android.view.View.GONE
             binding.controlsBox2.visibility = android.view.View.GONE
             binding.audienceRow.visibility = android.view.View.GONE
-
         }
     }
 

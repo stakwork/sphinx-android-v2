@@ -1,5 +1,10 @@
 # ChangeLog
 
+## Version 1.0.0-alpha30 (2025-02-03)
+- Redesigns Live Kit call UI
+- Fixes repeated mentions suggestions
+- Fixes duplicated payments in transactions history
+
 ## Version 1.0.0-alpha29 (2025-01-06)
 - Adds Picture in Picture for Live Kit calls
 

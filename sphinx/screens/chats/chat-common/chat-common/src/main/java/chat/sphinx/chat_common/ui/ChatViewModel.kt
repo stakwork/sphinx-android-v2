@@ -17,7 +17,6 @@ import android.provider.OpenableColumns
 import android.util.Log
 import android.webkit.MimeTypeMap
 import androidx.annotation.CallSuper
-import androidx.core.content.ContextCompat.startActivity
 import androidx.core.view.inputmethod.InputConnectionCompat
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.SavedStateHandle
@@ -31,8 +30,6 @@ import chat.sphinx.chat_common.R
 import chat.sphinx.resources.R as R_common
 import chat.sphinx.chat_common.model.*
 import chat.sphinx.chat_common.navigation.ChatNavigator
-import chat.sphinx.chat_common.ui.activity.call_activity.CallActivity
-import chat.sphinx.chat_common.ui.activity.call_activity.StressTest
 import chat.sphinx.chat_common.ui.viewstate.InitialHolderViewState
 import chat.sphinx.chat_common.ui.viewstate.attachment.AttachmentFullscreenViewState
 import chat.sphinx.chat_common.ui.viewstate.attachment.AttachmentSendViewState
@@ -98,6 +95,8 @@ import chat.sphinx.wrapper_feed.isVideo
 import chat.sphinx.wrapper_lightning.NodeBalance
 import chat.sphinx.wrapper_message.*
 import chat.sphinx.wrapper_message_media.*
+import com.example.call_activity.CallActivity
+import com.example.call_activity.StressTest
 import com.giphy.sdk.core.models.Media
 import com.giphy.sdk.ui.GPHContentType
 import com.giphy.sdk.ui.GPHSettings

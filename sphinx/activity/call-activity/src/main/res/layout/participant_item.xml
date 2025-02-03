@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="wrap_content"
+    android:layout_height="match_parent"
+    android:layout_margin="3dp"
+    android:background="@drawable/background_shade_2"
+    android:clipToOutline="true"
+    android:outlineProvider="background">
+
+    <FrameLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:background="@color/headerBG"
+        app:layout_constraintDimensionRatio="1:1"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+    <FrameLayout
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:layout_gravity="center">
+
+        <TextView
+            android:id="@+id/profile_initials"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:background="@drawable/circle_icon_4"
+            android:layout_gravity="center|top"
+            android:fontFamily="@font/roboto_medium"
+            android:textSize="16sp"
+            android:clipToOutline="true"
+            android:outlineProvider="background"
+            android:visibility="gone"
+            android:gravity="center"/>
+
+        <ImageView
+            android:id="@+id/profile_picture"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:layout_gravity="center|top"
+            android:visibility="visible" />
+
+    </FrameLayout>
+
+        <io.livekit.android.renderer.TextureViewRenderer
+            android:id="@+id/renderer"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+
+        <ImageView
+            android:id="@+id/speaking_indicator"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:src="@drawable/speaker_indicator"
+            android:visibility="invisible" />
+    </FrameLayout>
+
+    <FrameLayout
+        android:id="@+id/identity_bar"
+        android:layout_width="0dp"
+        android:layout_height="30dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <ImageView
+        android:id="@+id/mute_indicator"
+        android:layout_width="14dp"
+        android:layout_height="24dp"
+        android:layout_marginStart="8dp"
+        android:src="@drawable/mic_off"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@id/identity_bar"
+        app:layout_constraintStart_toStartOf="@id/identity_bar"
+        app:layout_constraintTop_toTopOf="@id/identity_bar"
+        app:tint="@color/badgeRed" />
+
+    <ImageView
+        android:id="@+id/mic_on"
+        android:layout_width="14dp"
+        android:layout_height="14dp"
+        android:layout_marginStart="8dp"
+        android:src="@drawable/mic"
+        android:visibility="visible"
+        app:layout_constraintBottom_toBottomOf="@id/identity_bar"
+        app:layout_constraintStart_toStartOf="@id/identity_bar"
+        app:layout_constraintTop_toTopOf="@id/identity_bar" />
+
+    <ImageView
+        android:id="@+id/speaking_now"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
+        android:layout_marginStart="8dp"
+        android:src="@drawable/speaking_wave"
+        android:visibility="invisible"
+        app:layout_constraintBottom_toBottomOf="@id/identity_bar"
+        app:layout_constraintStart_toStartOf="@id/identity_bar"
+        app:layout_constraintTop_toTopOf="@id/identity_bar" />
+
+    <TextView
+        android:id="@+id/identity_text"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="32dp"
+        android:ellipsize="end"
+        android:maxLines="1"
+        app:layout_constraintBottom_toBottomOf="@id/identity_bar"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="@id/identity_bar"
+        app:layout_constraintTop_toTopOf="@id/identity_bar" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -44,6 +44,7 @@ dependencies {
 
     // Sphinx
     api project(path: ':sphinx:activity:insetter-activity')
+    api project(path: ':sphinx:activity:call-activity')
     api project(path: ':sphinx:activity:concepts:concept-user-colors-helper')
 
     implementation project(path: ':sphinx:activity:features:video-player-controller')
@@ -78,8 +79,6 @@ dependencies {
     implementation project(path: ':sphinx:screens-detail:join-tribe:join-tribe')
 
     api project(path: ':sphinx:screens-detail:camera:camera-view-model-coordinator')
-
-
 
     api deps.androidx.recyclerView
     implementation deps.google.hilt

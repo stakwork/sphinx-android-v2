@@ -104,6 +104,8 @@ import chat.sphinx.wrapper_feed.isNewsletter
 import chat.sphinx.wrapper_feed.isPodcast
 import chat.sphinx.wrapper_feed.isVideo
 import chat.sphinx.wrapper_lightning.NodeBalance
+import com.example.call_activity.CallActivity
+import com.example.call_activity.StressTest
 import chat.sphinx.resources.R as R_common
 import com.squareup.moshi.Moshi
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -466,31 +468,73 @@ internal class DashboardViewModel @Inject constructor(
     }
 
     private fun joinCall(link: SphinxCallLink, audioOnly: Boolean) {
-        link.callServerUrl?.let { nnCallUrl ->
-
+        if (link.isLiveKitLink) {
             viewModelScope.launch(mainImmediate) {
-
                 val owner = getOwner()
 
-                val userInfo = JitsiMeetUserInfo()
-                userInfo.displayName = owner.alias?.value ?: ""
+                networkQueryPeople.getLiveKitToken(
+                    room = link.callRoom,
+                    alias = owner.alias?.value ?: "Unknown",
+                    profilePictureUrl = owner.photoUrl?.value
+                ).collect { loadResponse ->
+                    when(loadResponse) {
+                        is LoadResponse.Loading -> {}
+                        is Response.Error -> {}
+                        is Response.Success -> {
+                            val appContext: Context = app.applicationContext
 
-                owner.avatarUrl?.let { nnAvatarUrl ->
-                    userInfo.avatar = nnAvatarUrl
+                            val intent = Intent(appContext, CallActivity::class.java).apply {
+                                putExtra(
+                                    CallActivity.KEY_ARGS,
+                                    CallActivity.BundleArgs(
+                                        url = loadResponse.value.serverUrl,
+                                        token = loadResponse.value.participantToken,
+                                        e2eeOn = false,
+                                        e2eeKey = "",
+                                        stressTest = StressTest.None,
+                                        videoEnabled = !audioOnly
+                                    ),
+                                )
+                            }
+                            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+
+                            appContext.startActivity(intent)
+                        }
+                    }
                 }
-
-                val options = JitsiMeetConferenceOptions.Builder()
-                    .setServerURL(nnCallUrl)
-                    .setRoom(link.callRoom)
-                    .setAudioMuted(false)
-                    .setVideoMuted(false)
-                    .setFeatureFlag("welcomepage.enabled", false)
-                    .setAudioOnly(audioOnly)
-                    .setUserInfo(userInfo)
-                    .build()
-
-                JitsiMeetActivity.launch(app, options)
             }
+        } else if (link.isJitsiLink) {
+            link.callServerUrl?.let { nnCallUrl ->
+
+                viewModelScope.launch(mainImmediate) {
+
+                    val owner = getOwner()
+
+                    val userInfo = JitsiMeetUserInfo()
+                    userInfo.displayName = owner.alias?.value ?: ""
+
+                    owner.avatarUrl?.let { nnAvatarUrl ->
+                        userInfo.avatar = nnAvatarUrl
+                    }
+
+                    val options = JitsiMeetConferenceOptions.Builder()
+                        .setServerURL(nnCallUrl)
+                        .setRoom(link.callRoom)
+                        .setAudioMuted(false)
+                        .setVideoMuted(false)
+                        .setFeatureFlag("welcomepage.enabled", false)
+                        .setAudioOnly(audioOnly)
+                        .setUserInfo(userInfo)
+                        .build()
+
+                    JitsiMeetActivity.launch(app, options)
+                }
+            }
+        } else {
+            val url = link.value
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            app.applicationContext.startActivity(intent)
         }
     }
 

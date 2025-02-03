@@ -73,4 +73,8 @@ data class TransactionDto(
         return error_message?.isNotEmpty() == true
     }
 
+    fun isSucceededPayment(): Boolean {
+        return error_message.isNullOrEmpty()
+    }
+
 }

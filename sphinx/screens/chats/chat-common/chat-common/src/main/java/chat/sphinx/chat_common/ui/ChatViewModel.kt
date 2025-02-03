@@ -2460,7 +2460,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         if (lastWord.startsWith("@") && lastWord.length > 1) {
             val matchingMessages: MutableList<MessageHolderViewState> = mutableListOf();
 
-            messageHolderViewStateFlow.value.forEach loop@{ messageHolder ->
+            messageHolderViewStateFlow.value.reversed().forEach loop@{ messageHolder ->
                 if (messageHolder is MessageHolderViewState.Sent) {
                     return@loop
                 }

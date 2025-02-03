@@ -119,6 +119,7 @@ import org.jitsi.meet.sdk.JitsiMeetActivity
 import org.jitsi.meet.sdk.JitsiMeetConferenceOptions
 import org.jitsi.meet.sdk.JitsiMeetUserInfo
 import java.io.*
+import java.time.LocalDateTime
 
 
 @JvmSynthetic
@@ -2456,13 +2457,39 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         val lastWord = s?.split(" ")?.last()?.toString() ?: ""
 
         if (lastWord.startsWith("@") && lastWord.length > 1) {
-            val matchingMessages = messageHolderViewStateFlow.value.filter { messageHolder ->
-                messageHolder.message?.senderAlias?.value?.let { member ->
-                    (member.startsWith(lastWord.replace("@", ""), true))
-                } ?: false
+            val matchingMessages: MutableList<MessageHolderViewState> = mutableListOf();
+
+            messageHolderViewStateFlow.value.reversed().forEach loop@{ messageHolder ->
+                if (messageHolder is MessageHolderViewState.Sent) {
+                    return@loop
+                }
+                messageHolder.message?.date?.let { nnDate ->
+                    if (nnDate.before(DateTime.getThreeMonthsAgo())) {
+                        return@loop
+                    }
+                }
+                messageHolder.message?.senderAlias?.value?.let { alias ->
+                    if (alias.startsWith(lastWord.replace("@", ""), true)) {
+                        messageHolder.message.senderPic?.value?.let { picture ->
+                            if (!matchingMessages.any { it.message?.senderPic?.value == picture || it.message?.senderAlias?.value == alias }) {
+                                matchingMessages.add(messageHolder)
+                            }
+                        } ?: run {
+                            if (!matchingMessages.any {it.message?.senderAlias?.value == alias }) {
+                                matchingMessages.add(messageHolder)
+                            }
+                        }
+                    }
+                }
             }
 
-            val matchingAliases = matchingMessages.map { it.message?.senderAlias?.value ?: "" }.distinct()
+            val matchingAliases = matchingMessages.map {
+                Triple(
+                    it.message?.senderAlias?.value ?: "",
+                    it.message?.senderPic?.value ?: "",
+                    it.message?.getColorKey() ?: ""
+                )
+            }
 
             messageMentionsViewStateContainer.updateViewState(
                 MessageMentionsViewState.MessageMentions(matchingAliases)

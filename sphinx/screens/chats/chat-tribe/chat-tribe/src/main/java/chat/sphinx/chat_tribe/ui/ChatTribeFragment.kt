@@ -366,7 +366,14 @@ internal class ChatTribeFragment: ChatFragment<
             }
         }
 
-        mentionMembersPopup.listviewMentionTribeMembers.adapter = MessageMentionsAdapter(binding.root.context, mutableListOf())
+        mentionMembersPopup.listviewMentionTribeMembers.adapter = MessageMentionsAdapter(
+            binding.root.context,
+            mutableListOf(),
+            onStopSupervisor,
+            viewModel,
+            imageLoader,
+            userColorsHelper
+        )
 
         tribeMemberProfileBinding.includeLayoutTribeMemberProfileDetails
             .includeLayoutTribeProfileInfoContainer.recyclerViewBadges
@@ -1190,7 +1197,7 @@ internal class ChatTribeFragment: ChatFragment<
                                 layoutParams.height = listHeight
                                 requestLayout()
 
-                                (adapter as? MessageMentionsAdapter)?.let {
+                                (adapter as? MessageMentionsAdapter<*>)?.let {
                                     it.clear()
                                     it.addAll(viewState.mentions)
                                     it.notifyDataSetChanged()

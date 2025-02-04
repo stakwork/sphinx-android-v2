@@ -303,6 +303,8 @@ abstract class SphinxRepository(
             val ownerInfo = OwnerInfo(
                 owner?.alias?.value ?: "",
                 owner?.photoUrl?.value ?: "",
+                owner?.nodePubKey?.value,
+                owner?.routeHint?.value,
                 userState,
                 lastMessageIndex
             )

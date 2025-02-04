@@ -135,6 +135,8 @@ class ConnectManagerImpl: ConnectManager()
             null,
             null,
             null,
+            null,
+            null,
             null
         ))
     }
@@ -1010,6 +1012,8 @@ class ConnectManagerImpl: ConnectManager()
             _ownerInfoStateFlow.value = OwnerInfo(
                 ownerInfo.alias,
                 ownerInfo.picture,
+                ownerInfo.pubkey,
+                ownerInfo.routeHint,
                 ownerInfoStateFlow.value.userState,
                 ownerInfo.messageLastIndex
             )
@@ -1265,7 +1269,9 @@ class ConnectManagerImpl: ConnectManager()
                 convertSatsToMillisats(sats),
                 ownerInfoStateFlow.value.alias ?: "",
                 tribeServerIp,
-                serverDefaultTribe
+                serverDefaultTribe,
+                ownerInfoStateFlow.value.pubkey,
+                ownerInfoStateFlow.value.routeHint
             )
 
             if (createInvite.newInvite != null) {

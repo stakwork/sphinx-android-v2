@@ -323,9 +323,15 @@ sealed class DashboardChat {
                 get() = chat.photoUrl ?: contact.photoUrl
 
             override fun getMessageSender(message: Message, context: Context, withColon: Boolean): String {
-                return contact.alias?.let { alias ->
-                    alias.value + if (withColon) ": " else ""
-                } ?: ""
+                return if (isMessageSenderSelf(message)) {
+
+                    context.getString(R.string.last_message_description_you) + if (withColon) ": " else ""
+                } else {
+
+                    contact.alias?.let { alias ->
+                        alias.value + if (withColon) ": " else ""
+                    } ?: ""
+                }
             }
 
             override fun getColorKey(): String? {

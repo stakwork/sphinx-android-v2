@@ -1,5 +1,10 @@
 # ChangeLog
 
+## Version 1.0.0-alpha31 (2025-02-04)
+- Updates binding to new release version
+- Updates Live Kit library to new version
+- Fixes wrong sender issue on chats list
+
 ## Version 1.0.0-alpha30 (2025-02-03)
 - Redesigns Live Kit call UI
 - Fixes repeated mentions suggestions

@@ -1502,7 +1502,7 @@ class ConnectManagerImpl: ConnectManager()
                 messageType.toUByte(),
                 sphinxMessage,
                 getCurrentUserState(),
-                ownerInfoStateFlow.value.alias ?: "",
+                (ownerInfoStateFlow.value.alias ?: "").replace(" ", "_"),
                 ownerInfoStateFlow.value.picture ?: "",
                 convertSatsToMillisats(nnAmount),
                 isTribe
@@ -1543,7 +1543,7 @@ class ConnectManagerImpl: ConnectManager()
                 17.toUByte(), // Fix this hardcoded value
                 sphinxMessage,
                 getCurrentUserState(),
-                ownerInfoStateFlow.value.alias ?: "",
+                (ownerInfoStateFlow.value.alias ?: "").replace(" ", "_"),
                 ownerInfoStateFlow.value.picture ?: "",
                 convertSatsToMillisats(nnAmount),
                 isTribe

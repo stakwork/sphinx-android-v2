@@ -116,6 +116,18 @@ sealed class ChatSideEffect: SideEffect<ChatSideEffectFragment>() {
         }
     }
 
+    class NotifyError(
+        private val msg: String,
+        private val notificationLengthLong: Boolean = true
+    ): ChatSideEffect() {
+        override suspend fun execute(value: ChatSideEffectFragment) {
+            SphinxToastUtils(toastLengthLong = notificationLengthLong, toastBackgroundTint = chat.sphinx.resources.R.color.badgeRed).show(
+                value.chatFragmentContext,
+                msg)
+        }
+    }
+
+
     class CopyTextToClipboard(private val text: String): ChatSideEffect() {
         override suspend fun execute(value: ChatSideEffectFragment) {
             copyToClipBoard(

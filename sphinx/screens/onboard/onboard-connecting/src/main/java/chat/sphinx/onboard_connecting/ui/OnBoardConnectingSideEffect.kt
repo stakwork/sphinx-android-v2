@@ -21,6 +21,15 @@ internal sealed class OnBoardConnectingSideEffect: SideEffect<Context>() {
         }
     }
 
+    class NotifyError(
+        private val msg: String,
+        private val notificationLengthLong: Boolean = false
+    ): OnBoardConnectingSideEffect() {
+        override suspend fun execute(value: Context) {
+            SphinxToastUtils(toastLengthLong = notificationLengthLong, toastBackgroundTint = chat.sphinx.resources.R.color.badgeRed).show(value, msg)
+        }
+    }
+
     object GenerateTokenFailed: OnBoardConnectingSideEffect() {
         override suspend fun execute(value: Context) {
             SphinxToastUtils().show(value, R.string.side_effect_generate_token_failed)

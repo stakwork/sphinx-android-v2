@@ -20,6 +20,7 @@ import chat.sphinx.wrapper_chat.Chat
 import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.menu_bottom_profile_pic.PictureMenuHandler
 import chat.sphinx.menu_bottom_profile_pic.PictureMenuViewModel
+import chat.sphinx.wrapper_chat.toChatHost
 import chat.sphinx.wrapper_common.lightning.LightningNodePubKey
 import chat.sphinx.resources.R as R_common
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -61,6 +62,7 @@ internal class CreateTribeViewModel @Inject constructor(
     companion object {
         const val SERVER_SETTINGS_SHARED_PREFERENCES = "server_ip_settings"
         const val ENVIRONMENT_TYPE = "environment_type"
+        const val TRIBE_SERVER_IP = "tribe_server_ip"
     }
 
     private val args: CreateTribeFragmentArgs by savedStateHandle.navArgs()
@@ -70,6 +72,11 @@ internal class CreateTribeViewModel @Inject constructor(
         SERVER_SETTINGS_SHARED_PREFERENCES,
         Context.MODE_PRIVATE
     ).getBoolean(ENVIRONMENT_TYPE, true)
+
+    private val tribeDefaultServerUrl = app.getSharedPreferences(
+        SERVER_SETTINGS_SHARED_PREFERENCES,
+        Context.MODE_PRIVATE
+    ).getString(TRIBE_SERVER_IP, null)
 
     private val chatSharedFlow: SharedFlow<Chat?> = flow {
         chatId?.let {
@@ -151,7 +158,7 @@ internal class CreateTribeViewModel @Inject constructor(
             getChat()?.let { chat ->
                 updateViewState(CreateTribeViewState.LoadingExistingTribe)
 
-                val host = chat.host
+                val host = chat.host ?: tribeDefaultServerUrl?.toChatHost()
 
                 if (host != null) {
                     networkQueryChat.getTribeInfo(
@@ -251,7 +258,7 @@ internal class CreateTribeViewModel @Inject constructor(
             createTribeBuilder.build()?.let {
                 updateViewState(CreateTribeViewState.SavingTribe)
                 saveTribeJob = viewModelScope.launch(mainImmediate) {
-                    chatRepository.storeTribe(it,chatId)
+                    chatRepository.storeTribe(it, chatId)
                     navigator.closeDetailScreen()
                 }
             }

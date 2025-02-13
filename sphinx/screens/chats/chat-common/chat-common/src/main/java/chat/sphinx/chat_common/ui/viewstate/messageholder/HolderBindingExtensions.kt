@@ -2369,13 +2369,20 @@ private inline fun LayoutMessageHolderBinding.setGroupActionJoinRequestAdminLayo
     includeMessageTypeGroupActionHolder.includeMessageTypeGroupActionJoinRequest.apply {
         root.visible
 
+        layoutConstraintGroupActionJoinRequestContainer.background = AppCompatResources.getDrawable(
+            root.context,
+            R.drawable.background_group_request_message
+        )
+
         textViewGroupActionJoinRequestMessage.text = root.context.getString(R.string.tribe_request_admin_side, groupActionDetails.subjectName)
 
         textViewGroupActionJoinRequestAcceptAction.isEnabled = true
         textViewGroupActionJoinRequestAcceptAction.alpha = 1.0f
+        textViewGroupActionJoinRequestAcceptAction.visibility = View.VISIBLE
 
         textViewGroupActionJoinRequestRejectAction.isEnabled = true
         textViewGroupActionJoinRequestRejectAction.alpha = 1.0f
+        textViewGroupActionJoinRequestRejectAction.visibility = View.VISIBLE
     }
 }
 
@@ -2387,16 +2394,23 @@ private inline fun LayoutMessageHolderBinding.setGroupActionJoinRequestAdminLayo
 private inline fun LayoutMessageHolderBinding.setGroupActionJoinRejectedAdminLayout(
     groupActionDetails: LayoutState.GroupActionIndicator
 ) {
+    includeMessageTypeGroupActionHolder.includeMessageTypeGroupActionAnnouncement.root.gone
+
     includeMessageTypeGroupActionHolder.includeMessageTypeGroupActionJoinRequest.apply {
         root.visible
+
+        layoutConstraintGroupActionJoinRequestContainer.background = AppCompatResources.getDrawable(
+            root.context,
+            R.drawable.background_group_request_message_declined
+        )
 
         textViewGroupActionJoinRequestMessage.text = root.context.getString(R.string.tribe_request_rejected_admin_side, groupActionDetails.subjectName)
 
         textViewGroupActionJoinRequestAcceptAction.isEnabled = false
-        textViewGroupActionJoinRequestAcceptAction.alpha = 0.2f
+        textViewGroupActionJoinRequestAcceptAction.visibility = View.GONE
 
         textViewGroupActionJoinRequestRejectAction.isEnabled = false
-        textViewGroupActionJoinRequestRejectAction.alpha = 1.0f
+        textViewGroupActionJoinRequestRejectAction.visibility = View.GONE
     }
 }
 
@@ -2408,16 +2422,23 @@ private inline fun LayoutMessageHolderBinding.setGroupActionJoinRejectedAdminLay
 private inline fun LayoutMessageHolderBinding.setGroupActionJoinApprovedAdminLayout(
     groupActionDetails: LayoutState.GroupActionIndicator
 ) {
+    includeMessageTypeGroupActionHolder.includeMessageTypeGroupActionAnnouncement.root.gone
+
     includeMessageTypeGroupActionHolder.includeMessageTypeGroupActionJoinRequest.apply {
         root.visible
+
+        layoutConstraintGroupActionJoinRequestContainer.background = AppCompatResources.getDrawable(
+            root.context,
+            R.drawable.background_group_request_message_approved
+        )
 
         textViewGroupActionJoinRequestMessage.text = root.context.getString(R.string.tribe_request_approved_admin_side, groupActionDetails.subjectName)
 
         textViewGroupActionJoinRequestRejectAction.isEnabled = false
-        textViewGroupActionJoinRequestRejectAction.alpha = 0.2f
+        textViewGroupActionJoinRequestAcceptAction.visibility = View.GONE
 
         textViewGroupActionJoinRequestAcceptAction.isEnabled = false
-        textViewGroupActionJoinRequestAcceptAction.alpha = 1.0f
+        textViewGroupActionJoinRequestRejectAction.visibility = View.GONE
     }
 }
 

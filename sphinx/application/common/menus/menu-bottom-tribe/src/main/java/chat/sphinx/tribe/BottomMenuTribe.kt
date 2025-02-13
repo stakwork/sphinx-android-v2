@@ -54,15 +54,15 @@ class BottomMenuTribe(
                 )
             )
 
-            menuBottomOptions.add(
-                MenuBottomOption(
-                    text = R.string.bottom_menu_tribe_option_add_member,
-                    textColor = R_common.color.primaryBlueFontColor,
-                    onClick = {
-                        tribeMenuViewModel.addTribeMember()
-                    }
-                )
-            )
+//            menuBottomOptions.add(
+//                MenuBottomOption(
+//                    text = R.string.bottom_menu_tribe_option_add_member,
+//                    textColor = R_common.color.primaryBlueFontColor,
+//                    onClick = {
+//                        tribeMenuViewModel.addTribeMember()
+//                    }
+//                )
+//            )
 
             menuBottomOptions.add(
                 MenuBottomOption(

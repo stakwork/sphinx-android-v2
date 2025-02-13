@@ -210,7 +210,7 @@ internal class CreateTribeFragment: SideEffectDetailFragment<
                 viewModel.createTribeBuilder.setUnlisted(!isChecked)
             }
             switchTribeApproveMembershipOnSphinx.setOnCheckedChangeListener { _, isChecked ->
-                viewModel.createTribeBuilder.setPrivate(!isChecked)
+                viewModel.createTribeBuilder.setPrivate(isChecked)
             }
 
             buttonCreateTribe.setOnClickListener {
@@ -352,6 +352,7 @@ internal class CreateTribeFragment: SideEffectDetailFragment<
                 }
 
                 binding.switchTribeListingOnSphinx.isChecked = viewState.unlisted == false
+                binding.switchTribeApproveMembershipOnSphinx.isChecked = viewState.private == true
             }
         }
     }

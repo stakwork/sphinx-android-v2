@@ -3711,7 +3711,7 @@ abstract class SphinxRepository(
 
             val pricePerMessage = chat?.pricePerMessage?.value ?: 0
             val escrowAmount = chat?.escrowAmount?.value ?: 0
-            val priceToMeet = sendMessage.priceToMeet?.value ?: 0
+//            val priceToMeet = sendMessage.priceToMeet?.value ?: 0
             val messagePrice = (pricePerMessage + escrowAmount).toSat() ?: Sat(0)
 
             val messageType = when {

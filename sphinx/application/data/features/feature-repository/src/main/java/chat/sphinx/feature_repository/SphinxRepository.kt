@@ -1623,7 +1623,17 @@ abstract class SphinxRepository(
             queries.messageDeleteByUUID(msgUuid)
         }
 
-        val senderAlias = msgSender.alias?.toSenderAlias()
+        var senderAlias = msgSender.alias?.toSenderAlias()
+
+        if (msgType.isMemberApprove() || msgType.isMemberReject()) {
+            msg.replyUuid?.toReplyUUID()?.let { replyUUID ->
+                queries.messageGetByUUID(MessageUUID(replyUUID.value)).executeAsOneOrNull()?.let { requestMsg ->
+                    requestMsg.sender_alias?.let {
+                        senderAlias = it
+                    }
+                }
+            }
+        }
 
         val hasPaymentRequest = paymentRequest != null || existingMessage?.payment_request != null
 
@@ -3237,6 +3247,9 @@ abstract class SphinxRepository(
                             val purchaseItemsMap: MutableMap<MessageMUID, ArrayList<Message>> =
                                 LinkedHashMap(listMessageDbo.size)
 
+                            val requestResponsesMap: MutableMap<MessageUUID, Boolean?> =
+                                LinkedHashMap(listMessageDbo.size)
+
                             for (dbo in listMessageDbo) {
                                 dbo.uuid?.let { uuid ->
                                     reactionsMap[uuid] = ArrayList(0)
@@ -3255,6 +3268,22 @@ abstract class SphinxRepository(
 
                             val purchaseItemsMUIDs =
                                 purchaseItemsMap.keys.map { MessageMUID(it.value) }
+
+                            val memberRequestsUUID = listMessageDbo.filter({ it.type.isMemberRequest() && it.uuid != null }).map { ReplyUUID(it.uuid!!.value) }
+
+                            memberRequestsUUID.chunked(500).forEach { chunkedIds ->
+                                queries.messageGetAllRequestResponseItemsByReplyUUID(
+                                    chatId,
+                                    chunkedIds,
+                                ).executeAsList()
+                                    .let { response ->
+                                        response.forEach { dbo ->
+                                            dbo.reply_uuid?.let { uuid ->
+                                                requestResponsesMap[MessageUUID(uuid.value)] = true
+                                            }
+                                        }
+                                    }
+                            }
 
                             replyUUIDs.chunked(500).forEach { chunkedIds ->
                                 queries.messageGetAllReactionsByUUID(
@@ -3323,7 +3352,19 @@ abstract class SphinxRepository(
 
                             val chat = queries.chatGetById(chatId).executeAsOneOrNull()
 
-                            listMessageDbo.reversed().map { dbo ->
+                            val filteredMemberRequests = listMessageDbo.filter { dbo ->
+                                if (!dbo.type.isMemberRequest()) {
+                                    true
+                                } else {
+                                    val hasResponse = dbo.uuid?.let { uuid ->
+                                        requestResponsesMap[MessageUUID(uuid.value)] == true
+                                    } ?: false
+
+                                    !hasResponse
+                                }
+                            }
+
+                            filteredMemberRequests.reversed().map { dbo ->
                                 mapMessageDboAndDecryptContentIfNeeded(
                                     queries,
                                     dbo,
@@ -6534,7 +6575,7 @@ abstract class SphinxRepository(
 
         // Accept or Reject member
         messageUuid?.value?.let { nnMessageUuid ->
-        messageBuilder.setReplyUUID(ReplyUUID(nnMessageUuid))
+            messageBuilder.setReplyUUID(ReplyUUID(nnMessageUuid))
         }
 
         // Kick Member

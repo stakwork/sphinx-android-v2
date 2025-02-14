@@ -355,14 +355,6 @@ class ChatTribeViewModel @Inject constructor(
 
             if (type.isMemberApprove() || type.isMemberReject()) {
                 messageRepository.processMemberRequest(chatId, messageUuid, null, type, senderAlias)
-//                when () {
-//                    is LoadResponse.Loading -> {}
-//                    is Response.Success -> {}
-//
-//                    is Response.Error -> {
-//                        submitSideEffect(ChatSideEffect.Notify(errorMessage))
-//                    }
-//                }
             }
         }.join()
     }

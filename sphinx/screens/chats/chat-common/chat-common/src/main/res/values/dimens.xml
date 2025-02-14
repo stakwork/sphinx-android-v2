@@ -56,7 +56,7 @@
     <dimen name="status_badge_row_padding">10dp</dimen>
     <dimen name="group_action_message_padding_horizontal">20dp</dimen>
     <dimen name="group_action_message_padding_vertical">4dp</dimen>
-    <dimen name="group_request_message_button_xy">27dp</dimen>
+    <dimen name="group_request_message_button_xy">40dp</dimen>
 
 
     <!-- message_holder_in_photo_holder_xy + 8dp -->
@@ -89,7 +89,7 @@
     <dimen name="new_day_separator_holder_height">40dp</dimen>
     <dimen name="message_type_leave_or_join_group_holder_height">40dp</dimen>
     <dimen name="message_type_group_kick_holder_height">65dp</dimen>
-    <dimen name="message_type_group_join_request_holder_height">65dp</dimen>
+    <dimen name="message_type_group_join_request_holder_height">80dp</dimen>
     <dimen name="message_type_call_invite_holder_height_large">212dp</dimen>
     <dimen name="message_type_call_invite_holder_height_small">160dp</dimen>
     <dimen name="message_type_call_invite_join_button_height">38dp</dimen>

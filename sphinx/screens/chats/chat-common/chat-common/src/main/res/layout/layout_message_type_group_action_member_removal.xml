@@ -64,7 +64,7 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="@+id/text_view_group_action_member_removal_delete_group"
             app:layout_constraintEnd_toEndOf="parent"
-            tools:visibility="visible">
+            tools:visibility="gone">
 
             <ProgressBar
                 android:id="@+id/progress_bar_group_action_member_removal_delete_group"

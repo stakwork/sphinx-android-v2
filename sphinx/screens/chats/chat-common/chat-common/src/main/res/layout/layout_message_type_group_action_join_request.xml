@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="@dimen/message_type_group_join_request_holder_height"
-    android:visibility="gone"
+    android:visibility="visible"
     tools:visibility="visible">
 
 
@@ -31,7 +31,7 @@
             android:gravity="center"
             android:textAlignment="center"
             android:textColor="@color/text"
-            android:textSize="@dimen/default_text_size_sub_headline"
+            android:textSize="@dimen/default_text_size_tab"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/text_view_group_action_join_request_accept_action"
             app:layout_constraintHorizontal_chainStyle="packed"
@@ -47,7 +47,7 @@
             android:backgroundTint="@color/primaryGreen"
             android:fontFamily="@font/material_icons_regular"
             android:textColor="@android:color/white"
-            android:textSize="@dimen/default_text_size_tap_target_material_icon"
+            android:textSize="@dimen/default_text_size_back_arrow"
             android:text="@string/material_icon_name_group_action_accept_join_request"
             android:textAlignment="center"
             android:gravity="center"
@@ -61,10 +61,10 @@
             android:layout_height="@dimen/group_request_message_button_xy"
             android:layout_marginStart="@dimen/chat_message_inner_padding"
             android:background="@drawable/circular_button"
-            android:backgroundTint="@color/badgeRed"
+            android:backgroundTint="@android:color/darker_gray"
             android:fontFamily="@font/material_icons_regular"
             android:textColor="@android:color/white"
-            android:textSize="@dimen/default_text_size_tap_target_material_icon"
+            android:textSize="@dimen/default_text_size_back_arrow"
             android:text="@string/material_icon_name_group_action_reject_join_request"
             android:textAlignment="center"
             android:gravity="center"
@@ -82,7 +82,7 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="@+id/text_view_group_action_join_request_accept_action"
             app:layout_constraintEnd_toEndOf="@+id/text_view_group_action_join_request_reject_action"
-            tools:visibility="visible">
+            tools:visibility="gone">
 
             <ProgressBar
                 android:id="@+id/progress_bar_group_action_join_request_request_process"

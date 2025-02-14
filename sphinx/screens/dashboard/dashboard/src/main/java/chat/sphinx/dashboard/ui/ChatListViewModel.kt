@@ -192,7 +192,7 @@ internal class ChatListViewModel @Inject constructor(
                                     DashboardChat.Active.GroupOrTribe(
                                         chat,
                                         message,
-                                        accountOwnerStateFlow.value,
+                                        accountOwnerStateFlow.value ?: getOwner(),
                                         repositoryDashboard.getUnseenMessagesByChatId(chat.id),
                                         repositoryDashboard.getUnseenMentionsByChatId(chat.id)
                                     )

@@ -20,6 +20,15 @@ sealed class ChatListSideEffect: SideEffect<Context>() {
         }
     }
 
+    class NotifyError(
+        private val msg: String,
+        private val notificationLengthLong: Boolean = true
+    ): ChatListSideEffect() {
+        override suspend fun execute(value: Context) {
+            SphinxToastUtils(toastLengthLong = notificationLengthLong, toastBackgroundTint = chat.sphinx.resources.R.color.badgeRed).show(value, msg)
+        }
+    }
+
     class AlertConfirmPayInvite(
         private val amount: Long,
         private val callback: () -> Unit

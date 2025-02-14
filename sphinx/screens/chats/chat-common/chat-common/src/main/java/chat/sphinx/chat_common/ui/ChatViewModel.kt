@@ -1016,42 +1016,42 @@ abstract class ChatViewModel<ARGS : NavArgs>(
             connectManagerRepository.connectManagerErrorState.collect { connectManagerError ->
                 when (connectManagerError) {
                     is ConnectManagerError.SendMessageError -> {
-                        submitSideEffect(ChatSideEffect.Notify(
+                        submitSideEffect(ChatSideEffect.NotifyError(
                             app.getString(R_common.string.connect_manager_send_message_error))
                         )
                     }
                     is ConnectManagerError.PayContactInvoiceError -> {
-                        submitSideEffect(ChatSideEffect.Notify(
+                        submitSideEffect(ChatSideEffect.NotifyError(
                             app.getString(R_common.string.connect_manager_pay_contact_invoice_error))
                         )
                     }
                     is ConnectManagerError.PayInvoiceError -> {
-                        submitSideEffect(ChatSideEffect.Notify(
+                        submitSideEffect(ChatSideEffect.NotifyError(
                             app.getString(R_common.string.connect_manager_pay_invoice_error))
                         )
                     }
                     is ConnectManagerError.PaymentHashError -> {
-                        submitSideEffect(ChatSideEffect.Notify(
+                        submitSideEffect(ChatSideEffect.NotifyError(
                             app.getString(R_common.string.connect_manager_payment_hash_error))
                         )
                     }
                     is ConnectManagerError.ReadMessageError -> {
-                        submitSideEffect(ChatSideEffect.Notify(
+                        submitSideEffect(ChatSideEffect.NotifyError(
                             app.getString(R_common.string.connect_manager_read_message_error))
                         )
                     }
                     is ConnectManagerError.SignBytesError -> {
-                        submitSideEffect(ChatSideEffect.Notify(
+                        submitSideEffect(ChatSideEffect.NotifyError(
                             app.getString(R_common.string.connect_manager_sign_bytes_error))
                         )
                     }
                     is ConnectManagerError.MediaTokenError -> {
-                        submitSideEffect(ChatSideEffect.Notify(
+                        submitSideEffect(ChatSideEffect.NotifyError(
                             app.getString(R_common.string.connect_manager_media_token_error))
                         )
                     }
                     is ConnectManagerError.SetMuteError -> {
-                        submitSideEffect(ChatSideEffect.Notify(
+                        submitSideEffect(ChatSideEffect.NotifyError(
                             app.getString(R_common.string.connect_manager_set_mute_error))
                         )
                     }

@@ -427,48 +427,48 @@ internal class OnBoardConnectingViewModel @Inject constructor(
             connectManagerRepository.connectManagerErrorState.collect { connectManagerError ->
                 when (connectManagerError) {
                     is ConnectManagerError.GenerateXPubError -> {
-                        submitSideEffect(OnBoardConnectingSideEffect.Notify(
+                        submitSideEffect(OnBoardConnectingSideEffect.NotifyError(
                             app.getString(R_common.string.connect_manager_generate_xpub_error))
                         )
                     }
                     is ConnectManagerError.GenerateMnemonicError -> {
-                        submitSideEffect(OnBoardConnectingSideEffect.Notify(
+                        submitSideEffect(OnBoardConnectingSideEffect.NotifyError(
                             app.getString(R_common.string.connect_manager_generate_mnemonic_error))
                         )
                     }
                     is ConnectManagerError.ProcessInviteError -> {
-                        submitSideEffect(OnBoardConnectingSideEffect.Notify(
+                        submitSideEffect(OnBoardConnectingSideEffect.NotifyError(
                             app.getString(R_common.string.connect_manager_process_invite_error))
                         )
                     }
                     is ConnectManagerError.MqttConnectError -> {
-                        submitSideEffect(OnBoardConnectingSideEffect.Notify(
+                        submitSideEffect(OnBoardConnectingSideEffect.NotifyError(
                             String.format(app.getString(R_common.string.connect_manager_mqtt_connect_error), connectManagerError.error))
                         )
                     }
                     is ConnectManagerError.SubscribeOwnerError -> {
-                        submitSideEffect(OnBoardConnectingSideEffect.Notify(
+                        submitSideEffect(OnBoardConnectingSideEffect.NotifyError(
                             app.getString(R_common.string.connect_manager_subscribe_owner_error))
                         )
                     }
                     is ConnectManagerError.MqttClientError -> {
-                        submitSideEffect(OnBoardConnectingSideEffect.Notify(
+                        submitSideEffect(OnBoardConnectingSideEffect.NotifyError(
                             app.getString(R_common.string.connect_manager_mqtt_client_error))
                         )
                     }
                     is ConnectManagerError.MqttInitError -> {
-                        submitSideEffect(OnBoardConnectingSideEffect.Notify(
+                        submitSideEffect(OnBoardConnectingSideEffect.NotifyError(
                             String.format(
                                 app.getString(R_common.string.connect_manager_mqtt_init_error), connectManagerError.logs))
                         )
                     }
                     is ConnectManagerError.FetchMessageError -> {
-                        submitSideEffect(OnBoardConnectingSideEffect.Notify(
+                        submitSideEffect(OnBoardConnectingSideEffect.NotifyError(
                             app.getString(R_common.string.connect_manager_fetch_message_error))
                         )
                     }
                     is ConnectManagerError.FetchFirstMessageError -> {
-                        submitSideEffect(OnBoardConnectingSideEffect.Notify(
+                        submitSideEffect(OnBoardConnectingSideEffect.NotifyError(
                             app.getString(R_common.string.connect_manager_fetch_first_message_error))
                         )
                     }

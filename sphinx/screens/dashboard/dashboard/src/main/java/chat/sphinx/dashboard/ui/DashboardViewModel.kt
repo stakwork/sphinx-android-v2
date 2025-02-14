@@ -302,83 +302,83 @@ internal class DashboardViewModel @Inject constructor(
             connectManagerRepository.connectManagerErrorState.collect { connectManagerError ->
                 when (connectManagerError) {
                     is ConnectManagerError.GenerateXPubError -> {
-                        submitSideEffect(ChatListSideEffect.Notify(
+                        submitSideEffect(ChatListSideEffect.NotifyError(
                             app.getString(R_common.string.connect_manager_generate_xpub_error))
                         )
                     }
                     is ConnectManagerError.MqttConnectError -> {
-                        submitSideEffect(ChatListSideEffect.Notify(
+                        submitSideEffect(ChatListSideEffect.NotifyError(
                             String.format(app.getString(R_common.string.connect_manager_mqtt_connect_error), connectManagerError.error))
                         )
                     }
                     is ConnectManagerError.MqttClientError -> {
-                        submitSideEffect(ChatListSideEffect.Notify(
+                        submitSideEffect(ChatListSideEffect.NotifyError(
                             app.getString(R_common.string.connect_manager_mqtt_client_error))
                         )
                     }
                     is ConnectManagerError.MqttInitError -> {
-                        submitSideEffect(ChatListSideEffect.Notify(
+                        submitSideEffect(ChatListSideEffect.NotifyError(
                             String.format(
                             app.getString(R_common.string.connect_manager_mqtt_init_error), connectManagerError.logs))
                         )
                     }
                     is ConnectManagerError.JoinTribeError -> {
-                        submitSideEffect(ChatListSideEffect.Notify(
+                        submitSideEffect(ChatListSideEffect.NotifyError(
                             app.getString(R_common.string.connect_manager_join_tribe_error))
                         )
                     }
                     is ConnectManagerError.CreateTribeError -> {
-                        submitSideEffect(ChatListSideEffect.Notify(
+                        submitSideEffect(ChatListSideEffect.NotifyError(
                             app.getString(R_common.string.connect_manager_create_tribe_error))
                         )
                     }
                     is ConnectManagerError.CreateInviteError -> {
-                        submitSideEffect(ChatListSideEffect.Notify(
+                        submitSideEffect(ChatListSideEffect.NotifyError(
                             app.getString(R_common.string.connect_manager_create_invite_error))
                         )
                     }
                     is ConnectManagerError.DeleteInviteError -> {
-                        submitSideEffect(ChatListSideEffect.Notify(
+                        submitSideEffect(ChatListSideEffect.NotifyError(
                             app.getString(R_common.string.connect_manager_delete_invite_error))
                         )
                     }
                     is ConnectManagerError.ConcatNodesError -> {
-                        submitSideEffect(ChatListSideEffect.Notify(
+                        submitSideEffect(ChatListSideEffect.NotifyError(
                             app.getString(R_common.string.connect_manager_concat_nodes_error))
                         )
                     }
                     is ConnectManagerError.CreateInvoiceError -> {
-                        submitSideEffect(ChatListSideEffect.Notify(
+                        submitSideEffect(ChatListSideEffect.NotifyError(
                             app.getString(R_common.string.connect_manager_create_invoice_error))
                         )
                     }
                     is ConnectManagerError.GetReadMessagesError -> {
-                        submitSideEffect(ChatListSideEffect.Notify(
+                        submitSideEffect(ChatListSideEffect.NotifyError(
                             app.getString(R_common.string.connect_manager_get_read_messages_error))
                         )
                     }
                     is ConnectManagerError.SignBytesError -> {
-                        submitSideEffect(ChatListSideEffect.Notify(
+                        submitSideEffect(ChatListSideEffect.NotifyError(
                             app.getString(R_common.string.connect_manager_sign_bytes_error))
                         )
                     }
                     is ConnectManagerError.SendKeySendError -> {
-                        submitSideEffect(ChatListSideEffect.Notify(
+                        submitSideEffect(ChatListSideEffect.NotifyError(
                             app.getString(R_common.string.connect_manager_keysend_error))
                         )
                     }
                     is ConnectManagerError.MqttReconnectError -> {
-                        submitSideEffect(ChatListSideEffect.Notify(
+                        submitSideEffect(ChatListSideEffect.NotifyError(
                             app.getString(R_common.string.connect_manager_mqtt_reconnect_error))
                         )
                     }
                     is ConnectManagerError.XPubOrSignError -> {
-                        submitSideEffect(ChatListSideEffect.Notify(
+                        submitSideEffect(ChatListSideEffect.NotifyError(
                             app.getString(R_common.string.connect_manager_xpub_or_sign_error))
                         )
                     }
                     is ConnectManagerError.LoadTransactionsError -> {
-                        submitSideEffect(ChatListSideEffect.Notify(
+                        submitSideEffect(ChatListSideEffect.NotifyError(
                             app.getString(R_common.string.connect_manager_load_transactions_error))
                         )
                     }

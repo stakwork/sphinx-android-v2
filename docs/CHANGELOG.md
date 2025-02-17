@@ -1,5 +1,11 @@
 # ChangeLog
 
+## Version 1.0.0-alpha33 (2025-02-14)
+- Fixes issues with tribe members requests
+- Improves member requests UI
+- Fixes issues with tribe mentions
+- Other fixes and improvement
+
 ## Version 1.0.0-alpha31 (2025-02-04)
 - Updates binding to new release version
 - Updates Live Kit library to new version

@@ -1,6 +1,5 @@
 package chat.sphinx.feature_network_relay_call
 
-import app.cash.exhaustive.Exhaustive
 import chat.sphinx.concept_network_call.buildRequest
 import chat.sphinx.concept_network_client.NetworkClient
 import chat.sphinx.concept_network_client.NetworkClientClearedListener
@@ -13,14 +12,14 @@ import chat.sphinx.kotlin_response.ResponseError
 import chat.sphinx.logger.SphinxLogger
 import chat.sphinx.logger.e
 import chat.sphinx.wrapper_relay.AuthorizationToken
-import chat.sphinx.wrapper_relay.RequestSignature
 import chat.sphinx.wrapper_relay.RelayUrl
+import chat.sphinx.wrapper_relay.RequestSignature
 import chat.sphinx.wrapper_relay.TransportToken
-import com.squareup.moshi.JsonDataException
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -125,6 +124,30 @@ class NetworkRelayCallImpl(
             response = call(responseJsonClass, requestBuilder.build(), useExtendedNetworkCallClient)
 
             emit(Response.Success(response))
+        } catch (e: Exception) {
+            emit(handleException(LOG, GET, url, e))
+        }
+    }
+
+    override suspend fun getWithoutJson(
+        url: String,
+        headers: Map<String, String>?
+    ): Flow<LoadResponse<String, ResponseError>> = flow {
+
+        emit(LoadResponse.Loading)
+
+        try {
+            val networkResponse = withContext(io) {
+                networkClient.getClient()
+                    .newCall(buildRequest(url, headers).build())
+                    .execute()
+            }
+
+            if(networkResponse.isSuccessful) {
+                emit(Response.Success(""))
+            } else {
+                throw Exception(networkResponse.message)
+            }
         } catch (e: Exception) {
             emit(handleException(LOG, GET, url, e))
         }
@@ -362,7 +385,7 @@ class NetworkRelayCallImpl(
         val networkResponse = withContext(io) {
             client.newCall(request).execute()
         }
-        
+
         val body = networkResponse.body ?: throw NullPointerException(
             """
                 NetworkResponse.body returned null
@@ -402,6 +425,7 @@ class NetworkRelayCallImpl(
             networkResponse.code
         )
     }
+
 
     @Throws(NullPointerException::class, IOException::class)
     override suspend fun <T: Any> callList(

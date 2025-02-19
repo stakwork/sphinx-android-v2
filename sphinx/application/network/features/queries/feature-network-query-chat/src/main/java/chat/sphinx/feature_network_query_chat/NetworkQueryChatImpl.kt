@@ -1,7 +1,7 @@
 package chat.sphinx.feature_network_query_chat
 
 import chat.sphinx.concept_network_query_chat.NetworkQueryChat
-import chat.sphinx.concept_network_query_chat.model.*
+import chat.sphinx.concept_network_query_chat.model.NewTribeDto
 import chat.sphinx.concept_network_query_chat.model.feed.FeedDto
 import chat.sphinx.concept_network_relay_call.NetworkRelayCall
 import chat.sphinx.kotlin_response.LoadResponse
@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.Flow
 
 class NetworkQueryChatImpl(
     private val networkRelayCall: NetworkRelayCall,
-): NetworkQueryChat() {
+) : NetworkQueryChat() {
 
     companion object {
         private const val GET_TRIBE_INFO_URL_TEST = "http://%s/tribes/%s"
@@ -22,6 +22,10 @@ class NetworkQueryChatImpl(
         private const val GET_FEED_CONTENT_URL = "https://%s/feed?url=%s&fulltext=true"
         private const val TEST_V2_TRIBES_SERVER = "75.101.247.127:8801"
         private const val FEED_SPHINX_V1_URL = "https://people.sphinx.chat/feed?url=%s"
+        private const val START_RECORD_CALL_URL =
+            "https://chat.sphinx.chat/api/record/start?roomName=(room)&now=(timestamp)"
+        private const val STOP_RECORD_CALL_URL =
+            "https://chat.sphinx.chat/api/record/stop?roomName=(room)"
     }
 
     override fun getTribeInfo(
@@ -52,4 +56,17 @@ class NetworkQueryChatImpl(
             },
             responseJsonClass = FeedDto::class.java,
         )
+
+    override suspend fun startCallRecording(
+        room: String,
+        timestamp: String
+    ): Flow<LoadResponse<Any, ResponseError>> =
+        networkRelayCall.getWithoutJson(
+            START_RECORD_CALL_URL
+                .replace("(room)", room)
+                .replace("(timestamp)", timestamp)
+        )
+
+    override suspend fun stopCallRecording(room: String): Flow<LoadResponse<Any, ResponseError>> =
+        networkRelayCall.getWithoutJson(STOP_RECORD_CALL_URL.replace("(room)", room))
 }

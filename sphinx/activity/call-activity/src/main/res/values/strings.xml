@@ -3,4 +3,9 @@
     <string name="back_to_chat">Chat</string>
     <string name="one_participant">1 Participant</string>
     <string name="participant_count">%d Participants</string>
+    <string name="stopped_call_record_message">Recording ended. This call is no longer being recorded</string>
+    <string name="starting_call_recording_message">Starting call recording. Please wait...</string>
+    <string name="call_recording_in_progress_message">Recording in progress.\n Please be aware this call is being recorded.</string>
+    <string name="stopping_call_recording_message">Stopping call recording. Please wait...</string>
+    <string name="error_message_call_recording">Something went wrong. Please try again.</string>
 </resources>

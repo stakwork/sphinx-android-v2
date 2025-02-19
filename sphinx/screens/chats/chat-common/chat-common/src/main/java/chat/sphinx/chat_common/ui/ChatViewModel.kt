@@ -2053,7 +2053,8 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                                         e2eeOn = false,
                                         e2eeKey = "",
                                         stressTest = StressTest.None,
-                                        videoEnabled = !audioOnly
+                                        videoEnabled = !audioOnly,
+                                        roomName = loadResponse.value.roomName
                                     ),
                                 )
                             }

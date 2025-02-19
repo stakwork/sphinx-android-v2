@@ -2,6 +2,9 @@ package com.example.call_activity
 
 import android.app.Activity
 import android.app.PictureInPictureParams
+import android.graphics.BlendMode
+import android.graphics.BlendModeColorFilter
+import android.graphics.PorterDuff
 import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.Bundle
@@ -9,25 +12,40 @@ import android.os.Parcelable
 import android.util.Rational
 import android.view.View
 import android.view.WindowManager
+import android.view.animation.AccelerateDecelerateInterpolator
+import android.view.animation.AccelerateInterpolator
+import android.view.animation.AlphaAnimation
+import android.view.animation.Animation
+import android.view.animation.AnimationSet
+import android.view.animation.BounceInterpolator
+import android.view.animation.DecelerateInterpolator
+import android.view.animation.LinearInterpolator
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.content.res.ResourcesCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
-import chat.sphinx.call_activity.databinding.CallActivityBinding
-import com.xwray.groupie.GroupieAdapter
 import chat.sphinx.call_activity.R
+import chat.sphinx.call_activity.databinding.CallActivityBinding
 import chat.sphinx.concept_image_loader.ImageLoader
+import chat.sphinx.concept_network_query_chat.NetworkQueryChat
+import chat.sphinx.concept_network_query_chat.model.state.StartRecordingState
+import chat.sphinx.concept_network_query_chat.model.state.StopRecordingState
 import com.example.call_activity.dialog.showDebugMenuDialog
-import com.example.call_activity.dialog.showSelectAudioDeviceDialog
 import com.squareup.moshi.Moshi
+import com.xwray.groupie.GroupieAdapter
 import dagger.hilt.android.AndroidEntryPoint
+import io.matthewnelson.concept_coroutines.CoroutineDispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import kotlinx.parcelize.Parcelize
 import javax.inject.Inject
+
 
 @AndroidEntryPoint
 class CallActivity : AppCompatActivity() {
@@ -40,6 +58,12 @@ class CallActivity : AppCompatActivity() {
     @Suppress("ProtectedInFinal")
     protected lateinit var imageLoader: ImageLoader<ImageView>
 
+    @Inject
+    lateinit var networkQueryChat: NetworkQueryChat
+
+    @Inject
+    lateinit var dispatchers: CoroutineDispatchers
+
     private val viewModel: CallViewModel by viewModelByFactory {
         val args = intent.getParcelableExtra<BundleArgs>(KEY_ARGS)
             ?: throw NullPointerException("args is null!")
@@ -51,9 +75,13 @@ class CallActivity : AppCompatActivity() {
             e2eeKey = args.e2eeKey,
             videoEnabled = args.videoEnabled,
             stressTest = args.stressTest,
-            application = application
+            application = application,
+            roomName = args.roomName ?: "",
+            networkQueryChat = networkQueryChat,
+            dispatchers = dispatchers
         )
     }
+
     private lateinit var binding: CallActivityBinding
     private val screenCaptureIntentLauncher =
         registerForActivityResult(
@@ -124,6 +152,119 @@ class CallActivity : AppCompatActivity() {
             }
         }
 
+        lifecycleScope.launch {
+            viewModel.startRecordingState.collectLatest { state ->
+                when (state) {
+                    StartRecordingState.Error -> {
+                        binding.apply {
+                            recordingMessageBox.clearAnimation()
+                            recordingMessage.text = getString(R.string.error_message_call_recording)
+                            fadeOutAnimation(viewToFadeOut = recordingMessageBox)
+                        }
+                    }
+
+                    StartRecordingState.Empty -> {}
+
+                    StartRecordingState.Recording -> {
+                        val recordButtonActiveColor = resources.getColor(
+                            R.color.disabled_icons_color,
+                            null
+                        )
+
+                        val drawable = ResourcesCompat.getDrawable(
+                            resources,
+                            R.drawable.stop_circle,
+                            null
+                        )?.apply {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                colorFilter = BlendModeColorFilter(recordButtonActiveColor, BlendMode.SRC_ATOP)
+                            } else {
+                                setColorFilter(recordButtonActiveColor, PorterDuff.Mode.SRC_ATOP)
+                            }
+                        }
+
+                        binding.apply {
+                            recordingMessageBox.also {
+                                it.clearAnimation()
+                                it.visibility = View.VISIBLE
+                            }
+                            recordingMessage.text = getString(R.string.call_recording_in_progress_message)
+                            recordButton.setImageDrawable(drawable)
+
+                            fadeInFadeOutAnimation(
+                                viewToFadeOut = recordButton,
+                                durationMillis = 700,
+                                alphaStartValue = 1.0f,
+                                alphaEndValue = 0.5f,
+                            )
+                        }
+                    }
+
+                    StartRecordingState.Loading -> {
+                        binding.apply {
+                            recordingMessageBox.also {
+                                it.clearAnimation()
+                                it.visibility = View.VISIBLE
+                            }
+
+                            recordingMessage.text = getString(R.string.starting_call_recording_message)
+                        }
+                    }
+                }
+            }
+        }
+
+        lifecycleScope.launch {
+            viewModel.stopRecordingState.collectLatest { state ->
+                when(state) {
+                    StopRecordingState.Error -> {
+                        binding.apply {
+                            recordingMessageBox.clearAnimation()
+                            recordButton.isEnabled = true
+                            recordingMessage.text = getString(R.string.error_message_call_recording)
+
+                            fadeOutAnimation(
+                                viewToFadeOut = recordingMessageBox,
+                                durationMillis = 10000
+                            )
+                        }
+                    }
+
+                    StopRecordingState.Empty -> {}
+
+                    StopRecordingState.Stopped -> {
+                        binding.apply {
+                            recordingMessageBox.clearAnimation()
+                            recordingMessage.text = getString(R.string.stopped_call_record_message)
+
+                            recordButton.also {
+                                it.clearAnimation()
+                                it.isEnabled = true
+                                it.setImageResource(R.drawable.radio_button_checked)
+                            }
+
+                            fadeOutAnimation(
+                                viewToFadeOut = recordingMessageBox,
+                                durationMillis = 10000
+                            )
+                        }
+                    }
+
+                    StopRecordingState.Loading -> {
+                        binding.apply {
+                            recordingMessageBox.also {
+                                it.clearAnimation()
+                                it.visibility = View.VISIBLE
+                            }
+
+                            recordButton.isEnabled = false
+                            recordingMessage.text = getString(R.string.stopping_call_recording_message)
+                        }
+                    }
+                }
+            }
+        }
+
         // Controls setup
         viewModel.cameraEnabled.observe(this) { enabled ->
             binding.camera.setOnClickListener { viewModel.setCameraEnabled(!enabled) }
@@ -157,6 +298,7 @@ class CallActivity : AppCompatActivity() {
 
             binding.flipCamera.isEnabled = enabled
         }
+
         viewModel.micEnabled.observe(this) { enabled ->
             binding.mic.setOnClickListener { viewModel.setMicEnabled(!enabled) }
             binding.mic.setImageResource(
@@ -212,7 +354,7 @@ class CallActivity : AppCompatActivity() {
                 .create()
                 .show()
         }
-
+©
         viewModel.enhancedNsEnabled.observe(this) { enabled ->
             binding.enhancedNs.visibility = if (enabled) {
                 android.view.View.VISIBLE
@@ -261,6 +403,9 @@ class CallActivity : AppCompatActivity() {
             }
         }
 
+        binding.recordButton.setOnClickListener {
+            viewModel.toggleRecording()
+        }
 
         lifecycleScope.launchWhenCreated {
             viewModel.participants.collect { participants ->
@@ -277,6 +422,35 @@ class CallActivity : AppCompatActivity() {
             }
         }
 
+    }
+
+    private fun fadeOutAnimation(
+        viewToFadeOut: View,
+        durationMillis: Long = 3500
+    ) {
+        val animation = AlphaAnimation(1f, 0f).apply {
+            fillAfter = true
+            duration = durationMillis
+        }
+
+        viewToFadeOut.startAnimation(animation)
+    }
+
+    private fun fadeInFadeOutAnimation(
+        viewToFadeOut: View,
+        durationMillis: Long = 500,
+        alphaStartValue: Float =  1.0f,
+        alphaEndValue: Float =  0.5f,
+    ) {
+        val animation = AlphaAnimation(alphaStartValue, alphaEndValue).apply {
+            fillAfter = true
+            duration = durationMillis
+            repeatCount = Animation.INFINITE
+            interpolator = AccelerateInterpolator()
+            repeatMode = Animation.REVERSE
+        }
+
+        viewToFadeOut.startAnimation(animation)
     }
 
     override fun onUserLeaveHint() {
@@ -356,6 +530,7 @@ class CallActivity : AppCompatActivity() {
         val e2eeKey: String,
         val e2eeOn: Boolean,
         val stressTest: StressTest,
-        val videoEnabled: Boolean
+        val videoEnabled: Boolean,
+        val roomName: String? = null
     ) : Parcelable
 }

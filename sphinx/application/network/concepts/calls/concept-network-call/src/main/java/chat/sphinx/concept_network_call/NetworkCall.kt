@@ -71,6 +71,17 @@ abstract class NetworkCall {
     ): Flow<LoadResponse<String, ResponseError>>
 
     /**
+     * GET
+     *
+     * @param [url] the url
+     * @param [headers] any headers that need to be added to the request
+     * */
+    abstract suspend fun getWithoutJson(
+        url: String,
+        headers: Map<String, String>? = null,
+    ): Flow<LoadResponse<String, ResponseError>>
+
+    /**
      * PUT
      *
      * @param [responseJsonClass] the class to serialize the response json into

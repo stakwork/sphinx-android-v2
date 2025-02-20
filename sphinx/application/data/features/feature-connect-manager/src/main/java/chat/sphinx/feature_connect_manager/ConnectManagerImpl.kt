@@ -406,31 +406,6 @@ class ConnectManagerImpl: ConnectManager()
                 Log.d("MQTT_MESSAGES", "=> new_invite $invite")
             }
 
-            rr.inviterContactInfo?.let { inviterInfo ->
-                val parts = inviterInfo.split("_")
-                val okKey = parts.getOrNull(0)?.toLightningNodePubKey()
-                val routeHint = "${parts.getOrNull(1)}_${parts.getOrNull(2)}".toLightningRouteHint()
-
-                val code = codeFromInvite(inviteCode!!)
-
-                inviterContact = NewContact(
-                    null,
-                    okKey,
-                    routeHint,
-                    null,
-                    false,
-                    null,
-                    code,
-                    null,
-                    null,
-                    null
-                )
-
-                subscribeOwnerMQTT()
-
-                Log.d("MQTT_MESSAGES", "=> inviterInfo $inviterInfo")
-            }
-
             rr.msgsCounts?.let { msgsCounts ->
                 processMessagesCounts(msgsCounts)
             }
@@ -782,7 +757,14 @@ class ConnectManagerImpl: ConnectManager()
                 ownerSeed = firstSeed
 
                 if (inviteCode != null) {
-                    invite = parseInvite(inviteCode!!)
+                    try {
+                        invite = parseInvite(inviteCode!!)
+                    } catch (e: Exception) {
+                        notifyListeners {
+                            onConnectManagerError(ConnectManagerError.ParseInvite)
+                        }
+                        return@let
+                    }
 
                     val hostAndPubKey = invite.initialTribe?.let { extractTribeServerAndPubkey(it) }
                     val parts = invite.inviterContactInfo?.split("_")
@@ -860,8 +842,14 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
-    override fun setInviteCode(inviteString: String) {
-        this.inviteCode = inviteString
+    override fun restoreFailed() {
+        notifyListeners {
+            onConnectManagerError(ConnectManagerError.RestoreConnectionError)
+        }
+    }
+
+    override fun setInviteCode(inviteString: String?) {
+        this.inviteCode = inviteString?.trim()
     }
 
     override fun setMnemonicWords(words: List<String>?) {

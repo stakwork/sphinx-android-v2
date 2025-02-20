@@ -40,7 +40,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
 
 class SphinxRepositoryAndroid(
-    accountOwner: StateFlow<Contact?>,
     applicationScope: CoroutineScope,
     authenticationCoreManager: AuthenticationCoreManager,
     authenticationStorage: AuthenticationStorage,
@@ -66,7 +65,6 @@ class SphinxRepositoryAndroid(
     sphinxNotificationManager: SphinxNotificationManager,
     LOG: SphinxLogger,
 ): SphinxRepository(
-    accountOwner,
     applicationScope,
     authenticationCoreManager,
     authenticationStorage,

@@ -63,6 +63,7 @@ import chat.sphinx.example.wrapper_mqtt.toLspChannelInfo
 import chat.sphinx.feature_repository.mappers.action_track.*
 import chat.sphinx.feature_repository.mappers.chat.ChatDboPresenterMapper
 import chat.sphinx.feature_repository.mappers.contact.ContactDboPresenterMapper
+import chat.sphinx.feature_repository.mappers.contact.toContact
 import chat.sphinx.feature_repository.mappers.feed.*
 import chat.sphinx.feature_repository.mappers.feed.podcast.FeedDboFeedSearchResultPresenterMapper
 import chat.sphinx.feature_repository.mappers.feed.podcast.FeedDboPodcastPresenterMapper
@@ -164,7 +165,6 @@ import java.util.*
 
 
 abstract class SphinxRepository(
-    override val accountOwner: StateFlow<Contact?>,
     private val applicationScope: CoroutineScope,
     private val authenticationCoreManager: AuthenticationCoreManager,
     private val authenticationStorage: AuthenticationStorage,
@@ -214,6 +214,9 @@ abstract class SphinxRepository(
 
         const val MEDIA_KEY_SIZE = 32
     }
+
+    private val _accountOwner = MutableStateFlow<Contact?>(null)
+    override val accountOwner: StateFlow<Contact?> = _accountOwner
 
 
     ////////////////////////
@@ -271,6 +274,23 @@ abstract class SphinxRepository(
     init {
         connectManager.addListener(this)
         memeServerTokenHandler.addListener(this)
+
+        refreshAccountOwner()
+    }
+
+    private fun refreshAccountOwner() {
+        applicationScope.launch(mainImmediate) {
+            val queries = coreDB.getSphinxDatabaseQueries()
+            applicationScope.launch(dispatchers.io) {
+                queries.contactGetOwner()
+                    .asFlow()
+                    .mapToOneOrNull(dispatchers.io)
+                    .map { it?.toContact() }
+                    .collect { contact ->
+                        _accountOwner.value = contact
+                    }
+            }
+        }
     }
 
     override fun connectAndSubscribeToMqtt(userState: String?, mixerIp: String?) {
@@ -326,6 +346,14 @@ abstract class SphinxRepository(
         connectManager.createAccount()
     }
 
+    override fun resetAccount() {
+        setInviteCode(null)
+        setMnemonicWords(emptyList())
+        connectionManagerState.value = null
+        connectManagerErrorState.value = null
+    }
+
+
     override fun startRestoreProcess() {
         applicationScope.launch(mainImmediate) {
             var msgCounts: MsgsCounts? = null
@@ -356,7 +384,7 @@ abstract class SphinxRepository(
         }
     }
 
-    override fun setInviteCode(inviteString: String) {
+    override fun setInviteCode(inviteString: String?) {
         connectManager.setInviteCode(inviteString)
     }
 
@@ -732,6 +760,8 @@ abstract class SphinxRepository(
             if (scid != null && accountOwner.value?.nodePubKey == null) {
                 createOwner(okKey, routeHint, scid)
 
+                refreshAccountOwner()
+
                 connectionManagerState.value = OwnerRegistrationState.OwnerRegistered(
                     isRestoreAccount,
                     mixerServerIp,
@@ -760,6 +790,9 @@ abstract class SphinxRepository(
                             loadResponse.value.default_lsp,
                             loadResponse.value.router
                         )
+                    }
+                    is Response.Error -> {
+                        connectManager.restoreFailed()
                     }
                     else -> {}
                 }

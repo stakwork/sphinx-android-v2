@@ -11,6 +11,7 @@ import io.matthewnelson.concept_encryption_key.EncryptionKey
 import io.matthewnelson.crypto_common.annotations.RawPasswordAccess
 import net.sqlcipher.database.SQLiteDatabase
 import net.sqlcipher.database.SupportFactory
+import java.io.File
 
 class SphinxCoreDBImpl(
     context: Context,
@@ -59,9 +60,22 @@ class SphinxCoreDBImpl(
             driver?.close() // Close the database before deleting
             driver = null
 
-            val databasePath = appContext.getDatabasePath(DB_NAME)
-            if (databasePath.exists()) {
-                databasePath.delete()
+            val defaultPath = appContext.getDatabasePath(DB_NAME)
+            if (defaultPath.exists()) {
+                defaultPath.delete()
+                return
+            }
+
+            val noBackupPath = File(appContext.noBackupFilesDir, DB_NAME)
+            if (noBackupPath.exists()) {
+                noBackupPath.delete()
+                return
+            }
+
+            val filesDirPath = File(appContext.filesDir, DB_NAME)
+            if (filesDirPath.exists()) {
+                filesDirPath.delete()
+                return
             }
         }
     }

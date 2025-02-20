@@ -276,8 +276,6 @@ internal class ProfileViewModel @Inject constructor(
 
         viewModelScope.launch(mainImmediate) {
             keyRestore.clearAll()
-            repositoryDashboard.clearDatabase()
-
             navigator.toOnBoardWelcomeScreen()
         }
     }

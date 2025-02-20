@@ -36,6 +36,7 @@ import com.squareup.sqldelight.db.SqlDriver
 import io.matthewnelson.concept_encryption_key.EncryptionKey
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import java.io.File
 
 abstract class CoreDBImpl(private val moshi: Moshi): CoreDB() {
 
@@ -54,6 +55,8 @@ abstract class CoreDBImpl(private val moshi: Moshi): CoreDB() {
     }
 
     protected abstract fun getSqlDriver(encryptionKey: EncryptionKey): SqlDriver
+
+    protected abstract fun deleteDatabase()
 
     private val initializationLock = Object()
 
@@ -276,6 +279,16 @@ abstract class CoreDBImpl(private val moshi: Moshi): CoreDB() {
                     created_atAdapter = DateTimeAdapter.getInstance()
                 )
             ).sphinxDatabaseQueries
+        }
+    }
+
+    fun wipeDatabase() {
+        synchronized(initializationLock) {
+            if (isInitialized) {
+                sphinxDatabaseQueriesStateFlow.value = null
+            }
+
+            deleteDatabase()
         }
     }
 

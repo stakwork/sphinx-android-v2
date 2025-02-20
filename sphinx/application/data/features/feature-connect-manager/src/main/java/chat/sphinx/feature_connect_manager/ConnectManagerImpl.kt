@@ -2039,30 +2039,6 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
-    private fun publishTopicsSequentially(topics: Array<String>, messages: Array<String>?, index: Int) {
-        if (index < topics.size) {
-            val topic = topics[index]
-            val mqttMessage = messages?.getOrNull(index)
-
-            val message = if (mqttMessage?.isNotEmpty() == true) {
-                MqttMessage(mqttMessage.toByteArray())
-            } else {
-                MqttMessage()
-            }
-
-            mqttClient?.publish(topic, message, null, object : IMqttActionListener {
-                override fun onSuccess(asyncActionToken: IMqttToken?) {
-                    // Recursively call the function with the next index
-                    publishTopicsSequentially(topics, messages, index + 1)
-                }
-
-                override fun onFailure(asyncActionToken: IMqttToken?, exception: Throwable?) {
-                    Log.d("MQTT_MESSAGES", "Failed to publish to $topic: ${exception?.message}")
-                }
-            })
-        }
-    }
-
     // Utility Methods
     @OptIn(ExperimentalUnsignedTypes::class)
     private fun generateRandomBytes(size: Int): UByteArray {

@@ -37,7 +37,9 @@ sealed class LayoutState private constructor() {
         val showFailedContainer: Boolean,
         val showLockIcon: Boolean,
         val timestamp: String,
-        val errorMessage: String?
+        val errorMessage: String?,
+        val messageTimestamp: Long,
+        val showClockIcon: Boolean
     ): LayoutState() {
         val showReceived: Boolean
             get() = !showSent

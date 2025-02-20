@@ -1192,6 +1192,17 @@ abstract class ChatFragment<
                                     }
                                 }
                             }
+
+                            textViewChatHeaderClockIcon.apply {
+                                viewModel.clockIconState.collect { showClockIcon ->
+                                    if (showClockIcon) {
+                                        this.visible
+                                    } else {
+                                        this.gone
+                                    }
+                                }
+                            }
+
                         }
                     }
                 }

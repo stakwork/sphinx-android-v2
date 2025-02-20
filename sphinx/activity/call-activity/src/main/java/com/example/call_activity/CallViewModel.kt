@@ -47,6 +47,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
@@ -136,14 +137,18 @@ class CallViewModel constructor(
     val dataReceived = mutableDataReceived
 
     private var isRecording = false
+    private var isLocalParticipantRecording = false
 
     private val mutableStartRecordingState: MutableStateFlow<StartRecordingState> = MutableStateFlow(StartRecordingState.Empty)
-    val startRecordingState: StateFlow<StartRecordingState>
-        get() = mutableStartRecordingState
+    private val mutableIsLocalParticipantRecording: MutableStateFlow<Boolean> = MutableStateFlow(false)
+
+    val startRecordingState = combine(mutableStartRecordingState, mutableIsLocalParticipantRecording) {
+        startRecordState:StartRecordingState, isLocalParticipantRecording: Boolean ->
+        Pair(startRecordState, isLocalParticipantRecording)
+    }
 
     private val mutableStopRecordingState: MutableStateFlow<StopRecordingState> = MutableStateFlow(StopRecordingState.Empty)
-    val stopRecordingState: StateFlow<StopRecordingState>
-        get() = mutableStopRecordingState
+    val stopRecordingState: StateFlow<StopRecordingState> = mutableStopRecordingState.asStateFlow()
 
     // Whether other participants are allowed to subscribe to this participant's tracks.
     private val mutablePermissionAllowed = MutableStateFlow(true)
@@ -209,9 +214,17 @@ class CallViewModel constructor(
 
     private fun handleRecordingStatus(roomEvent: RoomEvent) {
         if (roomEvent.room.isRecording) {
+            mutableIsLocalParticipantRecording.value = isLocalParticipantRecording
             mutableStartRecordingState.value = StartRecordingState.Recording
-        } else {
+            resetStopRecordingState()
+         } else {
+             if(isLocalParticipantRecording) {
+                 isLocalParticipantRecording = false
+             }
+
+            mutableIsLocalParticipantRecording.value = isLocalParticipantRecording
             mutableStopRecordingState.value = StopRecordingState.Stopped
+            resetStartRecordingState()
         }
     }
 
@@ -379,6 +392,7 @@ class CallViewModel constructor(
     }
 
     fun toggleRecording() {
+        isLocalParticipantRecording = !isLocalParticipantRecording
         isRecording = !isRecording
 
         viewModelScope.launch(dispatchers.io) {

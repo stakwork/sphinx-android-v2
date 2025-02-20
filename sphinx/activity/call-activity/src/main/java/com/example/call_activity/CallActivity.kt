@@ -5,6 +5,7 @@ import android.app.PictureInPictureParams
 import android.graphics.BlendMode
 import android.graphics.BlendModeColorFilter
 import android.graphics.PorterDuff
+import android.graphics.drawable.Drawable
 import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.Bundle
@@ -12,14 +13,9 @@ import android.os.Parcelable
 import android.util.Rational
 import android.view.View
 import android.view.WindowManager
-import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.animation.AccelerateInterpolator
 import android.view.animation.AlphaAnimation
 import android.view.animation.Animation
-import android.view.animation.AnimationSet
-import android.view.animation.BounceInterpolator
-import android.view.animation.DecelerateInterpolator
-import android.view.animation.LinearInterpolator
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
@@ -40,7 +36,6 @@ import com.squareup.moshi.Moshi
 import com.xwray.groupie.GroupieAdapter
 import dagger.hilt.android.AndroidEntryPoint
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.parcelize.Parcelize
@@ -153,8 +148,10 @@ class CallActivity : AppCompatActivity() {
         }
 
         lifecycleScope.launch {
-            viewModel.startRecordingState.collectLatest { state ->
-                when (state) {
+            viewModel.startRecordingState.collectLatest {
+                (recordingState: StartRecordingState, isLocalParticipantRecording: Boolean)  ->
+
+                when (recordingState) {
                     StartRecordingState.Error -> {
                         binding.apply {
                             recordingMessageBox.clearAnimation()
@@ -166,30 +163,14 @@ class CallActivity : AppCompatActivity() {
                     StartRecordingState.Empty -> {}
 
                     StartRecordingState.Recording -> {
-                        val recordButtonActiveColor = resources.getColor(
-                            R.color.disabled_icons_color,
-                            null
-                        )
-
-                        val drawable = ResourcesCompat.getDrawable(
-                            resources,
-                            R.drawable.stop_circle,
-                            null
-                        )?.apply {
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                                colorFilter = BlendModeColorFilter(recordButtonActiveColor, BlendMode.SRC_ATOP)
-                            } else {
-                                setColorFilter(recordButtonActiveColor, PorterDuff.Mode.SRC_ATOP)
-                            }
-                        }
-
                         binding.apply {
                             recordingMessageBox.also {
                                 it.clearAnimation()
                                 it.visibility = View.VISIBLE
                             }
+
                             recordingMessage.text = getString(R.string.call_recording_in_progress_message)
-                            recordButton.setImageDrawable(drawable)
+                            recordButton.setImageDrawable(getRecordDrawable(isLocalParticipantRecording))
 
                             fadeInFadeOutAnimation(
                                 viewToFadeOut = recordButton,
@@ -422,6 +403,26 @@ class CallActivity : AppCompatActivity() {
             }
         }
 
+    }
+
+    private fun getRecordDrawable(isLocalParticipantRecording: Boolean): Drawable? {
+        val recordButtonActiveColor = resources.getColor(
+            R.color.disabled_icons_color,
+            null
+        )
+
+        val drawable = ResourcesCompat.getDrawable(
+            resources,
+            if (isLocalParticipantRecording) R.drawable.stop_circle else R.drawable.radio_button_checked,
+            null
+        )?.apply {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                colorFilter = BlendModeColorFilter(recordButtonActiveColor, BlendMode.SRC_ATOP)
+            } else {
+                setColorFilter(recordButtonActiveColor, PorterDuff.Mode.SRC_ATOP)
+            }
+        }
+        return drawable
     }
 
     private fun fadeOutAnimation(

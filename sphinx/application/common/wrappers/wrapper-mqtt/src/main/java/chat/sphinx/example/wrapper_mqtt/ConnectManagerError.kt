@@ -6,6 +6,7 @@ sealed class ConnectManagerError {
     object GenerateMnemonicError: ConnectManagerError()
     object ProcessInviteError: ConnectManagerError()
     object SubscribeOwnerError: ConnectManagerError()
+    object ParseInvite: ConnectManagerError()
     data class MqttConnectError(val error: String?): ConnectManagerError()
     object MqttClientError: ConnectManagerError()
     data class MqttInitError(val logs: String) : ConnectManagerError()
@@ -36,4 +37,5 @@ sealed class ConnectManagerError {
     object SendBoostError: ConnectManagerError()
     object MqttReconnectError: ConnectManagerError()
     object XPubOrSignError: ConnectManagerError()
+    object RestoreConnectionError: ConnectManagerError()
 }

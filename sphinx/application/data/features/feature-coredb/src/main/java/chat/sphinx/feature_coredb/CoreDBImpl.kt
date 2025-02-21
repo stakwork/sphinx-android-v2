@@ -20,7 +20,6 @@ import chat.sphinx.feature_coredb.adapters.lsp.LsatPathsAdapter
 import chat.sphinx.feature_coredb.adapters.lsp.LsatPreImageAdapter
 import chat.sphinx.feature_coredb.adapters.lsp.LsatStatusAdapter
 import chat.sphinx.feature_coredb.adapters.lsp.MacaroonAdapter
-import chat.sphinx.feature_coredb.adapters.media.*
 import chat.sphinx.feature_coredb.adapters.media.FileNameAdapter
 import chat.sphinx.feature_coredb.adapters.media.MediaKeyAdapter
 import chat.sphinx.feature_coredb.adapters.media.MediaKeyDecryptedAdapter

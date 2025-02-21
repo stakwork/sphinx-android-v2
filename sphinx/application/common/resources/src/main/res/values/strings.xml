@@ -323,6 +323,8 @@
     <string name="connect_manager_keysend_error">Error on keysend</string>
     <string name="connect_manager_mqtt_reconnect_error">Error trying to reconnect.</string>
     <string name="connect_manager_xpub_or_sign_error">Error generating xPub or signature issues</string>
+    <string name="connect_manager_parse_invite_error">Error parsing invite</string>
+    <string name="connect_manager_restore_connection_error">Error connecting to MQTT</string>
     <string name="connect_manager_load_transactions_error">Error loading transactions</string>
     <string name="alert_confirm_delete_invite_title">Delete Invite</string>
     <string name="alert_confirm_delete_invite_message">Are you sure you want to delete this invite?</string>

@@ -122,6 +122,7 @@ object RepositoryModule {
     @Provides
     @Singleton
     fun provideSphinxRepositoryAndroid(
+        accountOwner: StateFlow<Contact?>,
         applicationScope: CoroutineScope,
         authenticationCoreManager: AuthenticationCoreManager,
         authenticationStorage: AuthenticationStorage,
@@ -148,6 +149,7 @@ object RepositoryModule {
         sphinxLogger: SphinxLogger,
     ): SphinxRepositoryAndroid =
         SphinxRepositoryAndroid(
+            accountOwner,
             applicationScope,
             authenticationCoreManager,
             authenticationStorage,

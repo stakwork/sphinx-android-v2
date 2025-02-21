@@ -165,6 +165,7 @@ import java.util.*
 
 
 abstract class SphinxRepository(
+    override val accountOwner: StateFlow<Contact?>,
     private val applicationScope: CoroutineScope,
     private val authenticationCoreManager: AuthenticationCoreManager,
     private val authenticationStorage: AuthenticationStorage,
@@ -214,10 +215,6 @@ abstract class SphinxRepository(
 
         const val MEDIA_KEY_SIZE = 32
     }
-
-    private val _accountOwner = MutableStateFlow<Contact?>(null)
-    override val accountOwner: StateFlow<Contact?> = _accountOwner
-
 
     ////////////////////////
     /// Connect Manager ///
@@ -274,23 +271,6 @@ abstract class SphinxRepository(
     init {
         connectManager.addListener(this)
         memeServerTokenHandler.addListener(this)
-
-        refreshAccountOwner()
-    }
-
-    private fun refreshAccountOwner() {
-        applicationScope.launch(mainImmediate) {
-            val queries = coreDB.getSphinxDatabaseQueries()
-            applicationScope.launch(dispatchers.io) {
-                queries.contactGetOwner()
-                    .asFlow()
-                    .mapToOneOrNull(dispatchers.io)
-                    .map { it?.toContact() }
-                    .collect { contact ->
-                        _accountOwner.value = contact
-                    }
-            }
-        }
     }
 
     override fun connectAndSubscribeToMqtt(userState: String?, mixerIp: String?) {
@@ -351,6 +331,10 @@ abstract class SphinxRepository(
         setMnemonicWords(emptyList())
         connectionManagerState.value = null
         connectManagerErrorState.value = null
+
+        applicationScope.launch(io) {
+            clearDatabase()
+        }
     }
 
 
@@ -759,8 +743,6 @@ abstract class SphinxRepository(
 
             if (scid != null && accountOwner.value?.nodePubKey == null) {
                 createOwner(okKey, routeHint, scid)
-
-                refreshAccountOwner()
 
                 connectionManagerState.value = OwnerRegistrationState.OwnerRegistered(
                     isRestoreAccount,

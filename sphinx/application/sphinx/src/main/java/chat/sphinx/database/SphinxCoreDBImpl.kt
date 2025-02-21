@@ -54,29 +54,4 @@ class SphinxCoreDBImpl(
             )
         }
     }
-
-    override fun deleteDatabase() {
-        synchronized(this) {
-            driver?.close() // Close the database before deleting
-            driver = null
-
-            val defaultPath = appContext.getDatabasePath(DB_NAME)
-            if (defaultPath.exists()) {
-                defaultPath.delete()
-                return
-            }
-
-            val noBackupPath = File(appContext.noBackupFilesDir, DB_NAME)
-            if (noBackupPath.exists()) {
-                noBackupPath.delete()
-                return
-            }
-
-            val filesDirPath = File(appContext.filesDir, DB_NAME)
-            if (filesDirPath.exists()) {
-                filesDirPath.delete()
-                return
-            }
-        }
-    }
 }

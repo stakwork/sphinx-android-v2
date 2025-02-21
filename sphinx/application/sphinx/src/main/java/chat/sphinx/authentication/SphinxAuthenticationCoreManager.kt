@@ -41,8 +41,6 @@ class SphinxAuthenticationCoreManager(
 
     fun logOut() {
         setAuthenticationStateRequired(AuthenticationState.Required.InitialLogIn)
-
-//        sphinxCoreDBImpl.wipeDatabase()
     }
 
     @SuppressLint("SourceLockedOrientationActivity")

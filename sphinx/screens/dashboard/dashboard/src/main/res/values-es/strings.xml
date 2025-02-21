@@ -62,6 +62,7 @@
     <string name="last_message_description_has_join_tribe">%s se ha unido a la tribu</string>
     <string name="last_message_description_just_left_tribe">%s ha abandonado la tribu</string>
     <string name="last_message_description_wants_to_join">%s desea unirse a la tribu</string>
+    <string name="last_message_description_member_kicked">Has eliminado a un miembro de esta tribu</string>
     <string name="last_message_description_declined_request_from">Has denegado la solicitud de %s</string>
     <string name="last_message_description_approved_request_from">Has aprobado la solicitud de %s</string>
     <string name="last_message_description_admin_declined_request">El administrador ha denegado tu solicitud</string>

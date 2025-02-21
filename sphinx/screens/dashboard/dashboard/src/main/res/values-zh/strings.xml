@@ -61,6 +61,7 @@
 
     <string name="last_message_description_has_join_tribe">%s 已加入部落</string>
     <string name="last_message_description_just_left_tribe">%s 已離開部落</string>
+    <string name="last_message_description_member_kicked">You have removed a member from this tribe</string>
     <string name="last_message_description_wants_to_join">%s 想加入部落</string>
     <string name="last_message_description_declined_request_from">你已拒絕來自 %s 的請求</string>
     <string name="last_message_description_approved_request_from">你已同意來自 %s 的請求</string>

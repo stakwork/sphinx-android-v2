@@ -68,8 +68,8 @@
     <string name="tribe_leave_announcement">%1$s just left the tribe</string>
     <string name="group_leave_announcement">%1$s just left the group</string>
     <string name="tribe_deleted_announcement">Tinanggal ng admin ang kanyang tribo</string>
-    <string name="group_kick_announcement_member_side">Inalis ka na ng admin mula sa grupong ito</string>
-    <string name="tribe_kick_announcement_member_side">Inalis ka na ng admin mula sa tribong ito</string>
+    <string name="group_kick_announcement_member_side">Inalis ka na ng admin mula\nsa grupong ito</string>
+    <string name="tribe_kick_announcement_member_side">Inalis ka na ng admin mula\nsa tribong ito</string>
     <string name="tribe_welcome_announcement_member_side">Maligayang pagdating! Miyembro ka na ngayon</string>
     <string name="tribe_deleted_announcement_button_delete">Tanggalin ang Tribo</string>
     <string name="selected_message_menu_item_boost">Boost</string>

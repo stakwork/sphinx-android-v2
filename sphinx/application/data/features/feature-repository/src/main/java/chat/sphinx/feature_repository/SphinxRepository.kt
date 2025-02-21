@@ -3350,10 +3350,18 @@ abstract class SphinxRepository(
                                     }
                             }
 
-                            val chat = queries.chatGetById(chatId).executeAsOneOrNull()
+                            val chatDbo = queries.chatGetById(chatId).executeAsOneOrNull()
+                            var isMyTribe = false
+
+                            chatDbo?.let {
+                                val chat = chatDboPresenterMapper.mapFrom(chatDbo)
+                                isMyTribe = chat.isTribeOwnedByAccount(accountOwner.value?.nodePubKey)
+                            }
 
                             val filteredMemberRequests = listMessageDbo.filter { dbo ->
-                                if (!dbo.type.isMemberRequest()) {
+                                if (dbo.type.isGroupKick() && isMyTribe) {
+                                    false
+                                } else if (!dbo.type.isMemberRequest()) {
                                     true
                                 } else {
                                     val hasResponse = dbo.uuid?.let { uuid ->
@@ -3372,7 +3380,7 @@ abstract class SphinxRepository(
                                     dbo.uuid?.let { threadMap[it] },
                                     dbo.muid?.let { purchaseItemsMap[it] },
                                     dbo.reply_uuid,
-                                    chat
+                                    chatDbo
                                 )
                             }
                         }

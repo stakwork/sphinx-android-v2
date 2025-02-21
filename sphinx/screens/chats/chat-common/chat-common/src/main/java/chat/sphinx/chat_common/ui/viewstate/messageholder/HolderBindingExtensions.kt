@@ -848,6 +848,7 @@ internal inline fun LayoutMessageHolderBinding.setStatusHeader(
                 textViewMessageStatusSentTimestamp.text = statusHeader.timestamp
                 textViewMessageStatusSentLockIcon.goneIfFalse(statusHeader.showLockIcon)
                 progressBarMessageStatusSending.goneIfFalse(statusHeader.showSendingIcon)
+                textViewMessageStatusClockIcon.goneIfFalse(statusHeader.showClockIcon)
                 textViewMessageStatusSentBoltIcon.goneIfFalse(statusHeader.showBoltIcon)
                 layoutConstraintMessageStatusSentFailedContainer.goneIfFalse(statusHeader.showFailedContainer)
 
@@ -872,6 +873,22 @@ internal inline fun LayoutMessageHolderBinding.setStatusHeader(
             } else {
                 textViewMessageStatusReceivedTimestamp.text = statusHeader.timestamp
                 textViewMessageStatusReceivedLockIcon.goneIfFalse(statusHeader.showLockIcon)
+            }
+
+            val currentTime = System.currentTimeMillis()
+            val messageAge = currentTime - statusHeader.messageTimestamp
+
+            val showClockIcon = messageAge > 30_000 &&
+                    !statusHeader.showFailedContainer &&
+                    !statusHeader.showBoltIcon &&
+                    !statusHeader.showGrayBoltIcon
+
+            if (showClockIcon) {
+                progressBarMessageStatusSending.gone
+                textViewMessageStatusClockIcon.visible
+
+            } else {
+                textViewMessageStatusClockIcon.gone
             }
         }
     }

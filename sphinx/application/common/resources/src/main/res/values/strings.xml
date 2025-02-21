@@ -36,6 +36,7 @@
     <string name="material_icon_name_lock_open" translatable="false">lock_open</string>
     <string name="material_icon_name_error" translatable="false">error</string>
     <string name="material_icon_name_bolt" translatable="false">flash_on</string>
+    <string name="material_icon_name_clock" translatable="false">\uE192</string>
     <string name="material_icon_name_backspace_button" translatable="false">backspace</string>
     <string name="material_icon_name_call_button" translatable="false">phone</string>
     <string name="material_icon_name_close" translatable="false">close</string>

@@ -100,6 +100,17 @@
                     app:layout_constraintBottom_toBottomOf="@+id/text_view_chat_header_name"
                     app:layout_constraintStart_toEndOf="@+id/text_view_chat_header_lock"
                     app:layout_constraintTop_toTopOf="@+id/text_view_chat_header_name" />
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:id="@+id/text_view_chat_header_clock_icon"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:fontFamily="@font/material_icons_regular"
+                    android:textSize="15sp"
+                    android:textColor="@color/sphinxOrange"
+                    android:text="@string/material_icon_name_clock"
+                    app:layout_constraintBottom_toBottomOf="@+id/text_view_chat_header_name"
+                    app:layout_constraintStart_toEndOf="@+id/text_view_chat_header_connectivity"
+                    app:layout_constraintTop_toTopOf="@+id/text_view_chat_header_name" />
 
                 <!-- Pod Cast Contributions -->
                 <androidx.appcompat.widget.AppCompatTextView

@@ -111,6 +111,9 @@ internal sealed class MessageHolderViewState(
             val isInvoicePayment = message.type.isInvoicePayment()
 
             if (isFirstBubble || isInvoicePayment) {
+
+                val messageTimestamp = message.date.time
+
                 LayoutState.MessageStatusHeader(
                     if (chat.type.isConversation()) null else message.senderAlias?.value,
                     if (initialHolder is InitialHolderViewState.Initials) initialHolder.colorKey else message.getColorKey(),
@@ -121,7 +124,9 @@ internal sealed class MessageHolderViewState(
                     this is Sent && message.status.isFailed(),
                     message.messageContentDecrypted != null || message.messageMedia?.mediaKeyDecrypted != null,
                     message.date.messageTimeFormat(),
-                    message.errorMessage?.value?.trim()
+                    message.errorMessage?.value?.trim(),
+                    messageTimestamp = messageTimestamp,
+                    showClockIcon = false
                 )
             } else {
                 null

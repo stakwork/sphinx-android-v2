@@ -1113,7 +1113,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                     val lastMessage = messages.lastOrNull()
                     val showClockIcon = lastMessage?.let {
                         it.status == MessageStatus.Pending &&
-                                System.currentTimeMillis() - it.date.time < 30_000
+                                System.currentTimeMillis() - it.date.time > 30_000
                     } == true
 
                     updateClockIconState(showClockIcon)

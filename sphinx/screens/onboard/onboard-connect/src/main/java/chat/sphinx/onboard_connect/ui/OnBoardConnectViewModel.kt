@@ -18,36 +18,36 @@ import chat.sphinx.menu_bottom_phone_signer_method.PhoneSignerMethodMenuHandler
 import chat.sphinx.menu_bottom_phone_signer_method.PhoneSignerMethodMenuViewModel
 import chat.sphinx.menu_bottom_signer.SignerMenuHandler
 import chat.sphinx.menu_bottom_signer.SignerMenuViewModel
-import chat.sphinx.onboard_connect.navigation.OnBoardConnectNavigator
-import chat.sphinx.scanner_view_model_coordinator.request.ScannerRequest
-import chat.sphinx.scanner_view_model_coordinator.response.ScannerResponse
-import chat.sphinx.wrapper_invite.toValidInviteStringOrNull
-import chat.sphinx.resources.R as R_common
-import dagger.hilt.android.lifecycle.HiltViewModel
-import io.matthewnelson.android_feature_navigation.util.navArgs
-import io.matthewnelson.android_feature_viewmodel.SideEffectViewModel
-import io.matthewnelson.android_feature_viewmodel.submitSideEffect
-import io.matthewnelson.android_feature_viewmodel.updateViewState
-import io.matthewnelson.concept_coroutines.CoroutineDispatchers
-import io.matthewnelson.concept_views.viewstate.ViewStateContainer
 import chat.sphinx.onboard_common.model.RedemptionCode
 import chat.sphinx.onboard_connect.R
+import chat.sphinx.onboard_connect.navigation.OnBoardConnectNavigator
 import chat.sphinx.onboard_connect.viewstate.MnemonicDialogViewState
 import chat.sphinx.onboard_connect.viewstate.MnemonicWordsViewState
 import chat.sphinx.onboard_connect.viewstate.OnBoardConnectSubmitButtonViewState
 import chat.sphinx.onboard_connect.viewstate.OnBoardConnectViewState
 import chat.sphinx.resources.MnemonicLanguagesUtils
+import chat.sphinx.scanner_view_model_coordinator.request.ScannerRequest
+import chat.sphinx.scanner_view_model_coordinator.response.ScannerResponse
+import chat.sphinx.wrapper_invite.toValidInviteStringOrNull
 import com.squareup.moshi.Moshi
+import dagger.hilt.android.lifecycle.HiltViewModel
+import io.matthewnelson.android_feature_navigation.util.navArgs
+import io.matthewnelson.android_feature_viewmodel.SideEffectViewModel
 import io.matthewnelson.android_feature_viewmodel.currentViewState
+import io.matthewnelson.android_feature_viewmodel.submitSideEffect
+import io.matthewnelson.android_feature_viewmodel.updateViewState
 import io.matthewnelson.concept_authentication.coordinator.AuthenticationCoordinator
 import io.matthewnelson.concept_authentication.coordinator.AuthenticationRequest
 import io.matthewnelson.concept_authentication.coordinator.AuthenticationResponse
+import io.matthewnelson.concept_coroutines.CoroutineDispatchers
+import io.matthewnelson.concept_views.viewstate.ViewStateContainer
 import io.matthewnelson.concept_views.viewstate.value
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import javax.annotation.meta.Exhaustive
 import javax.inject.Inject
+import chat.sphinx.resources.R as R_common
 
 
 internal inline val OnBoardConnectFragmentArgs.newUser: Boolean

@@ -11,6 +11,7 @@ import io.matthewnelson.concept_encryption_key.EncryptionKey
 import io.matthewnelson.crypto_common.annotations.RawPasswordAccess
 import net.sqlcipher.database.SQLiteDatabase
 import net.sqlcipher.database.SupportFactory
+import java.io.File
 
 class SphinxCoreDBImpl(
     context: Context,

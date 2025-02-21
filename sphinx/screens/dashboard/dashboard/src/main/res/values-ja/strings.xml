@@ -61,6 +61,7 @@
 
     <string name="last_message_description_has_join_tribe">%sがトライブに参加しました</string>
     <string name="last_message_description_just_left_tribe">%sがトライブから退会しました</string>
+    <string name="last_message_description_member_kicked">You have removed a member from this tribe</string>
     <string name="last_message_description_wants_to_join">%sがトライブに参加したいと思っています</string>
     <string name="last_message_description_declined_request_from">%sからのリクエストを拒否しました</string>
     <string name="last_message_description_approved_request_from">%sからのリクエストを承認しました</string>

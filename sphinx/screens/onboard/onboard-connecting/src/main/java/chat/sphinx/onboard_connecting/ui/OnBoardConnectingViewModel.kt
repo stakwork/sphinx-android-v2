@@ -6,13 +6,8 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
-import chat.sphinx.concept_crypto_rsa.RSA
 import chat.sphinx.concept_network_query_contact.NetworkQueryContact
-import chat.sphinx.concept_network_query_contact.model.GenerateTokenResponse
 import chat.sphinx.concept_network_query_invite.NetworkQueryInvite
-import chat.sphinx.concept_network_query_invite.model.RedeemInviteDto
-import chat.sphinx.concept_network_tor.TorManager
-import chat.sphinx.concept_relay.RelayDataHandler
 import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
 import chat.sphinx.concept_repository_connect_manager.model.OwnerRegistrationState
 import chat.sphinx.concept_signer_manager.CheckAdminCallback
@@ -23,20 +18,14 @@ import chat.sphinx.key_restore.KeyRestore
 import chat.sphinx.key_restore.KeyRestoreResponse
 import chat.sphinx.kotlin_response.LoadResponse
 import chat.sphinx.kotlin_response.Response
-import chat.sphinx.kotlin_response.ResponseError
 import chat.sphinx.onboard_common.OnBoardStepHandler
-import chat.sphinx.onboard_common.model.OnBoardInviterData
-import chat.sphinx.onboard_common.model.OnBoardStep
 import chat.sphinx.onboard_common.model.RedemptionCode
-import chat.sphinx.onboard_connecting.R
 import chat.sphinx.onboard_connecting.navigation.OnBoardConnectingNavigator
-import chat.sphinx.wrapper_common.lightning.toLightningNodePubKey
 import chat.sphinx.wrapper_invite.InviteString
 import chat.sphinx.wrapper_invite.toValidInviteStringOrNull
-import chat.sphinx.wrapper_relay.*
+import chat.sphinx.wrapper_relay.toRelayUrl
 import chat.sphinx.wrapper_rsa.RsaPrivateKey
 import chat.sphinx.wrapper_rsa.RsaPublicKey
-import chat.sphinx.resources.R as R_common
 import com.squareup.moshi.Moshi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.matthewnelson.android_feature_navigation.util.navArgs
@@ -45,12 +34,12 @@ import io.matthewnelson.android_feature_viewmodel.submitSideEffect
 import io.matthewnelson.android_feature_viewmodel.updateViewState
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
 import io.matthewnelson.crypto_common.annotations.RawPasswordAccess
-import io.matthewnelson.crypto_common.clazzes.*
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import javax.annotation.meta.Exhaustive
 import javax.inject.Inject
+import chat.sphinx.resources.R as R_common
 
 internal inline val OnBoardConnectingFragmentArgs.restoreCode: RedemptionCode.AccountRestoration?
     get() {
@@ -90,8 +79,7 @@ internal class OnBoardConnectingViewModel @Inject constructor(
         Context,
         OnBoardConnectingSideEffect,
         OnBoardConnectingViewState
-        >(dispatchers, OnBoardConnectingViewState.Connecting),
-    CheckAdminCallback
+        >(dispatchers, OnBoardConnectingViewState.Connecting)
 {
 
     private val args: OnBoardConnectingFragmentArgs by handle.navArgs()
@@ -116,13 +104,14 @@ internal class OnBoardConnectingViewModel @Inject constructor(
     }
 
     init {
-        viewModelScope.launch(mainImmediate) {
-            delay(500L)
-            processCode()
-        }
         collectUserState()
         collectConnectionState()
         collectConnectManagerErrorState()
+
+        viewModelScope.launch(mainImmediate) {
+            delay(500L)
+            connectManagerRepository.createOwnerAccount()
+        }
     }
 
     fun setSignerManager(signerManager: SignerManager) {
@@ -131,27 +120,6 @@ internal class OnBoardConnectingViewModel @Inject constructor(
 //        signerManager.setNetworkQueryContact(networkQueryContact)
 
         this.signerManager = signerManager
-    }
-
-    private fun processCode() {
-        viewModelScope.launch(mainImmediate) {
-            args.restoreCode?.let { restoreCode ->
-                updateViewState(
-                    OnBoardConnectingViewState.Transition_Set2_DecryptKeys(restoreCode)
-                )
-            } ?: args.inviteCode?.let { inviteCode ->
-                redeemInvite(inviteCode)
-            } ?: run {
-                if (signerManager.isPhoneSignerSettingUp()) {
-                    continuePhoneSignerSetup()
-                } else {
-                    connectManagerRepository.createOwnerAccount()
-
-//                    submitSideEffect(OnBoardConnectingSideEffect.InvalidCode)
-//                    navigator.popBackStack()
-                }
-            }
-        }
     }
 
     private fun storeUserState(state: String) {
@@ -314,60 +282,8 @@ internal class OnBoardConnectingViewModel @Inject constructor(
             }
         }
     }
-
-    private suspend fun redeemInvite(input: InviteString) {
-        networkQueryInvite.redeemInvite(input).collect { loadResponse ->
-            @Exhaustive
-            when (loadResponse) {
-                is LoadResponse.Loading -> {}
-                is Response.Error -> {
-                    submitSideEffect(OnBoardConnectingSideEffect.InvalidInvite)
-                    navigator.popBackStack()
-                }
-                is Response.Success -> {
-                    val inviteResponse = loadResponse.value.response
-                }
-            }
-        }
-    }
-
-
-    private suspend fun goToConnectedScreen(
-        ownerPrivateKey: RsaPrivateKey,
-        transportKey: RsaPublicKey?
-    ) {
-        navigator.toOnBoardConnectedScreen()
-    }
-
     override suspend fun onMotionSceneCompletion(value: Any) {
         return
-    }
-
-    private fun continuePhoneSignerSetup() {
-        viewModelScope.launch(mainImmediate) {
-            signerManager.checkHasAdmin(this@OnBoardConnectingViewModel)
-        }
-    }
-
-    override fun checkAdminSucceeded() {
-        viewModelScope.launch(mainImmediate) {
-            signerManager.getPublicKeyAndRelayUrl()?.let { publicKeyAndRelayUrl ->
-                publicKeyAndRelayUrl.second.toRelayUrl()?.let {
-                } ?: run {
-                    checkAdminFailed()
-                }
-            } ?: run {
-                checkAdminFailed()
-            }
-        }
-    }
-
-    override fun checkAdminFailed() {
-        viewModelScope.launch(mainImmediate) {
-            signerManager.reset()
-            submitSideEffect(OnBoardConnectingSideEffect.CheckAdminFailed)
-            navigator.popBackStack()
-        }
     }
 
     private fun collectConnectionState() {
@@ -472,7 +388,25 @@ internal class OnBoardConnectingViewModel @Inject constructor(
                             app.getString(R_common.string.connect_manager_fetch_first_message_error))
                         )
                     }
+                    is ConnectManagerError.ParseInvite -> {
+                        submitSideEffect(OnBoardConnectingSideEffect.NotifyError(
+                            app.getString(R_common.string.connect_manager_parse_invite_error))
+                        )
+                    }
+                    is ConnectManagerError.RestoreConnectionError -> {
+                        submitSideEffect(OnBoardConnectingSideEffect.NotifyError(
+                            app.getString(R_common.string.connect_manager_restore_connection_error))
+                        )
+                    }
                     else -> {}
+                }
+
+                connectManagerError?.let {
+                    keyRestore.clearAll()
+                    connectManagerRepository.resetAccount()
+
+                    delay(1500L)
+                    navigator.popBackStack()
                 }
             }
         }

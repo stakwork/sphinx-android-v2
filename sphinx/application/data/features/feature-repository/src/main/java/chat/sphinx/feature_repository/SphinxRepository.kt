@@ -63,6 +63,7 @@ import chat.sphinx.example.wrapper_mqtt.toLspChannelInfo
 import chat.sphinx.feature_repository.mappers.action_track.*
 import chat.sphinx.feature_repository.mappers.chat.ChatDboPresenterMapper
 import chat.sphinx.feature_repository.mappers.contact.ContactDboPresenterMapper
+import chat.sphinx.feature_repository.mappers.contact.toContact
 import chat.sphinx.feature_repository.mappers.feed.*
 import chat.sphinx.feature_repository.mappers.feed.podcast.FeedDboFeedSearchResultPresenterMapper
 import chat.sphinx.feature_repository.mappers.feed.podcast.FeedDboPodcastPresenterMapper
@@ -209,17 +210,11 @@ abstract class SphinxRepository(
         // PersistentStorage Keys
         const val REPOSITORY_LIGHTNING_BALANCE = "REPOSITORY_LIGHTNING_BALANCE"
         const val REPOSITORY_LAST_SEEN_MESSAGE_DATE = "REPOSITORY_LAST_SEEN_MESSAGE_DATE"
-        const val REPOSITORY_LAST_SEEN_CONTACTS_DATE = "REPOSITORY_LAST_SEEN_CONTACTS_DATE"
         const val REPOSITORY_LAST_SEEN_MESSAGE_RESTORE_PAGE = "REPOSITORY_LAST_SEEN_MESSAGE_RESTORE_PAGE"
         const val REPOSITORY_PUSH_KEY = "REPOSITORY_PUSH_KEY"
 
-        // networkRefreshMessages
-        const val MESSAGE_PAGINATION_LIMIT = 200
-        const val DATE_NIXON_SHOCK = "1971-08-15T00:00:00.000Z"
-
         const val MEDIA_KEY_SIZE = 32
     }
-
 
     ////////////////////////
     /// Connect Manager ///
@@ -331,6 +326,18 @@ abstract class SphinxRepository(
         connectManager.createAccount()
     }
 
+    override fun resetAccount() {
+        setInviteCode(null)
+        setMnemonicWords(emptyList())
+        connectionManagerState.value = null
+        connectManagerErrorState.value = null
+
+        applicationScope.launch(io) {
+            clearDatabase()
+        }
+    }
+
+
     override fun startRestoreProcess() {
         applicationScope.launch(mainImmediate) {
             var msgCounts: MsgsCounts? = null
@@ -361,7 +368,7 @@ abstract class SphinxRepository(
         }
     }
 
-    override fun setInviteCode(inviteString: String) {
+    override fun setInviteCode(inviteString: String?) {
         connectManager.setInviteCode(inviteString)
     }
 
@@ -765,6 +772,9 @@ abstract class SphinxRepository(
                             loadResponse.value.default_lsp,
                             loadResponse.value.router
                         )
+                    }
+                    is Response.Error -> {
+                        connectManager.restoreFailed()
                     }
                     else -> {}
                 }
@@ -3350,10 +3360,18 @@ abstract class SphinxRepository(
                                     }
                             }
 
-                            val chat = queries.chatGetById(chatId).executeAsOneOrNull()
+                            val chatDbo = queries.chatGetById(chatId).executeAsOneOrNull()
+                            var isMyTribe = false
+
+                            chatDbo?.let {
+                                val chat = chatDboPresenterMapper.mapFrom(chatDbo)
+                                isMyTribe = chat.isTribeOwnedByAccount(accountOwner.value?.nodePubKey)
+                            }
 
                             val filteredMemberRequests = listMessageDbo.filter { dbo ->
-                                if (!dbo.type.isMemberRequest()) {
+                                if (dbo.type.isGroupKick() && isMyTribe) {
+                                    false
+                                } else if (!dbo.type.isMemberRequest()) {
                                     true
                                 } else {
                                     val hasResponse = dbo.uuid?.let { uuid ->
@@ -3372,7 +3390,7 @@ abstract class SphinxRepository(
                                     dbo.uuid?.let { threadMap[it] },
                                     dbo.muid?.let { purchaseItemsMap[it] },
                                     dbo.reply_uuid,
-                                    chat
+                                    chatDbo
                                 )
                             }
                         }

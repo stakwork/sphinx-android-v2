@@ -94,8 +94,8 @@
     <string name="tribe_leave_announcement">%1$s just left the tribe</string>
     <string name="group_leave_announcement">%1$s just left the group</string>
     <string name="tribe_deleted_announcement">The admin has deleted\nthis tribe</string>
-    <string name="group_kick_announcement_member_side">The admin has removed you from this group</string>
-    <string name="tribe_kick_announcement_member_side">The admin has removed you from this tribe</string>
+    <string name="group_kick_announcement_member_side">The admin has removed you\nfrom this group</string>
+    <string name="tribe_kick_announcement_member_side">The admin has removed you\nfrom this tribe</string>
     <string name="tribe_welcome_announcement_member_side">Welcome! You are now a member</string>
     <string name="tribe_deleted_announcement_button_delete">Delete Tribe</string>
 

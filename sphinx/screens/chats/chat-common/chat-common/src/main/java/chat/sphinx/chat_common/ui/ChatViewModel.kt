@@ -1109,11 +1109,26 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                         setupScrollDownButtonCount()
                         isScrollDownButtonSetup = true
                     }
+
+                    val lastMessage = messages.lastOrNull()
+                    val showClockIcon = lastMessage?.let {
+                        it.status == MessageStatus.Pending &&
+                                System.currentTimeMillis() - it.date.time > 30_000
+                    } == true
+
+                    updateClockIconState(showClockIcon)
                 }
             }
         }
         collectThread()
         collectUnseenMessagesNumber()
+    }
+
+    private val _clockIconState = MutableStateFlow(false)
+    val clockIconState: StateFlow<Boolean> = _clockIconState
+
+    private fun updateClockIconState(showClockIcon: Boolean) {
+        _clockIconState.value = showClockIcon
     }
 
         private fun setupScrollDownButtonCount() {

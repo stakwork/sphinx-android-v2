@@ -158,10 +158,7 @@ sealed class DashboardChat {
                 }
                 message.type.isGroupKick() -> {
                     if (message.sender.value == 0L) {
-                            context.getString(
-                            R.string.last_message_description_just_left_tribe,
-                            message.senderAlias?.value
-                        )
+                            context.getString(R.string.last_message_description_member_kicked)
                     } else {
                         context.getString(R.string.last_message_description_group_kick)
                     }

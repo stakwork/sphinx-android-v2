@@ -61,6 +61,7 @@
 
     <string name="last_message_description_has_join_tribe">%s has joined the tribe</string>
     <string name="last_message_description_just_left_tribe">%s just left the tribe</string>
+    <string name="last_message_description_member_kicked">You have removed a member from this tribe</string>
     <string name="last_message_description_wants_to_join">%s wants to join the tribe</string>
     <string name="last_message_description_declined_request_from">You have declined the request from %s</string>
     <string name="last_message_description_approved_request_from">You have approved the request from %s</string>

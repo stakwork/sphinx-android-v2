@@ -2329,6 +2329,7 @@ private inline fun LayoutMessageHolderBinding.setGroupActionAnnouncementLayout(
     groupActionDetails: LayoutState.GroupActionIndicator
 ) {
     includeMessageTypeGroupActionHolder.includeMessageTypeGroupActionJoinRequest.root.gone
+    includeMessageTypeGroupActionHolder.includeMessageTypeGroupActionMemberRemoval.root.gone
 
     includeMessageTypeGroupActionHolder.includeMessageTypeGroupActionAnnouncement.apply {
         root.visible
@@ -2382,6 +2383,7 @@ private inline fun LayoutMessageHolderBinding.setGroupActionJoinRequestAdminLayo
     groupActionDetails: LayoutState.GroupActionIndicator
 ) {
     includeMessageTypeGroupActionHolder.includeMessageTypeGroupActionAnnouncement.root.gone
+    includeMessageTypeGroupActionHolder.includeMessageTypeGroupActionMemberRemoval.root.gone
 
     includeMessageTypeGroupActionHolder.includeMessageTypeGroupActionJoinRequest.apply {
         root.visible
@@ -2412,6 +2414,7 @@ private inline fun LayoutMessageHolderBinding.setGroupActionJoinRejectedAdminLay
     groupActionDetails: LayoutState.GroupActionIndicator
 ) {
     includeMessageTypeGroupActionHolder.includeMessageTypeGroupActionAnnouncement.root.gone
+    includeMessageTypeGroupActionHolder.includeMessageTypeGroupActionMemberRemoval.root.gone
 
     includeMessageTypeGroupActionHolder.includeMessageTypeGroupActionJoinRequest.apply {
         root.visible
@@ -2440,6 +2443,7 @@ private inline fun LayoutMessageHolderBinding.setGroupActionJoinApprovedAdminLay
     groupActionDetails: LayoutState.GroupActionIndicator
 ) {
     includeMessageTypeGroupActionHolder.includeMessageTypeGroupActionAnnouncement.root.gone
+    includeMessageTypeGroupActionHolder.includeMessageTypeGroupActionMemberRemoval.root.gone
 
     includeMessageTypeGroupActionHolder.includeMessageTypeGroupActionJoinRequest.apply {
         root.visible
@@ -2468,6 +2472,9 @@ private inline fun LayoutMessageHolderBinding.setGroupActionJoinApprovedAdminLay
 private inline fun LayoutMessageHolderBinding.setGroupActionMemberRemovalLayout(
     groupActionDetails: LayoutState.GroupActionIndicator
 ) {
+    includeMessageTypeGroupActionHolder.includeMessageTypeGroupActionAnnouncement.root.gone
+    includeMessageTypeGroupActionHolder.includeMessageTypeGroupActionJoinRequest.root.gone
+
     includeMessageTypeGroupActionHolder.includeMessageTypeGroupActionMemberRemoval.apply {
         root.visible
 

@@ -1,4 +1,4 @@
-package chat.sphinx.concept_network_query_chat.model.state
+package com.example.call_activity.state
 
 sealed class StartRecordingState {
     object Loading: StartRecordingState()

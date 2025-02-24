@@ -13,12 +13,12 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.viewModelScope
 import chat.sphinx.concept_network_query_chat.NetworkQueryChat
-import chat.sphinx.concept_network_query_chat.model.state.StartRecordingState
-import chat.sphinx.concept_network_query_chat.model.state.StopRecordingState
 import chat.sphinx.kotlin_response.LoadResponse
 import chat.sphinx.kotlin_response.Response
 import chat.sphinx.wrapper_common.toDateTime
 import com.example.call_activity.service.ForegroundService
+import com.example.call_activity.state.StartRecordingState
+import com.example.call_activity.state.StopRecordingState
 import com.github.ajalt.timberkt.Timber
 import io.livekit.android.AudioOptions
 import io.livekit.android.LiveKit

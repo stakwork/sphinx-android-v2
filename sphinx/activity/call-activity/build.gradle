@@ -55,6 +55,7 @@ dependencies {
     implementation deps.androidx.lifecycle.processLifecycleOwner
 
     implementation deps.google.hilt
+    implementation project(':sphinx:application:network:concepts:queries:concept-network-query-chat')
     kapt kaptDeps.google.hilt
     kapt kaptDeps.square.moshiCodegen
 }

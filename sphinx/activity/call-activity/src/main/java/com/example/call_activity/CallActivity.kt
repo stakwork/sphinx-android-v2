@@ -29,9 +29,9 @@ import chat.sphinx.call_activity.R
 import chat.sphinx.call_activity.databinding.CallActivityBinding
 import chat.sphinx.concept_image_loader.ImageLoader
 import chat.sphinx.concept_network_query_chat.NetworkQueryChat
-import chat.sphinx.concept_network_query_chat.model.state.StartRecordingState
-import chat.sphinx.concept_network_query_chat.model.state.StopRecordingState
 import com.example.call_activity.dialog.showDebugMenuDialog
+import com.example.call_activity.state.StartRecordingState
+import com.example.call_activity.state.StopRecordingState
 import com.squareup.moshi.Moshi
 import com.xwray.groupie.GroupieAdapter
 import dagger.hilt.android.AndroidEntryPoint

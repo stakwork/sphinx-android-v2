@@ -402,7 +402,6 @@ internal class OnBoardConnectingViewModel @Inject constructor(
                 }
 
                 connectManagerError?.let {
-                    keyRestore.clearAll()
                     connectManagerRepository.resetAccount()
 
                     delay(1500L)

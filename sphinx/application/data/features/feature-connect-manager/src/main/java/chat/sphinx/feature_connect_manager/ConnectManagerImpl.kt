@@ -280,6 +280,11 @@ class ConnectManagerImpl: ConnectManager()
     private fun subscribeOwnerMQTT() {
         try {
             mqttClient?.let { client ->
+
+                notifyListeners {
+                    showMnemonic(isRestoreAccount())
+                }
+
                 // Network setup and handling
                 val networkSetup = setNetwork(network)
                 handleRunReturn(networkSetup)

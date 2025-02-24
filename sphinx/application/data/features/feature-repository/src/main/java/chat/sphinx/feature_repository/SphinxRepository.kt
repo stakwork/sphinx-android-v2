@@ -724,10 +724,19 @@ abstract class SphinxRepository(
                 walletDataHandler.persistWalletMnemonic(it)
             }
         }
-        if (!isRestore) {
-            connectionManagerState.value = OwnerRegistrationState.MnemonicWords(words)
-        }
     }
+
+    override fun showMnemonic(isRestore: Boolean) {
+        if (!isRestore) {
+            applicationScope.launch(mainImmediate) {
+                walletDataHandler.retrieveWalletMnemonic()?.let { words ->
+                    connectionManagerState.value = OwnerRegistrationState.MnemonicWords(words.value)
+                }
+            }
+        }
+
+    }
+
     override fun onOwnerRegistered(
         okKey: String,
         routeHint: String,

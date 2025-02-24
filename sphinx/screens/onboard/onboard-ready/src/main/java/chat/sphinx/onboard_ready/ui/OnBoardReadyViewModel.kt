@@ -41,6 +41,7 @@ internal class OnBoardReadyViewModel @Inject constructor(
 {
     fun finishSignup() {
         viewModelScope.launch(mainImmediate) {
+            onBoardStepHandler.finishOnboard()
             goToDashboard()
         }
     }

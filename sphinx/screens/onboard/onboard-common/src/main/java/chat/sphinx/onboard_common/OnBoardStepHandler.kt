@@ -38,6 +38,8 @@ class OnBoardStepHandler @Inject constructor(
         private const val STEP_3 = "STEP_3"
         private const val STEP_4 = "STEP_4"
 
+        private const val IS_ACCOUNT_SETUP = "IS_ACCOUNT_SETUP"
+
         // Character lengths must stay the same for
         // onboard step retrieval to function properly
         private const val STEP_SIZE: Int = STEP_1.length
@@ -126,6 +128,21 @@ class OnBoardStepHandler @Inject constructor(
 
             return step4
         }
+    }
+
+    suspend fun finishOnboard() {
+        lock.withLock {
+            authenticationStorage.putString(IS_ACCOUNT_SETUP, "true")
+        }
+    }
+
+    suspend fun isAccountSetup(): Boolean {
+        lock.withLock {
+            authenticationStorage.getString(IS_ACCOUNT_SETUP, null)?.let { isAccountSetupString ->
+                return isAccountSetupString == "true"
+            }
+        }
+        return false
     }
 
     suspend fun finishOnBoardSteps() {

@@ -1,6 +1,11 @@
 # ChangeLog
 
-## Version 1.0.0-alpha33 (2025-02-14)
+## Version 1.0.0-alpha33 (2025-02-21
+- Fixes issues with members kicked messages
+- Handles connection issues during signup
+- Adds pending messages icon on status header
+
+## Version 1.0.0-alpha32 (2025-02-14)
 - Fixes issues with tribe members requests
 - Improves member requests UI
 - Fixes issues with tribe mentions

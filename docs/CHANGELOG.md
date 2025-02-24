@@ -1,6 +1,9 @@
 # ChangeLog
 
-## Version 1.0.0-alpha33 (2025-02-21
+## Version 1.0.0-alpha34 (2025-02-24)
+- Fixes connection issues during signup
+
+## Version 1.0.0-alpha33 (2025-02-21)
 - Fixes issues with members kicked messages
 - Handles connection issues during signup
 - Adds pending messages icon on status header

@@ -323,7 +323,10 @@ abstract class SphinxRepository(
     }
 
     override fun createOwnerAccount() {
-        connectManager.createAccount()
+        applicationScope.launch(mainImmediate) {
+            val mnemonic = walletDataHandler.retrieveWalletMnemonic()
+            connectManager.createAccount(mnemonic?.value)
+        }
     }
 
     override fun resetAccount() {
@@ -2949,7 +2952,22 @@ abstract class SphinxRepository(
         val queries = coreDB.getSphinxDatabaseQueries()
         val now = DateTime.nowUTC().toDateTime()
 
-        val updatedOwner = accountOwner.value?.copy(
+        var owner: Contact? = accountOwner.value
+
+        if (owner == null) {
+            try {
+                accountOwner.collect { contact ->
+                    if (contact != null) {
+                        owner = contact
+                        throw Exception()
+                    }
+                }
+            } catch (e: Exception) {
+            }
+            delay(25L)
+        }
+
+        val updatedOwner = owner?.copy(
             alias = alias,
             updatedAt = now
         )

@@ -25,7 +25,7 @@ abstract class ConnectManager {
     abstract fun setOwnerInfo(ownerInfo: OwnerInfo)
 
     // Account Management Methods
-    abstract fun createAccount()
+    abstract fun createAccount(mnemonic: String?)
     abstract fun restoreAccount(
         defaultTribe: String?,
         tribeHost: String?,

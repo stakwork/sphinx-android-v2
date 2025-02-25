@@ -195,15 +195,15 @@ internal class OnBoardConnectingViewModel @Inject constructor(
                     }
                     is Response.Error -> {
                         submitSideEffect(
-                            OnBoardConnectingSideEffect.Notify(
+                            OnBoardConnectingSideEffect.NotifyError(
                                 app.getString(R_common.string.connect_manager_set_router_url)
                             )
                         )
-                        if (isRestore) {
-                            navigator.toOnBoardDesktopScreen()
-                        } else {
-                            navigator.toOnBoardNameScreen()
-                        }
+
+                        connectManagerRepository.resetAccount()
+
+                        delay(1500L)
+                        navigator.popBackStack()
                     }
                     else -> {}
                 }

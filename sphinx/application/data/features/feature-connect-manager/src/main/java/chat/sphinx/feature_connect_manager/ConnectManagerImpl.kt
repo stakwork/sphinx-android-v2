@@ -748,13 +748,13 @@ class ConnectManagerImpl: ConnectManager()
     }
 
     // Account Management Methods
-    override fun createAccount() {
+    override fun createAccount(mnemonic: String?) {
         if (isRestoreAccount()) {
             notifyListeners {
                 onRestoreAccount(isProductionEnvironment())
             }
         } else {
-            val seed = generateMnemonicAndSeed(null)
+            val seed = generateMnemonicAndSeed(mnemonic)
             val now = getTimestampInMilliseconds()
 
             seed?.let { firstSeed ->
@@ -1138,7 +1138,7 @@ class ConnectManagerImpl: ConnectManager()
 
         // Check if is account restoration
         val mnemonic = if (!restoreMnemonic.isNullOrEmpty()) {
-            restoreMnemonicWords!!.joinToString(" ").toWalletMnemonic()
+            restoreMnemonic.toWalletMnemonic()
         } else {
             try {
                 val randomBytes = generateRandomBytes(16)

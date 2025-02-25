@@ -2,11 +2,7 @@ package chat.sphinx.onboard_desktop.navigation
 
 import androidx.annotation.IdRes
 import androidx.navigation.NavController
-import chat.sphinx.onboard_common.model.OnBoardInviterData
-import chat.sphinx.onboard_common.model.OnBoardStep
 import chat.sphinx.onboard_desktop.R
-import chat.sphinx.onboard_desktop.ui.OnBoardDesktopFragmentArgs
-import chat.sphinx.wrapper_common.lightning.toLightningNodePubKey
 import io.matthewnelson.android_feature_navigation.DefaultNavOptions
 import io.matthewnelson.concept_navigation.NavigationRequest
 

@@ -23,6 +23,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.flowWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import chat.sphinx.call_activity.R
@@ -35,6 +37,9 @@ import com.example.call_activity.state.StopRecordingState
 import com.squareup.moshi.Moshi
 import com.xwray.groupie.GroupieAdapter
 import dagger.hilt.android.AndroidEntryPoint
+import io.matthewnelson.android_feature_toast_utils.ToastUtils
+import io.matthewnelson.android_feature_toast_utils.ToastUtilsResponse
+import io.matthewnelson.android_feature_toast_utils.show
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -58,6 +63,8 @@ class CallActivity : AppCompatActivity() {
 
     @Inject
     lateinit var dispatchers: CoroutineDispatchers
+
+    private var lastToast: Toast? = null
 
     private val viewModel: CallViewModel by viewModelByFactory {
         val args = intent.getParcelableExtra<BundleArgs>(KEY_ARGS)
@@ -148,28 +155,22 @@ class CallActivity : AppCompatActivity() {
         }
 
         lifecycleScope.launch {
-            viewModel.startRecordingState.collectLatest {
-                (recordingState: StartRecordingState, isLocalParticipantRecording: Boolean)  ->
+            viewModel.startRecordingState
+                .flowWithLifecycle(lifecycle, Lifecycle.State.STARTED)
+                .collectLatest {
+                    (recordingState: StartRecordingState, isLocalParticipantRecording: Boolean)  ->
 
                 when (recordingState) {
                     StartRecordingState.Error -> {
-                        binding.apply {
-                            recordingMessageBox.clearAnimation()
-                            recordingMessage.text = getString(R.string.error_message_call_recording)
-                            fadeOutAnimation(viewToFadeOut = recordingMessageBox)
-                        }
+                        showCustomToastMessage(messageRes = R.string.error_message_call_recording)
                     }
 
                     StartRecordingState.Empty -> {}
 
                     StartRecordingState.Recording -> {
-                        binding.apply {
-                            recordingMessageBox.also {
-                                it.clearAnimation()
-                                it.visibility = View.VISIBLE
-                            }
+                        showCustomToastMessage(messageRes = R.string.call_recording_in_progress_message)
 
-                            recordingMessage.text = getString(R.string.call_recording_in_progress_message)
+                        binding.apply {
                             recordButton.setImageDrawable(getRecordDrawable(isLocalParticipantRecording))
 
                             fadeInFadeOutAnimation(
@@ -182,65 +183,38 @@ class CallActivity : AppCompatActivity() {
                     }
 
                     StartRecordingState.Loading -> {
-                        binding.apply {
-                            recordingMessageBox.also {
-                                it.clearAnimation()
-                                it.visibility = View.VISIBLE
-                            }
-
-                            recordingMessage.text = getString(R.string.starting_call_recording_message)
-                        }
+                        showCustomToastMessage(messageRes = R.string.starting_call_recording_message)
                     }
                 }
             }
         }
 
         lifecycleScope.launch {
-            viewModel.stopRecordingState.collectLatest { state ->
+            viewModel.stopRecordingState
+                .flowWithLifecycle(lifecycle, Lifecycle.State.STARTED)
+                .collectLatest { state ->
                 when(state) {
                     StopRecordingState.Error -> {
-                        binding.apply {
-                            recordingMessageBox.clearAnimation()
-                            recordButton.isEnabled = true
-                            recordingMessage.text = getString(R.string.error_message_call_recording)
-
-                            fadeOutAnimation(
-                                viewToFadeOut = recordingMessageBox,
-                                durationMillis = 10000
-                            )
-                        }
+                        showCustomToastMessage(messageRes = R.string.error_message_call_recording)
                     }
 
                     StopRecordingState.Empty -> {}
 
                     StopRecordingState.Stopped -> {
                         binding.apply {
-                            recordingMessageBox.clearAnimation()
-                            recordingMessage.text = getString(R.string.stopped_call_record_message)
+                            showCustomToastMessage(messageRes = R.string.stopped_call_record_message)
 
                             recordButton.also {
                                 it.clearAnimation()
                                 it.isEnabled = true
                                 it.setImageResource(R.drawable.radio_button_checked)
                             }
-
-                            fadeOutAnimation(
-                                viewToFadeOut = recordingMessageBox,
-                                durationMillis = 10000
-                            )
                         }
                     }
 
                     StopRecordingState.Loading -> {
-                        binding.apply {
-                            recordingMessageBox.also {
-                                it.clearAnimation()
-                                it.visibility = View.VISIBLE
-                            }
-
-                            recordButton.isEnabled = false
-                            recordingMessage.text = getString(R.string.stopping_call_recording_message)
-                        }
+                        showCustomToastMessage(messageRes = R.string.stopping_call_recording_message)
+                        binding.recordButton.isEnabled = false
                     }
                 }
             }
@@ -348,7 +322,10 @@ class CallActivity : AppCompatActivity() {
             showAudioProcessorSwitchDialog(viewModel)
         }*/
 
-        binding.exit.setOnClickListener { finish() }
+        binding.exit.setOnClickListener {
+            lastToast?.cancel()
+            finish()
+        }
 
 
 //        binding.audioSelect.setOnClickListener {
@@ -402,7 +379,24 @@ class CallActivity : AppCompatActivity() {
                 }
             }
         }
+    }
 
+    private fun showCustomToastMessage(messageRes: Int) {
+        ToastUtils(
+            toastLengthLong = true,
+            textColor = android.R.color.white,
+            toastBackgroundTint = R.color.color_recording_background,
+            showOnTop = true,
+            verticalPositionInPixels = 140
+        ).show(
+            this@CallActivity,
+            messageRes
+        ).let { response ->
+
+            if (response is ToastUtilsResponse.Success) {
+                lastToast = response.toast
+            }
+        }
     }
 
     private fun getRecordDrawable(isLocalParticipantRecording: Boolean): Drawable? {
@@ -423,18 +417,6 @@ class CallActivity : AppCompatActivity() {
             }
         }
         return drawable
-    }
-
-    private fun fadeOutAnimation(
-        viewToFadeOut: View,
-        durationMillis: Long = 3500
-    ) {
-        val animation = AlphaAnimation(1f, 0f).apply {
-            fillAfter = true
-            duration = durationMillis
-        }
-
-        viewToFadeOut.startAnimation(animation)
     }
 
     private fun fadeInFadeOutAnimation(
@@ -517,6 +499,9 @@ class CallActivity : AppCompatActivity() {
     override fun onDestroy() {
         binding.audienceRow.adapter = null
         binding.speakerView.adapter = null
+        lastToast?.cancel()
+        lastToast = null
+
         super.onDestroy()
     }
 

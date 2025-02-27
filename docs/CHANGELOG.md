@@ -1,5 +1,8 @@
 # ChangeLog
 
+## Version 1.0.0-alpha36 (2025-02-27)
+- Fixes backward compatibility issues during signup
+
 ## Version 1.0.0-alpha35 (2025-02-25)
 - Fixes connection issues during signup
 

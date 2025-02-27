@@ -45,6 +45,8 @@ dependencies {
     api project(path: ':sphinx:application:common:resources')
     api project(path: ':sphinx:application:common:wrappers:wrapper-common')
 
+    implementation project(':sphinx:application:network:concepts:queries:concept-network-query-chat')
+
     implementation deps.chrisbanes.insetter
     implementation deps.square.moshi
     implementation deps.livekit.sdk
@@ -55,7 +57,6 @@ dependencies {
     implementation deps.androidx.lifecycle.processLifecycleOwner
 
     implementation deps.google.hilt
-    implementation project(':sphinx:application:network:concepts:queries:concept-network-query-chat')
     kapt kaptDeps.google.hilt
     kapt kaptDeps.square.moshiCodegen
 }

@@ -188,4 +188,6 @@
     <dimen name="control_size">40dp</dimen>
     <dimen name="control_padding">4dp</dimen>
     <dimen name="identity_bar_padding">4dp</dimen>
+
+    <dimen name="participant_item_height">50dp</dimen>
 </resources>

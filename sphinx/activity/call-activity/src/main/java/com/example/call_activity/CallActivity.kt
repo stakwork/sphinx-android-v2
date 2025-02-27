@@ -10,6 +10,7 @@ import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Parcelable
+import android.util.Log
 import android.util.Rational
 import android.view.View
 import android.view.WindowManager
@@ -31,6 +32,8 @@ import chat.sphinx.call_activity.R
 import chat.sphinx.call_activity.databinding.CallActivityBinding
 import chat.sphinx.concept_image_loader.ImageLoader
 import chat.sphinx.concept_network_query_chat.NetworkQueryChat
+import chat.sphinx.resources.getRandomColor
+import chat.sphinx.resources.setBackgroundRandomColor
 import com.example.call_activity.dialog.showDebugMenuDialog
 import com.example.call_activity.state.StartRecordingState
 import com.example.call_activity.state.StopRecordingState
@@ -41,8 +44,11 @@ import io.matthewnelson.android_feature_toast_utils.ToastUtils
 import io.matthewnelson.android_feature_toast_utils.ToastUtilsResponse
 import io.matthewnelson.android_feature_toast_utils.show
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.parcelize.Parcelize
 import javax.inject.Inject
 
@@ -65,6 +71,8 @@ class CallActivity : AppCompatActivity() {
     lateinit var dispatchers: CoroutineDispatchers
 
     private var lastToast: Toast? = null
+
+    private var bottomSheet: ParticipantsBottomSheetFragment? = null
 
     private val viewModel: CallViewModel by viewModelByFactory {
         val args = intent.getParcelableExtra<BundleArgs>(KEY_ARGS)
@@ -125,13 +133,13 @@ class CallActivity : AppCompatActivity() {
                             viewModel.room,
                             participant,
                             moshi = moshi,
-                            imageLoader = imageLoader
+                            imageLoader = imageLoader,
+                            color = viewModel.participantColors[participant.getNonEmptySCI()]
                         )
                     }
                     audienceAdapter.update(items)
                 }
         }
-
         // speaker view setup
         val speakerAdapter = GroupieAdapter()
         binding.speakerView.apply {
@@ -147,7 +155,8 @@ class CallActivity : AppCompatActivity() {
                             participant,
                             speakerView = true,
                             moshi = moshi,
-                            imageLoader = imageLoader
+                            imageLoader = imageLoader,
+                            color = viewModel.participantColors[participant.getNonEmptySCI()]
                         )
                     }
                 speakerAdapter.update(items)
@@ -162,6 +171,7 @@ class CallActivity : AppCompatActivity() {
 
                 when (recordingState) {
                     StartRecordingState.Error -> {
+                        binding.recordButton.isEnabled = true
                         showCustomToastMessage(messageRes = R.string.error_message_call_recording)
                     }
 
@@ -171,7 +181,10 @@ class CallActivity : AppCompatActivity() {
                         showCustomToastMessage(messageRes = R.string.call_recording_in_progress_message)
 
                         binding.apply {
-                            recordButton.setImageDrawable(getRecordDrawable(isLocalParticipantRecording))
+                            recordButton.also {
+                                it.setImageDrawable(getRecordDrawable(isLocalParticipantRecording))
+                                it.isEnabled = isLocalParticipantRecording
+                            }
 
                             fadeInFadeOutAnimation(
                                 viewToFadeOut = recordButton,
@@ -184,6 +197,8 @@ class CallActivity : AppCompatActivity() {
 
                     StartRecordingState.Loading -> {
                         showCustomToastMessage(messageRes = R.string.starting_call_recording_message)
+
+                        binding.recordButton.isEnabled = false
                     }
                 }
             }
@@ -214,8 +229,24 @@ class CallActivity : AppCompatActivity() {
 
                     StopRecordingState.Loading -> {
                         showCustomToastMessage(messageRes = R.string.stopping_call_recording_message)
-                        binding.recordButton.isEnabled = false
+
+                        binding.apply {
+                            recordButton.also {
+                                it.isEnabled = false
+                                it.setImageResource(R.drawable.radio_button_checked_recording)
+                            }
+                        }
                     }
+                }
+            }
+        }
+
+        lifecycleScope.launchWhenCreated {
+            viewModel.participants.collect { participants ->
+                if (bottomSheet == null) {
+                    bottomSheet = ParticipantsBottomSheetFragment.newInstance(participants.toMutableList(), viewModel.participantColors)
+                } else {
+                    bottomSheet?.setParticipants(participants.toMutableList(), viewModel.participantColors)
                 }
             }
         }
@@ -324,6 +355,7 @@ class CallActivity : AppCompatActivity() {
 
         binding.exit.setOnClickListener {
             lastToast?.cancel()
+            viewModel.stopRecording()
             finish()
         }
 
@@ -350,14 +382,8 @@ class CallActivity : AppCompatActivity() {
         }
 
         binding.listParticipants.setOnClickListener {
-            lifecycleScope.launchWhenCreated {
-                // Collect participants list only when the button is clicked
-                viewModel.participants.collect { participants ->
-
-                    // Only show BottomSheet when user clicks the button
-                    val bottomSheet = ParticipantsBottomSheetFragment(participants)
-                    bottomSheet.show(supportFragmentManager, bottomSheet.tag)
-                }
+            if (bottomSheet?.isAdded == false) {
+                bottomSheet?.show(supportFragmentManager, bottomSheet?.tag)
             }
         }
 

@@ -3,6 +3,7 @@ package com.example.call_activity
 import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Intent
+import android.content.res.Resources
 import android.media.projection.MediaProjectionManager
 import android.os.Build
 import androidx.annotation.OptIn
@@ -15,6 +16,7 @@ import androidx.lifecycle.viewModelScope
 import chat.sphinx.concept_network_query_chat.NetworkQueryChat
 import chat.sphinx.kotlin_response.LoadResponse
 import chat.sphinx.kotlin_response.Response
+import chat.sphinx.resources.getRandomColor
 import chat.sphinx.wrapper_common.toDateTime
 import com.example.call_activity.service.ForegroundService
 import com.example.call_activity.state.StartRecordingState
@@ -46,10 +48,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import livekit.org.webrtc.CameraXHelper
@@ -105,6 +110,8 @@ class CallViewModel constructor(
                         .sortedBy { it.value }
                         .mapNotNull { remoteParticipants[it] }
         }
+
+    val participantColors: MutableMap<String, Int> = mutableMapOf()
 
     private val mutableError = MutableStateFlow<Throwable?>(null)
     val error = mutableError.hide()
@@ -172,6 +179,19 @@ class CallViewModel constructor(
             launch {
                 combine(participants, activeSpeakers) { participants, speakers -> participants to speakers }
                     .collect { (participantsList, speakers) ->
+
+                        participantsList.forEach { participant ->
+                            if (!participantColors.containsKey(participant.getNonEmptySCI())) {
+                                participantColors[participant.getNonEmptySCI()] = application.getRandomColor()
+                            }
+                        }
+
+                        speakers.forEach { participant ->
+                            if (!participantColors.containsKey(participant.getNonEmptySCI())) {
+                                participantColors[participant.getNonEmptySCI()] = application.getRandomColor()
+                            }
+                        }
+
                         handlePrimarySpeaker(
                             participantsList,
                             speakers,
@@ -396,9 +416,17 @@ class CallViewModel constructor(
         isRecording = !isRecording
 
         viewModelScope.launch(dispatchers.io) {
-            if(isRecording) {
+            if (isRecording) {
                 callStartRecordingApi()
             } else {
+                callStopRecordingApi()
+            }
+        }
+    }
+
+    fun stopRecording() {
+        viewModelScope.launch(dispatchers.io) {
+            if (isRecording) {
                 callStopRecordingApi()
             }
         }
@@ -543,3 +571,10 @@ class CallViewModel constructor(
 private fun <T> LiveData<T>.hide(): LiveData<T> = this
 private fun <T> MutableStateFlow<T>.hide(): StateFlow<T> = this
 private fun <T> Flow<T>.hide(): Flow<T> = this
+
+fun Participant.getNonEmptySCI(): String {
+    (this as? LocalParticipant)?.let {
+        return "local-participant"
+    }
+    return this.sid.value
+}

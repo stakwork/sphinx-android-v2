@@ -32,19 +32,7 @@ value class SphinxCallLink(val value: String) {
         const val NEW_CALL_SERVER_URL = "https://chat.sphinx.chat/rooms"
         private const val CALL_ROOM_NAME = "sphinx.call"
 
-        const val AUDIO_ONLY_PARAM = "config.startAudioOnly"
-
-        fun newCallLink(
-            customServerUrl: String?,
-            startAudioOnly: Boolean
-        ): String? {
-            val currentTime = System.currentTimeMillis()
-//            val audioOnlyParam = if (startAudioOnly) "#${AUDIO_ONLY_PARAM}=true" else ""
-//            val linkString = "${customServerUrl ?: DEFAULT_CALL_SERVER_URL}/$CALL_ROOM_NAME.$currentTime$audioOnlyParam"
-            val linkString = "${customServerUrl ?: NEW_CALL_SERVER_URL}/$CALL_ROOM_NAME.$currentTime"
-
-            return linkString.toSphinxCallLink()?.value
-        }
+        const val AUDIO_ONLY_PARAM = "startAudioOnly"
 
         fun newCallLinkMessage(
             customServerUrl: String?,
@@ -52,9 +40,8 @@ value class SphinxCallLink(val value: String) {
             moshi: Moshi
         ): String? {
             val currentTime = System.currentTimeMillis()
-//            val audioOnlyParam = if (startAudioOnly) "#${AUDIO_ONLY_PARAM}=true" else ""
-//            val linkString = "${customServerUrl ?: DEFAULT_CALL_SERVER_URL}/$CALL_ROOM_NAME.$currentTime$audioOnlyParam"
-            val linkString = "${customServerUrl ?: NEW_CALL_SERVER_URL}/$CALL_ROOM_NAME.$currentTime"
+            val audioOnlyParam = if (startAudioOnly) "?${AUDIO_ONLY_PARAM}=true" else ""
+            val linkString = "${customServerUrl ?: NEW_CALL_SERVER_URL}/$CALL_ROOM_NAME.$currentTime$audioOnlyParam"
 
             linkString.toSphinxCallLink()?.let { sphinxCallLink ->
                 val callLinkMessage = CallLinkMessage(
@@ -102,7 +89,7 @@ value class SphinxCallLink(val value: String) {
         }
 
     fun getParameter(k: String): String? {
-        val parameters = value.substringAfter("#").split("&")
+        val parameters = value.substringAfter("#").substringAfter("?").split("&")
         for (parameter in parameters) {
             val paramComponents = parameter.split("=")
             val key:String? = if (paramComponents.isNotEmpty()) paramComponents.elementAtOrNull(0) else null

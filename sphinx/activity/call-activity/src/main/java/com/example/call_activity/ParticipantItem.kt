@@ -4,6 +4,7 @@ package com.example.call_activity
 
 import android.view.View
 import android.widget.ImageView
+import androidx.annotation.ColorInt
 import chat.sphinx.call_activity.R
 import chat.sphinx.call_activity.databinding.ParticipantItemBinding
 import chat.sphinx.concept_image_loader.ImageLoader
@@ -40,7 +41,8 @@ class ParticipantItem(
     private val participant: Participant,
     private val speakerView: Boolean = false,
     val moshi: Moshi,
-    val imageLoader: ImageLoader<ImageView>
+    val imageLoader: ImageLoader<ImageView>,
+    @ColorInt val color: Int? = null
 ) : BindableItem<ParticipantItemBinding>() {
 
     val imageLoaderDefaults by lazy {
@@ -98,7 +100,7 @@ class ParticipantItem(
                         if (!initials.isNullOrEmpty()) {
                             text = initials.toUpperCase(Locale.getDefault())
                         }
-                        setBackgroundRandomColor(R.drawable.circle_icon_4)
+                        setBackgroundRandomColor(R.drawable.circle_icon_4, color)
                     }
                 }
 
@@ -111,8 +113,6 @@ class ParticipantItem(
                 } else {
                     hideFocus(viewBinding)
                 }
-
-                viewBinding.micOn.visibility = if (isSpeaking) View.INVISIBLE else View.VISIBLE
             }
         }
         coroutineScope?.launch {
@@ -127,9 +127,7 @@ class ParticipantItem(
                 }
                 .collect { muted ->
                     viewBinding.muteIndicator.visibility = if (muted) View.VISIBLE else View.INVISIBLE
-
                     viewBinding.micOn.visibility = if (muted) View.INVISIBLE else View.VISIBLE
-
                 }
         }
 

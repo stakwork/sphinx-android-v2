@@ -171,8 +171,7 @@
                 android:outlineProvider="background"
                 android:padding="12dp"
                 android:scaleType="centerInside"
-                android:src="@drawable/radio_button_checked"
-                app:tint="@android:color/white" />
+                android:src="@drawable/radio_button_checked" />
         </FrameLayout>
 
         <FrameLayout

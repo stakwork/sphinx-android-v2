@@ -12,7 +12,13 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.viewModelScope
+import chat.sphinx.concept_network_query_chat.NetworkQueryChat
+import chat.sphinx.kotlin_response.LoadResponse
+import chat.sphinx.kotlin_response.Response
+import chat.sphinx.wrapper_common.toDateTime
 import com.example.call_activity.service.ForegroundService
+import com.example.call_activity.state.StartRecordingState
+import com.example.call_activity.state.StopRecordingState
 import com.github.ajalt.timberkt.Timber
 import io.livekit.android.AudioOptions
 import io.livekit.android.LiveKit
@@ -34,12 +40,14 @@ import io.livekit.android.room.track.Track
 import io.livekit.android.room.track.video.CameraCapturerUtils
 import io.livekit.android.util.LKLog
 import io.livekit.android.util.flow
+import io.matthewnelson.concept_coroutines.CoroutineDispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
@@ -47,7 +55,7 @@ import kotlinx.coroutines.launch
 import livekit.org.webrtc.CameraXHelper
 
 @OptIn(ExperimentalCamera2Interop::class)
-class CallViewModel(
+class CallViewModel constructor(
     val url: String,
     val token: String,
     application: Application,
@@ -55,7 +63,10 @@ class CallViewModel(
     val e2eeKey: String? = "",
     val videoEnabled: Boolean = false,
     val audioProcessorOptions: AudioProcessorOptions? = null,
-    val stressTest: StressTest = StressTest.None
+    val stressTest: StressTest = StressTest.None,
+    private val roomName: String,
+    private val networkQueryChat: NetworkQueryChat,
+    private val dispatchers: CoroutineDispatchers
 ) : AndroidViewModel(application) {
 
     private fun getE2EEOptions(): E2EEOptions? {
@@ -125,6 +136,20 @@ class CallViewModel(
     private val mutableDataReceived = MutableSharedFlow<String>()
     val dataReceived = mutableDataReceived
 
+    private var isRecording = false
+    private var isLocalParticipantRecording = false
+
+    private val mutableStartRecordingState: MutableStateFlow<StartRecordingState> = MutableStateFlow(StartRecordingState.Empty)
+    private val mutableIsLocalParticipantRecording: MutableStateFlow<Boolean> = MutableStateFlow(false)
+
+    val startRecordingState = combine(mutableStartRecordingState, mutableIsLocalParticipantRecording) {
+        startRecordState:StartRecordingState, isLocalParticipantRecording: Boolean ->
+        Pair(startRecordState, isLocalParticipantRecording)
+    }
+
+    private val mutableStopRecordingState: MutableStateFlow<StopRecordingState> = MutableStateFlow(StopRecordingState.Empty)
+    val stopRecordingState: StateFlow<StopRecordingState> = mutableStopRecordingState.asStateFlow()
+
     // Whether other participants are allowed to subscribe to this participant's tracks.
     private val mutablePermissionAllowed = MutableStateFlow(true)
     val permissionAllowed = mutablePermissionAllowed.hide()
@@ -160,11 +185,14 @@ class CallViewModel(
                 room.events.collect {
                     when (it) {
                         is RoomEvent.FailedToConnect -> mutableError.value = it.error
+
                         is RoomEvent.DataReceived -> {
                             val identity = it.participant?.identity ?: "server"
                             val message = it.data.toString(Charsets.UTF_8)
                             mutableDataReceived.emit("$identity: $message")
                         }
+
+                        is RoomEvent.RecordingStatusChanged -> handleRecordingStatus(it)
 
                         else -> {
                             Timber.e { "Room event: $it" }
@@ -181,6 +209,22 @@ class CallViewModel(
             application.startForegroundService(foregroundServiceIntent)
         } else {
             application.startService(foregroundServiceIntent)
+        }
+    }
+
+    private fun handleRecordingStatus(roomEvent: RoomEvent) {
+        if (roomEvent.room.isRecording) {
+            mutableIsLocalParticipantRecording.value = isLocalParticipantRecording
+            mutableStartRecordingState.value = StartRecordingState.Recording
+            resetStopRecordingState()
+         } else {
+             if(isLocalParticipantRecording) {
+                 isLocalParticipantRecording = false
+             }
+
+            mutableIsLocalParticipantRecording.value = isLocalParticipantRecording
+            mutableStopRecordingState.value = StopRecordingState.Stopped
+            resetStartRecordingState()
         }
     }
 
@@ -345,6 +389,66 @@ class CallViewModel(
         }
 
         videoTrack.switchCamera(position = newPosition)
+    }
+
+    fun toggleRecording() {
+        isLocalParticipantRecording = !isLocalParticipantRecording
+        isRecording = !isRecording
+
+        viewModelScope.launch(dispatchers.io) {
+            if(isRecording) {
+                callStartRecordingApi()
+            } else {
+                callStopRecordingApi()
+            }
+        }
+    }
+
+    private suspend fun callStopRecordingApi() {
+        resetStartRecordingState()
+
+        networkQueryChat.stopCallRecording(
+            room = roomName
+        ).collect { response ->
+            when (response) {
+                LoadResponse.Loading -> mutableStopRecordingState.value = StopRecordingState.Loading
+                is Response.Error -> {
+                    isRecording = true
+                    mutableStopRecordingState.value = StopRecordingState.Error
+                }
+                else -> {}
+            }
+        }
+    }
+
+    private fun resetStartRecordingState() {
+        if (mutableStartRecordingState.value != StartRecordingState.Empty) {
+            mutableStartRecordingState.value = StartRecordingState.Empty
+        }
+    }
+
+    private suspend fun callStartRecordingApi() {
+        resetStopRecordingState()
+
+        networkQueryChat.startCallRecording(
+            room = roomName,
+            timestamp = System.currentTimeMillis().toDateTime().toString(),
+        ).collect { response ->
+            when (response) {
+                LoadResponse.Loading -> mutableStartRecordingState.value = StartRecordingState.Loading
+                is Response.Error -> {
+                    isRecording = false
+                    mutableStartRecordingState.value = StartRecordingState.Error
+                }
+               else -> {}
+            }
+        }
+    }
+
+    private fun resetStopRecordingState() {
+        if (mutableStopRecordingState.value != StopRecordingState.Empty) {
+            mutableStopRecordingState.value = StopRecordingState.Empty
+        }
     }
 
     fun dismissError() {

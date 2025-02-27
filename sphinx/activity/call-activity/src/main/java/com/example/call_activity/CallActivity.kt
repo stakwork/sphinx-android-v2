@@ -2,6 +2,10 @@ package com.example.call_activity
 
 import android.app.Activity
 import android.app.PictureInPictureParams
+import android.graphics.BlendMode
+import android.graphics.BlendModeColorFilter
+import android.graphics.PorterDuff
+import android.graphics.drawable.Drawable
 import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.Bundle
@@ -9,25 +13,39 @@ import android.os.Parcelable
 import android.util.Rational
 import android.view.View
 import android.view.WindowManager
+import android.view.animation.AccelerateInterpolator
+import android.view.animation.AlphaAnimation
+import android.view.animation.Animation
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.content.res.ResourcesCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.flowWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
-import chat.sphinx.call_activity.databinding.CallActivityBinding
-import com.xwray.groupie.GroupieAdapter
 import chat.sphinx.call_activity.R
+import chat.sphinx.call_activity.databinding.CallActivityBinding
 import chat.sphinx.concept_image_loader.ImageLoader
+import chat.sphinx.concept_network_query_chat.NetworkQueryChat
 import com.example.call_activity.dialog.showDebugMenuDialog
-import com.example.call_activity.dialog.showSelectAudioDeviceDialog
+import com.example.call_activity.state.StartRecordingState
+import com.example.call_activity.state.StopRecordingState
 import com.squareup.moshi.Moshi
+import com.xwray.groupie.GroupieAdapter
 import dagger.hilt.android.AndroidEntryPoint
+import io.matthewnelson.android_feature_toast_utils.ToastUtils
+import io.matthewnelson.android_feature_toast_utils.ToastUtilsResponse
+import io.matthewnelson.android_feature_toast_utils.show
+import io.matthewnelson.concept_coroutines.CoroutineDispatchers
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import kotlinx.parcelize.Parcelize
 import javax.inject.Inject
+
 
 @AndroidEntryPoint
 class CallActivity : AppCompatActivity() {
@@ -40,6 +58,14 @@ class CallActivity : AppCompatActivity() {
     @Suppress("ProtectedInFinal")
     protected lateinit var imageLoader: ImageLoader<ImageView>
 
+    @Inject
+    lateinit var networkQueryChat: NetworkQueryChat
+
+    @Inject
+    lateinit var dispatchers: CoroutineDispatchers
+
+    private var lastToast: Toast? = null
+
     private val viewModel: CallViewModel by viewModelByFactory {
         val args = intent.getParcelableExtra<BundleArgs>(KEY_ARGS)
             ?: throw NullPointerException("args is null!")
@@ -51,9 +77,13 @@ class CallActivity : AppCompatActivity() {
             e2eeKey = args.e2eeKey,
             videoEnabled = args.videoEnabled,
             stressTest = args.stressTest,
-            application = application
+            application = application,
+            roomName = args.roomName ?: "",
+            networkQueryChat = networkQueryChat,
+            dispatchers = dispatchers
         )
     }
+
     private lateinit var binding: CallActivityBinding
     private val screenCaptureIntentLauncher =
         registerForActivityResult(
@@ -124,6 +154,72 @@ class CallActivity : AppCompatActivity() {
             }
         }
 
+        lifecycleScope.launch {
+            viewModel.startRecordingState
+                .flowWithLifecycle(lifecycle, Lifecycle.State.STARTED)
+                .collectLatest {
+                    (recordingState: StartRecordingState, isLocalParticipantRecording: Boolean)  ->
+
+                when (recordingState) {
+                    StartRecordingState.Error -> {
+                        showCustomToastMessage(messageRes = R.string.error_message_call_recording)
+                    }
+
+                    StartRecordingState.Empty -> {}
+
+                    StartRecordingState.Recording -> {
+                        showCustomToastMessage(messageRes = R.string.call_recording_in_progress_message)
+
+                        binding.apply {
+                            recordButton.setImageDrawable(getRecordDrawable(isLocalParticipantRecording))
+
+                            fadeInFadeOutAnimation(
+                                viewToFadeOut = recordButton,
+                                durationMillis = 700,
+                                alphaStartValue = 1.0f,
+                                alphaEndValue = 0.5f,
+                            )
+                        }
+                    }
+
+                    StartRecordingState.Loading -> {
+                        showCustomToastMessage(messageRes = R.string.starting_call_recording_message)
+                    }
+                }
+            }
+        }
+
+        lifecycleScope.launch {
+            viewModel.stopRecordingState
+                .flowWithLifecycle(lifecycle, Lifecycle.State.STARTED)
+                .collectLatest { state ->
+                when(state) {
+                    StopRecordingState.Error -> {
+                        showCustomToastMessage(messageRes = R.string.error_message_call_recording)
+                    }
+
+                    StopRecordingState.Empty -> {}
+
+                    StopRecordingState.Stopped -> {
+                        binding.apply {
+                            showCustomToastMessage(messageRes = R.string.stopped_call_record_message)
+
+                            recordButton.also {
+                                it.clearAnimation()
+                                it.isEnabled = true
+                                it.setImageResource(R.drawable.radio_button_checked)
+                            }
+                        }
+                    }
+
+                    StopRecordingState.Loading -> {
+                        showCustomToastMessage(messageRes = R.string.stopping_call_recording_message)
+                        binding.recordButton.isEnabled = false
+                    }
+                }
+            }
+        }
+
         // Controls setup
         viewModel.cameraEnabled.observe(this) { enabled ->
             binding.camera.setOnClickListener { viewModel.setCameraEnabled(!enabled) }
@@ -157,6 +253,7 @@ class CallActivity : AppCompatActivity() {
 
             binding.flipCamera.isEnabled = enabled
         }
+
         viewModel.micEnabled.observe(this) { enabled ->
             binding.mic.setOnClickListener { viewModel.setMicEnabled(!enabled) }
             binding.mic.setImageResource(
@@ -212,7 +309,7 @@ class CallActivity : AppCompatActivity() {
                 .create()
                 .show()
         }
-
+©
         viewModel.enhancedNsEnabled.observe(this) { enabled ->
             binding.enhancedNs.visibility = if (enabled) {
                 android.view.View.VISIBLE
@@ -225,7 +322,10 @@ class CallActivity : AppCompatActivity() {
             showAudioProcessorSwitchDialog(viewModel)
         }*/
 
-        binding.exit.setOnClickListener { finish() }
+        binding.exit.setOnClickListener {
+            lastToast?.cancel()
+            finish()
+        }
 
 
 //        binding.audioSelect.setOnClickListener {
@@ -261,6 +361,9 @@ class CallActivity : AppCompatActivity() {
             }
         }
 
+        binding.recordButton.setOnClickListener {
+            viewModel.toggleRecording()
+        }
 
         lifecycleScope.launchWhenCreated {
             viewModel.participants.collect { participants ->
@@ -276,7 +379,61 @@ class CallActivity : AppCompatActivity() {
                 }
             }
         }
+    }
 
+    private fun showCustomToastMessage(messageRes: Int) {
+        ToastUtils(
+            toastLengthLong = true,
+            textColor = android.R.color.white,
+            toastBackgroundTint = R.color.color_recording_background,
+            showOnTop = true,
+            verticalPositionInPixels = 140
+        ).show(
+            this@CallActivity,
+            messageRes
+        ).let { response ->
+
+            if (response is ToastUtilsResponse.Success) {
+                lastToast = response.toast
+            }
+        }
+    }
+
+    private fun getRecordDrawable(isLocalParticipantRecording: Boolean): Drawable? {
+        val recordButtonActiveColor = resources.getColor(
+            R.color.disabled_icons_color,
+            null
+        )
+
+        val drawable = ResourcesCompat.getDrawable(
+            resources,
+            if (isLocalParticipantRecording) R.drawable.stop_circle else R.drawable.radio_button_checked,
+            null
+        )?.apply {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                colorFilter = BlendModeColorFilter(recordButtonActiveColor, BlendMode.SRC_ATOP)
+            } else {
+                setColorFilter(recordButtonActiveColor, PorterDuff.Mode.SRC_ATOP)
+            }
+        }
+        return drawable
+    }
+
+    private fun fadeInFadeOutAnimation(
+        viewToFadeOut: View,
+        durationMillis: Long = 500,
+        alphaStartValue: Float =  1.0f,
+        alphaEndValue: Float =  0.5f,
+    ) {
+        val animation = AlphaAnimation(alphaStartValue, alphaEndValue).apply {
+            fillAfter = true
+            duration = durationMillis
+            repeatCount = Animation.INFINITE
+            interpolator = AccelerateInterpolator()
+            repeatMode = Animation.REVERSE
+        }
+
+        viewToFadeOut.startAnimation(animation)
     }
 
     override fun onUserLeaveHint() {
@@ -342,6 +499,9 @@ class CallActivity : AppCompatActivity() {
     override fun onDestroy() {
         binding.audienceRow.adapter = null
         binding.speakerView.adapter = null
+        lastToast?.cancel()
+        lastToast = null
+
         super.onDestroy()
     }
 
@@ -356,6 +516,7 @@ class CallActivity : AppCompatActivity() {
         val e2eeKey: String,
         val e2eeOn: Boolean,
         val stressTest: StressTest,
-        val videoEnabled: Boolean
+        val videoEnabled: Boolean,
+        val roomName: String? = null
     ) : Parcelable
 }

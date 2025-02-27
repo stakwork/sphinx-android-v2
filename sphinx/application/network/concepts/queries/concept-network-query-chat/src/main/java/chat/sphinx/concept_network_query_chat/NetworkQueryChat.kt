@@ -28,4 +28,12 @@ abstract class NetworkQueryChat {
         chatUUID: ChatUUID?,
     ): Flow<LoadResponse<FeedDto, ResponseError>>
 
+    abstract suspend fun startCallRecording(
+        room: String,
+        timestamp: String
+    ): Flow<LoadResponse<Any, ResponseError>>
+
+    abstract suspend fun stopCallRecording(
+        room: String,
+    ): Flow<LoadResponse<Any, ResponseError>>
 }

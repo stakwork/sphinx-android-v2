@@ -1,5 +1,9 @@
 # ChangeLog
 
+## Version 1.0.0-alpha37 (2025-02-27)
+- Adds ability to record Live Kit calls
+- Fixes UI issues on Live Kit calls
+
 ## Version 1.0.0-alpha36 (2025-02-27)
 - Fixes backward compatibility issues during signup
 

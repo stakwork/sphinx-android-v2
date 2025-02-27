@@ -2008,20 +2008,12 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         ) ?: SphinxCallLink.DEFAULT_CALL_SERVER_URL
 
         viewModelScope.launch(mainImmediate) {
-            val chat = chatSharedFlow.firstOrNull()
-
-            val messageText = if (chat?.isConversation() == true) {
-                SphinxCallLink.newCallLinkMessage(meetingServerUrl, audioOnly, moshi)
-            } else {
-                SphinxCallLink.newCallLink(meetingServerUrl, audioOnly)
-            }
-
-            val isCall = (chat?.isConversation() == true)
+            val messageText = SphinxCallLink.newCallLinkMessage(meetingServerUrl, audioOnly, moshi)
 
             messageText?.let { newCallLink ->
                 val messageBuilder = SendMessage.Builder()
                 messageBuilder.setText(newCallLink)
-                messageBuilder.setIsCall(isCall)
+                messageBuilder.setIsCall(true)
                 sendMessage(messageBuilder)
             }
         }
@@ -2068,7 +2060,8 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                                         e2eeOn = false,
                                         e2eeKey = "",
                                         stressTest = StressTest.None,
-                                        videoEnabled = !audioOnly
+                                        videoEnabled = !audioOnly,
+                                        roomName = loadResponse.value.roomName
                                     ),
                                 )
                             }

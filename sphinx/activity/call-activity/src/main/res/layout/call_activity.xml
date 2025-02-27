@@ -2,46 +2,23 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:keepScreenOn="true"
-    android:background="@color/black">
-
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/speaker_view"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:layout_margin="3dp"
-        android:background="@drawable/background_shade_2"
-        android:clipToOutline="true"
-        android:outlineProvider="background"
-        app:layout_constraintBottom_toTopOf="@id/audience_row"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/controls_box">
-
-    </androidx.recyclerview.widget.RecyclerView>
-
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/audience_row"
-        android:layout_width="match_parent"
-        android:layout_height="120dp"
-        app:layout_constraintBottom_toTopOf="@id/controls_box2"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+    android:background="@color/black"
+    android:keepScreenOn="true">
 
     <!-- Top Controls Box -->
     <LinearLayout
         android:id="@+id/controls_box"
         android:layout_width="match_parent"
-        android:layout_height="60dp"
+        android:layout_height="65dp"
         android:gravity="center_vertical"
-        android:paddingHorizontal="@dimen/default_half_layout_margin"
         android:orientation="horizontal"
+        android:paddingHorizontal="@dimen/default_half_layout_margin"
         app:layout_constraintTop_toTopOf="parent">
 
         <LinearLayout
             android:id="@+id/pip_button_container"
             android:layout_width="wrap_content"
-            android:layout_height="60dp"
+            android:layout_height="65dp"
             android:gravity="center_vertical"
             android:orientation="horizontal"
             app:layout_constraintTop_toTopOf="parent">
@@ -98,6 +75,26 @@
 
     </LinearLayout>
 
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/speaker_view"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_margin="3dp"
+        android:background="@drawable/background_shade_2"
+        android:clipToOutline="true"
+        android:outlineProvider="background"
+        app:layout_constraintBottom_toTopOf="@id/audience_row"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/controls_box" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/audience_row"
+        android:layout_width="match_parent"
+        android:layout_height="120dp"
+        app:layout_constraintBottom_toTopOf="@id/controls_box2"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 
     <!-- Bottom Controls Box -->
     <LinearLayout
@@ -113,22 +110,22 @@
 
         <FrameLayout
             android:layout_width="0dp"
-            android:layout_height="54dp"
-            android:layout_weight="1"
+            android:layout_height="65dp"
             android:layout_gravity="center"
-            android:layout_margin="0dp">
+            android:layout_margin="0dp"
+            android:layout_weight="0.1">
 
             <ImageView
                 android:id="@+id/camera"
-                android:layout_width="54dp"
-                android:layout_height="54dp"
-                android:layout_margin="0dp"
+                android:layout_width="65dp"
+                android:layout_height="65dp"
                 android:layout_gravity="center"
+                android:layout_margin="0dp"
                 android:background="@drawable/circle_icon_call_button"
                 android:clipToOutline="true"
                 android:outlineProvider="background"
-                android:scaleType="centerInside"
                 android:padding="16dp"
+                android:scaleType="centerInside"
                 android:src="@drawable/camera"
                 app:tint="@android:color/white" />
 
@@ -136,54 +133,76 @@
 
         <FrameLayout
             android:layout_width="0dp"
-            android:layout_height="54dp"
-            android:layout_weight="1"
+            android:layout_height="65dp"
             android:layout_gravity="center"
-            android:layout_margin="0dp">
+            android:layout_margin="0dp"
+            android:layout_weight="0.1">
 
             <ImageView
                 android:id="@+id/mic"
-                android:layout_width="54dp"
-                android:layout_height="54dp"
-                android:layout_margin="0dp"
+                android:layout_width="65dp"
+                android:layout_height="65dp"
                 android:layout_gravity="center"
+                android:layout_margin="0dp"
                 android:background="@drawable/circle_icon_call_button"
                 android:clipToOutline="true"
-                android:scaleType="centerInside"
                 android:outlineProvider="background"
                 android:padding="12dp"
+                android:scaleType="centerInside"
                 android:src="@drawable/mic"
                 app:tint="@android:color/white" />
         </FrameLayout>
 
         <FrameLayout
             android:layout_width="0dp"
-            android:layout_height="54dp"
-            android:layout_weight="1"
+            android:layout_height="65dp"
             android:layout_gravity="center"
-            android:layout_margin="0dp">
+            android:layout_margin="0dp"
+            android:layout_weight="0.1">
+
+            <ImageView
+                android:id="@+id/recordButton"
+                android:layout_width="65dp"
+                android:layout_height="65dp"
+                android:layout_gravity="center"
+                android:layout_margin="0dp"
+                android:background="@drawable/circle_icon_call_button"
+                android:clipToOutline="true"
+                android:outlineProvider="background"
+                android:padding="12dp"
+                android:scaleType="centerInside"
+                android:src="@drawable/radio_button_checked" />
+        </FrameLayout>
+
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="65dp"
+            android:layout_gravity="center"
+            android:layout_margin="0dp"
+            android:layout_weight="0.1">
 
             <ImageView
                 android:id="@+id/listParticipants"
-                android:layout_width="54dp"
-                android:layout_height="54dp"
+                android:layout_width="65dp"
+                android:layout_height="65dp"
                 android:layout_gravity="center"
                 android:background="@drawable/circle_icon_call_button"
                 android:clipToOutline="true"
                 android:outlineProvider="background"
                 android:padding="12dp"
+                android:scaleType="centerInside"
                 android:src="@drawable/group"
                 app:tint="@android:color/white" />
 
             <TextView
                 android:id="@+id/participantCountBadge"
-                android:layout_width="22dp"
-                android:layout_height="21dp"
-                android:layout_gravity="top|end"
-                android:background="@drawable/circle_icon_3"
+                android:layout_width="20dp"
+                android:layout_height="19dp"
                 android:layout_alignTop="@id/listParticipants"
                 android:layout_alignEnd="@id/listParticipants"
+                android:layout_gravity="top|end"
                 android:layout_marginEnd="20dp"
+                android:background="@drawable/circle_icon_3"
                 android:gravity="center"
                 android:textColor="@android:color/black"
                 android:textSize="12sp"
@@ -192,23 +211,23 @@
 
         <FrameLayout
             android:layout_width="0dp"
-            android:layout_height="54dp"
-            android:layout_weight="1"
+            android:layout_height="65dp"
             android:layout_gravity="center"
-            android:layout_margin="0dp">
+            android:layout_margin="0dp"
+            android:layout_weight="0.1">
 
             <ImageView
                 android:id="@+id/exit"
-                android:layout_width="match_parent"
-                android:layout_height="54dp"
-                android:layout_marginHorizontal="10dp"
+                android:layout_width="65dp"
+                android:layout_height="65dp"
                 android:layout_gravity="center"
+                android:layout_marginHorizontal="10dp"
+                android:layout_weight="1"
                 android:background="@drawable/circle_icon_end_call"
                 android:clipToOutline="true"
                 android:outlineProvider="background"
-                android:scaleType="fitCenter"
                 android:padding="20dp"
-                android:layout_weight="1"
+                android:scaleType="center"
                 android:src="@drawable/call_end" />
 
         </FrameLayout>

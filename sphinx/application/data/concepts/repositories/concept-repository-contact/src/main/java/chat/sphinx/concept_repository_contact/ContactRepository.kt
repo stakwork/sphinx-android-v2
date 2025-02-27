@@ -26,6 +26,7 @@ interface ContactRepository {
     /** Sphinx V2 (rename methods for clarity) **/
 
     val accountOwner: StateFlow<Contact?>
+    suspend fun getOwnerContact(): Contact?
     val getAllContacts: Flow<List<Contact>>
     fun getContactById(contactId: ContactId): Flow<Contact?>
     fun getContactByPubKey(pubKey: LightningNodePubKey): Flow<Contact?>

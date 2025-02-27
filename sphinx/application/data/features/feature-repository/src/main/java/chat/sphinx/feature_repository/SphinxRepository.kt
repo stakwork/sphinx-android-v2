@@ -678,6 +678,18 @@ abstract class SphinxRepository(
         }
     }
 
+    override suspend fun getOwnerContact(): Contact? {
+        var owner: Contact? = null
+
+        applicationScope.launch(mainImmediate) {
+            coreDB.getSphinxDatabaseQueries().contactGetOwner().executeAsOneOrNull()?.let {
+                owner = contactDboPresenterMapper.mapFrom(it)
+            }
+        }.join()
+
+        return owner
+    }
+
     override fun updateNewContactInvited(contact: NewContact) {
         applicationScope.launch(io) {
             val queries = coreDB.getSphinxDatabaseQueries()

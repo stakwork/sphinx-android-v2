@@ -48,13 +48,11 @@ internal class SplashViewModel @Inject constructor(
         }
 
         viewModelScope.launch(mainImmediate) {
-            val isAccountSetup: Boolean = onBoardStepHandler.isAccountSetup()
-
             backgroundLoginHandler.attemptBackgroundLogin(
                 updateLastLoginTimeOnSuccess = true
             )?.let {
 
-                if (isAccountSetup) {
+                if (onBoardStepHandler.isAccountSetup()) {
                     navigator.toDashboardScreen(
                         // No need as it was already updated
                         updateBackgroundLoginTime = false
@@ -78,7 +76,7 @@ internal class SplashViewModel @Inject constructor(
                             }
                             is AuthenticationResponse.Success.Authenticated -> {
 
-                                if (isAccountSetup) {
+                                if (onBoardStepHandler.isAccountSetup()) {
                                     navigator.toDashboardScreen(
                                         // No need as it was already updated
                                         updateBackgroundLoginTime = false

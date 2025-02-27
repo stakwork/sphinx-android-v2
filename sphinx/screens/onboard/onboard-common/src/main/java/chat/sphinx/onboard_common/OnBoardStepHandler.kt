@@ -1,11 +1,13 @@
 package chat.sphinx.onboard_common
 
+import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.logger.SphinxLogger
 import chat.sphinx.logger.e
 import chat.sphinx.onboard_common.internal.json.*
 import chat.sphinx.onboard_common.model.OnBoardInviterData
 import chat.sphinx.onboard_common.model.OnBoardStep
 import chat.sphinx.wrapper_common.lightning.LightningNodePubKey
+import chat.sphinx.wrapper_contact.Contact
 import chat.sphinx.wrapper_relay.AuthorizationToken
 import chat.sphinx.wrapper_relay.RelayHMacKey
 import chat.sphinx.wrapper_relay.RelayUrl
@@ -13,6 +15,8 @@ import chat.sphinx.wrapper_rsa.RsaPublicKey
 import com.squareup.moshi.Moshi
 import io.matthewnelson.concept_authentication.data.AuthenticationStorage
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -21,6 +25,7 @@ import javax.inject.Inject
 
 class OnBoardStepHandler @Inject constructor(
     private val authenticationStorage: AuthenticationStorage,
+    private val contactRepository: ContactRepository,
     private val moshi: Moshi,
     private val LOG: SphinxLogger,
     dispatchers: CoroutineDispatchers
@@ -140,6 +145,12 @@ class OnBoardStepHandler @Inject constructor(
         lock.withLock {
             authenticationStorage.getString(IS_ACCOUNT_SETUP, null)?.let { isAccountSetupString ->
                 return isAccountSetupString == "true"
+            }
+        }
+        contactRepository.getOwnerContact()?.alias?.let { nnAlias ->
+            if (nnAlias.value.isNotEmpty()) {
+                finishOnboard()
+                return true
             }
         }
         return false

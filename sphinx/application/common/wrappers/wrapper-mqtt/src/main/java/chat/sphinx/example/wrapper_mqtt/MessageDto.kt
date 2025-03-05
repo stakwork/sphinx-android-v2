@@ -2,7 +2,6 @@ package chat.sphinx.example.wrapper_mqtt
 
 import com.squareup.moshi.JsonClass
 import java.io.File
-import java.nio.file.LinkOption
 
 @JsonClass(generateAdapter = true)
 data class MessageDto(
@@ -42,7 +41,8 @@ data class MessageDto(
     val person: String?,
     val thread_uuid: String?,
     val error_message: String?,
-    val tag_message: String?
+    val tag_message: String?,
+    val remote_timezone_identifier: String?,
 ) {
     @Transient
     val seenActual: Boolean =

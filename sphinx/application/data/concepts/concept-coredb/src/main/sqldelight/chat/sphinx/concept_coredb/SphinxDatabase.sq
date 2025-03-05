@@ -20,7 +20,6 @@ import chat.sphinx.wrapper_common.Push;
 import chat.sphinx.wrapper_common.Seen;
 import chat.sphinx.wrapper_common.chat.ChatUUID;
 import chat.sphinx.wrapper_common.contact.Blocked;
-import chat.sphinx.wrapper_common.contact.ContactIndex;
 import chat.sphinx.wrapper_common.dashboard.ChatId;
 import chat.sphinx.wrapper_common.dashboard.ContactId;
 import chat.sphinx.wrapper_common.dashboard.DashboardItemId;
@@ -83,10 +82,14 @@ import chat.sphinx.wrapper_message.MessagePerson;
 import chat.sphinx.wrapper_message.MessageStatus;
 import chat.sphinx.wrapper_message.MessageType;
 import chat.sphinx.wrapper_message.RecipientAlias;
+import chat.sphinx.wrapper_message.RemoteTimezoneIdentifier;
 import chat.sphinx.wrapper_message.ReplyUUID;
 import chat.sphinx.wrapper_message.SenderAlias;
 import chat.sphinx.wrapper_message.TagMessage;
 import chat.sphinx.wrapper_message.ThreadUUID;
+import chat.sphinx.wrapper_message.TimezoneEnabled;
+import chat.sphinx.wrapper_message.TimezoneIdentifier;
+import chat.sphinx.wrapper_message.TimezoneUpdated;
 import chat.sphinx.wrapper_message_media.FileName;
 import chat.sphinx.wrapper_message_media.MediaKey;
 import chat.sphinx.wrapper_message_media.MediaKeyDecrypted;
@@ -161,7 +164,11 @@ CREATE TABLE chatDbo(
     content_seen_at             INTEGER         AS DateTime,
     notify                      INTEGER         AS NotificationLevel,
     pin_message                 TEXT            AS MessageUUID DEFAULT NULL,
-    second_brain_url            TEXT            AS SecondBrainUrl DEFAULT NULL
+    second_brain_url            TEXT            AS SecondBrainUrl DEFAULT NULL,
+    timezone_enabled            INTEGER         AS TimezoneEnabled DEFAULT 1,
+    timezone_identifier         TEXT            AS TimezoneIdentifier DEFAULT NULL,
+    remote_timezone_identifier  TEXT            AS RemoteTimezoneIdentifier DEFAULT NULL,
+    timezone_updated            INTEGER         AS TimezoneUpdated DEFAULT 1
 );
 
 chatUpdateNameAndStatus:
@@ -188,6 +195,26 @@ WHERE id = ?;
 chatUpdateContentSeenAt:
 UPDATE chatDbo
 SET content_seen_at = :content_seen_at
+WHERE id = ?;
+
+chatUpdateTimezoneEnabled:
+UPDATE chatDbo
+SET timezone_enabled = :timezone_enabled
+WHERE id = ?;
+
+chatUpdateTimezoneIdentifier:
+UPDATE chatDbo
+SET timezone_identifier = :timezone_identifier
+WHERE id = ?;
+
+chatUpdateRemoteTimezoneIdentifier:
+UPDATE chatDbo
+SET remote_timezone_identifier = :remote_timezone_identifier
+WHERE id = ?;
+
+chatUpdateTimezoneUpdated:
+UPDATE chatDbo
+SET timezone_updated = :timezone_updated
 WHERE id = ?;
 
 chatGetAll:
@@ -778,7 +805,8 @@ CREATE TABLE messageDbo(
     person                      TEXT            AS MessagePerson,
     thread_uuid                 TEXT            AS ThreadUUID,
     error_message               TEXT            AS ErrorMessage,
-    tag_message                 TEXT            AS TagMessage
+    tag_message                 TEXT            AS TagMessage,
+    remote_timezone_identifier  TEXT            AS RemoteTimezoneIdentifier DEFAULT NULL
 );
 
 messageGetAllReactionsByUUID:

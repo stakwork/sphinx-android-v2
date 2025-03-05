@@ -8,9 +8,20 @@ import chat.sphinx.wrapper_common.dashboard.ContactId
 import chat.sphinx.wrapper_common.lightning.LightningPaymentHash
 import chat.sphinx.wrapper_common.lightning.LightningPaymentRequest
 import chat.sphinx.wrapper_common.lightning.Sat
-import chat.sphinx.wrapper_common.message.*
+import chat.sphinx.wrapper_common.message.CallLinkMessage
+import chat.sphinx.wrapper_common.message.MessageId
+import chat.sphinx.wrapper_common.message.MessageUUID
+import chat.sphinx.wrapper_common.message.SphinxCallLink
+import chat.sphinx.wrapper_common.message.isValidSphinxCallLink
+import chat.sphinx.wrapper_common.message.toSphinxCallLink
 import chat.sphinx.wrapper_common.time
-import chat.sphinx.wrapper_message_media.*
+import chat.sphinx.wrapper_message_media.MessageMedia
+import chat.sphinx.wrapper_message_media.isAudio
+import chat.sphinx.wrapper_message_media.isImage
+import chat.sphinx.wrapper_message_media.isPdf
+import chat.sphinx.wrapper_message_media.isSphinxText
+import chat.sphinx.wrapper_message_media.isUnknown
+import chat.sphinx.wrapper_message_media.isVideo
 import chat.sphinx.wrapper_message_media.token.MediaUrl
 
 @Suppress("NOTHING_TO_INLINE")
@@ -384,6 +395,7 @@ abstract class Message {
     abstract val tagMessage: TagMessage?
     abstract val isPinned: Boolean
 
+
     abstract val messageContentDecrypted: MessageContentDecrypted?
     abstract val messageDecryptionError: Boolean
     abstract val messageDecryptionException: Exception?
@@ -396,6 +408,7 @@ abstract class Message {
     abstract val purchaseItems: List<Message>?
     abstract val replyMessage: Message?
     abstract val thread: List<Message>?
+    abstract val remoteTimezoneIdentifier: RemoteTimezoneIdentifier?
 
     override fun equals(other: Any?): Boolean {
         return  other                               is Message                      &&

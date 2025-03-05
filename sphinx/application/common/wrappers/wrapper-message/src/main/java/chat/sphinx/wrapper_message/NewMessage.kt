@@ -52,7 +52,8 @@ class NewMessage(
     override val reactions: List<Message>? = null,
     override val purchaseItems: List<Message>? = null,
     override val replyMessage: Message? = null,
-    override val thread: List<Message>? = null
+    override val thread: List<Message>? = null,
+    override val remoteTimezoneIdentifier: RemoteTimezoneIdentifier? = null,
 ) : Message() {
 
     override fun equals(other: Any?): Boolean {

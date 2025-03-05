@@ -256,6 +256,10 @@ inline fun TransactionCallbacks.upsertNewChat(
     val chatName = chat.name
     val adminPubKey = chat.ownerPubKey
     val pinedMessage = chat.pinedMessage
+    val timezoneEnabled = chat.timezoneEnabled?.toTimezoneEnabled()
+    val timezoneIdentifier = chat.timezoneIdentifier?.toTimezoneIdentifier()
+    val remoteTimezoneIdentifier = chat.remoteTimezoneIdentifier?.toRemoteTimezoneIdentifier()
+    val timezoneUpdated = chat.timezoneUpdated?.toTimezoneUpdated()
 
     queries.chatUpsert(
         chatName,
@@ -275,12 +279,16 @@ inline fun TransactionCallbacks.upsertNewChat(
         chat.pendingContactIds,
         chat.notify,
         pinedMessage,
+        timezoneEnabled,
+        timezoneIdentifier,
+        remoteTimezoneIdentifier,
+        timezoneUpdated,
         chatId,
         chat.uuid,
         chatType,
         createdAt,
         pricePerMessage,
-        escrowAmount
+        escrowAmount,
     )
 
     if (
@@ -350,6 +358,10 @@ inline fun TransactionCallbacks.upsertChat(
     val chatName = dto.name?.toChatName()
     val adminPubKey = dto.owner_pub_key?.toLightningNodePubKey()
     val pinedMessage = dto.pin?.toMessageUUID()
+    val timezoneEnabled = dto.timezoneEnabled.toTimezoneEnabled()
+    val timezoneIdentifier = dto.timezone_identifier?.toTimezoneIdentifier()
+    val remoteTimezoneIdentifier = dto.remote_timezone_identifier?.toRemoteTimezoneIdentifier()
+    val timezoneUpdated = dto.timezoneUpdated.toTimezoneUpdated()
 
     queries.chatUpsert(
         chatName,
@@ -369,6 +381,10 @@ inline fun TransactionCallbacks.upsertChat(
         dto.pending_contact_ids?.map { ContactId(it) },
         dto.notify?.toNotificationLevel(),
         pinedMessage,
+        timezoneEnabled,
+        timezoneIdentifier,
+        remoteTimezoneIdentifier,
+        timezoneUpdated,
         chatId,
         ChatUUID(dto.uuid),
         chatType,

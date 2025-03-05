@@ -1,0 +1,8 @@
+import java.lang.Boolean;
+
+ALTER TABLE chatDbo ADD COLUMN timezone_enabled INTEGER AS Boolean DEFAULT TRUE;
+ALTER TABLE chatDbo ADD COLUMN timezone_identifier TEXT DEFAULT NULL;
+ALTER TABLE chatDbo ADD COLUMN remote_timezone_identifier TEXT DEFAULT NULL;
+ALTER TABLE chatDbo ADD COLUMN timezone_updated INTEGER AS Boolean DEFAULT TRUE;
+
+ALTER TABLE messageDbo ADD COLUMN remote_timezone_identifier TEXT DEFAULT NULL;

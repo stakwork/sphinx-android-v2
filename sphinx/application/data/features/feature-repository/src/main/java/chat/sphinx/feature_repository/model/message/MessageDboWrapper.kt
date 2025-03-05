@@ -144,6 +144,30 @@ class MessageDboWrapper(
 
     @Volatile
     @Suppress("PropertyName")
+    var _timezoneEnabled: TimezoneEnabled? = null
+    override val timezoneEnabled: TimezoneEnabled?
+        get() = _timezoneEnabled
+
+    @Volatile
+    @Suppress("PropertyName")
+    var _timezoneIdentifier: TimezoneIdentifier? = null
+    override val timezoneIdentifier: TimezoneIdentifier?
+        get() = _timezoneIdentifier
+
+    @Volatile
+    @Suppress("PropertyName")
+    var _remoteTimezoneIdentifier: RemoteTimezoneIdentifier? = null
+    override val remoteTimezoneIdentifier: RemoteTimezoneIdentifier?
+        get() = _remoteTimezoneIdentifier
+
+    @Volatile
+    @Suppress("PropertyName")
+    var _timezoneUpdated: TimezoneUpdated? = null
+    override val timezoneUpdated: TimezoneUpdated?
+        get() = _timezoneUpdated
+
+    @Volatile
+    @Suppress("PropertyName")
     var _isPinned: Boolean = false
     override val isPinned: Boolean
         get() = _isPinned
@@ -187,7 +211,8 @@ fun convertMessageDboToNewMessage(messageDbo: MessageDbo, messageMedia: MessageM
         reactions = null,
         purchaseItems = null,
         replyMessage = null,
-        thread = null
+        thread = null,
+        remoteTimezoneIdentifier = messageDbo.remote_timezone_identifier
     )
 }
 

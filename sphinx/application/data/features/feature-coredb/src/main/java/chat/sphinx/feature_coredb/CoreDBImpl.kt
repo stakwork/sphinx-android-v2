@@ -8,6 +8,9 @@ import chat.sphinx.feature_coredb.adapters.action_track.ActionTrackMetaDataAdapt
 import chat.sphinx.feature_coredb.adapters.action_track.ActionTrackTypeAdapter
 import chat.sphinx.feature_coredb.adapters.action_track.ActionTrackUploadedAdapter
 import chat.sphinx.feature_coredb.adapters.chat.*
+import chat.sphinx.feature_coredb.adapters.chat.RemoteTimezoneIdentifierAdapter
+import chat.sphinx.feature_coredb.adapters.chat.TimezoneEnabledAdapter
+import chat.sphinx.feature_coredb.adapters.chat.TimezoneIdentifierAdapter
 import chat.sphinx.feature_coredb.adapters.common.*
 import chat.sphinx.feature_coredb.adapters.contact.*
 import chat.sphinx.feature_coredb.adapters.feed.*
@@ -26,6 +29,7 @@ import chat.sphinx.feature_coredb.adapters.media.MediaKeyDecryptedAdapter
 import chat.sphinx.feature_coredb.adapters.media.MediaTokenAdapter
 import chat.sphinx.feature_coredb.adapters.media.MediaTypeAdapter
 import chat.sphinx.feature_coredb.adapters.message.*
+import chat.sphinx.feature_coredb.adapters.message.TimezoneUpdatedAdapter
 import chat.sphinx.feature_coredb.adapters.server.IpAdapter
 import chat.sphinx.feature_coredb.adapters.subscription.CronAdapter
 import chat.sphinx.feature_coredb.adapters.subscription.EndNumberAdapter
@@ -96,6 +100,10 @@ abstract class CoreDBImpl(private val moshi: Moshi): CoreDB() {
                     notifyAdapter = NotifyAdapter(),
                     pin_messageAdapter = PinMessageAdapter.getInstance(),
                     second_brain_urlAdapter = SecondBrainUrlAdapter(),
+                    timezone_enabledAdapter = TimezoneEnabledAdapter(),
+                    timezone_updatedAdapter = TimezoneUpdatedAdapter(),
+                    remote_timezone_identifierAdapter = RemoteTimezoneIdentifierAdapter(),
+                    timezone_identifierAdapter = TimezoneIdentifierAdapter()
                 ),
                 contactDboAdapter = ContactDbo.Adapter(
                     idAdapter = ContactIdAdapter.getInstance(),
@@ -165,6 +173,7 @@ abstract class CoreDBImpl(private val moshi: Moshi): CoreDB() {
                     thread_uuidAdapter = ThreadUUIDAdapter(),
                     error_messageAdapter = ErrorMessageAdapter(),
                     tag_messageAdapter = TagMessageAdapter(),
+                    remote_timezone_identifierAdapter = RemoteTimezoneIdentifierAdapter()
                 ),
                 messageMediaDboAdapter = MessageMediaDbo.Adapter(
                     idAdapter = MessageIdAdapter.getInstance(),

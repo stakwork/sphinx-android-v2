@@ -3,6 +3,11 @@ package chat.sphinx.feature_repository.mappers.chat
 import chat.sphinx.conceptcoredb.ChatDbo
 import chat.sphinx.feature_repository.mappers.ClassMapper
 import chat.sphinx.wrapper_chat.Chat
+import chat.sphinx.wrapper_message.isTrue
+import chat.sphinx.wrapper_message.toRemoteTimezoneIdentifier
+import chat.sphinx.wrapper_message.toTimezoneEnabled
+import chat.sphinx.wrapper_message.toTimezoneIdentifier
+import chat.sphinx.wrapper_message.toTimezoneUpdated
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
 import java.text.ParseException
 
@@ -42,6 +47,10 @@ internal class ChatDboPresenterMapper(
             notify = value.notify,
             pinedMessage = value.pin_message,
             secondBrainUrl = value.second_brain_url,
+            timezoneEnabled = value.timezone_enabled?.isTrue(),
+            timezoneIdentifier = value.timezone_identifier?.value,
+            remoteTimezoneIdentifier = value.remote_timezone_identifier?.value,
+            timezoneUpdated = value.timezone_updated?.isTrue()
         )
     }
 
@@ -72,7 +81,11 @@ internal class ChatDboPresenterMapper(
             content_seen_at = value.contentSeenAt,
             notify = value.notify,
             pin_message = value.pinedMessage,
-            second_brain_url = value.secondBrainUrl
+            second_brain_url = value.secondBrainUrl,
+            timezone_enabled = value.timezoneEnabled?.toTimezoneEnabled(),
+            timezone_identifier = value.timezoneIdentifier?.toTimezoneIdentifier(),
+            remote_timezone_identifier = value.remoteTimezoneIdentifier?.toRemoteTimezoneIdentifier(),
+            timezone_updated = value.timezoneUpdated?.toTimezoneUpdated()
         )
     }
 }

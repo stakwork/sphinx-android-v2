@@ -481,7 +481,11 @@ abstract class SphinxRepository(
                 contentSeenAt = null,
                 pinedMessage = null,
                 notify = NotificationLevel.SeeAll,
-                secondBrainUrl = null
+                secondBrainUrl = null,
+                timezoneEnabled = null,
+                timezoneIdentifier = null,
+                remoteTimezoneIdentifier = null,
+                timezoneUpdated = null
             )
 
             chatLock.withLock {
@@ -986,7 +990,11 @@ abstract class SphinxRepository(
                                 contentSeenAt = null,
                                 pinedMessage = loadResponse.value.pin?.toMessageUUID(),
                                 notify = NotificationLevel.SeeAll,
-                                secondBrainUrl = null
+                                secondBrainUrl = null,
+                                timezoneEnabled = null,
+                                timezoneIdentifier = null,
+                                remoteTimezoneIdentifier = null,
+                                timezoneUpdated = null
                             )
 
                             chatLock.withLock {
@@ -1415,7 +1423,11 @@ abstract class SphinxRepository(
                     contentSeenAt = existingTribe?.contentSeenAt,
                     pinedMessage = existingTribe?.pinedMessage,
                     notify = NotificationLevel.SeeAll,
-                    secondBrainUrl = existingTribe?.secondBrainUrl
+                    secondBrainUrl = existingTribe?.secondBrainUrl,
+                    timezoneEnabled = existingTribe?.timezoneEnabled,
+                    timezoneIdentifier = existingTribe?.timezoneIdentifier,
+                    remoteTimezoneIdentifier = existingTribe?.remoteTimezoneIdentifier,
+                    timezoneUpdated = existingTribe?.timezoneUpdated
                 )
 
                 chatLock.withLock {
@@ -1945,7 +1957,11 @@ abstract class SphinxRepository(
                                 contentSeenAt = null,
                                 pinedMessage = loadResponse.value.pin?.toMessageUUID(),
                                 notify = NotificationLevel.SeeAll,
-                                secondBrainUrl = loadResponse.value.second_brain_url?.toSecondBrainUrl()
+                                secondBrainUrl = loadResponse.value.second_brain_url?.toSecondBrainUrl(),
+                                timezoneEnabled = null,
+                                timezoneIdentifier = null,
+                                remoteTimezoneIdentifier = null,
+                                timezoneUpdated = null
                             )
 
                             messageLock.withLock {
@@ -2924,7 +2940,11 @@ abstract class SphinxRepository(
                 contentSeenAt = null,
                 pinedMessage = null,
                 notify = NotificationLevel.SeeAll,
-                secondBrainUrl = null
+                secondBrainUrl = null,
+                timezoneEnabled = null,
+                timezoneIdentifier = null,
+                remoteTimezoneIdentifier = null,
+                timezoneUpdated = null
             )
 
             contactLock.withLock {

@@ -42,7 +42,11 @@ data class MessageDto(
     val person: String?,
     val thread_uuid: String?,
     val error_message: String?,
-    val tag_message: String?
+    val tag_message: String?,
+    val timezone_enabled: Any?,
+    val timezone_identifier: String?,
+    val remote_timezone_identifier: String?,
+    val timezone_updated: Any?
 ) {
     @Transient
     val seenActual: Boolean =
@@ -108,4 +112,32 @@ data class MessageDto(
             null
         }
     }
+
+    @Transient
+    val timezoneEnabled: Boolean =
+        when (timezone_enabled) {
+            is Boolean -> {
+                timezone_enabled
+            }
+            is Double -> {
+                timezone_enabled.toInt() == 1
+            }
+            else -> {
+                false
+            }
+        }
+
+    @Transient
+    val timezoneUpdated: Boolean =
+        when (timezone_updated) {
+            is Boolean -> {
+                timezone_updated
+            }
+            is Double -> {
+                timezone_updated.toInt() == 1
+            }
+            else -> {
+                false
+            }
+        }
 }

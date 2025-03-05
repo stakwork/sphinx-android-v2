@@ -384,6 +384,7 @@ abstract class Message {
     abstract val tagMessage: TagMessage?
     abstract val isPinned: Boolean
 
+
     abstract val messageContentDecrypted: MessageContentDecrypted?
     abstract val messageDecryptionError: Boolean
     abstract val messageDecryptionException: Exception?
@@ -396,6 +397,11 @@ abstract class Message {
     abstract val purchaseItems: List<Message>?
     abstract val replyMessage: Message?
     abstract val thread: List<Message>?
+
+    abstract val timezoneEnabled: TimezoneEnabled?
+    abstract val timezoneIdentifier: TimezoneIdentifier?
+    abstract val remoteTimezoneIdentifier: RemoteTimezoneIdentifier?
+    abstract val timezoneUpdated: TimezoneUpdated?
 
     override fun equals(other: Any?): Boolean {
         return  other                               is Message                      &&

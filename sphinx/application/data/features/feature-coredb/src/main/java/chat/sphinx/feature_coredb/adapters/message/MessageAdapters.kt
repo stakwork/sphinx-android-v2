@@ -17,14 +17,9 @@ import chat.sphinx.wrapper_message.ReplyUUID
 import chat.sphinx.wrapper_message.SenderAlias
 import chat.sphinx.wrapper_message.TagMessage
 import chat.sphinx.wrapper_message.ThreadUUID
-import chat.sphinx.wrapper_message.TimezoneEnabled
-import chat.sphinx.wrapper_message.TimezoneIdentifier
-import chat.sphinx.wrapper_message.TimezoneUpdated
 import chat.sphinx.wrapper_message.toFlagged
 import chat.sphinx.wrapper_message.toMessageStatus
 import chat.sphinx.wrapper_message.toMessageType
-import chat.sphinx.wrapper_message.toTimezoneEnabled
-import chat.sphinx.wrapper_message.toTimezoneUpdated
 import com.squareup.sqldelight.ColumnAdapter
 
 internal class MessageUUIDAdapter : ColumnAdapter<MessageUUID, String> {
@@ -199,30 +194,9 @@ internal class TagMessageAdapter : ColumnAdapter<TagMessage, String> {
     }
 }
 
-internal class TimezoneEnabledAdapter : ColumnAdapter<TimezoneEnabled, Long> {
-    override fun decode(databaseValue: Long): TimezoneEnabled =
-        databaseValue.toInt().toTimezoneEnabled()
-
-    override fun encode(value: TimezoneEnabled): Long = value.value.toLong()
-}
-
-internal class TimezoneIdentifierAdapter : ColumnAdapter<TimezoneIdentifier, String> {
-    override fun decode(databaseValue: String): TimezoneIdentifier =
-        TimezoneIdentifier(databaseValue)
-
-    override fun encode(value: TimezoneIdentifier): String = value.value
-}
-
 internal class RemoteTimezoneIdentifierAdapter : ColumnAdapter<RemoteTimezoneIdentifier, String> {
     override fun decode(databaseValue: String): RemoteTimezoneIdentifier =
         RemoteTimezoneIdentifier(databaseValue)
 
     override fun encode(value: RemoteTimezoneIdentifier): String = value.value
-}
-
-internal class TimezoneUpdatedAdapter : ColumnAdapter<TimezoneUpdated, Long> {
-    override fun decode(databaseValue: Long): TimezoneUpdated =
-        databaseValue.toInt().toTimezoneUpdated()
-
-    override fun encode(value: TimezoneUpdated): Long = value.value.toLong()
 }

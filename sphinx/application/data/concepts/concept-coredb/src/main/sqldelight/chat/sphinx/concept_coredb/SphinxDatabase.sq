@@ -20,7 +20,6 @@ import chat.sphinx.wrapper_common.Push;
 import chat.sphinx.wrapper_common.Seen;
 import chat.sphinx.wrapper_common.chat.ChatUUID;
 import chat.sphinx.wrapper_common.contact.Blocked;
-import chat.sphinx.wrapper_common.contact.ContactIndex;
 import chat.sphinx.wrapper_common.dashboard.ChatId;
 import chat.sphinx.wrapper_common.dashboard.ContactId;
 import chat.sphinx.wrapper_common.dashboard.DashboardItemId;
@@ -178,16 +177,6 @@ SET name = :name,
     status = :status
 WHERE id = ?;
 
-chatTimezoneIdentifier:
-UPDATE chatDbo
-SET timezone_identifier = :timezone_identifier
-WHERE id = ?;
-
-chatRemoteTimezoneIdentifier:
-UPDATE chatDbo
-SET remote_timezone_identifier = :remote_timezone_identifier
-WHERE id = ?;
-
 chatUpdateLatestMessage:
 UPDATE chatDbo
 SET latest_message_id = :latest_message_id
@@ -211,6 +200,16 @@ WHERE id = ?;
 chatUpdateTimezoneEnabled:
 UPDATE chatDbo
 SET timezone_enabled = :timezone_enabled
+WHERE id = ?;
+
+chatUpdateTimezoneIdentifier:
+UPDATE chatDbo
+SET timezone_identifier = :timezone_identifier
+WHERE id = ?;
+
+chatUpdateRemoteTimezoneIdentifier:
+UPDATE chatDbo
+SET remote_timezone_identifier = :remote_timezone_identifier
 WHERE id = ?;
 
 chatUpdateTimezoneUpdated:
@@ -290,11 +289,7 @@ chatUpsert {
         my_alias = :my_alias,
         pending_contact_ids = :pending_contact_ids,
         notify = :notify,
-        pin_message = :pin_message,
-        timezone_enabled = :timezone_enabled,
-        timezone_identifier = :timezone_identifier,
-        remote_timezone_identifier = :remote_timezone_identifier,
-        timezone_updated = :timezone_updated
+        pin_message = :pin_message
     WHERE id = :id;
 
     INSERT OR IGNORE INTO chatDbo(
@@ -320,11 +315,7 @@ chatUpsert {
         my_alias,
         pending_contact_ids,
         notify,
-        pin_message,
-        timezone_enabled,
-        timezone_identifier,
-        remote_timezone_identifier,
-        timezone_updated
+        pin_message
     )
     VALUES (
         :id,
@@ -349,11 +340,7 @@ chatUpsert {
         :my_alias,
         :pending_contact_ids,
         :notify,
-        :pin_message,
-        :timezone_enabled,
-        :timezone_identifier,
-        :remote_timezone_identifier,
-        :timezone_updated
+        :pin_message
     );
 }
 
@@ -385,21 +372,6 @@ chatUpdateDetails:
 UPDATE chatDbo
 SET photo_url = :photo_url,
     status = :status
-WHERE id = ?;
-
-chatUpdateTimezoneIdentifier:
-UPDATE chatDbo
-SET timezone_identifier = :timezone_identifier
-WHERE id = ?;
-
-chatUpdateRemoteTimezoneIdentifier:
-UPDATE chatDbo
-SET remote_timezone_identifier = :remote_timezone_identifier
-WHERE id = ?;
-
-chatUpdateRemoteTimezoneUpdated:
-UPDATE chatDbo
-SET timezone_updated = :timezone_updated
 WHERE id = ?;
 
 chatUpdateTribeData:

@@ -3,7 +3,6 @@ package chat.sphinx.edit_contact.ui
 import android.icu.util.TimeZone
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -20,8 +19,10 @@ import chat.sphinx.contact.databinding.LayoutContactBinding
 import chat.sphinx.contact.databinding.LayoutContactDetailScreenHeaderBinding
 import chat.sphinx.contact.databinding.LayoutContactSaveBinding
 import chat.sphinx.contact.ui.ContactFragment
+import chat.sphinx.detail_resources.databinding.ShareTimezoneLayoutBinding
 import chat.sphinx.edit_contact.R
 import chat.sphinx.edit_contact.databinding.FragmentEditContactBinding
+import chat.sphinx.resources.R.color
 import chat.sphinx.resources.setTextColorExt
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -55,20 +56,13 @@ internal class EditContactFragment : ContactFragment<
         LayoutContactSaveBinding::bind, R.id.include_edit_contact_layout_save
     )
 
-    private lateinit var fragmentEditContactBinding: FragmentEditContactBinding
+    private val fragmentShareTimezone: ShareTimezoneLayoutBinding by viewBinding(
+        ShareTimezoneLayoutBinding::bind, R.id.include_share_timezone_layout
+    )
 
     override fun getHeaderText(): String = getString(R.string.edit_contact_header_name)
 
     override fun getSaveButtonText(): String = getString(R.string.save_contact_button)
-
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
-        fragmentEditContactBinding = FragmentEditContactBinding.inflate(inflater)
-        return fragmentEditContactBinding.root
-    }
 
     @RequiresApi(Build.VERSION_CODES.N)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -96,7 +90,7 @@ internal class EditContactFragment : ContactFragment<
             }
         }
 
-        fragmentEditContactBinding.apply {
+        fragmentShareTimezone.apply {
 
             spinnerTimezones.let {
                 it.adapter = spinnerAdapter
@@ -121,8 +115,8 @@ internal class EditContactFragment : ContactFragment<
                 }
             }
 
-            switchEditContact.setOnCheckedChangeListener { compoundButton, isChecked ->
-                spinnerTimezones.let { it ->
+            switchEditTimezone.setOnCheckedChangeListener { _, isChecked ->
+                spinnerTimezones.let {
                     if (!isChecked) {
                         disableSpinner(spinner = it, spinnerLabel = textViewContactTimezone)
                     } else {
@@ -141,7 +135,7 @@ internal class EditContactFragment : ContactFragment<
             setSelection(0)
         }
 
-        spinnerLabel.setTextColorExt(chat.sphinx.resources.R.color.secondaryText)
+        spinnerLabel.setTextColorExt(color.secondaryText)
     }
 
     private fun enableSpinner(spinner: Spinner, spinnerLabel: AppCompatTextView) {
@@ -151,7 +145,6 @@ internal class EditContactFragment : ContactFragment<
             alpha = 1.0f
         }
 
-        spinnerLabel.setTextColorExt(chat.sphinx.resources.R.color.text)
+        spinnerLabel.setTextColorExt(color.text)
     }
-
 }

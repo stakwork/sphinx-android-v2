@@ -7,7 +7,9 @@ import android.os.Bundle
 import android.text.InputFilter
 import android.text.Spanned
 import android.view.KeyEvent
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
@@ -25,6 +27,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import by.kirich1409.viewbindingdelegate.viewBinding
 import chat.sphinx.concept_image_loader.ImageLoader
+import chat.sphinx.detail_resources.databinding.ShareTimezoneLayoutBinding
 import chat.sphinx.insetter_activity.InsetterActivity
 import chat.sphinx.insetter_activity.addNavigationBarPadding
 import chat.sphinx.menu_bottom.ui.MenuBottomViewState
@@ -61,6 +64,10 @@ internal class TribeDetailFragment : SideEffectFragment<
         >(R.layout.fragment_tribe_detail) {
     override val viewModel: TribeDetailViewModel by viewModels()
     override val binding: FragmentTribeDetailBinding by viewBinding(FragmentTribeDetailBinding::bind)
+
+    private val fragmentShareTimezone: ShareTimezoneLayoutBinding by viewBinding(
+        ShareTimezoneLayoutBinding::bind, R.id.include_share_timezone_layout
+    )
 
     @Inject
     lateinit var imageLoaderInj: ImageLoader<ImageView>
@@ -112,6 +119,9 @@ internal class TribeDetailFragment : SideEffectFragment<
                     }
                 }
             }
+        }
+
+        fragmentShareTimezone.apply {
 
             spinnerTimezones.let {
                 it.adapter = spinnerAdapter
@@ -119,7 +129,7 @@ internal class TribeDetailFragment : SideEffectFragment<
 
                 disableSpinner(
                     spinner = it,
-                    spinnerLabel = textViewTribeTimezone
+                    spinnerLabel = textViewContactTimezone
                 )
 
                 it.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
@@ -136,12 +146,12 @@ internal class TribeDetailFragment : SideEffectFragment<
                 }
             }
 
-            switchEditTribe.setOnCheckedChangeListener { compoundButton, isChecked ->
-                spinnerTimezones.let { it ->
+            switchEditTimezone.setOnCheckedChangeListener { _, isChecked ->
+                spinnerTimezones.let {
                     if (!isChecked) {
-                        disableSpinner(spinner = it, spinnerLabel = textViewTribeTimezone)
+                        disableSpinner(spinner = it, spinnerLabel = textViewContactTimezone)
                     } else {
-                        enableSpinner(spinner = it, spinnerLabel = textViewTribeTimezone)
+                        enableSpinner(spinner = it, spinnerLabel = textViewContactTimezone)
                     }
                 }
             }

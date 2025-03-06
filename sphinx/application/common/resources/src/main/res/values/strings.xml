@@ -329,5 +329,7 @@
     <string name="connect_manager_load_transactions_error">Error loading transactions</string>
     <string name="alert_confirm_delete_invite_title">Delete Invite</string>
     <string name="alert_confirm_delete_invite_message">Are you sure you want to delete this invite?</string>
+    <string name="timezone_label">Timezone</string>
+    <string name="share_timezone_label">Share timezone</string>
 
 </resources>

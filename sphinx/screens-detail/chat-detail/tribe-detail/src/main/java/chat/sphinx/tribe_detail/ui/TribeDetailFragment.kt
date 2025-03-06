@@ -1,17 +1,25 @@
 package chat.sphinx.tribe_detail.ui
 
 import android.content.Context
+import android.icu.util.TimeZone
+import android.os.Build
 import android.os.Bundle
 import android.text.InputFilter
 import android.text.Spanned
 import android.view.KeyEvent
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import android.widget.ImageView
-import android.widget.SeekBar
+import android.widget.Spinner
 import android.widget.TextView
 import android.widget.TextView.OnEditorActionListener
 import androidx.activity.OnBackPressedCallback
+import androidx.annotation.RequiresApi
+import androidx.appcompat.widget.AppCompatTextView
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.viewModels
@@ -19,19 +27,21 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import by.kirich1409.viewbindingdelegate.viewBinding
 import chat.sphinx.concept_image_loader.ImageLoader
+import chat.sphinx.detail_resources.databinding.ShareTimezoneLayoutBinding
 import chat.sphinx.insetter_activity.InsetterActivity
 import chat.sphinx.insetter_activity.addNavigationBarPadding
 import chat.sphinx.menu_bottom.ui.MenuBottomViewState
 import chat.sphinx.menu_bottom_profile_pic.BottomMenuPicture
 import chat.sphinx.menu_bottom_profile_pic.UpdatingImageViewState
+import chat.sphinx.resources.R.*
 import chat.sphinx.resources.inputMethodManager
+import chat.sphinx.resources.setTextColorExt
 import chat.sphinx.tribe.BottomMenuTribe
 import chat.sphinx.tribe_detail.R
 import chat.sphinx.tribe_detail.databinding.FragmentTribeDetailBinding
 import chat.sphinx.wrapper_chat.fixedAlias
 import chat.sphinx.wrapper_chat.isTribeOwnedByAccount
 import chat.sphinx.wrapper_common.eeemmddhmma
-import chat.sphinx.resources.R as R_common
 import dagger.hilt.android.AndroidEntryPoint
 import io.matthewnelson.android_feature_screens.ui.sideeffect.SideEffectFragment
 import io.matthewnelson.android_feature_screens.util.gone
@@ -45,16 +55,19 @@ import javax.inject.Inject
 
 
 @AndroidEntryPoint
-internal class TribeDetailFragment: SideEffectFragment<
+internal class TribeDetailFragment : SideEffectFragment<
         Context,
         TribeDetailSideEffect,
         TribeDetailViewState,
         TribeDetailViewModel,
         FragmentTribeDetailBinding
-        >(R.layout.fragment_tribe_detail)
-{
+        >(R.layout.fragment_tribe_detail) {
     override val viewModel: TribeDetailViewModel by viewModels()
     override val binding: FragmentTribeDetailBinding by viewBinding(FragmentTribeDetailBinding::bind)
+
+    private val fragmentShareTimezone: ShareTimezoneLayoutBinding by viewBinding(
+        ShareTimezoneLayoutBinding::bind, R.id.include_share_timezone_layout
+    )
 
     @Inject
     lateinit var imageLoaderInj: ImageLoader<ImageView>
@@ -77,16 +90,69 @@ internal class TribeDetailFragment: SideEffectFragment<
         )
     }
 
+    @RequiresApi(Build.VERSION_CODES.N)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        val allTimezonesList: List<String> =
+            TimeZone.getAvailableIDs()
+                .toMutableList()
+                .also { it.add(index = 0, element = "Use Computer Settings") }
+                .toList()
+
+        val spinnerAdapter = ArrayAdapter(
+            requireContext(),
+            android.R.layout.simple_spinner_item,
+            allTimezonesList
+        ).also {
+            it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        }
+
         BackPressHandler(viewLifecycleOwner, requireActivity())
 
-        binding.includeTribeDetailHeader.apply {
-            textViewDetailScreenHeaderName.text = getString(R.string.tribe_detail_header_name)
-            textViewDetailScreenClose.setOnClickListener {
-                lifecycleScope.launch(viewModel.mainImmediate) {
-                    viewModel.navigator.closeDetailScreen()
+        binding.apply {
+            includeTribeDetailHeader.also {
+                it.textViewDetailScreenHeaderName.text = getString(R.string.tribe_detail_header_name)
+                it.textViewDetailScreenClose.setOnClickListener {
+                    lifecycleScope.launch(viewModel.mainImmediate) {
+                        viewModel.navigator.closeDetailScreen()
+                    }
+                }
+            }
+        }
+
+        fragmentShareTimezone.apply {
+
+            spinnerTimezones.let {
+                it.adapter = spinnerAdapter
+                it.setSelection(0)
+
+                disableSpinner(
+                    spinner = it,
+                    spinnerLabel = textViewContactTimezone
+                )
+
+                it.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                    override fun onItemSelected(
+                        parent: AdapterView<*>?,
+                        view: View?,
+                        position: Int,
+                        id: Long
+                    ) {
+                        parent?.setSelection(position)
+                    }
+
+                    override fun onNothingSelected(parent: AdapterView<*>?) {}
+                }
+            }
+
+            switchEditTimezone.setOnCheckedChangeListener { _, isChecked ->
+                spinnerTimezones.let {
+                    if (!isChecked) {
+                        disableSpinner(spinner = it, spinnerLabel = textViewContactTimezone)
+                    } else {
+                        enableSpinner(spinner = it, spinnerLabel = textViewContactTimezone)
+                    }
                 }
             }
         }
@@ -101,10 +167,31 @@ internal class TribeDetailFragment: SideEffectFragment<
         )
     }
 
+    private fun disableSpinner(spinner: Spinner, spinnerLabel: AppCompatTextView) {
+        spinner.apply {
+            isEnabled = false
+            isClickable = false
+            alpha = 0.5f
+            setSelection(0)
+        }
+
+        spinnerLabel.setTextColorExt(color.secondaryText)
+    }
+
+    private fun enableSpinner(spinner: Spinner, spinnerLabel: AppCompatTextView) {
+        spinner.apply {
+            isEnabled = true
+            isClickable = true
+            alpha = 1.0f
+        }
+
+        spinnerLabel.setTextColorExt(color.text)
+    }
+
     private inner class BackPressHandler(
         owner: LifecycleOwner,
         activity: FragmentActivity,
-    ): OnBackPressedCallback(true) {
+    ) : OnBackPressedCallback(true) {
 
         init {
             activity.apply {
@@ -118,11 +205,17 @@ internal class TribeDetailFragment: SideEffectFragment<
         override fun handleOnBackPressed() {
             when {
                 viewModel.pictureMenuHandler.viewStateContainer.value is MenuBottomViewState.Open -> {
-                    viewModel.pictureMenuHandler.viewStateContainer.updateViewState(MenuBottomViewState.Closed)
+                    viewModel.pictureMenuHandler.viewStateContainer.updateViewState(
+                        MenuBottomViewState.Closed
+                    )
                 }
+
                 viewModel.tribeMenuHandler.viewStateContainer.value is MenuBottomViewState.Open -> {
-                    viewModel.tribeMenuHandler.viewStateContainer.updateViewState(MenuBottomViewState.Closed)
+                    viewModel.tribeMenuHandler.viewStateContainer.updateViewState(
+                        MenuBottomViewState.Closed
+                    )
                 }
+
                 else -> {
                     lifecycleScope.launch(viewModel.mainImmediate) {
                         viewModel.navigator.closeDetailScreen()
@@ -186,14 +279,16 @@ internal class TribeDetailFragment: SideEffectFragment<
         binding.apply {
             editTextProfileAliasValue.setOnFocusChangeListener { _, hasFocus ->
                 if (hasFocus) {
-                    editTextProfileAliasValue.setText(editTextProfileAliasValue.text.toString().fixedAlias())
+                    editTextProfileAliasValue.setText(
+                        editTextProfileAliasValue.text.toString().fixedAlias()
+                    )
                     addAliasFilter()
                     return@setOnFocusChangeListener
                 }
                 viewModel.updateProfileAlias(editTextProfileAliasValue.text.toString())
             }
 
-            editTextProfileAliasValue.setOnEditorActionListener(object: OnEditorActionListener {
+            editTextProfileAliasValue.setOnEditorActionListener(object : OnEditorActionListener {
                 override fun onEditorAction(v: TextView, actionId: Int, event: KeyEvent?): Boolean {
                     if (actionId == EditorInfo.IME_ACTION_DONE || event?.keyCode == KeyEvent.KEYCODE_ENTER) {
                         editTextProfileAliasValue.let { editText ->
@@ -234,8 +329,8 @@ internal class TribeDetailFragment: SideEffectFragment<
 
     override suspend fun onViewStateFlowCollect(viewState: TribeDetailViewState) {
         @Exhaustive
-        when(viewState) {
-            is TribeDetailViewState.Idle -> { }
+        when (viewState) {
+            is TribeDetailViewState.Idle -> {}
 
             is TribeDetailViewState.TribeProfile -> {
                 binding.apply {
@@ -261,7 +356,8 @@ internal class TribeDetailFragment: SideEffectFragment<
                         viewState.chat.escrowAmount?.value ?: 0L
                     )
 
-                    val userAlias = viewState.chat.myAlias?.value ?: viewState.accountOwner.alias?.value
+                    val userAlias =
+                        viewState.chat.myAlias?.value ?: viewState.accountOwner.alias?.value
                     editTextProfileAliasValue.setText(userAlias)
 
                     viewState.chat.photoUrl?.let {
@@ -310,13 +406,15 @@ internal class TribeDetailFragment: SideEffectFragment<
                             imageViewProfilePicture.setImageDrawable(
                                 ContextCompat.getDrawable(
                                     binding.root.context,
-                                    R_common.drawable.ic_profile_avatar_circle
+                                    drawable.ic_profile_avatar_circle
                                 )
                             )
                         }
+
                         is UpdatingImageViewState.UpdatingImageFailed -> {
                             progressBarUploadProfilePicture.gone
                         }
+
                         is UpdatingImageViewState.UpdatingImageSucceed -> {
                             progressBarUploadProfilePicture.visible
                         }

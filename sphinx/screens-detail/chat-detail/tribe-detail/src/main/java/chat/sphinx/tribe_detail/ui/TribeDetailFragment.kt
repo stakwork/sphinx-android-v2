@@ -7,9 +7,7 @@ import android.os.Bundle
 import android.text.InputFilter
 import android.text.Spanned
 import android.view.KeyEvent
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
@@ -20,6 +18,7 @@ import android.widget.TextView.OnEditorActionListener
 import androidx.activity.OnBackPressedCallback
 import androidx.annotation.RequiresApi
 import androidx.appcompat.widget.AppCompatTextView
+import androidx.appcompat.widget.SwitchCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.viewModels
@@ -33,7 +32,8 @@ import chat.sphinx.insetter_activity.addNavigationBarPadding
 import chat.sphinx.menu_bottom.ui.MenuBottomViewState
 import chat.sphinx.menu_bottom_profile_pic.BottomMenuPicture
 import chat.sphinx.menu_bottom_profile_pic.UpdatingImageViewState
-import chat.sphinx.resources.R.*
+import chat.sphinx.resources.R.color
+import chat.sphinx.resources.R.drawable
 import chat.sphinx.resources.inputMethodManager
 import chat.sphinx.resources.setTextColorExt
 import chat.sphinx.tribe.BottomMenuTribe
@@ -90,68 +90,21 @@ internal class TribeDetailFragment : SideEffectFragment<
         )
     }
 
+    private lateinit var allTimezonesList: List<String>
+
     @RequiresApi(Build.VERSION_CODES.N)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        val allTimezonesList: List<String> =
-            TimeZone.getAvailableIDs()
-                .toMutableList()
-                .also { it.add(index = 0, element = "Use Computer Settings") }
-                .toList()
-
-        val spinnerAdapter = ArrayAdapter(
-            requireContext(),
-            android.R.layout.simple_spinner_item,
-            allTimezonesList
-        ).also {
-            it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        }
 
         BackPressHandler(viewLifecycleOwner, requireActivity())
 
         binding.apply {
             includeTribeDetailHeader.also {
-                it.textViewDetailScreenHeaderName.text = getString(R.string.tribe_detail_header_name)
+                it.textViewDetailScreenHeaderName.text =
+                    getString(R.string.tribe_detail_header_name)
                 it.textViewDetailScreenClose.setOnClickListener {
                     lifecycleScope.launch(viewModel.mainImmediate) {
                         viewModel.navigator.closeDetailScreen()
-                    }
-                }
-            }
-        }
-
-        fragmentShareTimezone.apply {
-
-            spinnerTimezones.let {
-                it.adapter = spinnerAdapter
-                it.setSelection(0)
-
-                disableSpinner(
-                    spinner = it,
-                    spinnerLabel = textViewContactTimezone
-                )
-
-                it.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                    override fun onItemSelected(
-                        parent: AdapterView<*>?,
-                        view: View?,
-                        position: Int,
-                        id: Long
-                    ) {
-                        parent?.setSelection(position)
-                    }
-
-                    override fun onNothingSelected(parent: AdapterView<*>?) {}
-                }
-            }
-
-            switchEditTimezone.setOnCheckedChangeListener { _, isChecked ->
-                spinnerTimezones.let {
-                    if (!isChecked) {
-                        disableSpinner(spinner = it, spinnerLabel = textViewContactTimezone)
-                    } else {
-                        enableSpinner(spinner = it, spinnerLabel = textViewContactTimezone)
                     }
                 }
             }
@@ -165,27 +118,6 @@ internal class TribeDetailFragment : SideEffectFragment<
             binding.includeLayoutMenuBottomTribeProfilePic,
             viewLifecycleOwner
         )
-    }
-
-    private fun disableSpinner(spinner: Spinner, spinnerLabel: AppCompatTextView) {
-        spinner.apply {
-            isEnabled = false
-            isClickable = false
-            alpha = 0.5f
-            setSelection(0)
-        }
-
-        spinnerLabel.setTextColorExt(color.secondaryText)
-    }
-
-    private fun enableSpinner(spinner: Spinner, spinnerLabel: AppCompatTextView) {
-        spinner.apply {
-            isEnabled = true
-            isClickable = true
-            alpha = 1.0f
-        }
-
-        spinnerLabel.setTextColorExt(color.text)
     }
 
     private inner class BackPressHandler(
@@ -275,7 +207,23 @@ internal class TribeDetailFragment : SideEffectFragment<
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.N)
     private fun setupTribeDetail() {
+
+        allTimezonesList =
+            TimeZone.getAvailableIDs()
+                .toMutableList()
+                .also { it.add(index = 0, element = "Use Computer Settings") }
+                .toList()
+
+        val spinnerAdapter = ArrayAdapter(
+            requireContext(),
+            android.R.layout.simple_spinner_item,
+            allTimezonesList
+        ).also {
+            it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        }
+
         binding.apply {
             editTextProfileAliasValue.setOnFocusChangeListener { _, hasFocus ->
                 if (hasFocus) {
@@ -305,6 +253,39 @@ internal class TribeDetailFragment : SideEffectFragment<
                 }
             })
 
+            fragmentShareTimezone.apply {
+                spinnerTimezones.let {
+                    it.adapter = spinnerAdapter
+                    it.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                        override fun onItemSelected(
+                            parent: AdapterView<*>?,
+                            view: View?,
+                            position: Int,
+                            id: Long
+                        ) {
+                            viewModel.updateTimezoneIdentifier(
+                                timezoneIdentifier = parent?.getItemAtPosition(position).toString()
+                            )
+
+                            viewModel.updateTimezoneUpdated(timezoneUpdated = true)
+                        }
+
+                        override fun onNothingSelected(parent: AdapterView<*>?) {}
+                    }
+                }
+
+                switchEditTimezone.setOnCheckedChangeListener { _, isChecked ->
+                    handleSpinnerAndSwitch(
+                        spinner = spinnerTimezones,
+                        spinnerLabel = textViewContactTimezone,
+                        switch = switchEditTimezone,
+                        isChecked = isChecked
+                    )
+
+                    viewModel.updateTimezoneEnabledStatus(isTimezoneEnabled = isChecked)
+                }
+            }
+
             textViewMenuButton.setOnClickListener {
                 viewModel.tribeMenuHandler.viewStateContainer.updateViewState(
                     MenuBottomViewState.Open
@@ -325,6 +306,27 @@ internal class TribeDetailFragment : SideEffectFragment<
                 viewModel.goToTribeBadgesScreen()
             }
         }
+    }
+
+    private fun handleSpinnerAndSwitch(
+        spinner: Spinner,
+        spinnerLabel: AppCompatTextView,
+        switch: SwitchCompat,
+        isChecked: Boolean
+    ) {
+        val textColor = if (isChecked) color.text else color.secondaryText
+
+        spinner.apply {
+            isEnabled = isChecked
+            isClickable = isChecked
+            alpha = if (isChecked) 1.0f else 0.5f
+
+            if (!isChecked) setSelection(0)
+        }
+
+        switch.isChecked = isChecked
+
+        spinnerLabel.setTextColorExt(textColor)
     }
 
     override suspend fun onViewStateFlowCollect(viewState: TribeDetailViewState) {
@@ -385,6 +387,23 @@ internal class TribeDetailFragment : SideEffectFragment<
                     } else {
                         buttonAdminViewMembers.gone
                         layoutConstraintTribeBadges.gone
+                    }
+
+                    fragmentShareTimezone.also { timezoneLayout ->
+                        val spinnerPos = allTimezonesList.indexOf(
+                            viewState.chat.timezoneIdentifier.toString()
+                        )
+
+                        val spinnerSelection = if (spinnerPos == -1) 0 else spinnerPos
+
+                        handleSpinnerAndSwitch(
+                            spinner = timezoneLayout.spinnerTimezones,
+                            spinnerLabel = timezoneLayout.textViewContactTimezone,
+                            switch = timezoneLayout.switchEditTimezone,
+                            isChecked = viewState.chat.timezoneEnabled ?: false
+                        )
+
+                        timezoneLayout.spinnerTimezones.setSelection(spinnerSelection)
                     }
                 }
             }

@@ -1116,6 +1116,11 @@ SET seen = 1
 WHERE chat_id = ?
 AND id <= ?;
 
+messageUpdateRemoteTimezoneIdentifier:
+UPDATE messageDbo
+SET remote_timezone_identifier = :remote_timezone_identifier
+WHERE chat_id = ?;
+
 messageUpsert {
     UPDATE messageDbo
     SET status = :status,

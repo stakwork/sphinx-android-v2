@@ -3,14 +3,14 @@ package chat.sphinx.edit_contact.ui
 import android.icu.util.TimeZone
 import android.os.Build
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import android.widget.CompoundButton
 import android.widget.Spinner
 import androidx.annotation.RequiresApi
 import androidx.appcompat.widget.AppCompatTextView
+import androidx.appcompat.widget.SwitchCompat
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import by.kirich1409.viewbindingdelegate.viewBinding
@@ -19,6 +19,7 @@ import chat.sphinx.contact.databinding.LayoutContactBinding
 import chat.sphinx.contact.databinding.LayoutContactDetailScreenHeaderBinding
 import chat.sphinx.contact.databinding.LayoutContactSaveBinding
 import chat.sphinx.contact.ui.ContactFragment
+import chat.sphinx.contact.ui.ContactViewState
 import chat.sphinx.detail_resources.databinding.ShareTimezoneLayoutBinding
 import chat.sphinx.edit_contact.R
 import chat.sphinx.edit_contact.databinding.FragmentEditContactBinding
@@ -26,6 +27,7 @@ import chat.sphinx.resources.R.color
 import chat.sphinx.resources.setTextColorExt
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
+import javax.annotation.meta.Exhaustive
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -60,6 +62,11 @@ internal class EditContactFragment : ContactFragment<
         ShareTimezoneLayoutBinding::bind, R.id.include_share_timezone_layout
     )
 
+    private var selectedTimezoneIdentifier: String? = null
+    private var timezoneUpdated: Boolean = false
+    private var timezoneEnabled: Boolean = false
+    private lateinit var allTimezonesList: List<String>
+
     override fun getHeaderText(): String = getString(R.string.edit_contact_header_name)
 
     override fun getSaveButtonText(): String = getString(R.string.save_contact_button)
@@ -68,11 +75,10 @@ internal class EditContactFragment : ContactFragment<
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val allTimezonesList: List<String> =
-            TimeZone.getAvailableIDs()
-                .toMutableList()
-                .also { it.add(index = 0, element = "Use Computer Settings") }
-                .toList()
+        allTimezonesList = TimeZone.getAvailableIDs()
+            .toMutableList()
+            .also { it.add(index = 0, element = "Use Computer Settings") }
+            .toList()
 
         val spinnerAdapter = ArrayAdapter(
             requireContext(),
@@ -91,14 +97,15 @@ internal class EditContactFragment : ContactFragment<
         }
 
         fragmentShareTimezone.apply {
-
             spinnerTimezones.let {
                 it.adapter = spinnerAdapter
                 it.setSelection(0)
 
-                disableSpinner(
+                handleSpinnerAndSwitch(
                     spinner = it,
-                    spinnerLabel = textViewContactTimezone
+                    spinnerLabel = textViewContactTimezone,
+                    switch = switchEditTimezone,
+                    isChecked = false
                 )
 
                 it.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
@@ -108,43 +115,89 @@ internal class EditContactFragment : ContactFragment<
                         position: Int,
                         id: Long
                     ) {
-                        parent?.setSelection(position)
+                        if (it.selectedItemPosition == 0) {
+                            selectedTimezoneIdentifier = null
+                            timezoneUpdated = false
+                            return
+                        }
+
+                        selectedTimezoneIdentifier = parent?.getItemAtPosition(position).toString()
+                        timezoneUpdated = true
                     }
 
                     override fun onNothingSelected(parent: AdapterView<*>?) {}
                 }
             }
 
-            switchEditTimezone.setOnCheckedChangeListener { _, isChecked ->
-                spinnerTimezones.let {
-                    if (!isChecked) {
-                        disableSpinner(spinner = it, spinnerLabel = textViewContactTimezone)
-                    } else {
-                        enableSpinner(spinner = it, spinnerLabel = textViewContactTimezone)
-                    }
+            switchEditTimezone.setOnCheckedChangeListener { compoundButton, isChecked ->
+                timezoneEnabled = isChecked
+
+                handleSpinnerAndSwitch(
+                    spinnerTimezones,
+                    textViewContactTimezone,
+                    switchEditTimezone,
+                    isChecked,
+                )
+            }
+        }
+
+        contactSaveBinding.buttonSave.setOnClickListener {
+            viewModel.updateTimezoneStatus(
+                isTimezoneEnabled = timezoneEnabled,
+                timezoneIdentifier = selectedTimezoneIdentifier.toString(),
+                timezoneUpdated = timezoneUpdated
+            )
+
+            viewModel.closeFragment()
+        }
+    }
+
+    private fun handleSpinnerAndSwitch(
+        spinner: Spinner,
+        spinnerLabel: AppCompatTextView,
+        switch: SwitchCompat,
+        isChecked: Boolean
+    ) {
+        val textColor = if (isChecked) color.text else color.secondaryText
+
+        spinner.apply {
+            isEnabled = isChecked
+            isClickable = isChecked
+            alpha = if (isChecked) 1.0f else 0.5f
+
+            if (!isChecked) setSelection(0)
+        }
+
+        switch.isChecked = isChecked
+
+        spinnerLabel.setTextColorExt(textColor)
+    }
+
+    override suspend fun onViewStateFlowCollect(viewState: ContactViewState) {
+        @Exhaustive
+        when (viewState) {
+            ContactViewState.Error -> {}
+            ContactViewState.Idle -> {}
+            ContactViewState.Saved -> {}
+            ContactViewState.Saving -> {}
+            is ContactViewState.ShareTimezone -> {
+                fragmentShareTimezone.also { timezoneLayout ->
+                    val spinnerPos = allTimezonesList.indexOf(
+                        viewState.chat.timezoneIdentifier.toString()
+                    )
+
+                    val spinnerSelection = if (spinnerPos == -1) 0 else spinnerPos
+
+                    handleSpinnerAndSwitch(
+                        spinner = timezoneLayout.spinnerTimezones,
+                        spinnerLabel = timezoneLayout.textViewContactTimezone,
+                        switch = timezoneLayout.switchEditTimezone,
+                        isChecked = viewState.chat.timezoneEnabled ?: false
+                    )
+
+                    timezoneLayout.spinnerTimezones.setSelection(spinnerSelection)
                 }
             }
         }
-    }
-
-    private fun disableSpinner(spinner: Spinner, spinnerLabel: AppCompatTextView) {
-        spinner.apply {
-            isEnabled = false
-            isClickable = false
-            alpha = 0.5f
-            setSelection(0)
-        }
-
-        spinnerLabel.setTextColorExt(color.secondaryText)
-    }
-
-    private fun enableSpinner(spinner: Spinner, spinnerLabel: AppCompatTextView) {
-        spinner.apply {
-            isEnabled = true
-            isClickable = true
-            alpha = 1.0f
-        }
-
-        spinnerLabel.setTextColorExt(color.text)
     }
 }

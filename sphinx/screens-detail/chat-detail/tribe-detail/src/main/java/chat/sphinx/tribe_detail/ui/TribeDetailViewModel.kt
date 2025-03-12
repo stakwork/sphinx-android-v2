@@ -26,6 +26,9 @@ import chat.sphinx.wrapper_chat.isTribeOwnedByAccount
 import chat.sphinx.wrapper_chat.isTrue
 import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_contact.Contact
+import chat.sphinx.wrapper_message.toTimezoneEnabled
+import chat.sphinx.wrapper_message.toTimezoneIdentifier
+import chat.sphinx.wrapper_message.toTimezoneUpdated
 import chat.sphinx.resources.R as R_common
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.matthewnelson.android_feature_navigation.util.navArgs
@@ -52,13 +55,12 @@ internal class TribeDetailViewModel @Inject constructor(
     private val mediaPlayerServiceController: MediaPlayerServiceController,
     val navigator: TribeDetailNavigator,
     val LOG: SphinxLogger,
-): SideEffectViewModel<
+) : SideEffectViewModel<
         Context,
         TribeDetailSideEffect,
         TribeDetailViewState>(dispatchers, TribeDetailViewState.Idle),
     TribeMenuViewModel,
-    PictureMenuViewModel
-{
+    PictureMenuViewModel {
     companion object {
         const val TAG = "TribeDetailViewModel"
         const val SERVER_SETTINGS_SHARED_PREFERENCES = "server_ip_settings"
@@ -70,7 +72,7 @@ internal class TribeDetailViewModel @Inject constructor(
 
     private val tribeDefaultServerUrl = app.getSharedPreferences(
         SERVER_SETTINGS_SHARED_PREFERENCES,
-    Context.MODE_PRIVATE
+        Context.MODE_PRIVATE
     ).getString(TRIBE_SERVER_IP, null)
 
 
@@ -86,8 +88,9 @@ internal class TribeDetailViewModel @Inject constructor(
         replay = 1,
     )
 
-
-    private inner class TribeDetailViewStateContainer: ViewStateContainer<TribeDetailViewState>(TribeDetailViewState.Idle) {
+    private inner class TribeDetailViewStateContainer : ViewStateContainer<TribeDetailViewState>(
+        TribeDetailViewState.Idle
+    ) {
         override val viewStateFlow: StateFlow<TribeDetailViewState> by lazy {
             flow {
                 chatSharedFlow.collect { chat ->
@@ -127,7 +130,7 @@ internal class TribeDetailViewModel @Inject constructor(
                             throw Exception()
                         }
                     }
-                } catch (e: Exception) {}
+                } catch (e: Exception) { }
                 delay(25L)
 
                 resolvedOwner!!
@@ -153,7 +156,8 @@ internal class TribeDetailViewModel @Inject constructor(
                     throw Exception()
                 }
             }
-        } catch (e: Exception) {}
+        } catch (e: Exception) {
+        }
         delay(25L)
 
         return chat!!
@@ -229,6 +233,7 @@ internal class TribeDetailViewModel @Inject constructor(
             }
         )
     }
+
     fun goToTribeBadgesScreen() {
         viewModelScope.launch(mainImmediate) {
             navigator.toTribeBadgesScreen(chatId)
@@ -250,6 +255,30 @@ internal class TribeDetailViewModel @Inject constructor(
 //            }
 //        }
         // TODO V2 implement change alias
+    }
+
+    fun updateTimezoneEnabledStatus(isTimezoneEnabled: Boolean) {
+        viewModelScope.launch(mainImmediate) {
+            chatRepository.updateTimezoneEnabledStatus(
+                isTimezoneEnabled = isTimezoneEnabled.toTimezoneEnabled(), chatId = chatId
+            )
+        }
+    }
+
+    fun updateTimezoneIdentifier(timezoneIdentifier: String) {
+        viewModelScope.launch(mainImmediate) {
+            chatRepository.updateTimezoneIdentifier(
+                timezoneIdentifier = timezoneIdentifier.toTimezoneIdentifier(), chatId = chatId
+            )
+        }
+    }
+
+    fun updateTimezoneUpdated(timezoneUpdated: Boolean) {
+        viewModelScope.launch(mainImmediate) {
+            chatRepository.updateTimezoneUpdated(
+                timezoneUpdated = timezoneUpdated.toTimezoneUpdated(), chatId = chatId
+            )
+        }
     }
 
     /***
@@ -277,7 +306,8 @@ internal class TribeDetailViewModel @Inject constructor(
         viewModelScope.launch(mainImmediate) {
             val chat = getChat()
             if (chat.isTribeOwnedByAccount(getOwner().nodePubKey) || !chat.privateTribe.isTrue()) {
-                val shareTribeURL = "sphinx.chat://?action=tribeV2&pubkey=${chat.uuid.value}&host=${tribeDefaultServerUrl}"
+                val shareTribeURL =
+                    "sphinx.chat://?action=tribeV2&pubkey=${chat.uuid.value}&host=${tribeDefaultServerUrl}"
                 navigator.toShareTribeScreen(shareTribeURL, app.getString(R.string.qr_code_title))
             }
         }

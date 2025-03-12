@@ -3,6 +3,7 @@ package chat.sphinx.concept_repository_message
 import chat.sphinx.concept_repository_message.model.SendPaymentRequest
 import chat.sphinx.concept_repository_message.model.SendMessage
 import chat.sphinx.concept_repository_message.model.SendPayment
+import chat.sphinx.example.wrapper_mqtt.MessageMetadata
 import chat.sphinx.kotlin_response.Response
 import chat.sphinx.kotlin_response.ResponseError
 import chat.sphinx.wrapper_chat.Chat
@@ -23,6 +24,7 @@ import chat.sphinx.wrapper_message.MessageContentDecrypted
 import chat.sphinx.wrapper_message.MessageType
 import chat.sphinx.wrapper_message.Msg
 import chat.sphinx.wrapper_message.MsgSender
+import chat.sphinx.wrapper_message.RemoteTimezoneIdentifier
 import chat.sphinx.wrapper_message.SenderAlias
 import chat.sphinx.wrapper_message.TagMessage
 import chat.sphinx.wrapper_message.ThreadUUID
@@ -63,7 +65,10 @@ interface MessageRepository {
 
     suspend fun fetchPinnedMessageByUUID(messageUUID: MessageUUID, chatId: ChatId)
 
-    fun updateMessageContentDecrypted(messageId: MessageId, messageContentDecrypted: MessageContentDecrypted)
+    fun updateMessageContentDecrypted(
+        messageId: MessageId,
+        messageContentDecrypted: MessageContentDecrypted
+    )
 
     suspend fun readMessages(chatId: ChatId)
 
@@ -101,7 +106,7 @@ interface MessageRepository {
 
     suspend fun deleteAllMessagesAndPubKey(pubKey: String, chatId: ChatId)
 
-    suspend fun getPaymentTemplates() : Response<List<PaymentTemplate>, ResponseError>
+    suspend fun getPaymentTemplates(): Response<List<PaymentTemplate>, ResponseError>
 
     suspend fun sendPayment(
         sendPayment: SendPayment?
@@ -149,10 +154,16 @@ interface MessageRepository {
         paymentRequest: LightningPaymentRequest?,
         paymentHash: LightningPaymentHash?,
         bolt11: Bolt11?,
-        tag: TagMessage?
+        tag: TagMessage?,
+        metadata: MessageMetadata?
     )
 
     suspend fun deleteMqttMessage(messageUuid: MessageUUID)
 
     suspend fun fetchDeletedMessagesOnDb()
+
+    suspend fun updateMessageRemoteTimezoneIdentifier(
+        chatId: ChatId,
+        remoteTimezoneIdentifier: RemoteTimezoneIdentifier?
+    )
 }

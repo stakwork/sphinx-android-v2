@@ -1824,15 +1824,19 @@ abstract class SphinxRepository(
 
         metadata?.timezone?.let {
             if (isTribe) {
-                updateMessageRemoteTimezoneIdentifier(
-                    chatId = ChatId(chatId),
-                    remoteTimezoneIdentifier = it.toRemoteTimezoneIdentifier()
-                )
+                if(!fromMe) {
+                    updateMessageRemoteTimezoneIdentifier(
+                        chatId = ChatId(chatId),
+                        remoteTimezoneIdentifier = it.toRemoteTimezoneIdentifier()
+                    )
+                }
             } else {
-                updateChatRemoteTimezoneIdentifier(
-                    remoteTimezoneIdentifier = it.toRemoteTimezoneIdentifier(),
-                    chatId = ChatId(chatId)
-                )
+                if (!fromMe) {
+                    updateChatRemoteTimezoneIdentifier(
+                        remoteTimezoneIdentifier = it.toRemoteTimezoneIdentifier(),
+                        chatId = ChatId(chatId)
+                    )
+                }
             }
         }
     }
@@ -1905,10 +1909,17 @@ abstract class SphinxRepository(
         currentChat: Chat?
     ) {
 
-        val metadata = currentChat?.let {
-            MessageMetadata(
-                timezone = it.timezoneIdentifier.toString()
-            ).toJson(moshi)
+        val metadata: String? = if(
+            currentChat?.timezoneUpdated == true &&
+            currentChat.timezoneEnabled == true
+        ) {
+            currentChat.let {
+                MessageMetadata(
+                    timezone = it.timezoneIdentifier.toString()
+                ).toJson(moshi)
+            }
+        } else {
+            null
         }
 
         val newMessage = chat.sphinx.example.wrapper_mqtt.Message(

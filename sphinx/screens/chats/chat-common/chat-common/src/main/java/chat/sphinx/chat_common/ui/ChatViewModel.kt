@@ -2337,10 +2337,26 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         val lastWord = s?.split(" ")?.last()?.toString() ?: ""
 
         if (lastWord.startsWith("@") && lastWord.length > 1) {
+            // Remove "@" and perform a case-insensitive comparison
+            val cleanedLastWord = lastWord.removePrefix("@").lowercase()
+
+            // Track excluded members (those who left or were kicked)
+            val excludedMembers = mutableSetOf<String>()
+        
             val matchingMessages = messageHolderViewStateFlow.value.filter { messageHolder ->
-                messageHolder.message?.senderAlias?.value?.let { member ->
-                    (member.startsWith(lastWord.replace("@", ""), true))
-                } ?: false
+                val senderAlias = messageHolder.message?.senderAlias?.value?.lowercase()
+                val messageType = messageHolder.message?.type
+
+                // If the message type is 15 (groupLeave) or 16 (groupKick), mark the sender as excluded
+                if (messageType == 15 || messageType == 16) {
+                    senderAlias?.let { excludedMembers.add(it) }
+                }
+
+                // If the sender is in the excluded members list and sent a valid message, reinstate them
+                val isValidRejoin = messageType != 15 && messageType != 16 && senderAlias != null && excludedMembers.contains(senderAlias)
+            
+                // Only include members who are not excluded or those who have rejoined
+                senderAlias?.startsWith(cleanedLastWord) == true && (!excludedMembers.contains(senderAlias) || isValidRejoin)
             }
 
             val matchingAliases = matchingMessages.map { it.message?.senderAlias?.value ?: "" }.distinct()

@@ -57,7 +57,7 @@ internal val MessageHolderViewState.showSentBubbleArrow: Boolean
 
 internal sealed class MessageHolderViewState(
     val message: Message?,
-    chat: Chat,
+    val chat: Chat,
     private val tribeAdmin: Contact?,
     val messageHolderType: MessageHolderType,
     private val separatorDate: DateTime?,
@@ -938,7 +938,7 @@ internal sealed class MessageHolderViewState(
     class ThreadHeader(
         message: Message?,
         messageHolderType: MessageHolderType,
-        val chat: Chat,
+        chat: Chat,
         val tribeAdmin: Contact?,
         initialHolder: InitialHolderViewState,
         val messageSenderInfo: (Message) -> Triple<PhotoUrl?, ContactAlias?, String>?,

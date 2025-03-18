@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/layout_constraint_chat_header_and_pin"
     android:layout_width="match_parent"
-    android:layout_height="@dimen/default_header_height"
+    android:layout_height="wrap_content"
     android:paddingEnd="@dimen/default_half_layout_margin"
     android:background="@color/headerBG"
     android:elevation="@dimen/default_elevation">
@@ -12,7 +12,8 @@
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/layout_constraint_chat_header"
         android:layout_width="match_parent"
-        android:layout_height="@dimen/default_header_height"
+        android:layout_height="wrap_content"
+        android:minHeight="@dimen/default_header_height"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
@@ -141,6 +142,20 @@
                     app:layout_constraintStart_toEndOf="@+id/text_view_chat_header_contributions"
                     app:layout_constraintTop_toTopOf="@+id/text_view_chat_header_contributions"
                     tools:visibility="visible" />
+
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:id="@+id/text_view_chat_header_current_timezone"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/secondaryText"
+                    android:visibility="gone"
+                    android:fontFamily="@font/roboto_regular"
+                    android:textSize="12sp"
+                    app:layout_constraintStart_toStartOf="@+id/text_view_chat_header_name"
+                    app:layout_constraintTop_toBottomOf="@+id/text_view_chat_header_contributions"
+                    tools:text="TIMEZONE"
+                    tools:visibility="visible" />
+
             </androidx.constraintlayout.widget.ConstraintLayout>
 
         </androidx.constraintlayout.widget.ConstraintLayout>

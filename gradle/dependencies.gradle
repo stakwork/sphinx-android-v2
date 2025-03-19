@@ -5,7 +5,7 @@ ext.versions = [
     'buildTools': "30.0.3",
     'compileSdk': 34,
     'minSdk': 23,
-    'androidGradle': '8.0.0',
+    'androidGradle': '8.9.0',
     'arch': '2.1.0',
     'camera': '1.1.0-alpha10',
     'cameraView': '1.0.0-alpha30',

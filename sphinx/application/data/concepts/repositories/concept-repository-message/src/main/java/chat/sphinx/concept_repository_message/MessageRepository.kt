@@ -164,6 +164,7 @@ interface MessageRepository {
 
     suspend fun updateMessageRemoteTimezoneIdentifier(
         chatId: ChatId,
-        remoteTimezoneIdentifier: RemoteTimezoneIdentifier?
+        remoteTimezoneIdentifier: RemoteTimezoneIdentifier?,
+        messageId: MessageId
     )
 }

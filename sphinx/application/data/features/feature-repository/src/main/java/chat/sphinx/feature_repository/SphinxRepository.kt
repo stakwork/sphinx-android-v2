@@ -1827,6 +1827,7 @@ abstract class SphinxRepository(
                 if(!fromMe) {
                     updateMessageRemoteTimezoneIdentifier(
                         chatId = ChatId(chatId),
+                        messageId = msgIndex,
                         remoteTimezoneIdentifier = it.toRemoteTimezoneIdentifier()
                     )
                 }
@@ -1913,11 +1914,7 @@ abstract class SphinxRepository(
             currentChat?.timezoneUpdated == true &&
             currentChat.timezoneEnabled == true
         ) {
-            currentChat.let {
-                MessageMetadata(
-                    timezone = it.timezoneIdentifier.toString()
-                ).toJson(moshi)
-            }
+            MessageMetadata(timezone = currentChat.timezoneIdentifier.toString()).toJson(moshi)
         } else {
             null
         }
@@ -2235,7 +2232,8 @@ abstract class SphinxRepository(
 
     override suspend fun updateMessageRemoteTimezoneIdentifier(
         chatId: ChatId,
-        remoteTimezoneIdentifier: RemoteTimezoneIdentifier?
+        remoteTimezoneIdentifier: RemoteTimezoneIdentifier?,
+        messageId: MessageId
     ) {
         val queries = coreDB.getSphinxDatabaseQueries()
 
@@ -2243,7 +2241,8 @@ abstract class SphinxRepository(
             messageLock.withLock {
                 queries.messageUpdateRemoteTimezoneIdentifier(
                     remote_timezone_identifier = remoteTimezoneIdentifier,
-                    chat_id = chatId
+                    chat_id = chatId,
+                    id = messageId
                 )
             }
         } catch (ex: Exception) {
@@ -3432,6 +3431,7 @@ abstract class SphinxRepository(
             }
         }
 
+        message._remoteTimezoneIdentifier = messageDbo.remote_timezone_identifier
 
         return message
     }

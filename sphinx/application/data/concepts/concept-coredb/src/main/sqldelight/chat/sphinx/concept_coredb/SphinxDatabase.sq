@@ -212,6 +212,11 @@ UPDATE chatDbo
 SET remote_timezone_identifier = :remote_timezone_identifier
 WHERE id = ?;
 
+chatUpdateRemoteTimezoneIdentifierIfNull:
+UPDATE chatDbo
+SET remote_timezone_identifier = :remote_timezone_identifier
+WHERE id = ? AND remote_timezone_identifier IS NULL;
+
 chatUpdateTimezoneUpdated:
 UPDATE chatDbo
 SET timezone_updated = :timezone_updated
@@ -1168,7 +1173,8 @@ messageUpsert {
         person,
         thread_uuid,
         error_message,
-        tag_message
+        tag_message,
+        remote_timezone_identifier,
     )
     VALUES (
         :id,
@@ -1198,7 +1204,8 @@ messageUpsert {
         :person,
         :thread_uuid,
         :error_message,
-        :tag_message
+        :tag_message,
+        :remote_timezone_identifier
     );
 }
 

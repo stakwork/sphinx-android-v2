@@ -15,10 +15,10 @@ import chat.sphinx.wrapper_common.lsat.LsatIdentifier
 import chat.sphinx.wrapper_common.lsat.LsatIssuer
 import chat.sphinx.wrapper_common.lsat.LsatStatus
 import chat.sphinx.wrapper_message.Message
-import chat.sphinx.wrapper_message.RemoteTimezoneIdentifier
-import chat.sphinx.wrapper_message.TimezoneEnabled
-import chat.sphinx.wrapper_message.TimezoneIdentifier
-import chat.sphinx.wrapper_message.TimezoneUpdated
+import chat.sphinx.wrapper_common.message.RemoteTimezoneIdentifier
+import chat.sphinx.wrapper_chat.TimezoneEnabled
+import chat.sphinx.wrapper_chat.TimezoneIdentifier
+import chat.sphinx.wrapper_chat.TimezoneUpdated
 import chat.sphinx.wrapper_podcast.Podcast
 import kotlinx.coroutines.flow.Flow
 
@@ -119,6 +119,7 @@ interface ChatRepository {
 
     suspend fun updateChatRemoteTimezoneIdentifier(
         remoteTimezoneIdentifier: RemoteTimezoneIdentifier?,
-        chatId: ChatId
+        chatId: ChatId,
+        isRestore: Boolean
     )
 }

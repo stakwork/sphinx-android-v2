@@ -11,6 +11,7 @@ import chat.sphinx.wrapper_common.lightning.LightningNodePubKey
 import chat.sphinx.wrapper_common.lightning.Sat
 import chat.sphinx.wrapper_common.message.MessageId
 import chat.sphinx.wrapper_common.message.MessageUUID
+import chat.sphinx.wrapper_common.message.RemoteTimezoneIdentifier
 
 @Suppress("NOTHING_TO_INLINE")
 inline fun Chat.isMuted(): Boolean {
@@ -93,6 +94,6 @@ data class Chat(
     val secondBrainUrl: SecondBrainUrl?,
     val timezoneEnabled: Boolean?,
     val timezoneIdentifier: String?,
-    val remoteTimezoneIdentifier: String?,
+    val remoteTimezoneIdentifier: RemoteTimezoneIdentifier?,
     val timezoneUpdated: Boolean?
 )

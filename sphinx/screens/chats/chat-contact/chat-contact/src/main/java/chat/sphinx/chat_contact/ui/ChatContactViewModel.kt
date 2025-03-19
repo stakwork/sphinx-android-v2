@@ -165,12 +165,6 @@ internal class ChatContactViewModel @Inject constructor(
         replay = 1
     )
 
-    val chatState: StateFlow<ChatContactState>
-        get() = chatMutableState
-    private val chatMutableState: MutableStateFlow<ChatContactState> = MutableStateFlow(
-        ChatContactState.Idle
-    )
-
     init {
         getChatState()
     }

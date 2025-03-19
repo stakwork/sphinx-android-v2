@@ -11,6 +11,7 @@ import chat.sphinx.wrapper_common.lightning.Sat
 import chat.sphinx.wrapper_common.message.CallLinkMessage
 import chat.sphinx.wrapper_common.message.MessageId
 import chat.sphinx.wrapper_common.message.MessageUUID
+import chat.sphinx.wrapper_common.message.RemoteTimezoneIdentifier
 import chat.sphinx.wrapper_common.message.SphinxCallLink
 import chat.sphinx.wrapper_common.message.isValidSphinxCallLink
 import chat.sphinx.wrapper_common.message.toSphinxCallLink

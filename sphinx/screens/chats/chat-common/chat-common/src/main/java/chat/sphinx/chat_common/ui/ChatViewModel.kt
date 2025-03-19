@@ -254,6 +254,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                                 showLock = currentState.showLock || contact.isEncrypted(),
                                 isMuted = currentState.isMuted,
                                 isChatAvailable = getChat().status.isApproved(),
+                                remoteTimezoneIdentifier = getChat().remoteTimezoneIdentifier,
                             )
                         }
                     }
@@ -267,7 +268,8 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                         chatHeaderName = chat?.name?.value ?: getChatInfo()?.first?.value ?: "",
                         showLock = chat != null,
                         isMuted = chat?.notify?.isMuteChat() == true,
-                        isChatAvailable = chat?.status?.isApproved() ?: false
+                        isChatAvailable = chat?.status?.isApproved() ?: false,
+                        remoteTimezoneIdentifier = chat?.remoteTimezoneIdentifier,
                     )
                     chat?.let { nnChat ->
                         if (nnChat.isPrivateTribe()) {

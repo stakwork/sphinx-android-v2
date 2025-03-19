@@ -6,7 +6,7 @@ import com.squareup.moshi.Moshi
 
 @JsonClass(generateAdapter = true)
 data class MessageMetadata(
-    val timezone: String
+    val tz: String
 ) {
     @Throws(AssertionError::class)
     fun toJson(moshi: Moshi): String {

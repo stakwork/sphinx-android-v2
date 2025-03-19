@@ -25,9 +25,9 @@ import chat.sphinx.wrapper_common.lightning.LightningNodePubKey
 import chat.sphinx.wrapper_common.lightning.LightningRouteHint
 import chat.sphinx.wrapper_contact.ContactAlias
 import chat.sphinx.wrapper_contact.getColorKey
-import chat.sphinx.wrapper_message.toTimezoneEnabled
-import chat.sphinx.wrapper_message.toTimezoneIdentifier
-import chat.sphinx.wrapper_message.toTimezoneUpdated
+import chat.sphinx.wrapper_chat.toTimezoneEnabled
+import chat.sphinx.wrapper_chat.toTimezoneIdentifier
+import chat.sphinx.wrapper_chat.toTimezoneUpdated
 import com.squareup.moshi.Moshi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.matthewnelson.android_feature_navigation.util.navArgs

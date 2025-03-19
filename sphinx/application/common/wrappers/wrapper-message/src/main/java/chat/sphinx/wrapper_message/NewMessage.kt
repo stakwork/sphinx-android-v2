@@ -11,6 +11,7 @@ import chat.sphinx.wrapper_common.lightning.Sat
 import chat.sphinx.wrapper_common.message.CallLinkMessage
 import chat.sphinx.wrapper_common.message.MessageId
 import chat.sphinx.wrapper_common.message.MessageUUID
+import chat.sphinx.wrapper_common.message.RemoteTimezoneIdentifier
 import chat.sphinx.wrapper_message_media.MessageMedia
 
 class NewMessage(
@@ -89,6 +90,6 @@ class NewMessage(
                 "messageDecryptionException=$messageDecryptionException, " +
                 "messageMedia=$messageMedia, feedBoost=$feedBoost, callLinkMessage=$callLinkMessage, " +
                 "podcastClip=$podcastClip, giphyData=$giphyData, reactions=$reactions, " +
-                "purchaseItems=$purchaseItems, replyMessage=$replyMessage, thread=$thread)"
+                "purchaseItems=$purchaseItems, replyMessage=$replyMessage, thread=$thread, remoteTimezoneIdentifier=$remoteTimezoneIdentifier)"
     }
 }

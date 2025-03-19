@@ -3,11 +3,11 @@ package chat.sphinx.feature_repository.mappers.chat
 import chat.sphinx.conceptcoredb.ChatDbo
 import chat.sphinx.feature_repository.mappers.ClassMapper
 import chat.sphinx.wrapper_chat.Chat
-import chat.sphinx.wrapper_message.isTrue
-import chat.sphinx.wrapper_message.toRemoteTimezoneIdentifier
-import chat.sphinx.wrapper_message.toTimezoneEnabled
-import chat.sphinx.wrapper_message.toTimezoneIdentifier
-import chat.sphinx.wrapper_message.toTimezoneUpdated
+import chat.sphinx.wrapper_chat.isTrue
+import chat.sphinx.wrapper_common.message.toRemoteTimezoneIdentifier
+import chat.sphinx.wrapper_chat.toTimezoneEnabled
+import chat.sphinx.wrapper_chat.toTimezoneIdentifier
+import chat.sphinx.wrapper_chat.toTimezoneUpdated
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
 import java.text.ParseException
 

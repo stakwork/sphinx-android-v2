@@ -1,4 +1,4 @@
-package chat.sphinx.wrapper_message
+package chat.sphinx.wrapper_chat
 
 @Suppress("NOTHING_TO_INLINE")
 inline fun TimezoneUpdated.isTrue(): Boolean =

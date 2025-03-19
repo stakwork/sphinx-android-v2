@@ -26,9 +26,9 @@ import chat.sphinx.wrapper_chat.isTribeOwnedByAccount
 import chat.sphinx.wrapper_chat.isTrue
 import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_contact.Contact
-import chat.sphinx.wrapper_message.toTimezoneEnabled
-import chat.sphinx.wrapper_message.toTimezoneIdentifier
-import chat.sphinx.wrapper_message.toTimezoneUpdated
+import chat.sphinx.wrapper_chat.toTimezoneEnabled
+import chat.sphinx.wrapper_chat.toTimezoneIdentifier
+import chat.sphinx.wrapper_chat.toTimezoneUpdated
 import chat.sphinx.resources.R as R_common
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.matthewnelson.android_feature_navigation.util.navArgs

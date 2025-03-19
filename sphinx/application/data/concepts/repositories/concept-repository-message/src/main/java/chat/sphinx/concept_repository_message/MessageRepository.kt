@@ -24,7 +24,7 @@ import chat.sphinx.wrapper_message.MessageContentDecrypted
 import chat.sphinx.wrapper_message.MessageType
 import chat.sphinx.wrapper_message.Msg
 import chat.sphinx.wrapper_message.MsgSender
-import chat.sphinx.wrapper_message.RemoteTimezoneIdentifier
+import chat.sphinx.wrapper_common.message.RemoteTimezoneIdentifier
 import chat.sphinx.wrapper_message.SenderAlias
 import chat.sphinx.wrapper_message.TagMessage
 import chat.sphinx.wrapper_message.ThreadUUID
@@ -155,7 +155,7 @@ interface MessageRepository {
         paymentHash: LightningPaymentHash?,
         bolt11: Bolt11?,
         tag: TagMessage?,
-        metadata: MessageMetadata?
+        isRestore: Boolean
     )
 
     suspend fun deleteMqttMessage(messageUuid: MessageUUID)

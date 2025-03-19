@@ -12,7 +12,7 @@ import chat.sphinx.wrapper_message.MessagePerson
 import chat.sphinx.wrapper_message.MessageStatus
 import chat.sphinx.wrapper_message.MessageType
 import chat.sphinx.wrapper_message.RecipientAlias
-import chat.sphinx.wrapper_message.RemoteTimezoneIdentifier
+import chat.sphinx.wrapper_common.message.RemoteTimezoneIdentifier
 import chat.sphinx.wrapper_message.ReplyUUID
 import chat.sphinx.wrapper_message.SenderAlias
 import chat.sphinx.wrapper_message.TagMessage

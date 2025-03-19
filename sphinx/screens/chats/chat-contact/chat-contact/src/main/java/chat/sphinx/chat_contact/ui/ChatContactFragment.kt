@@ -109,26 +109,4 @@ internal class ChatContactFragment : ChatFragment<
     protected lateinit var _imageLoader: ImageLoader<ImageView>
     override val imageLoader: ImageLoader<ImageView>
         get() = _imageLoader
-
-    override fun onStart() {
-        super.onStart()
-        lifecycleScope.launch {
-            viewModel.chatState.collect { state ->
-                when (state) {
-                    is ChatContactState.ChatContactData -> {
-                        state.chat?.let {
-                            if (!it.timezoneIdentifier.isNullOrEmpty()) {
-                                headerBinding.textViewChatHeaderCurrentTimezone.also { timezoneTextView ->
-                                    timezoneTextView.visible
-                                    timezoneTextView.text = state.chat.remoteTimezoneIdentifier
-                                }
-                            }
-                        }
-                    }
-
-                    ChatContactState.Idle -> {}
-                }
-            }
-        }
-    }
 }

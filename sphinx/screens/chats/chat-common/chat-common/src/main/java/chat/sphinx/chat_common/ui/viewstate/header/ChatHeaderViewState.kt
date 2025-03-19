@@ -1,5 +1,6 @@
 package chat.sphinx.chat_common.ui.viewstate.header
 
+import chat.sphinx.wrapper_common.message.RemoteTimezoneIdentifier
 import io.matthewnelson.concept_views.viewstate.ViewState
 
 sealed class ChatHeaderViewState: ViewState<ChatHeaderViewState>() {
@@ -11,5 +12,6 @@ sealed class ChatHeaderViewState: ViewState<ChatHeaderViewState>() {
         val showLock: Boolean,
         val isMuted: Boolean,
         val isChatAvailable: Boolean,
+        val remoteTimezoneIdentifier: RemoteTimezoneIdentifier?
     ): ChatHeaderViewState()
 }

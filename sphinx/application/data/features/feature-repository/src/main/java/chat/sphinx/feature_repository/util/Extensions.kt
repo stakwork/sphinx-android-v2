@@ -752,7 +752,8 @@ fun TransactionCallbacks.upsertNewMessage(
         message.messageContent,
         message.messageContentDecrypted,
         message.messageMedia?.mediaToken?.getMUIDFromMediaToken()?.value?.toMessageMUID(),
-        message.flagged.value.toFlagged()
+        message.flagged.value.toFlagged(),
+        message.remoteTimezoneIdentifier
     )
 
     if (message.type.isInvoicePayment()) {

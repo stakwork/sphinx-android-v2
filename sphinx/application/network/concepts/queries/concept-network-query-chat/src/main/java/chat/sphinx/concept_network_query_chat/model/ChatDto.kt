@@ -1,10 +1,5 @@
 package chat.sphinx.concept_network_query_chat.model
 
-import chat.sphinx.wrapper_common.message.MessageId
-import chat.sphinx.wrapper_message.RemoteTimezoneIdentifier
-import chat.sphinx.wrapper_message.TimezoneEnabled
-import chat.sphinx.wrapper_message.TimezoneIdentifier
-import chat.sphinx.wrapper_message.TimezoneUpdated
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 

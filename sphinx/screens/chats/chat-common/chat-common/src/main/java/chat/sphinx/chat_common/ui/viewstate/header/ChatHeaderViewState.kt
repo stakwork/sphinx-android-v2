@@ -11,7 +11,6 @@ sealed class ChatHeaderViewState: ViewState<ChatHeaderViewState>() {
         val chatHeaderName: String,
         val showLock: Boolean,
         val isMuted: Boolean,
-        val isChatAvailable: Boolean,
-        val remoteTimezoneIdentifier: RemoteTimezoneIdentifier?
+        val isChatAvailable: Boolean
     ): ChatHeaderViewState()
 }

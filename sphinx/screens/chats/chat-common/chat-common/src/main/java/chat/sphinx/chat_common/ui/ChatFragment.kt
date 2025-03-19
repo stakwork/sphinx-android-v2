@@ -1158,7 +1158,6 @@ abstract class ChatFragment<
                     is ChatHeaderViewState.Idle -> {}
                     is ChatHeaderViewState.Initialized -> {
                         headerBinding.apply {
-
                             textViewChatHeaderName.text = viewState.chatHeaderName.replacingMarkdown()
                             textViewChatHeaderLock.goneIfFalse(viewState.showLock)
 
@@ -1202,8 +1201,22 @@ abstract class ChatFragment<
                                     }
                                 }
                             }
-
                         }
+                    }
+                }
+            }
+        }
+
+        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+            viewModel.remoteTimezoneStateFlow.collect { viewState ->
+                headerBinding.apply {
+                    viewState?.let {
+                        textViewChatHeaderCurrentTimezone.also { timezoneTextView ->
+                            timezoneTextView.visible
+                            timezoneTextView.text = it
+                        }
+                    } ?: run {
+                        textViewChatHeaderCurrentTimezone.gone
                     }
                 }
             }

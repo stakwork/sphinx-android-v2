@@ -39,7 +39,8 @@ sealed class LayoutState private constructor() {
         val timestamp: String,
         val errorMessage: String?,
         val messageTimestamp: Long,
-        val showClockIcon: Boolean
+        val showClockIcon: Boolean,
+        val remoteTimezoneIdentifier: String?
     ): LayoutState() {
         val showReceived: Boolean
             get() = !showSent

@@ -111,7 +111,7 @@ internal class EditContactViewModel @Inject constructor(
 
     fun updateTimezoneStatus(
         isTimezoneEnabled: Boolean,
-        timezoneIdentifier: String,
+        timezoneIdentifier: String?,
         timezoneUpdated: Boolean
     ) {
         viewModelScope.launch(mainImmediate) {
@@ -120,7 +120,7 @@ internal class EditContactViewModel @Inject constructor(
             )
 
             chatRepository.updateTimezoneIdentifier(
-                timezoneIdentifier = timezoneIdentifier.toTimezoneIdentifier(), chatId = chatId
+                timezoneIdentifier = timezoneIdentifier?.toTimezoneIdentifier(), chatId = chatId
             )
 
             chatRepository.updateTimezoneUpdated(

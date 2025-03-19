@@ -207,9 +207,7 @@ internal fun LayoutMessageHolderBinding.setView(
             holderJobs,
             dispatchers,
             lifecycleScope,
-            userColorsHelper,
-            viewState.chat,
-            viewState.message?.remoteTimezoneIdentifier?.value
+            userColorsHelper
         )
         setInvoiceExpirationHeader(
             viewState.invoiceExpirationHeader
@@ -829,9 +827,7 @@ internal inline fun LayoutMessageHolderBinding.setStatusHeader(
     holderJobs: ArrayList<Job>,
     dispatchers: CoroutineDispatchers,
     lifecycleScope: CoroutineScope,
-    userColorsHelper: UserColorsHelper,
-    chat: Chat,
-    remoteTimezoneIdentifier: String?,
+    userColorsHelper: UserColorsHelper
 ) {
     includeMessageStatusHeader.apply {
         if (statusHeader == null) {
@@ -898,10 +894,15 @@ internal inline fun LayoutMessageHolderBinding.setStatusHeader(
             } else {
                 textViewMessageStatusReceivedTimestamp.text = statusHeader.timestamp
                 textViewMessageStatusReceivedLockIcon.goneIfFalse(statusHeader.showLockIcon)
-                displayTimezone(
-                    chat = chat,
-                    remoteTimezoneIdentifier = remoteTimezoneIdentifier
-                )
+
+                if (statusHeader.remoteTimezoneIdentifier != null) {
+                    textViewMessageStatusReceivedTimezone.also { timezoneView ->
+                        timezoneView.visible
+                        timezoneView.text = statusHeader.remoteTimezoneIdentifier
+                    }
+                } else {
+                    textViewMessageStatusReceivedTimezone.gone
+                }
             }
 
             val currentTime = System.currentTimeMillis()

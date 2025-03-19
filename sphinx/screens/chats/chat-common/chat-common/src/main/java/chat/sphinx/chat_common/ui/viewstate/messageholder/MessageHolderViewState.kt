@@ -114,6 +114,12 @@ internal sealed class MessageHolderViewState(
 
                 val messageTimestamp = message.date.time
 
+                val timezoneString: String? = if (chat.isTribe() && !message.remoteTimezoneIdentifier?.value.isNullOrEmpty()) {
+                    message.remoteTimezoneIdentifier?.value?.let {
+                        DateTime.getLocalTimeFor(it)
+                    }
+                } else null
+
                 LayoutState.MessageStatusHeader(
                     if (chat.type.isConversation()) null else message.senderAlias?.value,
                     if (initialHolder is InitialHolderViewState.Initials) initialHolder.colorKey else message.getColorKey(),
@@ -126,7 +132,8 @@ internal sealed class MessageHolderViewState(
                     message.date.messageTimeFormat(),
                     message.errorMessage?.value?.trim(),
                     messageTimestamp = messageTimestamp,
-                    showClockIcon = false
+                    showClockIcon = false,
+                    remoteTimezoneIdentifier = timezoneString
                 )
             } else {
                 null

@@ -165,10 +165,6 @@ internal class ChatContactViewModel @Inject constructor(
         replay = 1
     )
 
-    init {
-        getChatState()
-    }
-
     override suspend fun getChatInfo(): Triple<ChatName?, PhotoUrl?, String>? {
         contactSharedFlow.replayCache.firstOrNull()?.let { contact ->
             return Triple(
@@ -274,15 +270,6 @@ internal class ChatContactViewModel @Inject constructor(
         }
 
         return contact
-    }
-
-
-    private fun getChatState() {
-        viewModelScope.launch(io) {
-            chatSharedFlow.firstOrNull()?.let { chat ->
-                chatMutableState.value = chat.toChatContactData()
-            }
-        }
     }
 
     override fun readMessages() {

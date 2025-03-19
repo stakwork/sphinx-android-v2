@@ -3,11 +3,6 @@ package chat.sphinx.feature_repository.mappers.chat
 import chat.sphinx.conceptcoredb.ChatDbo
 import chat.sphinx.feature_repository.mappers.ClassMapper
 import chat.sphinx.wrapper_chat.Chat
-import chat.sphinx.wrapper_chat.isTrue
-import chat.sphinx.wrapper_common.message.toRemoteTimezoneIdentifier
-import chat.sphinx.wrapper_chat.toTimezoneEnabled
-import chat.sphinx.wrapper_chat.toTimezoneIdentifier
-import chat.sphinx.wrapper_chat.toTimezoneUpdated
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
 import java.text.ParseException
 
@@ -47,10 +42,10 @@ internal class ChatDboPresenterMapper(
             notify = value.notify,
             pinedMessage = value.pin_message,
             secondBrainUrl = value.second_brain_url,
-            timezoneEnabled = value.timezone_enabled?.isTrue(),
-            timezoneIdentifier = value.timezone_identifier?.value,
-            remoteTimezoneIdentifier = value.remote_timezone_identifier?.value,
-            timezoneUpdated = value.timezone_updated?.isTrue()
+            timezoneEnabled = value.timezone_enabled,
+            timezoneIdentifier = value.timezone_identifier,
+            remoteTimezoneIdentifier = value.remote_timezone_identifier,
+            timezoneUpdated = value.timezone_updated
         )
     }
 
@@ -82,10 +77,10 @@ internal class ChatDboPresenterMapper(
             notify = value.notify,
             pin_message = value.pinedMessage,
             second_brain_url = value.secondBrainUrl,
-            timezone_enabled = value.timezoneEnabled?.toTimezoneEnabled(),
-            timezone_identifier = value.timezoneIdentifier?.toTimezoneIdentifier(),
-            remote_timezone_identifier = value.remoteTimezoneIdentifier?.toRemoteTimezoneIdentifier(),
-            timezone_updated = value.timezoneUpdated?.toTimezoneUpdated()
+            timezone_enabled = value.timezoneEnabled,
+            timezone_identifier = value.timezoneIdentifier,
+            remote_timezone_identifier = value.remoteTimezoneIdentifier,
+            timezone_updated = value.timezoneUpdated
         )
     }
 }

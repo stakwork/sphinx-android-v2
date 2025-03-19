@@ -92,8 +92,8 @@ data class Chat(
     val pinedMessage: MessageUUID?,
     val notify: NotificationLevel?,
     val secondBrainUrl: SecondBrainUrl?,
-    val timezoneEnabled: Boolean?,
-    val timezoneIdentifier: String?,
+    val timezoneEnabled: TimezoneEnabled?,
+    val timezoneIdentifier: TimezoneIdentifier?,
     val remoteTimezoneIdentifier: RemoteTimezoneIdentifier?,
-    val timezoneUpdated: Boolean?
+    val timezoneUpdated: TimezoneUpdated?
 )

@@ -82,14 +82,14 @@ import chat.sphinx.wrapper_message.MessagePerson;
 import chat.sphinx.wrapper_message.MessageStatus;
 import chat.sphinx.wrapper_message.MessageType;
 import chat.sphinx.wrapper_message.RecipientAlias;
-import chat.sphinx.wrapper_message.RemoteTimezoneIdentifier;
+import chat.sphinx.wrapper_common.message.RemoteTimezoneIdentifier;
 import chat.sphinx.wrapper_message.ReplyUUID;
 import chat.sphinx.wrapper_message.SenderAlias;
 import chat.sphinx.wrapper_message.TagMessage;
 import chat.sphinx.wrapper_message.ThreadUUID;
-import chat.sphinx.wrapper_message.TimezoneEnabled;
-import chat.sphinx.wrapper_message.TimezoneIdentifier;
-import chat.sphinx.wrapper_message.TimezoneUpdated;
+import chat.sphinx.wrapper_chat.TimezoneEnabled;
+import chat.sphinx.wrapper_chat.TimezoneIdentifier;
+import chat.sphinx.wrapper_chat.TimezoneUpdated;
 import chat.sphinx.wrapper_message_media.FileName;
 import chat.sphinx.wrapper_message_media.MediaKey;
 import chat.sphinx.wrapper_message_media.MediaKeyDecrypted;
@@ -221,6 +221,11 @@ chatUpdateTimezoneUpdated:
 UPDATE chatDbo
 SET timezone_updated = :timezone_updated
 WHERE id = ?;
+
+chatUpdateTimezoneUpdatedOnSystemChanged:
+UPDATE chatDbo
+SET timezone_updated = 1
+WHERE timezone_identifier IS NULL AND timezone_enabled = 1;
 
 chatGetAll:
 SELECT *
@@ -1174,7 +1179,7 @@ messageUpsert {
         thread_uuid,
         error_message,
         tag_message,
-        remote_timezone_identifier,
+        remote_timezone_identifier
     )
     VALUES (
         :id,

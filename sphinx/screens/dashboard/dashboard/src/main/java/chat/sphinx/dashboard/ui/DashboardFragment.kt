@@ -121,6 +121,7 @@ internal class DashboardFragment : MotionLayoutFragment<
 
         handleDeepLinks()
         handlePushNotification()
+        processTimezoneChanges()
 
         activity?.intent = null
     }
@@ -130,6 +131,10 @@ internal class DashboardFragment : MotionLayoutFragment<
             viewModel.handleDeepLink(deepLink)
             activity?.intent?.data = null
         }
+    }
+
+    private fun processTimezoneChanges() {
+        viewModel.processTimezoneChanges()
     }
 
     private fun handlePushNotification() {

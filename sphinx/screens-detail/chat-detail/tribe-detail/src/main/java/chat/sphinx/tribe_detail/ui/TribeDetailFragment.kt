@@ -1,7 +1,6 @@
 package chat.sphinx.tribe_detail.ui
 
 import android.content.Context
-import android.icu.util.TimeZone
 import android.os.Build
 import android.os.Bundle
 import android.text.InputFilter
@@ -41,6 +40,8 @@ import chat.sphinx.tribe_detail.R
 import chat.sphinx.tribe_detail.databinding.FragmentTribeDetailBinding
 import chat.sphinx.wrapper_chat.fixedAlias
 import chat.sphinx.wrapper_chat.isTribeOwnedByAccount
+import chat.sphinx.wrapper_chat.isTrue
+import chat.sphinx.wrapper_common.DateTime
 import chat.sphinx.wrapper_common.eeemmddhmma
 import dagger.hilt.android.AndroidEntryPoint
 import io.matthewnelson.android_feature_screens.ui.sideeffect.SideEffectFragment
@@ -211,7 +212,7 @@ internal class TribeDetailFragment : SideEffectFragment<
     private fun setupTribeDetail() {
 
         allTimezonesList =
-            TimeZone.getAvailableIDs()
+            DateTime.getValidTimeZoneIds()
                 .toMutableList()
                 .also { it.add(index = 0, element = "Use Computer Settings") }
                 .toList()
@@ -400,7 +401,7 @@ internal class TribeDetailFragment : SideEffectFragment<
                             spinner = timezoneLayout.spinnerTimezones,
                             spinnerLabel = timezoneLayout.textViewContactTimezone,
                             switch = timezoneLayout.switchEditTimezone,
-                            isChecked = viewState.chat.timezoneEnabled ?: false
+                            isChecked = viewState.chat.timezoneEnabled?.isTrue() ?: false
                         )
 
                         timezoneLayout.spinnerTimezones.setSelection(spinnerSelection)

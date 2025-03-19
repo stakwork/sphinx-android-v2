@@ -1901,12 +1901,12 @@ abstract class SphinxRepository(
         memberPubKey: LightningNodePubKey?,
         currentChat: Chat?
     ) {
-
         val metadata: String? = if(
-            currentChat?.timezoneUpdated == true &&
-            currentChat.timezoneEnabled == true
+            currentChat?.timezoneUpdated?.isTrue() == true &&
+            currentChat.timezoneEnabled?.isTrue() == true
         ) {
-            MessageMetadata(tz = currentChat.timezoneIdentifier.toString()).toJson(moshi)
+            val timezoneAbbreviation = DateTime.getTimezoneAbbreviationFrom(currentChat.timezoneIdentifier?.value)
+            MessageMetadata(tz = timezoneAbbreviation).toJson(moshi)
         } else {
             null
         }
@@ -2001,6 +2001,18 @@ abstract class SphinxRepository(
                     timezone_updated = timezoneUpdated,
                     id = chatId
                 )
+            }
+        } catch (ex: Exception) {
+            LOG.e(TAG, ex.printStackTrace().toString(), ex)
+        }
+    }
+
+    override suspend fun updateTimezoneUpdatedOnSystemChange() {
+        val queries = coreDB.getSphinxDatabaseQueries()
+
+        try {
+            chatLock.withLock {
+                queries.chatUpdateTimezoneUpdatedOnSystemChanged()
             }
         } catch (ex: Exception) {
             LOG.e(TAG, ex.printStackTrace().toString(), ex)
@@ -4041,6 +4053,7 @@ abstract class SphinxRepository(
                                 message?.toMessageContentDecrypted() ?: sendMessage.text?.toMessageContentDecrypted(),
                                 null,
                                 false.toFlagged(),
+                                if (chat.timezoneEnabled?.isTrue() == true) chat.timezoneIdentifier?.value?.toRemoteTimezoneIdentifier() else null
                             )
                         }
                         provisionalId

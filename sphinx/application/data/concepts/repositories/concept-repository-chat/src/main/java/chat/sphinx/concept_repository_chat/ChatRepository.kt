@@ -117,6 +117,8 @@ interface ChatRepository {
         chatId: ChatId
     )
 
+    suspend fun updateTimezoneUpdatedOnSystemChange()
+
     suspend fun updateChatRemoteTimezoneIdentifier(
         remoteTimezoneIdentifier: RemoteTimezoneIdentifier?,
         chatId: ChatId,

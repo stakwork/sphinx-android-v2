@@ -8,6 +8,8 @@ import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.pdf.PdfRenderer
+import android.icu.text.SimpleDateFormat
+import android.icu.util.TimeZone
 import android.net.Uri
 import android.os.Build
 import android.os.ParcelFileDescriptor
@@ -17,6 +19,7 @@ import android.provider.OpenableColumns
 import android.util.Log
 import android.webkit.MimeTypeMap
 import androidx.annotation.CallSuper
+import androidx.annotation.RequiresApi
 import androidx.core.view.inputmethod.InputConnectionCompat
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.SavedStateHandle
@@ -68,6 +71,7 @@ import chat.sphinx.concept_repository_message.MessageRepository
 import chat.sphinx.concept_repository_message.model.SendMessage
 import chat.sphinx.concept_view_model_coordinator.ViewModelCoordinator
 import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
+import chat.sphinx.example.wrapper_mqtt.MessageMetadata
 import chat.sphinx.highlighting_tool.boldTexts
 import chat.sphinx.highlighting_tool.markDownLinkTexts
 import chat.sphinx.highlighting_tool.replacingMarkdown
@@ -120,6 +124,8 @@ import org.jitsi.meet.sdk.JitsiMeetConferenceOptions
 import org.jitsi.meet.sdk.JitsiMeetUserInfo
 import java.io.*
 import java.time.LocalDateTime
+import java.util.Date
+import java.util.Locale
 
 
 @JvmSynthetic
@@ -200,6 +206,13 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         ChatHeaderViewStateContainer()
     }
 
+    private val _remoteTimezoneStateFlow: MutableStateFlow<String?> by lazy {
+        MutableStateFlow(null)
+    }
+
+    val remoteTimezoneStateFlow: StateFlow<String?>
+        get() = _remoteTimezoneStateFlow.asStateFlow()
+
     val threadHeaderViewState: ViewStateContainer<ThreadHeaderViewState> by lazy {
         ViewStateContainer(
             if (isThreadChat()) {
@@ -236,6 +249,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         private var contactCollectionJob: Job? = null
         private var chatCollectionJob: Job? = null
 
+        @RequiresApi(Build.VERSION_CODES.N)
         override val viewStateFlow: StateFlow<ChatHeaderViewState> = flow {
 
             contactId?.let { nnContactId ->
@@ -248,13 +262,13 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
                     contactRepository.getContactById(nnContactId).collect { contact ->
                         val currentState = _viewStateFlow.value
+
                         if (contact != null && currentState is ChatHeaderViewState.Initialized) {
                             _viewStateFlow.value = ChatHeaderViewState.Initialized(
                                 chatHeaderName = contact.alias?.value ?: "",
                                 showLock = currentState.showLock || contact.isEncrypted(),
                                 isMuted = currentState.isMuted,
-                                isChatAvailable = getChat().status.isApproved(),
-                                remoteTimezoneIdentifier = getChat().remoteTimezoneIdentifier,
+                                isChatAvailable = getChat().status.isApproved()
                             )
                         }
                     }
@@ -264,13 +278,19 @@ abstract class ChatViewModel<ARGS : NavArgs>(
             chatCollectionJob = viewModelScope.launch {
                 chatSharedFlow.collect { chat ->
 
+                    val timezoneString: String? = chat?.remoteTimezoneIdentifier?.value?.let {
+                        DateTime.getLocalTimeFor(it)
+                    }
+
+                    _remoteTimezoneStateFlow.value = timezoneString
+
                     _viewStateFlow.value = ChatHeaderViewState.Initialized(
                         chatHeaderName = chat?.name?.value ?: getChatInfo()?.first?.value ?: "",
                         showLock = chat != null,
                         isMuted = chat?.notify?.isMuteChat() == true,
-                        isChatAvailable = chat?.status?.isApproved() ?: false,
-                        remoteTimezoneIdentifier = chat?.remoteTimezoneIdentifier,
+                        isChatAvailable = chat?.status?.isApproved() ?: false
                     )
+
                     chat?.let { nnChat ->
                         if (nnChat.isPrivateTribe()) {
                             handleDisabledFooterState(nnChat)

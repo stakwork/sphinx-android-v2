@@ -1,12 +1,10 @@
 package chat.sphinx.edit_contact.ui
 
-import android.icu.util.TimeZone
 import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
-import android.widget.CompoundButton
 import android.widget.Spinner
 import androidx.annotation.RequiresApi
 import androidx.appcompat.widget.AppCompatTextView
@@ -25,6 +23,8 @@ import chat.sphinx.edit_contact.R
 import chat.sphinx.edit_contact.databinding.FragmentEditContactBinding
 import chat.sphinx.resources.R.color
 import chat.sphinx.resources.setTextColorExt
+import chat.sphinx.wrapper_chat.isTrue
+import chat.sphinx.wrapper_common.DateTime
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.annotation.meta.Exhaustive
@@ -71,13 +71,17 @@ internal class EditContactFragment : ContactFragment<
 
     override fun getSaveButtonText(): String = getString(R.string.save_contact_button)
 
+    companion object {
+        const val USE_COMPUTER_SETTINGS = "Use Computer Settings"
+    }
+
     @RequiresApi(Build.VERSION_CODES.N)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        allTimezonesList = TimeZone.getAvailableIDs()
+        allTimezonesList = DateTime.getValidTimeZoneIds()
             .toMutableList()
-            .also { it.add(index = 0, element = "Use Computer Settings") }
+            .also { it.add(index = 0, element = USE_COMPUTER_SETTINGS) }
             .toList()
 
         val spinnerAdapter = ArrayAdapter(
@@ -117,11 +121,9 @@ internal class EditContactFragment : ContactFragment<
                     ) {
                         if (it.selectedItemPosition == 0) {
                             selectedTimezoneIdentifier = null
-                            timezoneUpdated = false
-                            return
+                        } else {
+                            selectedTimezoneIdentifier = parent?.getItemAtPosition(position).toString()
                         }
-
-                        selectedTimezoneIdentifier = parent?.getItemAtPosition(position).toString()
                         timezoneUpdated = true
                     }
 
@@ -144,7 +146,7 @@ internal class EditContactFragment : ContactFragment<
         contactSaveBinding.buttonSave.setOnClickListener {
             viewModel.updateTimezoneStatus(
                 isTimezoneEnabled = timezoneEnabled,
-                timezoneIdentifier = selectedTimezoneIdentifier.toString(),
+                timezoneIdentifier = selectedTimezoneIdentifier,
                 timezoneUpdated = timezoneUpdated
             )
 
@@ -183,7 +185,7 @@ internal class EditContactFragment : ContactFragment<
             is ContactViewState.ShareTimezone -> {
                 fragmentShareTimezone.also { timezoneLayout ->
                     val spinnerPos = allTimezonesList.indexOf(
-                        viewState.chat.timezoneIdentifier.toString()
+                        viewState.chat.timezoneIdentifier?.value ?: USE_COMPUTER_SETTINGS
                     )
 
                     val spinnerSelection = if (spinnerPos == -1) 0 else spinnerPos
@@ -192,7 +194,7 @@ internal class EditContactFragment : ContactFragment<
                         spinner = timezoneLayout.spinnerTimezones,
                         spinnerLabel = timezoneLayout.textViewContactTimezone,
                         switch = timezoneLayout.switchEditTimezone,
-                        isChecked = viewState.chat.timezoneEnabled ?: false
+                        isChecked = viewState.chat.timezoneEnabled?.isTrue() ?: false
                     )
 
                     timezoneLayout.spinnerTimezones.setSelection(spinnerSelection)

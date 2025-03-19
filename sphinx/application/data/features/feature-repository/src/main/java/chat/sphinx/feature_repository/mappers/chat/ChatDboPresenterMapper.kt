@@ -42,6 +42,10 @@ internal class ChatDboPresenterMapper(
             notify = value.notify,
             pinedMessage = value.pin_message,
             secondBrainUrl = value.second_brain_url,
+            timezoneEnabled = value.timezone_enabled,
+            timezoneIdentifier = value.timezone_identifier,
+            remoteTimezoneIdentifier = value.remote_timezone_identifier,
+            timezoneUpdated = value.timezone_updated
         )
     }
 
@@ -72,7 +76,11 @@ internal class ChatDboPresenterMapper(
             content_seen_at = value.contentSeenAt,
             notify = value.notify,
             pin_message = value.pinedMessage,
-            second_brain_url = value.secondBrainUrl
+            second_brain_url = value.secondBrainUrl,
+            timezone_enabled = value.timezoneEnabled,
+            timezone_identifier = value.timezoneIdentifier,
+            remote_timezone_identifier = value.remoteTimezoneIdentifier,
+            timezone_updated = value.timezoneUpdated
         )
     }
 }

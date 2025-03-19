@@ -1,16 +1,28 @@
 package chat.sphinx.feature_coredb.adapters.message
 
 import chat.sphinx.wrapper_common.Push
-import chat.sphinx.wrapper_common.Seen
 import chat.sphinx.wrapper_common.message.MessageUUID
-import chat.sphinx.wrapper_common.contact.Blocked
-import chat.sphinx.wrapper_common.contact.toBlocked
 import chat.sphinx.wrapper_common.toPush
-import chat.sphinx.wrapper_common.toSeen
-import chat.sphinx.wrapper_message.*
+import chat.sphinx.wrapper_message.ErrorMessage
+import chat.sphinx.wrapper_message.Flagged
+import chat.sphinx.wrapper_message.MessageContent
+import chat.sphinx.wrapper_message.MessageContentDecrypted
+import chat.sphinx.wrapper_message.MessageMUID
+import chat.sphinx.wrapper_message.MessagePerson
+import chat.sphinx.wrapper_message.MessageStatus
+import chat.sphinx.wrapper_message.MessageType
+import chat.sphinx.wrapper_message.RecipientAlias
+import chat.sphinx.wrapper_common.message.RemoteTimezoneIdentifier
+import chat.sphinx.wrapper_message.ReplyUUID
+import chat.sphinx.wrapper_message.SenderAlias
+import chat.sphinx.wrapper_message.TagMessage
+import chat.sphinx.wrapper_message.ThreadUUID
+import chat.sphinx.wrapper_message.toFlagged
+import chat.sphinx.wrapper_message.toMessageStatus
+import chat.sphinx.wrapper_message.toMessageType
 import com.squareup.sqldelight.ColumnAdapter
 
-internal class MessageUUIDAdapter: ColumnAdapter<MessageUUID, String> {
+internal class MessageUUIDAdapter : ColumnAdapter<MessageUUID, String> {
     override fun decode(databaseValue: String): MessageUUID {
         return MessageUUID(databaseValue)
     }
@@ -20,7 +32,7 @@ internal class MessageUUIDAdapter: ColumnAdapter<MessageUUID, String> {
     }
 }
 
-internal class MessageTypeAdapter: ColumnAdapter<MessageType, Long> {
+internal class MessageTypeAdapter : ColumnAdapter<MessageType, Long> {
     override fun decode(databaseValue: Long): MessageType {
         return databaseValue.toInt().toMessageType()
     }
@@ -30,7 +42,7 @@ internal class MessageTypeAdapter: ColumnAdapter<MessageType, Long> {
     }
 }
 
-internal class MessageContentAdapter: ColumnAdapter<MessageContent, String> {
+internal class MessageContentAdapter : ColumnAdapter<MessageContent, String> {
     override fun decode(databaseValue: String): MessageContent {
         return MessageContent(databaseValue)
     }
@@ -40,7 +52,7 @@ internal class MessageContentAdapter: ColumnAdapter<MessageContent, String> {
     }
 }
 
-internal class MessageContentDecryptedAdapter: ColumnAdapter<MessageContentDecrypted, String> {
+internal class MessageContentDecryptedAdapter : ColumnAdapter<MessageContentDecrypted, String> {
     override fun decode(databaseValue: String): MessageContentDecrypted {
         return MessageContentDecrypted(databaseValue)
     }
@@ -50,7 +62,7 @@ internal class MessageContentDecryptedAdapter: ColumnAdapter<MessageContentDecry
     }
 }
 
-internal class MessageStatusAdapter: ColumnAdapter<MessageStatus, Long> {
+internal class MessageStatusAdapter : ColumnAdapter<MessageStatus, Long> {
 
     companion object {
         private const val NULL = Long.MIN_VALUE
@@ -69,7 +81,7 @@ internal class MessageStatusAdapter: ColumnAdapter<MessageStatus, Long> {
     }
 }
 
-internal class SenderAliasAdapter: ColumnAdapter<SenderAlias, String> {
+internal class SenderAliasAdapter : ColumnAdapter<SenderAlias, String> {
     override fun decode(databaseValue: String): SenderAlias {
         return SenderAlias(databaseValue)
     }
@@ -79,7 +91,7 @@ internal class SenderAliasAdapter: ColumnAdapter<SenderAlias, String> {
     }
 }
 
-internal class MessageMUIDAdapter: ColumnAdapter<MessageMUID, String> {
+internal class MessageMUIDAdapter : ColumnAdapter<MessageMUID, String> {
     override fun decode(databaseValue: String): MessageMUID {
         return MessageMUID(databaseValue)
     }
@@ -89,7 +101,7 @@ internal class MessageMUIDAdapter: ColumnAdapter<MessageMUID, String> {
     }
 }
 
-internal class ReplyUUIDAdapter: ColumnAdapter<ReplyUUID, String> {
+internal class ReplyUUIDAdapter : ColumnAdapter<ReplyUUID, String> {
     override fun decode(databaseValue: String): ReplyUUID {
         return ReplyUUID(databaseValue)
     }
@@ -99,7 +111,7 @@ internal class ReplyUUIDAdapter: ColumnAdapter<ReplyUUID, String> {
     }
 }
 
-internal class FlaggedAdapter private constructor(): ColumnAdapter<Flagged, Long> {
+internal class FlaggedAdapter private constructor() : ColumnAdapter<Flagged, Long> {
 
     companion object {
         @Volatile
@@ -120,7 +132,7 @@ internal class FlaggedAdapter private constructor(): ColumnAdapter<Flagged, Long
     }
 }
 
-internal class RecipientAliasAdapter: ColumnAdapter<RecipientAlias, String> {
+internal class RecipientAliasAdapter : ColumnAdapter<RecipientAlias, String> {
     override fun decode(databaseValue: String): RecipientAlias {
         return RecipientAlias(databaseValue)
     }
@@ -130,7 +142,7 @@ internal class RecipientAliasAdapter: ColumnAdapter<RecipientAlias, String> {
     }
 }
 
-internal class PushAdapter: ColumnAdapter<Push, Long> {
+internal class PushAdapter : ColumnAdapter<Push, Long> {
 
     override fun decode(databaseValue: Long): Push {
         return databaseValue.toInt().toPush()
@@ -141,7 +153,7 @@ internal class PushAdapter: ColumnAdapter<Push, Long> {
     }
 }
 
-internal class PersonAdapter: ColumnAdapter<MessagePerson, String> {
+internal class PersonAdapter : ColumnAdapter<MessagePerson, String> {
 
     override fun decode(databaseValue: String): MessagePerson {
         return MessagePerson(databaseValue)
@@ -152,7 +164,7 @@ internal class PersonAdapter: ColumnAdapter<MessagePerson, String> {
     }
 }
 
-internal class ThreadUUIDAdapter: ColumnAdapter<ThreadUUID, String> {
+internal class ThreadUUIDAdapter : ColumnAdapter<ThreadUUID, String> {
     override fun decode(databaseValue: String): ThreadUUID {
         return ThreadUUID(databaseValue)
     }
@@ -162,7 +174,7 @@ internal class ThreadUUIDAdapter: ColumnAdapter<ThreadUUID, String> {
     }
 }
 
-internal class ErrorMessageAdapter: ColumnAdapter<ErrorMessage, String> {
+internal class ErrorMessageAdapter : ColumnAdapter<ErrorMessage, String> {
     override fun decode(databaseValue: String): ErrorMessage {
         return ErrorMessage(databaseValue)
     }
@@ -172,7 +184,7 @@ internal class ErrorMessageAdapter: ColumnAdapter<ErrorMessage, String> {
     }
 }
 
-internal class TagMessageAdapter: ColumnAdapter<TagMessage, String> {
+internal class TagMessageAdapter : ColumnAdapter<TagMessage, String> {
     override fun decode(databaseValue: String): TagMessage {
         return TagMessage(databaseValue)
     }
@@ -182,4 +194,9 @@ internal class TagMessageAdapter: ColumnAdapter<TagMessage, String> {
     }
 }
 
+internal class RemoteTimezoneIdentifierAdapter : ColumnAdapter<RemoteTimezoneIdentifier, String> {
+    override fun decode(databaseValue: String): RemoteTimezoneIdentifier =
+        RemoteTimezoneIdentifier(databaseValue)
 
+    override fun encode(value: RemoteTimezoneIdentifier): String = value.value
+}

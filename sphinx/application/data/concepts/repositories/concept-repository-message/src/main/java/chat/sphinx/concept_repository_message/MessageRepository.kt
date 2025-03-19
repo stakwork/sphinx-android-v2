@@ -63,7 +63,10 @@ interface MessageRepository {
 
     suspend fun fetchPinnedMessageByUUID(messageUUID: MessageUUID, chatId: ChatId)
 
-    fun updateMessageContentDecrypted(messageId: MessageId, messageContentDecrypted: MessageContentDecrypted)
+    fun updateMessageContentDecrypted(
+        messageId: MessageId,
+        messageContentDecrypted: MessageContentDecrypted
+    )
 
     suspend fun readMessages(chatId: ChatId)
 
@@ -101,7 +104,7 @@ interface MessageRepository {
 
     suspend fun deleteAllMessagesAndPubKey(pubKey: String, chatId: ChatId)
 
-    suspend fun getPaymentTemplates() : Response<List<PaymentTemplate>, ResponseError>
+    suspend fun getPaymentTemplates(): Response<List<PaymentTemplate>, ResponseError>
 
     suspend fun sendPayment(
         sendPayment: SendPayment?
@@ -149,7 +152,8 @@ interface MessageRepository {
         paymentRequest: LightningPaymentRequest?,
         paymentHash: LightningPaymentHash?,
         bolt11: Bolt11?,
-        tag: TagMessage?
+        tag: TagMessage?,
+        isRestore: Boolean
     )
 
     suspend fun deleteMqttMessage(messageUuid: MessageUUID)

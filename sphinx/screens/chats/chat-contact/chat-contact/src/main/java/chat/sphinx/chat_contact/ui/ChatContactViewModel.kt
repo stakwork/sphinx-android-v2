@@ -44,7 +44,15 @@ import io.matthewnelson.android_feature_navigation.util.navArgs
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
 import io.matthewnelson.concept_media_cache.MediaCacheHandler
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -81,7 +89,7 @@ internal class ChatContactViewModel @Inject constructor(
     connectManagerRepository: ConnectManagerRepository,
     moshi: Moshi,
     LOG: SphinxLogger,
-): ChatViewModel<ChatContactFragmentArgs>(
+) : ChatViewModel<ChatContactFragmentArgs>(
     app,
     dispatchers,
     memeServerTokenHandler,
@@ -184,7 +192,8 @@ internal class ChatContactViewModel @Inject constructor(
                         throw Exception()
                     }
                 }
-            } catch (e: Exception) {}
+            } catch (e: Exception) {
+            }
             delay(25L)
 
             return Triple(
@@ -202,7 +211,10 @@ internal class ChatContactViewModel @Inject constructor(
         TODO("Not yet implemented")
     }
 
-    override suspend fun getInitialHolderViewStateForReceivedMessage(message: Message, owner: Contact): InitialHolderViewState {
+    override suspend fun getInitialHolderViewStateForReceivedMessage(
+        message: Message,
+        owner: Contact
+    ): InitialHolderViewState {
         if (message.sender == owner.id) {
             owner.photoUrl?.let { photoUrl ->
                 return InitialHolderViewState.Url(photoUrl)
@@ -233,14 +245,14 @@ internal class ChatContactViewModel @Inject constructor(
                 initialHolder = it
                 throw Exception()
             }
-        } catch (e: Exception) {}
+        } catch (e: Exception) {
+        }
         delay(25L)
 
         return initialHolder ?: InitialHolderViewState.None
     }
 
-
-    private suspend fun getContact() : Contact? {
+    private suspend fun getContact(): Contact? {
         var contact: Contact? = contactSharedFlow.replayCache.firstOrNull()
             ?: contactSharedFlow.firstOrNull()
 
@@ -252,7 +264,8 @@ internal class ChatContactViewModel @Inject constructor(
                         throw Exception()
                     }
                 }
-            } catch (e: Exception) {}
+            } catch (e: Exception) {
+            }
             delay(25L)
         }
 

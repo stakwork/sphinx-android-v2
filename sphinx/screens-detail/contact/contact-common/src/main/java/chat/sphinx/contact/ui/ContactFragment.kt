@@ -77,6 +77,8 @@ abstract class ContactFragment<
             is ContactViewState.Error -> {
                 contactSaveBinding.progressBarContactSave.gone
             }
+
+            is ContactViewState.ShareTimezone -> {}
         }
     }
 

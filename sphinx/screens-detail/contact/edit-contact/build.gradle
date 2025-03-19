@@ -36,5 +36,6 @@ dependencies {
 
     implementation deps.google.hilt
     implementation deps.square.moshi
+    implementation project(':sphinx:application:data:concepts:repositories:concept-repository-chat')
     kapt kaptDeps.google.hilt
 }

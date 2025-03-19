@@ -49,6 +49,8 @@ import chat.sphinx.example.concept_connect_manager.model.OwnerInfo
 import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
 import chat.sphinx.example.wrapper_mqtt.LastReadMessages.Companion.toLastReadMap
 import chat.sphinx.example.wrapper_mqtt.MessageDto
+import chat.sphinx.example.wrapper_mqtt.MessageMetadata
+import chat.sphinx.example.wrapper_mqtt.MessageMetadata.Companion.toMessageMetadata
 import chat.sphinx.example.wrapper_mqtt.MsgsCounts
 import chat.sphinx.example.wrapper_mqtt.MsgsCounts.Companion.toMsgsCounts
 import chat.sphinx.example.wrapper_mqtt.MuteLevels.Companion.toMuteLevelsMap
@@ -63,7 +65,6 @@ import chat.sphinx.example.wrapper_mqtt.toLspChannelInfo
 import chat.sphinx.feature_repository.mappers.action_track.*
 import chat.sphinx.feature_repository.mappers.chat.ChatDboPresenterMapper
 import chat.sphinx.feature_repository.mappers.contact.ContactDboPresenterMapper
-import chat.sphinx.feature_repository.mappers.contact.toContact
 import chat.sphinx.feature_repository.mappers.feed.*
 import chat.sphinx.feature_repository.mappers.feed.podcast.FeedDboFeedSearchResultPresenterMapper
 import chat.sphinx.feature_repository.mappers.feed.podcast.FeedDboPodcastPresenterMapper
@@ -139,7 +140,6 @@ import chat.sphinx.wrapper_message_media.token.MediaHost
 import chat.sphinx.wrapper_podcast.FeedRecommendation
 import chat.sphinx.wrapper_podcast.FeedSearchResultRow
 import chat.sphinx.wrapper_podcast.Podcast
-import chat.sphinx.wrapper_relay.*
 import chat.sphinx.wrapper_rsa.RsaPrivateKey
 import chat.sphinx.wrapper_rsa.RsaPublicKey
 import com.squareup.moshi.Moshi
@@ -267,6 +267,7 @@ abstract class SphinxRepository(
     override val restoreMinIndex: MutableStateFlow<Long?> by lazy {
         MutableStateFlow(null)
     }
+    private var chatId: ChatId? = null
 
     init {
         connectManager.addListener(this)
@@ -345,12 +346,13 @@ abstract class SphinxRepository(
         applicationScope.launch(mainImmediate) {
             var msgCounts: MsgsCounts? = null
 
-            restoreProcessState.asStateFlow().collect{ restoreProcessState ->
+            restoreProcessState.asStateFlow().collect { restoreProcessState ->
                 when (restoreProcessState) {
                     is RestoreProcessState.MessagesCounts -> {
                         msgCounts = restoreProcessState.msgsCounts
                         connectManager.fetchFirstMessagesPerKey(0L, msgCounts?.first_for_each_scid)
                     }
+
                     is RestoreProcessState.RestoreMessages -> {
                         delay(100L)
                         connectManager.fetchMessagesOnRestoreAccount(
@@ -451,14 +453,15 @@ abstract class SphinxRepository(
             val queries = coreDB.getSphinxDatabaseQueries()
 
             // TribeId is set from LONG.MAX_VALUE and decremented by 1 for each new tribe
-            val tribeId = queries.chatGetLastTribeId().executeAsOneOrNull()?.let { it.MIN?.minus(1) }
-                ?: (Long.MAX_VALUE)
+            val tribeId =
+                queries.chatGetLastTribeId().executeAsOneOrNull()?.let { it.MIN?.minus(1) }
+                    ?: (Long.MAX_VALUE)
             val now: String = DateTime.nowUTC()
 
             val newTribe = Chat(
                 id = ChatId(tribeId),
                 uuid = ChatUUID(tribePubKey),
-                name = ChatName( tribeName ?: "unknown"),
+                name = ChatName(tribeName ?: "unknown"),
                 photoUrl = tribePicture?.toPhotoUrl(),
                 type = ChatType.Tribe,
                 status = ChatStatus.Approved,
@@ -481,7 +484,11 @@ abstract class SphinxRepository(
                 contentSeenAt = null,
                 pinedMessage = null,
                 notify = NotificationLevel.SeeAll,
-                secondBrainUrl = null
+                secondBrainUrl = null,
+                timezoneEnabled = null,
+                timezoneIdentifier = null,
+                remoteTimezoneIdentifier = null,
+                timezoneUpdated = null
             )
 
             chatLock.withLock {
@@ -612,6 +619,7 @@ abstract class SphinxRepository(
 
             val newMessage = chat.sphinx.example.wrapper_mqtt.Message(
                 "",
+                null,
                 null,
                 null,
                 null,
@@ -986,7 +994,11 @@ abstract class SphinxRepository(
                                 contentSeenAt = null,
                                 pinedMessage = loadResponse.value.pin?.toMessageUUID(),
                                 notify = NotificationLevel.SeeAll,
-                                secondBrainUrl = null
+                                secondBrainUrl = null,
+                                timezoneEnabled = null,
+                                timezoneIdentifier = null,
+                                remoteTimezoneIdentifier = null,
+                                timezoneUpdated = null
                             )
 
                             chatLock.withLock {
@@ -1199,6 +1211,7 @@ abstract class SphinxRepository(
                                 null,
                                 null,
                                 null,
+                                null,
                                 null
                             )
 
@@ -1254,12 +1267,14 @@ abstract class SphinxRepository(
                                 paymentRequest,
                                 paymentHash,
                                 bolt11,
-                                msgTag
+                                msgTag,
+                                isRestore
                             )
                         }
                     }
                 } ?: run {
                     val message = if (msg.isNotEmpty()) msg.toMsg(moshi) else Msg(
+                        null,
                         null,
                         null,
                         null,
@@ -1415,7 +1430,11 @@ abstract class SphinxRepository(
                     contentSeenAt = existingTribe?.contentSeenAt,
                     pinedMessage = existingTribe?.pinedMessage,
                     notify = NotificationLevel.SeeAll,
-                    secondBrainUrl = existingTribe?.secondBrainUrl
+                    secondBrainUrl = existingTribe?.secondBrainUrl,
+                    timezoneEnabled = existingTribe?.timezoneEnabled,
+                    timezoneIdentifier = existingTribe?.timezoneIdentifier,
+                    remoteTimezoneIdentifier = existingTribe?.remoteTimezoneIdentifier,
+                    timezoneUpdated = existingTribe?.timezoneUpdated
                 )
 
                 chatLock.withLock {
@@ -1602,7 +1621,8 @@ abstract class SphinxRepository(
         paymentRequest: LightningPaymentRequest?,
         paymentHash: LightningPaymentHash?,
         bolt11: Bolt11?,
-        tag: TagMessage?
+        tag: TagMessage?,
+        isRestore: Boolean
     ) {
         val queries = coreDB.getSphinxDatabaseQueries()
         val contact = contactTribePubKey.toLightningNodePubKey()?.let { getContactByPubKey(it).firstOrNull() }
@@ -1722,7 +1742,8 @@ abstract class SphinxRepository(
             reactions = null,
             purchaseItems = null,
             replyMessage = null,
-            thread = null
+            thread = null,
+            remoteTimezoneIdentifier = if (isTribe) msg.metadata?.toMessageMetadata(moshi)?.tz?.toRemoteTimezoneIdentifier() else null
         )
 
         contact?.id?.let { contactId ->
@@ -1799,6 +1820,18 @@ abstract class SphinxRepository(
         chatLock.withLock {
             queries.chatUpdateSeen(Seen.False, ChatId(chatId))
         }
+
+        if (!fromMe) {
+            msg.metadata?.toMessageMetadata(moshi)?.tz?.let {
+                if (!isTribe) {
+                    updateChatRemoteTimezoneIdentifier(
+                        remoteTimezoneIdentifier = it.toRemoteTimezoneIdentifier(),
+                        chatId = ChatId(chatId),
+                        isRestore = isRestore
+                    )
+                }
+            }
+        }
     }
 
     private suspend fun upsertGenericPaymentMsg(
@@ -1815,7 +1848,7 @@ abstract class SphinxRepository(
             id = msgIndex,
             chatId = ChatId(ChatId.NULL_CHAT_ID.toLong()),
             type = msgType,
-            sender = ContactId(-1) ,
+            sender = ContactId(-1),
             receiver = ContactId(0),
             amount = msgAmount ?: Sat(0L),
             paymentHash = paymentHash,
@@ -1865,8 +1898,19 @@ abstract class SphinxRepository(
         replyUUID: ReplyUUID?,
         threadUUID: ThreadUUID?,
         isTribe: Boolean,
-        memberPubKey: LightningNodePubKey?
+        memberPubKey: LightningNodePubKey?,
+        currentChat: Chat?
     ) {
+        val metadata: String? = if(
+            currentChat?.timezoneUpdated?.isTrue() == true &&
+            currentChat.timezoneEnabled?.isTrue() == true
+        ) {
+            val timezoneAbbreviation = DateTime.getTimezoneAbbreviationFrom(currentChat.timezoneIdentifier?.value)
+            MessageMetadata(tz = timezoneAbbreviation).toJson(moshi)
+        } else {
+            null
+        }
+
         val newMessage = chat.sphinx.example.wrapper_mqtt.Message(
             messageContent,
             null,
@@ -1876,7 +1920,8 @@ abstract class SphinxRepository(
             replyUUID?.value,
             threadUUID?.value,
             memberPubKey?.value,
-            null
+            null,
+            metadata
         ).toJson(moshi)
 
         provisionalId?.value?.let {
@@ -1888,6 +1933,115 @@ abstract class SphinxRepository(
                 amount?.value,
                 isTribe
             )
+        }
+
+        applicationScope.launch(io) {
+            chatId?.let {
+                updateTimezoneFlag(
+                    timezoneUpdated = TimezoneUpdated.False,
+                    chatId = it
+                )
+            }
+        }
+    }
+
+    override suspend fun updateTimezoneEnabledStatus(
+        isTimezoneEnabled: TimezoneEnabled,
+        chatId: ChatId
+    ) {
+        val queries = coreDB.getSphinxDatabaseQueries()
+
+        try {
+            chatLock.withLock {
+                queries.chatUpdateTimezoneEnabled(
+                    timezone_enabled = isTimezoneEnabled,
+                    id = chatId
+                )
+            }
+        } catch (ex: Exception) {
+            LOG.e(TAG, ex.printStackTrace().toString(), ex)
+        }
+    }
+
+    override suspend fun updateTimezoneIdentifier(
+        timezoneIdentifier: TimezoneIdentifier?,
+        chatId: ChatId
+    ) {
+        val queries = coreDB.getSphinxDatabaseQueries()
+
+        try {
+            chatLock.withLock {
+                queries.chatUpdateTimezoneIdentifier(
+                    timezone_identifier = timezoneIdentifier,
+                    id = chatId
+                )
+            }
+        } catch (ex: Exception) {
+            LOG.e(TAG, ex.printStackTrace().toString(), ex)
+        }
+    }
+
+    override suspend fun updateTimezoneUpdated(
+        timezoneUpdated: TimezoneUpdated,
+        chatId: ChatId
+    ) {
+        this.chatId = chatId
+        updateTimezoneFlag(timezoneUpdated, chatId)
+    }
+
+    private suspend fun updateTimezoneFlag(
+        timezoneUpdated: TimezoneUpdated,
+        chatId: ChatId
+    ) {
+        val queries = coreDB.getSphinxDatabaseQueries()
+
+        try {
+            chatLock.withLock {
+                queries.chatUpdateTimezoneUpdated(
+                    timezone_updated = timezoneUpdated,
+                    id = chatId
+                )
+            }
+        } catch (ex: Exception) {
+            LOG.e(TAG, ex.printStackTrace().toString(), ex)
+        }
+    }
+
+    override suspend fun updateTimezoneUpdatedOnSystemChange() {
+        val queries = coreDB.getSphinxDatabaseQueries()
+
+        try {
+            chatLock.withLock {
+                queries.chatUpdateTimezoneUpdatedOnSystemChanged()
+            }
+        } catch (ex: Exception) {
+            LOG.e(TAG, ex.printStackTrace().toString(), ex)
+        }
+    }
+
+    override suspend fun updateChatRemoteTimezoneIdentifier(
+        remoteTimezoneIdentifier: RemoteTimezoneIdentifier?,
+        chatId: ChatId,
+        isRestore: Boolean
+    ) {
+        val queries = coreDB.getSphinxDatabaseQueries()
+
+        try {
+            chatLock.withLock {
+                if (isRestore) {
+                    queries.chatUpdateRemoteTimezoneIdentifierIfNull(
+                        remote_timezone_identifier = remoteTimezoneIdentifier,
+                        id = chatId
+                    )
+                } else {
+                    queries.chatUpdateRemoteTimezoneIdentifier(
+                        remote_timezone_identifier = remoteTimezoneIdentifier,
+                        id = chatId
+                    )
+                }
+            }
+        } catch (ex: Exception) {
+            LOG.e(TAG, ex.printStackTrace().toString(), ex)
         }
     }
 
@@ -1945,7 +2099,11 @@ abstract class SphinxRepository(
                                 contentSeenAt = null,
                                 pinedMessage = loadResponse.value.pin?.toMessageUUID(),
                                 notify = NotificationLevel.SeeAll,
-                                secondBrainUrl = loadResponse.value.second_brain_url?.toSecondBrainUrl()
+                                secondBrainUrl = loadResponse.value.second_brain_url?.toSecondBrainUrl(),
+                                timezoneEnabled = null,
+                                timezoneIdentifier = null,
+                                remoteTimezoneIdentifier = null,
+                                timezoneUpdated = null
                             )
 
                             messageLock.withLock {
@@ -2043,6 +2201,7 @@ abstract class SphinxRepository(
                         null,
                         mediaMessage.media_token.value,
                         mediaKey,
+                        null,
                         null,
                         null,
                         null,
@@ -2924,7 +3083,11 @@ abstract class SphinxRepository(
                 contentSeenAt = null,
                 pinedMessage = null,
                 notify = NotificationLevel.SeeAll,
-                secondBrainUrl = null
+                secondBrainUrl = null,
+                timezoneEnabled = null,
+                timezoneIdentifier = null,
+                remoteTimezoneIdentifier = null,
+                timezoneUpdated = null
             )
 
             contactLock.withLock {
@@ -3260,6 +3423,7 @@ abstract class SphinxRepository(
             }
         }
 
+        message._remoteTimezoneIdentifier = messageDbo.remote_timezone_identifier
 
         return message
     }
@@ -3889,6 +4053,7 @@ abstract class SphinxRepository(
                                 message?.toMessageContentDecrypted() ?: sendMessage.text?.toMessageContentDecrypted(),
                                 null,
                                 false.toFlagged(),
+                                if (chat.timezoneEnabled?.isTrue() == true) chat.timezoneIdentifier?.value?.toRemoteTimezoneIdentifier() else null
                             )
                         }
                         provisionalId
@@ -3969,7 +4134,8 @@ abstract class SphinxRepository(
                                     replyUUID,
                                     threadUUID,
                                     chat?.isTribe() ?: false,
-                                    sendMessage.memberPubKey
+                                    sendMessage.memberPubKey,
+                                    chat
                                 )
 
                                 LOG.d("MQTT_MESSAGES", "Media Message was sent. mediatoken=$mediaTokenValue mediakey$mediaKey" )
@@ -3989,7 +4155,8 @@ abstract class SphinxRepository(
                         replyUUID,
                         threadUUID,
                         chat?.isTribe() ?: false,
-                        sendMessage.memberPubKey
+                        sendMessage.memberPubKey,
+                        chat
                     )
                 }
             }
@@ -4289,6 +4456,7 @@ abstract class SphinxRepository(
                 message.uuid?.value,
                 null,
                 null,
+                null,
                 null
             ).toJson(moshi)
 
@@ -4438,6 +4606,7 @@ abstract class SphinxRepository(
                 null,
                 null,
                 null,
+                null,
                 null
             ).toJson(moshi)
 
@@ -4583,6 +4752,7 @@ abstract class SphinxRepository(
                 null,
                 null,
                 messageUUID.value,
+                null,
                 null,
                 null,
                 null
@@ -4898,7 +5068,8 @@ abstract class SphinxRepository(
                 null,
                 null,
                 null,
-                invoiceAndHash?.first
+                invoiceAndHash?.first,
+                null
             ).toJson(moshi)
 
             chatLock.withLock {
@@ -5014,7 +5185,8 @@ abstract class SphinxRepository(
                         message.uuid?.value,
                         null,
                         null,
-                        null
+                        null,
+                        null,
                     ).toJson(moshi)
 
 

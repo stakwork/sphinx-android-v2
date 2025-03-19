@@ -15,6 +15,10 @@ import chat.sphinx.wrapper_common.lsat.LsatIdentifier
 import chat.sphinx.wrapper_common.lsat.LsatIssuer
 import chat.sphinx.wrapper_common.lsat.LsatStatus
 import chat.sphinx.wrapper_message.Message
+import chat.sphinx.wrapper_common.message.RemoteTimezoneIdentifier
+import chat.sphinx.wrapper_chat.TimezoneEnabled
+import chat.sphinx.wrapper_chat.TimezoneIdentifier
+import chat.sphinx.wrapper_chat.TimezoneUpdated
 import chat.sphinx.wrapper_podcast.Podcast
 import kotlinx.coroutines.flow.Flow
 
@@ -53,7 +57,10 @@ interface ChatRepository {
      *
      * Returns error if something went wrong (networking)
      * */
-    suspend fun setNotificationLevel(chat: Chat, level: NotificationLevel): Response<Boolean, ResponseError>
+    suspend fun setNotificationLevel(
+        chat: Chat,
+        level: NotificationLevel
+    ): Response<Boolean, ResponseError>
 
     suspend fun updateChatContentSeenAt(chatId: ChatId)
 
@@ -95,4 +102,26 @@ interface ChatRepository {
     suspend fun upsertLsat(lsat: Lsat)
     suspend fun updateLsatStatus(identifier: LsatIdentifier, status: LsatStatus)
 
+    suspend fun updateTimezoneEnabledStatus(
+        isTimezoneEnabled: TimezoneEnabled,
+        chatId: ChatId
+    )
+
+    suspend fun updateTimezoneIdentifier(
+        timezoneIdentifier: TimezoneIdentifier?,
+        chatId: ChatId
+    )
+
+    suspend fun updateTimezoneUpdated(
+        timezoneUpdated: TimezoneUpdated,
+        chatId: ChatId
+    )
+
+    suspend fun updateTimezoneUpdatedOnSystemChange()
+
+    suspend fun updateChatRemoteTimezoneIdentifier(
+        remoteTimezoneIdentifier: RemoteTimezoneIdentifier?,
+        chatId: ChatId,
+        isRestore: Boolean
+    )
 }

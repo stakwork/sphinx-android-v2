@@ -1,6 +1,5 @@
 package chat.sphinx.concept_network_query_chat.model
 
-import chat.sphinx.wrapper_common.message.MessageId
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 
@@ -36,6 +35,10 @@ data class ChatDto(
     val pending_contact_ids: List<Long>?,
     val pin: String?,
     val notify: Int?,
+    val timezone_enabled: Any?,
+    val timezone_identifier: String?,
+    val remote_timezone_identifier: String?,
+    val timezone_updated: Any?
 ) {
     @Transient
     val isMutedActual: Boolean =
@@ -101,6 +104,34 @@ data class ChatDto(
             }
             is Double -> {
                 seen.toInt() == 1
+            }
+            else -> {
+                false
+            }
+        }
+
+    @Transient
+    val timezoneEnabled: Boolean =
+        when (timezone_enabled) {
+            is Boolean -> {
+                timezone_enabled
+            }
+            is Double -> {
+                timezone_enabled.toInt() == 1
+            }
+            else -> {
+                false
+            }
+        }
+
+    @Transient
+    val timezoneUpdated: Boolean =
+        when (timezone_updated) {
+            is Boolean -> {
+                timezone_updated
+            }
+            is Double -> {
+                timezone_updated.toInt() == 1
             }
             else -> {
                 false

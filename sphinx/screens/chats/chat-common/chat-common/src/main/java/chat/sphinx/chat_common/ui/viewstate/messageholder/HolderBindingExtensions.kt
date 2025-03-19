@@ -16,9 +16,9 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.updateLayoutParams
 import app.cash.exhaustive.Exhaustive
 import chat.sphinx.chat_common.R
-import chat.sphinx.resources.R as R_common
 import chat.sphinx.chat_common.adapters.MessageListAdapter
 import chat.sphinx.chat_common.databinding.LayoutMessageHolderBinding
+import chat.sphinx.chat_common.databinding.LayoutMessageStatusHeaderBinding
 import chat.sphinx.chat_common.databinding.LayoutMessageTypeAttachmentAudioBinding
 import chat.sphinx.chat_common.databinding.LayoutMessageTypePodcastClipBinding
 import chat.sphinx.chat_common.model.FeedItemPreview
@@ -28,42 +28,63 @@ import chat.sphinx.chat_common.model.UnspecifiedUrl
 import chat.sphinx.chat_common.ui.viewstate.audio.AudioMessageState
 import chat.sphinx.chat_common.ui.viewstate.audio.AudioPlayState
 import chat.sphinx.chat_common.util.AudioPlayerController
-import chat.sphinx.highlighting_tool.SphinxHighlightingTool
-import chat.sphinx.highlighting_tool.SphinxLinkify
-import chat.sphinx.highlighting_tool.SphinxUrlSpan
 import chat.sphinx.chat_common.util.VideoThumbnailUtil
-import chat.sphinx.concept_image_loader.*
+import chat.sphinx.concept_image_loader.Disposable
+import chat.sphinx.concept_image_loader.ImageLoader
+import chat.sphinx.concept_image_loader.ImageLoaderOptions
+import chat.sphinx.concept_image_loader.OnImageLoadListener
+import chat.sphinx.concept_image_loader.Transformation
 import chat.sphinx.concept_meme_server.MemeServerTokenHandler
 import chat.sphinx.concept_network_client_crypto.CryptoHeader
 import chat.sphinx.concept_network_client_crypto.CryptoScheme
 import chat.sphinx.concept_user_colors_helper.UserColorsHelper
-import chat.sphinx.resources.*
+import chat.sphinx.highlighting_tool.SphinxHighlightingTool
+import chat.sphinx.highlighting_tool.SphinxLinkify
+import chat.sphinx.highlighting_tool.SphinxUrlSpan
 import chat.sphinx.resources.databinding.LayoutChatImageSmallInitialHolderBinding
+import chat.sphinx.resources.getColorHexCode
+import chat.sphinx.resources.getRandomHexCode
+import chat.sphinx.resources.getString
+import chat.sphinx.resources.setBackgroundRandomColor
+import chat.sphinx.resources.setInitialsColor
+import chat.sphinx.resources.setTextFont
+import chat.sphinx.resources.toSp
+import chat.sphinx.wrapper_chat.Chat
 import chat.sphinx.wrapper_chat.ChatType
+import chat.sphinx.wrapper_chat.isTribe
 import chat.sphinx.wrapper_common.DateTime
 import chat.sphinx.wrapper_common.asFormattedString
 import chat.sphinx.wrapper_common.before
-import chat.sphinx.wrapper_common.lightning.*
+import chat.sphinx.wrapper_common.lightning.asFormattedString
 import chat.sphinx.wrapper_common.util.getHHMMSSString
 import chat.sphinx.wrapper_common.util.getHHMMString
 import chat.sphinx.wrapper_common.util.getInitials
 import chat.sphinx.wrapper_meme_server.headerKey
 import chat.sphinx.wrapper_meme_server.headerValue
-import chat.sphinx.wrapper_message.*
+import chat.sphinx.wrapper_message.Message
+import chat.sphinx.wrapper_message.MessageType
+import chat.sphinx.wrapper_message.PurchaseStatus
+import chat.sphinx.wrapper_message.isExpiredInvoice
+import chat.sphinx.wrapper_message.isPodcastBoost
+import chat.sphinx.wrapper_message.isSphinxCallLink
 import chat.sphinx.wrapper_message_media.MessageMedia
 import chat.sphinx.wrapper_view.Px
-import io.matthewnelson.android_feature_screens.util.*
+import io.matthewnelson.android_feature_screens.util.gone
+import io.matthewnelson.android_feature_screens.util.goneIfFalse
+import io.matthewnelson.android_feature_screens.util.goneIfTrue
+import io.matthewnelson.android_feature_screens.util.visible
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.io.File
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.resources.R as common_R
 
 
 @MainThread
 @Suppress("NOTHING_TO_INLINE")
-internal fun  LayoutMessageHolderBinding.setView(
+internal fun LayoutMessageHolderBinding.setView(
     lifecycleScope: CoroutineScope,
     holderJobs: ArrayList<Job>,
     disposables: ArrayList<Disposable>,
@@ -186,7 +207,7 @@ internal fun  LayoutMessageHolderBinding.setView(
             holderJobs,
             dispatchers,
             lifecycleScope,
-            userColorsHelper,
+            userColorsHelper
         )
         setInvoiceExpirationHeader(
             viewState.invoiceExpirationHeader
@@ -208,7 +229,7 @@ internal fun  LayoutMessageHolderBinding.setView(
         )
         if (viewState.background !is BubbleBackground.Gone) {
             setBubbleImageAttachment(viewState.bubbleImageAttachment) { imageView, loadingContainer, url, media ->
-                loadImageAttachment(imageView,loadingContainer, url, media)
+                loadImageAttachment(imageView, loadingContainer, url, media)
             }
 
             setBubbleAudioAttachment(
@@ -247,22 +268,22 @@ internal fun  LayoutMessageHolderBinding.setView(
                 userColorsHelper,
                 audioPlayerController,
                 loadImage = { imageView, url ->
-                lifecycleScope.launch(dispatchers.mainImmediate) {
-                    imageLoader.load(
-                        imageView,
-                        url,
-                        ImageLoaderOptions.Builder()
-                            .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
-                            .transformation(Transformation.CircleCrop)
-                            .build()
-                    )
-                        .also { disposables.add(it) }
-                }.let { job ->
-                    holderJobs.add(job)
-                }
-            }, lastReplyImage = { imageView, constraintLayout, url, media ->
+                    lifecycleScope.launch(dispatchers.mainImmediate) {
+                        imageLoader.load(
+                            imageView,
+                            url,
+                            ImageLoaderOptions.Builder()
+                                .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
+                                .transformation(Transformation.CircleCrop)
+                                .build()
+                        )
+                            .also { disposables.add(it) }
+                    }.let { job ->
+                        holderJobs.add(job)
+                    }
+                }, lastReplyImage = { imageView, constraintLayout, url, media ->
                     loadImageAttachment(imageView, constraintLayout, url, media)
-            })
+                })
             setBubblePaidMessageLayout(
                 dispatchers,
                 holderJobs,
@@ -806,7 +827,7 @@ internal inline fun LayoutMessageHolderBinding.setStatusHeader(
     holderJobs: ArrayList<Job>,
     dispatchers: CoroutineDispatchers,
     lifecycleScope: CoroutineScope,
-    userColorsHelper: UserColorsHelper,
+    userColorsHelper: UserColorsHelper
 ) {
     includeMessageStatusHeader.apply {
         if (statusHeader == null) {
@@ -873,6 +894,15 @@ internal inline fun LayoutMessageHolderBinding.setStatusHeader(
             } else {
                 textViewMessageStatusReceivedTimestamp.text = statusHeader.timestamp
                 textViewMessageStatusReceivedLockIcon.goneIfFalse(statusHeader.showLockIcon)
+
+                if (statusHeader.remoteTimezoneIdentifier != null) {
+                    textViewMessageStatusReceivedTimezone.also { timezoneView ->
+                        timezoneView.visible
+                        timezoneView.text = statusHeader.remoteTimezoneIdentifier
+                    }
+                } else {
+                    textViewMessageStatusReceivedTimezone.gone
+                }
             }
 
             val currentTime = System.currentTimeMillis()
@@ -890,6 +920,18 @@ internal inline fun LayoutMessageHolderBinding.setStatusHeader(
             } else {
                 textViewMessageStatusClockIcon.gone
             }
+        }
+    }
+}
+
+private fun LayoutMessageStatusHeaderBinding.displayTimezone(
+    chat: Chat,
+    remoteTimezoneIdentifier: String?
+) {
+    if (!remoteTimezoneIdentifier.isNullOrEmpty() && chat.isTribe()) {
+        textViewMessageStatusReceivedTimezone.also { timezoneView ->
+            timezoneView.visible
+            timezoneView.text = remoteTimezoneIdentifier
         }
     }
 }

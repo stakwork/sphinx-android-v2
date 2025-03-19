@@ -3,6 +3,7 @@ package chat.sphinx.chat_contact.ui
 import android.widget.ImageView
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import by.kirich1409.viewbindingdelegate.viewBinding
 import chat.sphinx.chat_common.databinding.*
@@ -14,15 +15,16 @@ import chat.sphinx.concept_image_loader.ImageLoader
 import chat.sphinx.concept_user_colors_helper.UserColorsHelper
 import chat.sphinx.menu_bottom.databinding.LayoutMenuBottomBinding
 import dagger.hilt.android.AndroidEntryPoint
+import io.matthewnelson.android_feature_screens.util.visible
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
-internal class ChatContactFragment: ChatFragment<
+internal class ChatContactFragment : ChatFragment<
         FragmentChatContactBinding,
         ChatContactFragmentArgs,
         ChatContactViewModel,
-        >(R.layout.fragment_chat_contact)
-{
+        >(R.layout.fragment_chat_contact) {
     override val binding: FragmentChatContactBinding by viewBinding(FragmentChatContactBinding::bind)
     override val footerBinding: LayoutChatFooterBinding by viewBinding(
         LayoutChatFooterBinding::bind, R.id.include_chat_contact_footer
@@ -51,7 +53,8 @@ internal class ChatContactFragment: ChatFragment<
         LayoutSelectedMessageBinding::bind, R.id.include_chat_contact_selected_message
     )
     override val selectedMessageHolderBinding: LayoutMessageHolderBinding by viewBinding(
-        LayoutMessageHolderBinding::bind, R_chat_common.id.include_layout_message_holder_selected_message
+        LayoutMessageHolderBinding::bind,
+        R_chat_common.id.include_layout_message_holder_selected_message
     )
     override val attachmentSendBinding: LayoutAttachmentSendPreviewBinding by viewBinding(
         LayoutAttachmentSendPreviewBinding::bind, R.id.include_chat_contact_attachment_send_preview

@@ -193,6 +193,33 @@ value class DateTime(val value: Date) {
                     }
             }
 
+        fun getTimezoneAbbreviationFrom(identifier: String?): String {
+            var timezone = TimeZone.getDefault()
+            identifier?.let {
+                timezone = TimeZone.getTimeZone(it)
+            }
+            return timezone.getDisplayName(false, TimeZone.SHORT).replace(Regex("GMT([+-])0?(\\d+):\\d+"), "GMT$1$2")
+        }
+
+        fun getValidTimeZoneIds(): List<String> {
+            return TimeZone.getAvailableIDs().filter { id ->
+                val tz = TimeZone.getTimeZone(id)
+                tz.id != "GMT" || id == "GMT" // Ensure it's not an invalid alias
+            }
+        }
+
+        fun getLocalTimeFor(identifier: String): String {
+            val timeZone = TimeZone.getTimeZone(identifier)
+            val dateFormat = SimpleDateFormat("hh:mm a z", Locale.getDefault())
+            dateFormat.timeZone = timeZone
+
+            return dateFormat.format(Date()).replace(Regex("GMT([+-])0?(\\d+):\\d+"), "GMT$1$2")
+        }
+
+        fun getSystemTimezoneAbbreviation(): String {
+            return TimeZone.getDefault().getDisplayName(false, TimeZone.SHORT)
+        }
+
         /**
          * Returns a string value using [FORMAT_RELAY]
          * */

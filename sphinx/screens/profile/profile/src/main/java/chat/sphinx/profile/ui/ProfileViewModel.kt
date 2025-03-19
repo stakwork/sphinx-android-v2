@@ -432,6 +432,7 @@ internal class ProfileViewModel @Inject constructor(
     private val _meetingServerUrlStateFlow: MutableStateFlow<String?> by lazy {
         MutableStateFlow(null)
     }
+
     private val _linkPreviewsEnabledStateFlow: MutableStateFlow<Boolean> by lazy {
         MutableStateFlow(true)
     }

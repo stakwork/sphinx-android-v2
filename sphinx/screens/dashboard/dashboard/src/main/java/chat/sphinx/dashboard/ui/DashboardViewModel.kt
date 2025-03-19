@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.icu.util.TimeZone
 import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
@@ -55,6 +56,7 @@ import chat.sphinx.scanner_view_model_coordinator.request.ScannerRequest
 import chat.sphinx.scanner_view_model_coordinator.response.ScannerResponse
 import chat.sphinx.wrapper_chat.Chat
 import chat.sphinx.wrapper_chat.isConversation
+import chat.sphinx.wrapper_common.DateTime
 import chat.sphinx.wrapper_common.ExternalAuthorizeLink
 import chat.sphinx.wrapper_common.ExternalRequestLink
 import chat.sphinx.wrapper_common.FeedRecommendationsToggle
@@ -200,6 +202,7 @@ internal class DashboardViewModel @Inject constructor(
         const val ROUTER_URL= "router_url"
         const val ROUTER_PUBKEY= "router_pubkey"
         const val TRIBES_V1_URL = "people.sphinx.chat"
+        const val SYSTEM_TIMEZONE = "system_timezone"
     }
 
     private val _hideBalanceStateFlow: MutableStateFlow<Int> by lazy {
@@ -240,7 +243,19 @@ internal class DashboardViewModel @Inject constructor(
         feedRepository.restoreContentFeedStatuses()
 
         networkRefresh(true)
+    }
 
+    fun processTimezoneChanges() {
+        getSystemTimezone()?.let { savesTimezone ->
+            val currentTimezone = DateTime.getSystemTimezoneAbbreviation()
+            if (currentTimezone != savesTimezone) {
+                viewModelScope.launch(mainImmediate) {
+                    chatRepository.updateTimezoneUpdatedOnSystemChange()
+                }
+            }
+        }
+
+        setSystemTimezone(DateTime.getSystemTimezoneAbbreviation())
     }
 
     private fun setDeviceId() {
@@ -398,6 +413,17 @@ internal class DashboardViewModel @Inject constructor(
 
     private fun getUserState(): String? {
         return userStateSharedPreferences.getString(ONION_STATE_KEY, null)
+    }
+
+    private fun setSystemTimezone(timezone: String) {
+        val editor = userStateSharedPreferences.edit()
+
+        editor.putString(SYSTEM_TIMEZONE, timezone)
+        editor.apply()
+    }
+
+    private fun getSystemTimezone(): String? {
+        return userStateSharedPreferences.getString(SYSTEM_TIMEZONE, null)
     }
 
     private fun getNetworkMixerIp(): String? {

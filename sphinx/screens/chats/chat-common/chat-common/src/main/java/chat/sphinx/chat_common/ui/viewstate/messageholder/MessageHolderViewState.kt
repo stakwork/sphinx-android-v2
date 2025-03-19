@@ -57,7 +57,7 @@ internal val MessageHolderViewState.showSentBubbleArrow: Boolean
 
 internal sealed class MessageHolderViewState(
     val message: Message?,
-    chat: Chat,
+    val chat: Chat,
     private val tribeAdmin: Contact?,
     val messageHolderType: MessageHolderType,
     private val separatorDate: DateTime?,
@@ -114,6 +114,12 @@ internal sealed class MessageHolderViewState(
 
                 val messageTimestamp = message.date.time
 
+                val timezoneString: String? = if (chat.isTribe() && !message.remoteTimezoneIdentifier?.value.isNullOrEmpty()) {
+                    message.remoteTimezoneIdentifier?.value?.let {
+                        DateTime.getLocalTimeFor(it)
+                    }
+                } else null
+
                 LayoutState.MessageStatusHeader(
                     if (chat.type.isConversation()) null else message.senderAlias?.value,
                     if (initialHolder is InitialHolderViewState.Initials) initialHolder.colorKey else message.getColorKey(),
@@ -126,7 +132,8 @@ internal sealed class MessageHolderViewState(
                     message.date.messageTimeFormat(),
                     message.errorMessage?.value?.trim(),
                     messageTimestamp = messageTimestamp,
-                    showClockIcon = false
+                    showClockIcon = false,
+                    remoteTimezoneIdentifier = timezoneString
                 )
             } else {
                 null
@@ -938,7 +945,7 @@ internal sealed class MessageHolderViewState(
     class ThreadHeader(
         message: Message?,
         messageHolderType: MessageHolderType,
-        val chat: Chat,
+        chat: Chat,
         val tribeAdmin: Contact?,
         initialHolder: InitialHolderViewState,
         val messageSenderInfo: (Message) -> Triple<PhotoUrl?, ContactAlias?, String>?,

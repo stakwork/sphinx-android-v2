@@ -45,6 +45,10 @@ import io.matthewnelson.android_feature_viewmodel.submitSideEffect
 import io.matthewnelson.concept_views.viewstate.collect
 import io.matthewnelson.concept_views.viewstate.value
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -89,6 +93,8 @@ internal class ProfileFragment: SideEffectFragment<
             binding.includeLayoutMenuBottomProfilePic,
             viewLifecycleOwner
         )
+
+        updateTimezoneAndDateTime()
     }
 
     private inner class BackPressHandler(
@@ -527,5 +533,15 @@ internal class ProfileFragment: SideEffectFragment<
 
     override suspend fun onSideEffectCollect(sideEffect: ProfileSideEffect) {
         sideEffect.execute(requireActivity())
+    }
+
+    private fun updateTimezoneAndDateTime() {
+        val timeZone = TimeZone.getDefault()
+        val timeZoneIdentifier = timeZone.id
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+        dateFormat.timeZone = timeZone
+        val currentDateTime = dateFormat.format(Date())
+
+        binding.includeProfileNamePictureHolder.textViewTimezoneAndDate.text = "$timeZoneIdentifier\n$currentDateTime"
     }
 }

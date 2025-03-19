@@ -1,5 +1,8 @@
 # ChangeLog
 
+## Version 1.0.0-alpha38 (2025-03-19)
+- Adds ability to share timezone with contacts
+
 ## Version 1.0.0-alpha37 (2025-02-27)
 - Adds ability to record Live Kit calls
 - Fixes UI issues on Live Kit calls

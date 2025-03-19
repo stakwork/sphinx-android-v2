@@ -375,13 +375,32 @@ abstract class ChatFragment<
                     val currentText = dest.toString()
                     val proposedText = currentText.substring(0, dstart) + source.subSequence(start, end) + currentText.substring(dend)
 
-                    return if (proposedText.toByteArray().size > 594) {
+                    val contentBytes = 18
+                    val offsetBytes = 360
+                    val attachmentBytes = 389
+                    val replyBytes = 84
+                    val threadBytes = 84
+
+                    var bytes = proposedText.toByteArray().size + contentBytes + offsetBytes
+
+                    if (sendMessageBuilder.isSendingAttachment()) {
+                        bytes += attachmentBytes
+                    }
+
+                    if (sendMessageBuilder.isReplying()) {
+                        bytes += replyBytes
+                    }
+
+                    if (sendMessageBuilder.isThreadMsg()) {
+                        bytes += threadBytes
+                    }
+                    
+                    return if (bytes > 869) {
                         // If the proposed text exceeds the limit, return an empty string to prevent the change
                         ""
                     } else {
                         // If the proposed text does not exceed the limit, allow the change
                         source.subSequence(start, end)
-
                     }
                 }
             })

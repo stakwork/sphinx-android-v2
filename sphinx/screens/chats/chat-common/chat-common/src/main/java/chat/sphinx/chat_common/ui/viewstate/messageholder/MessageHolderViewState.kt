@@ -116,7 +116,7 @@ internal sealed class MessageHolderViewState(
 
                 val timezoneString: String? = if (chat.isTribe() && !message.remoteTimezoneIdentifier?.value.isNullOrEmpty()) {
                     message.remoteTimezoneIdentifier?.value?.let {
-                        DateTime.getLocalTimeFor(it)
+                        DateTime.getLocalTimeFor(it, message.date)
                     }
                 } else null
 

@@ -1,5 +1,8 @@
 # ChangeLog
 
+## Version 1.0.0-alpha39 (2025-03-20)
+- Fixes issues on timezone sharing
+
 ## Version 1.0.0-alpha38 (2025-03-19)
 - Adds ability to share timezone with contacts
 

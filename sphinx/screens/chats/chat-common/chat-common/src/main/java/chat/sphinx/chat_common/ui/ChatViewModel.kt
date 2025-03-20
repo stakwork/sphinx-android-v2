@@ -279,7 +279,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                 chatSharedFlow.collect { chat ->
 
                     val timezoneString: String? = chat?.remoteTimezoneIdentifier?.value?.let {
-                        DateTime.getLocalTimeFor(it)
+                        DateTime.getLocalTimeFor(it, null)
                     }
 
                     _remoteTimezoneStateFlow.value = timezoneString

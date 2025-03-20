@@ -208,11 +208,14 @@ value class DateTime(val value: Date) {
             }
         }
 
-        fun getLocalTimeFor(identifier: String): String {
+        fun getLocalTimeFor(identifier: String, datetime: DateTime?): String {
             val timeZone = TimeZone.getTimeZone(identifier)
             val dateFormat = SimpleDateFormat("hh:mm a z", Locale.getDefault())
             dateFormat.timeZone = timeZone
 
+            datetime?.let {
+                return dateFormat.format(Date(it.time)).replace(Regex("GMT([+-])0?(\\d+):\\d+"), "GMT$1$2")
+            }
             return dateFormat.format(Date()).replace(Regex("GMT([+-])0?(\\d+):\\d+"), "GMT$1$2")
         }
 

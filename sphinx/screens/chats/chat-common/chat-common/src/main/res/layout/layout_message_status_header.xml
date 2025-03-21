@@ -58,22 +58,6 @@
             tools:text="00:00 AM" />
 
         <androidx.appcompat.widget.AppCompatTextView
-            android:id="@+id/text_view_message_status_received_lock_icon"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="3dp"
-            android:fontFamily="@font/material_icons_regular"
-            android:text="@string/material_icon_name_lock"
-            android:textColor="@color/secondaryText"
-            android:textSize="@dimen/default_text_size_list_row_headline"
-            android:visibility="gone"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/text_view_message_status_received_timezone"
-            app:layout_constraintStart_toEndOf="@id/text_view_message_status_received_timestamp"
-            app:layout_constraintTop_toTopOf="parent"
-            tools:visibility="visible" />
-
-        <androidx.appcompat.widget.AppCompatTextView
             android:id="@+id/text_view_message_status_received_timezone"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -84,9 +68,27 @@
             android:visibility="gone"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toEndOf="@+id/text_view_message_status_received_lock_icon"
             app:layout_constraintTop_toTopOf="parent"
-            tools:text="TIMEZONE"
+            android:layout_marginStart="@dimen/default_small_layout_margin"
+            app:layout_constraintEnd_toStartOf="@id/text_view_message_status_received_lock_icon"
+            app:layout_constraintStart_toEndOf="@id/text_view_message_status_received_timestamp"
+            tools:text="/ 12:00 GMT+3"
+            tools:visibility="visible" />
+
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/text_view_message_status_received_lock_icon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="3dp"
+            android:fontFamily="@font/material_icons_regular"
+            android:text="@string/material_icon_name_lock"
+            android:textColor="@color/secondaryText"
+            android:textSize="@dimen/default_text_size_list_row_headline"
+            android:visibility="gone"
+            android:layout_marginStart="@dimen/default_tiny_layout_margin"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/text_view_message_status_received_timezone"
+            app:layout_constraintTop_toTopOf="parent"
             tools:visibility="visible" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
@@ -153,8 +155,8 @@
 
         <androidx.appcompat.widget.AppCompatTextView
             android:id="@+id/text_view_message_status_sent_lock_icon"
-            android:layout_width="10dp"
-            android:layout_height="10dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:fontFamily="@font/material_icons_regular"
             android:text="@string/material_icon_name_lock"
             android:textColor="@color/secondaryText"

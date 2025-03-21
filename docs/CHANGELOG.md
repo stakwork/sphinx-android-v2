@@ -1,5 +1,8 @@
 # ChangeLog
 
+## Version 1.0.0-alpha40 (2025-03-21)
+- Improves UI on timezone sharing
+
 ## Version 1.0.0-alpha39 (2025-03-20)
 - Fixes issues on timezone sharing
 

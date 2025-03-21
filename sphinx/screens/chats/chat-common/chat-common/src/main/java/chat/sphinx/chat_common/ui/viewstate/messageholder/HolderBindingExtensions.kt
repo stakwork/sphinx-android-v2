@@ -1,5 +1,6 @@
 package chat.sphinx.chat_common.ui.viewstate.messageholder
 
+import android.annotation.SuppressLint
 import android.graphics.Color
 import android.view.Gravity
 import android.view.View
@@ -898,7 +899,7 @@ internal inline fun LayoutMessageHolderBinding.setStatusHeader(
                 if (statusHeader.remoteTimezoneIdentifier != null) {
                     textViewMessageStatusReceivedTimezone.also { timezoneView ->
                         timezoneView.visible
-                        timezoneView.text = statusHeader.remoteTimezoneIdentifier
+                        timezoneView.text = "/ ${statusHeader.remoteTimezoneIdentifier}"
                     }
                 } else {
                     textViewMessageStatusReceivedTimezone.gone

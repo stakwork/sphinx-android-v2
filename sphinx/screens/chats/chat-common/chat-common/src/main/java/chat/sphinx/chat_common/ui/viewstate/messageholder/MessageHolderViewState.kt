@@ -72,6 +72,7 @@ internal sealed class MessageHolderViewState(
     private val paidTextAttachmentContentProvider: suspend (message: Message) -> LayoutState.Bubble.ContainerThird.Message?,
     private val onBindDownloadMedia: () -> Unit,
     private val onBindThreadDownloadMedia: () -> Unit,
+    private val memberTimezoneIdentifier: String?,
 ) {
 
     val isPinned: Boolean by lazy(LazyThreadSafetyMode.NONE) {
@@ -114,10 +115,12 @@ internal sealed class MessageHolderViewState(
 
                 val messageTimestamp = message.date.time
 
-                val timezoneString: String? = if (chat.isTribe() && !message.remoteTimezoneIdentifier?.value.isNullOrEmpty()) {
-                    message.remoteTimezoneIdentifier?.value?.let {
-                        DateTime.getLocalTimeFor(it, message.date)
-                    }
+                val timezoneString: String? = if (chat.isTribe()) {
+                    if (!((message.remoteTimezoneIdentifier?.value ?: memberTimezoneIdentifier).isNullOrEmpty())) {
+                        (message.remoteTimezoneIdentifier?.value ?: memberTimezoneIdentifier)?.let {
+                            DateTime.getLocalTimeFor(it, message.date)
+                        }
+                    } else null
                 } else null
 
                 LayoutState.MessageStatusHeader(
@@ -861,6 +864,7 @@ internal sealed class MessageHolderViewState(
         paidTextMessageContentProvider: suspend (message: Message) -> LayoutState.Bubble.ContainerThird.Message?,
         onBindDownloadMedia: () -> Unit,
         onBindThreadDownloadMedia: () -> Unit,
+        memberTimezoneIdentifier: String?,
     ) : MessageHolderViewState(
         message,
         chat,
@@ -877,7 +881,8 @@ internal sealed class MessageHolderViewState(
         previewProvider,
         paidTextMessageContentProvider,
         onBindDownloadMedia,
-        onBindThreadDownloadMedia
+        onBindThreadDownloadMedia,
+        memberTimezoneIdentifier
     )
 
     class Received(
@@ -895,6 +900,7 @@ internal sealed class MessageHolderViewState(
         paidTextMessageContentProvider: suspend (message: Message) -> LayoutState.Bubble.ContainerThird.Message?,
         onBindDownloadMedia: () -> Unit,
         onBindThreadDownloadMedia: () -> Unit,
+        memberTimezoneIdentifier: String?,
     ) : MessageHolderViewState(
         message,
         chat,
@@ -912,6 +918,7 @@ internal sealed class MessageHolderViewState(
         paidTextMessageContentProvider,
         onBindDownloadMedia,
         onBindThreadDownloadMedia,
+        memberTimezoneIdentifier
     )
 
     class Separator(
@@ -939,7 +946,8 @@ internal sealed class MessageHolderViewState(
         previewProvider = { null },
         paidTextAttachmentContentProvider = { null },
         onBindDownloadMedia = {},
-        onBindThreadDownloadMedia = {}
+        onBindThreadDownloadMedia = {},
+        memberTimezoneIdentifier = null
     )
 
     class ThreadHeader(
@@ -968,7 +976,8 @@ internal sealed class MessageHolderViewState(
         { null },
         { null },
         {},
-        {}
+        {},
+        null
     ) {
         fun copy(isExpanded: Boolean = this.isExpanded): ThreadHeader {
             return ThreadHeader(

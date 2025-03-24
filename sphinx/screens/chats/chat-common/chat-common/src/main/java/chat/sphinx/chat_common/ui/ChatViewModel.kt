@@ -27,8 +27,11 @@ import chat.sphinx.camera_view_model_coordinator.request.CameraRequest
 import chat.sphinx.camera_view_model_coordinator.response.CameraResponse
 import chat.sphinx.chat_common.BuildConfig
 import chat.sphinx.chat_common.R
-import chat.sphinx.resources.R as R_common
-import chat.sphinx.chat_common.model.*
+import chat.sphinx.chat_common.model.FeedItemPreview
+import chat.sphinx.chat_common.model.MessageLinkPreview
+import chat.sphinx.chat_common.model.NodeDescriptor
+import chat.sphinx.chat_common.model.TribeLink
+import chat.sphinx.chat_common.model.UnspecifiedUrl
 import chat.sphinx.chat_common.navigation.ChatNavigator
 import chat.sphinx.chat_common.ui.viewstate.InitialHolderViewState
 import chat.sphinx.chat_common.ui.viewstate.attachment.AttachmentFullscreenViewState
@@ -37,7 +40,11 @@ import chat.sphinx.chat_common.ui.viewstate.footer.FooterViewState
 import chat.sphinx.chat_common.ui.viewstate.header.ChatHeaderViewState
 import chat.sphinx.chat_common.ui.viewstate.mentions.MessageMentionsViewState
 import chat.sphinx.chat_common.ui.viewstate.menu.ChatMenuViewState
-import chat.sphinx.chat_common.ui.viewstate.messageholder.*
+import chat.sphinx.chat_common.ui.viewstate.messageholder.BubbleBackground
+import chat.sphinx.chat_common.ui.viewstate.messageholder.InvoiceLinesHolderViewState
+import chat.sphinx.chat_common.ui.viewstate.messageholder.LayoutState
+import chat.sphinx.chat_common.ui.viewstate.messageholder.MessageHolderType
+import chat.sphinx.chat_common.ui.viewstate.messageholder.MessageHolderViewState
 import chat.sphinx.chat_common.ui.viewstate.messagereply.MessageReplyViewState
 import chat.sphinx.chat_common.ui.viewstate.scrolldown.ScrollDownViewState
 import chat.sphinx.chat_common.ui.viewstate.search.MessagesSearchViewState
@@ -47,8 +54,6 @@ import chat.sphinx.chat_common.ui.viewstate.thread.ThreadHeaderViewState
 import chat.sphinx.chat_common.util.AudioPlayerController
 import chat.sphinx.chat_common.util.AudioPlayerControllerImpl
 import chat.sphinx.chat_common.util.AudioRecorderController
-import chat.sphinx.highlighting_tool.SphinxLinkify
-import chat.sphinx.highlighting_tool.highlightedTexts
 import chat.sphinx.concept_image_loader.ImageLoaderOptions
 import chat.sphinx.concept_link_preview.LinkPreviewHandler
 import chat.sphinx.concept_link_preview.model.TribePreviewName
@@ -68,33 +73,102 @@ import chat.sphinx.concept_repository_message.MessageRepository
 import chat.sphinx.concept_repository_message.model.SendMessage
 import chat.sphinx.concept_view_model_coordinator.ViewModelCoordinator
 import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
+import chat.sphinx.highlighting_tool.SphinxLinkify
 import chat.sphinx.highlighting_tool.boldTexts
+import chat.sphinx.highlighting_tool.highlightedTexts
 import chat.sphinx.highlighting_tool.markDownLinkTexts
 import chat.sphinx.highlighting_tool.replacingMarkdown
-import chat.sphinx.kotlin_response.*
+import chat.sphinx.kotlin_response.LoadResponse
+import chat.sphinx.kotlin_response.Response
+import chat.sphinx.kotlin_response.message
 import chat.sphinx.logger.SphinxLogger
 import chat.sphinx.logger.e
 import chat.sphinx.menu_bottom.ui.MenuBottomViewState
 import chat.sphinx.resources.getRandomHexCode
-import chat.sphinx.wrapper_chat.*
-import chat.sphinx.wrapper_common.*
+import chat.sphinx.wrapper_chat.Chat
+import chat.sphinx.wrapper_chat.ChatName
+import chat.sphinx.wrapper_chat.NotificationLevel
+import chat.sphinx.wrapper_chat.isApproved
+import chat.sphinx.wrapper_chat.isConversation
+import chat.sphinx.wrapper_chat.isMuteChat
+import chat.sphinx.wrapper_chat.isPending
+import chat.sphinx.wrapper_chat.isPrivateTribe
+import chat.sphinx.wrapper_chat.isTribe
+import chat.sphinx.wrapper_common.DateTime
+import chat.sphinx.wrapper_common.PhotoUrl
+import chat.sphinx.wrapper_common.PreviewsEnabled
+import chat.sphinx.wrapper_common.before
 import chat.sphinx.wrapper_common.chat.ChatUUID
+import chat.sphinx.wrapper_common.chatTimeFormat
 import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_common.dashboard.ContactId
 import chat.sphinx.wrapper_common.feed.FeedItemLink
 import chat.sphinx.wrapper_common.feed.toFeedItemLink
-import chat.sphinx.wrapper_common.lightning.*
-import chat.sphinx.wrapper_common.message.*
+import chat.sphinx.wrapper_common.getMinutesDifferenceWithDateTime
+import chat.sphinx.wrapper_common.isDifferentDayThan
+import chat.sphinx.wrapper_common.isTrue
+import chat.sphinx.wrapper_common.lightning.LightningNodePubKey
+import chat.sphinx.wrapper_common.lightning.LightningRouteHint
+import chat.sphinx.wrapper_common.lightning.Sat
+import chat.sphinx.wrapper_common.lightning.VirtualLightningNodeAddress
+import chat.sphinx.wrapper_common.lightning.getPubKey
+import chat.sphinx.wrapper_common.lightning.getRouteHint
+import chat.sphinx.wrapper_common.lightning.toLightningNodePubKey
+import chat.sphinx.wrapper_common.lightning.toVirtualLightningNodeAddress
+import chat.sphinx.wrapper_common.message.CallLinkMessage
+import chat.sphinx.wrapper_common.message.MessageId
+import chat.sphinx.wrapper_common.message.MessageUUID
+import chat.sphinx.wrapper_common.message.SphinxCallLink
+import chat.sphinx.wrapper_common.message.toCallLinkMessageOrNull
+import chat.sphinx.wrapper_common.message.toSphinxCallLink
+import chat.sphinx.wrapper_common.time
 import chat.sphinx.wrapper_common.tribe.TribeJoinLink
 import chat.sphinx.wrapper_common.tribe.toTribeJoinLink
-import chat.sphinx.wrapper_contact.*
+import chat.sphinx.wrapper_contact.Contact
+import chat.sphinx.wrapper_contact.avatarUrl
+import chat.sphinx.wrapper_contact.getColorKey
+import chat.sphinx.wrapper_contact.isEncrypted
+import chat.sphinx.wrapper_contact.toContactAlias
 import chat.sphinx.wrapper_feed.Feed
 import chat.sphinx.wrapper_feed.isNewsletter
 import chat.sphinx.wrapper_feed.isPodcast
 import chat.sphinx.wrapper_feed.isVideo
 import chat.sphinx.wrapper_lightning.NodeBalance
-import chat.sphinx.wrapper_message.*
-import chat.sphinx.wrapper_message_media.*
+import chat.sphinx.wrapper_message.GiphyData
+import chat.sphinx.wrapper_message.Message
+import chat.sphinx.wrapper_message.MessageStatus
+import chat.sphinx.wrapper_message.MessageType
+import chat.sphinx.wrapper_message.PodcastClip
+import chat.sphinx.wrapper_message.SenderAlias
+import chat.sphinx.wrapper_message.ThreadUUID
+import chat.sphinx.wrapper_message.getColorKey
+import chat.sphinx.wrapper_message.hasSameSenderThanMessage
+import chat.sphinx.wrapper_message.isDeleted
+import chat.sphinx.wrapper_message.isFlagged
+import chat.sphinx.wrapper_message.isGroupAction
+import chat.sphinx.wrapper_message.isGroupKick
+import chat.sphinx.wrapper_message.isGroupLeave
+import chat.sphinx.wrapper_message.isInvoicePayment
+import chat.sphinx.wrapper_message.isMediaAttachmentAvailable
+import chat.sphinx.wrapper_message.isPaidInvoice
+import chat.sphinx.wrapper_message.retrieveImageUrlAndMessageMedia
+import chat.sphinx.wrapper_message.retrievePaidTextAttachmentUrlAndMessageMedia
+import chat.sphinx.wrapper_message.retrieveSphinxCallLink
+import chat.sphinx.wrapper_message.retrieveTextToShow
+import chat.sphinx.wrapper_message.retrieveUrlAndMessageMedia
+import chat.sphinx.wrapper_message.shouldAvoidGrouping
+import chat.sphinx.wrapper_message.toMessageContentDecrypted
+import chat.sphinx.wrapper_message_media.FileName
+import chat.sphinx.wrapper_message_media.MediaType
+import chat.sphinx.wrapper_message_media.MessageMedia
+import chat.sphinx.wrapper_message_media.getPriceFromMediaToken
+import chat.sphinx.wrapper_message_media.isAudio
+import chat.sphinx.wrapper_message_media.isImage
+import chat.sphinx.wrapper_message_media.isPdf
+import chat.sphinx.wrapper_message_media.isUnknown
+import chat.sphinx.wrapper_message_media.isVideo
+import chat.sphinx.wrapper_message_media.toFileName
+import chat.sphinx.wrapper_message_media.toMediaType
 import com.example.call_activity.CallActivity
 import com.example.call_activity.StressTest
 import com.giphy.sdk.core.models.Media
@@ -113,13 +187,31 @@ import io.matthewnelson.concept_coroutines.CoroutineDispatchers
 import io.matthewnelson.concept_media_cache.MediaCacheHandler
 import io.matthewnelson.concept_views.viewstate.ViewStateContainer
 import io.matthewnelson.concept_views.viewstate.value
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.onCompletion
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.jitsi.meet.sdk.JitsiMeetActivity
 import org.jitsi.meet.sdk.JitsiMeetConferenceOptions
 import org.jitsi.meet.sdk.JitsiMeetUserInfo
-import java.io.*
-import java.time.LocalDateTime
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.FileInputStream
+import java.io.IOException
+import java.io.InputStream
+import chat.sphinx.resources.R as R_common
 
 
 @JvmSynthetic
@@ -149,7 +241,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
     private val connectManagerRepository: ConnectManagerRepository,
     val moshi: Moshi,
     protected val LOG: SphinxLogger,
-    ) : MotionLayoutViewModel<
+) : MotionLayoutViewModel<
         Nothing,
         ChatSideEffectFragment,
         ChatSideEffect,
@@ -2465,26 +2557,66 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         val lastWord = s?.split(" ")?.last()?.toString() ?: ""
 
         if (lastWord.startsWith("@") && lastWord.length > 1) {
-            val matchingMessages: MutableList<MessageHolderViewState> = mutableListOf();
+            val matchingMessages: MutableList<MessageHolderViewState> = mutableListOf()
+            val excludedMembers: MutableList<String> = mutableListOf()
+            val messagesList = messageHolderViewStateFlow.value
 
-            messageHolderViewStateFlow.value.reversed().forEach loop@{ messageHolder ->
+            checkForExcludedOrRejoinedMembers(
+                messagesList,
+                matchingMessages.toList(),
+                onAddToExcludedMembersList = { member ->
+                    member.message?.senderAlias?.value?.let { excludedMembers.add(it) }
+                    matchingMessages.retainAll { it.message?.senderAlias?.value != member.message?.senderAlias?.value }
+                },
+                onRemoveFromExcludedMembersList = { member ->
+                    if (excludedMembers.isNotEmpty()) {
+                        member.message?.senderAlias?.let { excludedMembers.remove(it.value) }
+                        matchingMessages.add(member)
+                    }
+                }
+            )
+
+            messagesList.reversed().forEach loop@{ messageHolder ->
                 if (messageHolder is MessageHolderViewState.Sent) {
                     return@loop
                 }
+
                 messageHolder.message?.date?.let { nnDate ->
                     if (nnDate.before(DateTime.getThreeMonthsAgo())) {
                         return@loop
                     }
                 }
+
                 messageHolder.message?.senderAlias?.value?.let { alias ->
                     if (alias.startsWith(lastWord.replace("@", ""), true)) {
                         messageHolder.message.senderPic?.value?.let { picture ->
-                            if (!matchingMessages.any { it.message?.senderPic?.value == picture || it.message?.senderAlias?.value == alias }) {
-                                matchingMessages.add(messageHolder)
+                            if (!matchingMessages.any {
+                                    it.message?.senderPic?.value == picture ||
+                                            it.message?.senderAlias?.value == alias
+                                }
+                            ) {
+                                checkForExcludedMembers(
+                                    excludedMembersList = excludedMembers.toList(),
+                                    currentMessageHolder = messageHolder,
+                                    onAddToMatchingMessagesList = { matchedMessage ->
+                                        if (matchingMessages.any {
+                                            it.message?.senderAlias?.value ==
+                                            matchedMessage.message?.senderAlias?.value }
+                                        ) {
+                                            matchingMessages.add(matchedMessage)
+                                        }
+                                    }
+                                )
                             }
                         } ?: run {
-                            if (!matchingMessages.any {it.message?.senderAlias?.value == alias }) {
-                                matchingMessages.add(messageHolder)
+                            if (!matchingMessages.any { it.message?.senderAlias?.value == alias }) {
+                                checkForExcludedMembers(
+                                    excludedMembersList = excludedMembers.toList(),
+                                    currentMessageHolder = messageHolder,
+                                    onAddToMatchingMessagesList = { matchedMessage ->
+                                        matchingMessages.add(matchedMessage)
+                                    },
+                                )
                             }
                         }
                     }
@@ -2502,13 +2634,86 @@ abstract class ChatViewModel<ARGS : NavArgs>(
             messageMentionsViewStateContainer.updateViewState(
                 MessageMentionsViewState.MessageMentions(matchingAliases)
             )
-
         } else {
             messageMentionsViewStateContainer.updateViewState(
                 MessageMentionsViewState.MessageMentions(listOf())
             )
         }
+    }
 
+    private fun checkForExcludedOrRejoinedMembers(
+        messagesList: List<MessageHolderViewState>,
+        matchingMessages: List<MessageHolderViewState>,
+        onAddToExcludedMembersList: (MessageHolderViewState) -> Unit,
+        onRemoveFromExcludedMembersList: (MessageHolderViewState) -> Unit
+    ) {
+        messagesList.forEachIndexed { index, messageHolderViewState ->
+            messageHolderViewState.message?.type?.let { type ->
+                if (type.isGroupLeave()) {
+                    checkToAddToExcludedMembers(
+                        currentMessageHolder = messageHolderViewState,
+                        matchingMessagesList = matchingMessages.toList(),
+                        onAddToExcludedMembersList = { member: MessageHolderViewState ->
+                            onAddToExcludedMembersList(member)
+                        }
+                    )
+                } else {
+                    includeMemberIfRejoined(
+                        messageList = messagesList,
+                        currentIndex = index,
+                        currentMessageHolder = messageHolderViewState,
+                        onRemoveFromExcludedMembersList = { member: MessageHolderViewState ->
+                            onRemoveFromExcludedMembersList(member)
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+    private fun checkForExcludedMembers(
+        excludedMembersList: List<String>,
+        onAddToMatchingMessagesList: (MessageHolderViewState) -> Unit,
+        currentMessageHolder: MessageHolderViewState
+    ) {
+        val isMemberInExcludedList = excludedMembersList.any {
+            it == currentMessageHolder.message?.senderAlias?.value
+        }
+
+        if (!isMemberInExcludedList) {
+            onAddToMatchingMessagesList(currentMessageHolder)
+        }
+    }
+
+    private fun checkToAddToExcludedMembers(
+        currentMessageHolder: MessageHolderViewState,
+        matchingMessagesList: List<MessageHolderViewState>,
+        onAddToExcludedMembersList: (MessageHolderViewState) -> Unit
+    ) {
+        val hasSameAlias = matchingMessagesList.any {
+            it.message?.senderAlias?.value == currentMessageHolder.message?.senderAlias?.value
+        }
+
+        if (!hasSameAlias) {
+            onAddToExcludedMembersList(currentMessageHolder)
+        }
+    }
+
+    private fun includeMemberIfRejoined(
+        messageList: List<MessageHolderViewState>,
+        currentIndex: Int,
+        currentMessageHolder: MessageHolderViewState,
+        onRemoveFromExcludedMembersList: (MessageHolderViewState) -> Unit
+    ) {
+        val previousMessageHolder = messageList.getOrNull(currentIndex - 1) ?: return
+
+        if (previousMessageHolder.message?.senderAlias == currentMessageHolder.message?.senderAlias) {
+            previousMessageHolder.message?.type?.let { previousMessageHolderType ->
+                if (previousMessageHolderType.isGroupLeave()) {
+                    onRemoveFromExcludedMembersList(currentMessageHolder)
+                }
+            }
+        }
     }
 
     fun sendAppLog(appLog: String) {
@@ -2528,12 +2733,15 @@ inline fun MessageMedia.retrieveMediaStorageUri(): Uri? {
         this.mediaType.isImage -> {
             MediaStore.Images.Media.EXTERNAL_CONTENT_URI
         }
+
         this.mediaType.isVideo -> {
             MediaStore.Video.Media.EXTERNAL_CONTENT_URI
         }
+
         this.mediaType.isAudio -> {
             MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
         }
+
         else -> {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 MediaStore.Downloads.EXTERNAL_CONTENT_URI

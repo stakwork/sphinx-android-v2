@@ -1,5 +1,8 @@
 # ChangeLog
 
+## Version 1.0.0-alpha41 (2025-03-24)
+- Adds timezone on every tribe message
+
 ## Version 1.0.0-alpha40 (2025-03-21)
 - Improves UI on timezone sharing
 

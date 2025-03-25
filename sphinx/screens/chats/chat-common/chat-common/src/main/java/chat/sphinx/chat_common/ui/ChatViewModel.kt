@@ -2599,10 +2599,9 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                                     excludedMembersList = excludedMembers.toList(),
                                     currentMessageHolder = messageHolder,
                                     onAddToMatchingMessagesList = { matchedMessage ->
-                                        if (matchingMessages.any {
-                                            it.message?.senderAlias?.value ==
-                                            matchedMessage.message?.senderAlias?.value }
-                                        ) {
+                                        if (!matchingMessages.any {
+                                            it.message?.senderAlias?.value == matchedMessage.message?.senderAlias?.value
+                                        }) {
                                             matchingMessages.add(matchedMessage)
                                         }
                                     }

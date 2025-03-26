@@ -267,7 +267,6 @@ abstract class SphinxRepository(
     override val restoreMinIndex: MutableStateFlow<Long?> by lazy {
         MutableStateFlow(null)
     }
-    private var chatId: ChatId? = null
 
     init {
         connectManager.addListener(this)
@@ -1899,18 +1898,8 @@ abstract class SphinxRepository(
         threadUUID: ThreadUUID?,
         isTribe: Boolean,
         memberPubKey: LightningNodePubKey?,
-        currentChat: Chat?
+        metadata: String?
     ) {
-        val metadata: String? = if(
-            currentChat?.timezoneUpdated?.isTrue() == true &&
-            currentChat.timezoneEnabled?.isTrue() == true
-        ) {
-            val timezoneAbbreviation = DateTime.getTimezoneAbbreviationFrom(currentChat.timezoneIdentifier?.value)
-            MessageMetadata(tz = timezoneAbbreviation).toJson(moshi)
-        } else {
-            null
-        }
-
         val newMessage = chat.sphinx.example.wrapper_mqtt.Message(
             messageContent,
             null,
@@ -1933,15 +1922,6 @@ abstract class SphinxRepository(
                 amount?.value,
                 isTribe
             )
-        }
-
-        applicationScope.launch(io) {
-            chatId?.let {
-                updateTimezoneFlag(
-                    timezoneUpdated = TimezoneUpdated.False,
-                    chatId = it
-                )
-            }
         }
     }
 
@@ -1985,7 +1965,6 @@ abstract class SphinxRepository(
         timezoneUpdated: TimezoneUpdated,
         chatId: ChatId
     ) {
-        this.chatId = chatId
         updateTimezoneFlag(timezoneUpdated, chatId)
     }
 
@@ -4009,6 +3988,23 @@ abstract class SphinxRepository(
 
             val threadUUID = sendMessage.threadUUID
 
+            val metadata: String? = if(
+                chat?.timezoneUpdated?.isTrue() == true &&
+                chat.timezoneEnabled?.isTrue() == true
+            ) {
+                val timezoneAbbreviation = DateTime.getTimezoneAbbreviationFrom(chat.timezoneIdentifier?.value)
+                MessageMetadata(tz = timezoneAbbreviation).toJson(moshi)
+            } else {
+                null
+            }
+
+            if (metadata != null && chat?.id != null) {
+                updateTimezoneFlag(
+                    timezoneUpdated = TimezoneUpdated.False,
+                    chatId = chat.id
+                )
+            }
+
             val provisionalMessageId: MessageId? = chat?.let { chatDbo ->
                 // Build provisional message and insert
                 provisionalMessageLock.withLock {
@@ -4135,7 +4131,7 @@ abstract class SphinxRepository(
                                     threadUUID,
                                     chat?.isTribe() ?: false,
                                     sendMessage.memberPubKey,
-                                    chat
+                                    metadata
                                 )
 
                                 LOG.d("MQTT_MESSAGES", "Media Message was sent. mediatoken=$mediaTokenValue mediakey$mediaKey" )
@@ -4156,7 +4152,7 @@ abstract class SphinxRepository(
                         threadUUID,
                         chat?.isTribe() ?: false,
                         sendMessage.memberPubKey,
-                        chat
+                        metadata
                     )
                 }
             }

@@ -337,9 +337,8 @@ internal class TribeDetailFragment : SideEffectFragment<
 
             is TribeDetailViewState.TribeProfile -> {
                 binding.apply {
-                    // Hide the upload picture progress indicator
                     progressBarUploadProfilePicture.gone
-                    // Initialize the Tribe Specific menu bar with the
+
                     bottomMenuTribe.initialize(
                         viewState.chat,
                         viewState.accountOwner,
@@ -391,11 +390,9 @@ internal class TribeDetailFragment : SideEffectFragment<
                     }
 
                     fragmentShareTimezone.also { timezoneLayout ->
-                        val spinnerPos = allTimezonesList.indexOf(
-                            viewState.chat.timezoneIdentifier.toString()
-                        )
-
-                        val spinnerSelection = if (spinnerPos == -1) 0 else spinnerPos
+                        val timezoneId = viewState.chat.timezoneIdentifier?.value ?: "Use Computer Settings"
+                        val spinnerPos = allTimezonesList.indexOf(timezoneId)
+                        val spinnerSelection = if (spinnerPos in allTimezonesList.indices) spinnerPos else 0
 
                         handleSpinnerAndSwitch(
                             spinner = timezoneLayout.spinnerTimezones,

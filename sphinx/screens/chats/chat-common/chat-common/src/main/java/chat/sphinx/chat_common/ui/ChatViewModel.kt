@@ -2499,7 +2499,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         if (lastWord.startsWith("@") && lastWord.length > 1) {
             val matchingMessages: MutableList<MessageHolderViewState> = mutableListOf();
 
-            messageHolderViewStateFlow.value.reversed().forEach loop@{ messageHolder ->
+            messageHolderViewStateFlow.value.forEach loop@{ messageHolder ->
                 if (messageHolder is MessageHolderViewState.Sent) {
                     return@loop
                 }
@@ -2511,11 +2511,40 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                 messageHolder.message?.senderAlias?.value?.let { alias ->
                     if (alias.startsWith(lastWord.replace("@", ""), true)) {
                         messageHolder.message.senderPic?.value?.let { picture ->
-                            if (!matchingMessages.any { it.message?.senderPic?.value == picture || it.message?.senderAlias?.value == alias }) {
+                            if (messageHolder.message.type.isGroupLeave()) {
+                                val index = matchingMessages.indexOfFirst {
+                                    it.message?.senderPic?.value == picture || it.message?.senderAlias?.value == alias
+                                }
+                                if (index != -1) {
+                                    matchingMessages.removeAt(index)
+                                }
+                            }
+
+                            val index = matchingMessages.indexOfFirst {
+                                it.message?.senderAlias?.value == alias
+                            }
+
+                            if (index != -1) {
+                                matchingMessages[index] = messageHolder
+                            } else if (!matchingMessages.any { it.message?.senderPic?.value == picture || it.message?.senderAlias?.value == alias }) {
                                 matchingMessages.add(messageHolder)
                             }
                         } ?: run {
-                            if (!matchingMessages.any {it.message?.senderAlias?.value == alias }) {
+                            if (messageHolder.message.type.isGroupLeave()) {
+                                val index = matchingMessages.indexOfFirst {
+                                    it.message?.senderAlias?.value == alias
+                                }
+                                if (index != -1) {
+                                    matchingMessages.removeAt(index)
+                                }
+                            }
+                            val index = matchingMessages.indexOfFirst {
+                                it.message?.senderAlias?.value == alias
+                            }
+
+                            if (index != -1) {
+                                matchingMessages[index] = messageHolder
+                            } else {
                                 matchingMessages.add(messageHolder)
                             }
                         }

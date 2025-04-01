@@ -1,5 +1,8 @@
 # ChangeLog
 
+## Version 1.0.0-alpha43 (2025-04-01)
+- Fixes timezone sharing issues
+
 ## Version 1.0.0-alpha42 (2025-03-28)
 - Fixes timezone sharing issues
 - Fixes mentions suggestions issues

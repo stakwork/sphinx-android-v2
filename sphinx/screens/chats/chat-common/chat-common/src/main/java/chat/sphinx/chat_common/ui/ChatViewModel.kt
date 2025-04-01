@@ -491,6 +491,16 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
             val messagesList = filterAndSortMessagesIfNecessary(chat, messages)
 
+            if (chat.type.isTribe()) {
+                messages.forEach { message ->
+                    val alias = message.senderAlias?.value
+                    val tz = message.remoteTimezoneIdentifier?.value
+                    if (!alias.isNullOrEmpty() && !tz.isNullOrEmpty()) {
+                        memberTimezones[alias] = tz
+                    }
+                }
+            }
+
             for ((index, message) in messagesList.withIndex()) {
 
                 val previousMessage: Message? = if (index > 0) messagesList[index - 1] else null
@@ -765,13 +775,6 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                     }
                 }
 
-                if (chat.type.isTribe()) {
-                    message.senderAlias?.value?.let { senderAlias ->
-                        message.remoteTimezoneIdentifier?.value?.let { remoteTZ ->
-                            memberTimezones[senderAlias] = remoteTZ
-                        }
-                    }
-                }
             }
         }
 

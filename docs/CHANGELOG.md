@@ -1,5 +1,8 @@
 # ChangeLog
 
+## Version 1.0.0-alpha44 (2025-04-02)
+- Upgrades LiveKit library
+
 ## Version 1.0.0-alpha43 (2025-04-01)
 - Fixes timezone sharing issues
 

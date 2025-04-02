@@ -21,7 +21,7 @@ ext.versions = [
     'okhttp'     : '4.10.0',
     'sqlDelight' : '1.5.4',
     'toplAndroid': '2.1.2',
-    'livekit' : '2.12.1',
+    'livekit' : '2.14.0',
     'groupie': '2.9.0',
     'timberkt' : '1.5.1',
     'targetSdk'  : 34

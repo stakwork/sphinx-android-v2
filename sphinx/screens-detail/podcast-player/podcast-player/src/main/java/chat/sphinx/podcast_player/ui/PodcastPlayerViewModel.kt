@@ -452,7 +452,13 @@ internal class PodcastPlayerViewModel @Inject constructor(
                     episode,
                     episode.currentTimeMilliseconds ?: 0,
                     ::retrieveEpisodeDuration
-                )
+                ) { referenceIdExist ->
+                    if (referenceIdExist) {
+                        // implement GET chanters data endpoint
+                    } else {
+                        // POST check if node exists
+                    }
+                }
 
                 viewStateContainer.updateViewState(
                     PodcastPlayerViewState.EpisodePlayed(

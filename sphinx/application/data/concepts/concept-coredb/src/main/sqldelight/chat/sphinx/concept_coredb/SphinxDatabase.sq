@@ -14,6 +14,9 @@ import chat.sphinx.wrapper_chat.ChatType;
 import chat.sphinx.wrapper_chat.ChatUnlisted;
 import chat.sphinx.wrapper_chat.NotificationLevel;
 import chat.sphinx.wrapper_chat.SecondBrainUrl;
+import chat.sphinx.wrapper_chat.TimezoneEnabled;
+import chat.sphinx.wrapper_chat.TimezoneIdentifier;
+import chat.sphinx.wrapper_chat.TimezoneUpdated;
 import chat.sphinx.wrapper_common.DateTime;
 import chat.sphinx.wrapper_common.PhotoUrl;
 import chat.sphinx.wrapper_common.Push;
@@ -45,6 +48,7 @@ import chat.sphinx.wrapper_common.lsat.LsatStatus;
 import chat.sphinx.wrapper_common.lsat.Macaroon;
 import chat.sphinx.wrapper_common.message.MessageId;
 import chat.sphinx.wrapper_common.message.MessageUUID;
+import chat.sphinx.wrapper_common.message.RemoteTimezoneIdentifier;
 import chat.sphinx.wrapper_common.subscription.Cron;
 import chat.sphinx.wrapper_common.subscription.EndNumber;
 import chat.sphinx.wrapper_common.subscription.SubscriptionCount;
@@ -56,6 +60,9 @@ import chat.sphinx.wrapper_contact.NotificationSound;
 import chat.sphinx.wrapper_contact.Owner;
 import chat.sphinx.wrapper_contact.PrivatePhoto;
 import chat.sphinx.wrapper_feed.FeedAuthor;
+import chat.sphinx.wrapper_feed.FeedChapterData;
+import chat.sphinx.wrapper_feed.FeedChaptersData;
+import chat.sphinx.wrapper_feed.FeedChaptersDataKt;
 import chat.sphinx.wrapper_feed.FeedContentType;
 import chat.sphinx.wrapper_feed.FeedDescription;
 import chat.sphinx.wrapper_feed.FeedDestinationAddress;
@@ -70,6 +77,7 @@ import chat.sphinx.wrapper_feed.FeedLanguage;
 import chat.sphinx.wrapper_feed.FeedModelSuggested;
 import chat.sphinx.wrapper_feed.FeedModelType;
 import chat.sphinx.wrapper_feed.FeedPlayerSpeed;
+import chat.sphinx.wrapper_feed.FeedReferenceId;
 import chat.sphinx.wrapper_feed.FeedTitle;
 import chat.sphinx.wrapper_invite.InviteCode;
 import chat.sphinx.wrapper_invite.InviteString;
@@ -82,14 +90,10 @@ import chat.sphinx.wrapper_message.MessagePerson;
 import chat.sphinx.wrapper_message.MessageStatus;
 import chat.sphinx.wrapper_message.MessageType;
 import chat.sphinx.wrapper_message.RecipientAlias;
-import chat.sphinx.wrapper_common.message.RemoteTimezoneIdentifier;
 import chat.sphinx.wrapper_message.ReplyUUID;
 import chat.sphinx.wrapper_message.SenderAlias;
 import chat.sphinx.wrapper_message.TagMessage;
 import chat.sphinx.wrapper_message.ThreadUUID;
-import chat.sphinx.wrapper_chat.TimezoneEnabled;
-import chat.sphinx.wrapper_chat.TimezoneIdentifier;
-import chat.sphinx.wrapper_chat.TimezoneUpdated;
 import chat.sphinx.wrapper_message_media.FileName;
 import chat.sphinx.wrapper_message_media.MediaKey;
 import chat.sphinx.wrapper_message_media.MediaKeyDecrypted;
@@ -1630,7 +1634,9 @@ CREATE TABLE feedItemDbo(
     link                        TEXT               AS FeedUrl,
     feed_id                     TEXT               AS FeedId NOT NULL,
     duration                    INTEGER            AS FeedItemDuration,
-    local_file                  TEXT               AS File
+    local_file                  TEXT               AS File,
+    reference_id                TEXT               AS FeedReferenceId,
+    chapters_data               TEXT               AS FeedChaptersData
 );
 
 feedItemUpsert {

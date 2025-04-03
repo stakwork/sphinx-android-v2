@@ -348,7 +348,8 @@ data class Podcast(
     fun willStartPlayingEpisode(
         episode: PodcastEpisode,
         timeMilliseconds: Long,
-        durationRetrieverHandle: (episode: PodcastEpisode) -> Long
+        durationRetrieverHandle: (episode: PodcastEpisode) -> Long,
+        referenceIdExist: ((Boolean) -> Unit)? = null
     ) {
         val episodeId = episode.id.value
         val didChangeEpisode = this.episodeId != episodeId
@@ -364,6 +365,8 @@ data class Podcast(
         this.timeMilliSeconds = timeMilliseconds
 
         getCurrentEpisodeDuration(durationRetrieverHandle)
+
+        referenceIdExist?.invoke(episode.referenceId != null)
     }
 
     fun didSeekTo(timeMilliseconds: Long) {

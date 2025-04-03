@@ -31,7 +31,9 @@ data class FeedItem(
     val link: FeedUrl?,
     val feedId: FeedId,
     val duration: FeedItemDuration?,
-    override var localFile: File?
+    override var localFile: File?,
+    val referenceId: FeedReferenceId?,
+    val chaptersData: FeedChaptersData?
 ): DownloadableFeedItem {
 
     var feed: Feed? = null

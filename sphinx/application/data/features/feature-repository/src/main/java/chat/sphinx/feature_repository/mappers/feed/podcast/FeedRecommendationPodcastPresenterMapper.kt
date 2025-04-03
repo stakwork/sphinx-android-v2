@@ -33,7 +33,9 @@ internal class FeedRecommendationPodcastPresenterMapper() {
             value.endMilliseconds,
             value.topics,
             value.guests,
-            value.pubKey
+            value.pubKey,
+            null,
+            null
         )
 
     fun getRecommendationsPodcast(): Podcast {

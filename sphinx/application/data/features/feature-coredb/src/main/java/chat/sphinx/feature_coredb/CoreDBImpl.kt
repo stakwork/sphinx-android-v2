@@ -68,6 +68,7 @@ import chat.sphinx.feature_coredb.adapters.contact.LightningRouteHintAdapter
 import chat.sphinx.feature_coredb.adapters.contact.NotificationSoundAdapter
 import chat.sphinx.feature_coredb.adapters.contact.PrivatePhotoAdapter
 import chat.sphinx.feature_coredb.adapters.feed.FeedAuthorAdapter
+import chat.sphinx.feature_coredb.adapters.feed.FeedChapterDataAdapter
 import chat.sphinx.feature_coredb.adapters.feed.FeedContentTypeAdapter
 import chat.sphinx.feature_coredb.adapters.feed.FeedDescriptionAdapter
 import chat.sphinx.feature_coredb.adapters.feed.FeedDestinationAddressAdapter
@@ -82,6 +83,7 @@ import chat.sphinx.feature_coredb.adapters.feed.FeedItemsCountAdapter
 import chat.sphinx.feature_coredb.adapters.feed.FeedLanguageAdapter
 import chat.sphinx.feature_coredb.adapters.feed.FeedModelSuggestedAdapter
 import chat.sphinx.feature_coredb.adapters.feed.FeedModelTypeAdapter
+import chat.sphinx.feature_coredb.adapters.feed.FeedReferenceIdAdapter
 import chat.sphinx.feature_coredb.adapters.feed.FeedTitleAdapter
 import chat.sphinx.feature_coredb.adapters.feed.FeedTypeAdapter
 import chat.sphinx.feature_coredb.adapters.feed.FeedUrlAdapter
@@ -321,6 +323,8 @@ abstract class CoreDBImpl(private val moshi: Moshi): CoreDB() {
                     feed_idAdapter = FeedIdAdapter(),
                     durationAdapter = FeedItemDurationAdapter(),
                     local_fileAdapter = FileAdapter.getInstance(),
+                    reference_idAdapter = FeedReferenceIdAdapter(),
+                    chapters_dataAdapter = FeedChapterDataAdapter(),
                 ),
                 feedModelDboAdapter = FeedModelDbo.Adapter(
                     idAdapter = FeedIdAdapter(),

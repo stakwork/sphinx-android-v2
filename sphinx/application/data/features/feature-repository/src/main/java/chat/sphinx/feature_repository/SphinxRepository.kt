@@ -5617,6 +5617,8 @@ abstract class SphinxRepository(
                 episode.link ?: FeedUrl(""),
                 FeedId(FeedRecommendation.RECOMMENDATION_PODCAST_ID),
                 FeedItemDuration(0),
+                null,
+                null,
                 null
             )
 

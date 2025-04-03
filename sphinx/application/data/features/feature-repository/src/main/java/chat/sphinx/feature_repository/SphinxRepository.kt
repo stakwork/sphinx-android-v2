@@ -140,6 +140,7 @@ import chat.sphinx.wrapper_message_media.token.MediaHost
 import chat.sphinx.wrapper_podcast.FeedRecommendation
 import chat.sphinx.wrapper_podcast.FeedSearchResultRow
 import chat.sphinx.wrapper_podcast.Podcast
+import chat.sphinx.wrapper_podcast.PodcastEpisode
 import chat.sphinx.wrapper_rsa.RsaPrivateKey
 import chat.sphinx.wrapper_rsa.RsaPublicKey
 import com.squareup.moshi.Moshi
@@ -6085,6 +6086,25 @@ abstract class SphinxRepository(
                     )
                 }
             }
+    }
+
+    override suspend fun checkIfEpisodeNodeExists(
+        podcastEpisode: PodcastEpisode,
+        podcastTitle: FeedTitle
+    ) {
+        networkQueryFeedSearch.checkIfEpisodeNodeExists(podcastEpisode, podcastTitle).collect { response ->
+            @Exhaustive
+            when (response) {
+                is LoadResponse.Loading -> {}
+
+                is Response.Error -> {
+                    val result = response
+                }
+                is Response.Success -> {
+                    val result = response
+                }
+            }
+        }
     }
 
 

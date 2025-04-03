@@ -12,12 +12,14 @@ import chat.sphinx.wrapper_common.message.MessageUUID
 import chat.sphinx.wrapper_feed.*
 import chat.sphinx.wrapper_podcast.Podcast
 import chat.sphinx.wrapper_podcast.FeedSearchResultRow
+import chat.sphinx.wrapper_podcast.PodcastEpisode
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 
 interface FeedRepository {
     fun getPodcastByChatId(chatId: ChatId): Flow<Podcast?>
     fun getPodcastById(feedId: FeedId): Flow<Podcast?>
+    suspend fun checkIfEpisodeNodeExists(podcastEpisode: PodcastEpisode, podcastTitle: FeedTitle)
 
     fun searchFeedsBy(
         searchTerm: String,

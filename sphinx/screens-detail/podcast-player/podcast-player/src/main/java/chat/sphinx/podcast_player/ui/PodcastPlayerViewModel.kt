@@ -30,7 +30,6 @@ import chat.sphinx.concept_service_media.UserAction
 import chat.sphinx.concept_view_model_coordinator.ResponseHolder
 import chat.sphinx.feature_view_model_coordinator.RequestCatcher
 import chat.sphinx.kotlin_response.Response
-import chat.sphinx.podcast_player.R
 import chat.sphinx.resources.R as R_common
 import chat.sphinx.podcast_player.coordinator.PodcastPlayerViewModelCoordinator
 import chat.sphinx.podcast_player.navigation.BackType
@@ -456,7 +455,9 @@ internal class PodcastPlayerViewModel @Inject constructor(
                     if (referenceIdExist) {
                         // implement GET chanters data endpoint
                     } else {
-                        // POST check if node exists
+                        viewModelScope.launch(mainImmediate) {
+                            feedRepository.checkIfEpisodeNodeExists(episode, podcast.title)
+                        }
                     }
                 }
 

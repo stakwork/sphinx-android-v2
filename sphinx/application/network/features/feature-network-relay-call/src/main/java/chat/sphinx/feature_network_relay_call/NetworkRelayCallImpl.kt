@@ -252,7 +252,10 @@ class NetworkRelayCallImpl(
 
             val reqBody = requestBodyJson?.toRequestBody(mediaType?.toMediaType())
 
-            val response = call(responseJsonClass, requestBuilder.put(reqBody ?: EMPTY_REQUEST).build())
+            val response = call(
+                responseJsonClass,
+                requestBuilder.put(reqBody ?: EMPTY_REQUEST).build()
+            )
 
             emit(Response.Success(response))
         } catch (e: Exception) {
@@ -267,7 +270,8 @@ class NetworkRelayCallImpl(
         requestBodyJsonClass: Class<V>,
         requestBody: V,
         mediaType: String?,
-        headers: Map<String, String>?
+        headers: Map<String, String>?,
+        accept400AsSuccess: Boolean
     ): Flow<LoadResponse<T, ResponseError>> = flow {
 
         emit(LoadResponse.Loading)
@@ -280,11 +284,15 @@ class NetworkRelayCallImpl(
 
             val reqBody = requestBodyJson.toRequestBody(mediaType?.toMediaType())
 
-            val response = call(responseJsonClass, requestBuilder.post(reqBody).build())
+            val response = call(responseJsonClass, requestBuilder.post(reqBody).build(), accept400AsSuccess)
 
             emit(Response.Success(response))
+        } catch (e: CustomException) {
+            emit(Response.Error(ResponseError(e.message ?: "Unknown error", e, e.code?.toLong())))
+        } catch (e: IOException) {
+            emit(Response.Error(ResponseError("Network error: ${e.message}", e)))
         } catch (e: Exception) {
-            emit(handleException(LOG, POST, url, e))
+            emit(Response.Error(ResponseError("Unexpected error: ${e.message}", e)))
         }
     }
 
@@ -338,7 +346,10 @@ class NetworkRelayCallImpl(
 
             val reqBody: RequestBody? = requestBodyJson?.toRequestBody(mediaType?.toMediaType())
 
-            val response = call(responseJsonClass, requestBuilder.delete(reqBody ?: EMPTY_REQUEST).build())
+            val response = call(
+                responseJsonClass,
+                requestBuilder.delete(reqBody ?: EMPTY_REQUEST).build()
+            )
 
             emit(Response.Success(response))
         } catch (e: Exception) {
@@ -363,12 +374,10 @@ class NetworkRelayCallImpl(
     override suspend fun <T: Any> call(
         responseJsonClass: Class<T>,
         request: Request,
-        useExtendedNetworkCallClient: Boolean
+        useExtendedNetworkCallClient: Boolean,
+        accept400AsSuccess: Boolean
     ): T {
 
-        // TODO: Make less horrible. Needed for the `/contacts` endpoint for users who
-        //  have a large number of contacts as Relay needs more time than the default
-        //  client's settings. Replace once the `aa/contacts` endpoint gets pagination.
         val client = if (useExtendedNetworkCallClient) {
             extendedClientLock.withLock {
                 extendedNetworkCallClient ?: networkClient.getClient().newBuilder()
@@ -387,43 +396,26 @@ class NetworkRelayCallImpl(
         }
 
         val body = networkResponse.body ?: throw NullPointerException(
-            """
-                NetworkResponse.body returned null
-                NetworkResponse: $networkResponse
-            """.trimIndent()
+            "NetworkResponse.body returned null\nNetworkResponse: $networkResponse"
         )
 
-        if (!networkResponse.isSuccessful) {
-            val response = try {
-                moshi.adapter(NetworkRelayErrorResponseDto::class.java).fromJson(body.source())
-            } catch (e: Exception) {
-                body.close()
-                throw IOException(networkResponse.toString())
-            }
-
-            body.close()
-            throw IOException(response?.error ?: networkResponse.toString())
-        }
+        val acceptableErrorCodes = if (accept400AsSuccess) listOf(400) else emptyList()
 
         return withContext(default) {
-            try{
+            try {
                 moshi.adapter(responseJsonClass).fromJson(body.source())
             } catch (e: Exception) {
                 throw CustomException(
-                    """
-                Failed to convert Json to ${responseJsonClass.simpleName}
-                NetworkResponse: $networkResponse
-            """.trimIndent(),
+                    "Failed to convert Json to ${responseJsonClass.simpleName}\nNetworkResponse: $networkResponse",
                     networkResponse.code
                 )
+            } finally {
+                body.close()
             }
         } ?: throw CustomException(
-            """
-                Failed to convert Json to ${responseJsonClass.simpleName}
-                NetworkResponse: $networkResponse
-            """.trimIndent(),
+            "Failed to convert Json to ${responseJsonClass.simpleName}\nNetworkResponse: $networkResponse",
             networkResponse.code
-        )
+        ).takeUnless { networkResponse.code in acceptableErrorCodes } ?: throw IOException("Unacceptable error: ${networkResponse}")
     }
 
 

@@ -64,7 +64,8 @@ class NetworkQueryFeedSearchImpl(
             responseJsonClass = EpisodeNodeResponseDto::class.java,
             requestBodyJsonClass = Map::class.java,
             requestBody = requestBody,
-            mediaType = "application/json"
+            mediaType = "application/json",
+            accept400AsSuccess = true
         )
     }
 }

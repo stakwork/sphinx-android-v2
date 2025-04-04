@@ -20,7 +20,7 @@ interface FeedRepository {
     fun getPodcastByChatId(chatId: ChatId): Flow<Podcast?>
     fun getPodcastById(feedId: FeedId): Flow<Podcast?>
     suspend fun checkIfEpisodeNodeExists(podcastEpisode: PodcastEpisode, podcastTitle: FeedTitle)
-
+    suspend fun getChaptersData(referenceId: FeedReferenceId, id: FeedId)
     fun searchFeedsBy(
         searchTerm: String,
         feedType: FeedType?,

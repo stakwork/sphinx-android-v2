@@ -1752,6 +1752,16 @@ UPDATE feedItemDbo
 SET local_file = NULL
 WHERE feed_id = ?;
 
+feedItemUpdateReferenceId:
+UPDATE feedItemDbo
+SET reference_id = :reference_id
+WHERE id = :id;
+
+feedItemUpdateChaptersData:
+UPDATE feedItemDbo
+SET chapters_data = :chapters_data
+WHERE id = :id;
+
 feedItemDeleteAll:
 DELETE FROM feedItemDbo;
 

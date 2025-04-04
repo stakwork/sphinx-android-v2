@@ -452,10 +452,10 @@ internal class PodcastPlayerViewModel @Inject constructor(
                     episode.currentTimeMilliseconds ?: 0,
                     ::retrieveEpisodeDuration
                 ) { referenceIdExist ->
-                    if (referenceIdExist) {
-                        // implement GET chanters data endpoint
-                    } else {
-                        viewModelScope.launch(mainImmediate) {
+                    viewModelScope.launch(mainImmediate) {
+                        if (referenceIdExist) {
+                            feedRepository.getChaptersData(episode.referenceId!!, episode.id)
+                        } else {
                             feedRepository.checkIfEpisodeNodeExists(episode, podcast.title)
                         }
                     }

@@ -8,7 +8,9 @@ import chat.sphinx.kotlin_response.LoadResponse
 import chat.sphinx.kotlin_response.ResponseError
 import chat.sphinx.wrapper_common.feed.FeedType
 import chat.sphinx.wrapper_common.feed.isPodcast
+import chat.sphinx.wrapper_feed.FeedReferenceId
 import chat.sphinx.wrapper_feed.FeedTitle
+import chat.sphinx.wrapper_podcast.ChapterResponseDto
 import chat.sphinx.wrapper_podcast.PodcastEpisode
 import kotlinx.coroutines.flow.Flow
 
@@ -20,6 +22,7 @@ class NetworkQueryFeedSearchImpl(
         private const val TRIBES_DEFAULT_SERVER_URL = "https://people.sphinx.chat"
         private const val GRAPH_MINDSET_BASE_URL = "https://graphmindset.sphinx.chat"
         private const val GRAPH_MINDSET_ADD_NODE_URL = "https://graphmindset.sphinx.chat/api/add_node?sig=&msg="
+        private const val ENDPOINT_GET_CHAPTERS = "$GRAPH_MINDSET_BASE_URL/api/graph/subgraph?start_node=%s&include_properties=true&depth=1&node_type=%%5B%%27Chapter%%27%%5D"
 
         private const val ENDPOINT_PODCAST_SEARCH = "$TRIBES_DEFAULT_SERVER_URL/search_podcasts?q=%s"
         private const val ENDPOINT_YOUTUBE_SEARCH = "$TRIBES_DEFAULT_SERVER_URL/search_youtube?q=%s"
@@ -68,4 +71,12 @@ class NetworkQueryFeedSearchImpl(
             accept400AsSuccess = true
         )
     }
+
+    override fun getChaptersData(referenceId: FeedReferenceId): Flow<LoadResponse<ChapterResponseDto, ResponseError>> {
+        return networkRelayCall.get(
+            url = String.format(ENDPOINT_GET_CHAPTERS, referenceId.value),
+            responseJsonClass = ChapterResponseDto::class.java
+        )
+    }
+
 }

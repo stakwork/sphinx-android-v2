@@ -277,6 +277,16 @@
             app:layout_constraintTop_toTopOf="parent" />
 
         <androidx.appcompat.widget.AppCompatImageView
+            android:id="@+id/button_list_icon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/default_header_margin_horizontal"
+            android:src="@drawable/ic_list"
+            app:layout_constraintBottom_toBottomOf="@+id/button_additional_options"
+            app:layout_constraintStart_toEndOf="@id/button_additional_options"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <androidx.appcompat.widget.AppCompatImageView
             android:id="@+id/button_play_episode"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

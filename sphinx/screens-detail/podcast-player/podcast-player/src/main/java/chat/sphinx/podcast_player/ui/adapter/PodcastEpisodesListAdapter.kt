@@ -2,6 +2,7 @@ package chat.sphinx.podcast_player.ui.adapter
 
 import android.util.Log
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import androidx.core.content.ContextCompat
@@ -103,6 +104,7 @@ internal class PodcastEpisodesListAdapter(
     }
 
     private val podcastEpisodes = ArrayList<PodcastEpisode>()
+    private var expandedPosition: Int? = null
 
     override fun onStart(owner: LifecycleOwner) {
         super.onStart(owner)
@@ -196,6 +198,7 @@ internal class PodcastEpisodesListAdapter(
 
         private var disposable: Disposable? = null
         private var episode: PodcastEpisode? = null
+        private val chapterListAdapter = ChapterListAdapter(lifecycleOwner)
 
         init {
             binding.buttonPlayEpisode.setOnClickListener {
@@ -208,6 +211,27 @@ internal class PodcastEpisodesListAdapter(
                     }
                 }
             }
+
+            binding.recyclerViewChapters.apply {
+                layoutManager = LinearLayoutManager(context)
+                adapter = chapterListAdapter
+            }
+
+            binding.buttonListIcon.setOnClickListener {
+                val position = bindingAdapterPosition
+                if (position == RecyclerView.NO_POSITION) return@setOnClickListener
+
+                if (expandedPosition == position) {
+                    expandedPosition = null
+                    notifyItemChanged(position)
+                } else {
+                    val previousPosition = expandedPosition
+                    expandedPosition = position
+                    previousPosition?.let { notifyItemChanged(it) }
+                    notifyItemChanged(position)
+                }
+            }
+
 
             binding.buttonDownloadArrow.setOnClickListener {
                 episode?.let { nnEpisode ->
@@ -243,6 +267,9 @@ internal class PodcastEpisodesListAdapter(
         }
 
         fun bind(position: Int) {
+            val isExpanded = position == expandedPosition
+            binding.recyclerViewChapters.visibility = if (isExpanded) View.VISIBLE else View.GONE
+
             binding.apply {
                 val podcastEpisode: PodcastEpisode = podcastEpisodes.getOrNull(position) ?: let {
                     episode = null
@@ -250,6 +277,17 @@ internal class PodcastEpisodesListAdapter(
                 }
                 episode = podcastEpisode
                 disposable?.dispose()
+
+                val chaptersAdapter = ChapterListAdapter(lifecycleOwner)
+                val chapters = podcastEpisode.chapters?.nodes?.mapNotNull { it.properties }
+
+                binding.recyclerViewChapters.apply {
+                    layoutManager = LinearLayoutManager(context)
+                    adapter = chaptersAdapter
+                }
+                if (chapters?.isNotEmpty() == true) {
+                    chaptersAdapter.submitList(chapters)
+                }
 
                 // General info
                 textViewEpisodeHeader.text = podcastEpisode.titleToShow

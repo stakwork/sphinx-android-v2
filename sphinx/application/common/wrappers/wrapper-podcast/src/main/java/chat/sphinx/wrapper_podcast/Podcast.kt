@@ -194,6 +194,7 @@ data class Podcast(
             episodeCopy.playing = episode.playing
             episodeCopy.contentEpisodeStatus = episode.contentEpisodeStatus
             episodeCopy.played = episode.played
+            episodeCopy.chapters = episode.chapters
 
             episodesList.add(episodeCopy)
         }
@@ -209,6 +210,7 @@ data class Podcast(
                 episodeCopy.playing = episode.playing
                 episodeCopy.contentEpisodeStatus = episode.contentEpisodeStatus
                 episodeCopy.played = episode.played
+                episodeCopy.chapters = episode.chapters
 
                 episodesList.add(episodeCopy)
             }

@@ -309,6 +309,14 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recycler_view_chapters"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/default_layout_margin"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@+id/layout_constraint_episode_icons_container"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

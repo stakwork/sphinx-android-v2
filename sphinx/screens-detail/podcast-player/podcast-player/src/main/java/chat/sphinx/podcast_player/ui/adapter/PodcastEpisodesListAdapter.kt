@@ -281,11 +281,12 @@ internal class PodcastEpisodesListAdapter(
                 val chaptersAdapter = ChapterListAdapter(lifecycleOwner)
                 val chapters = podcastEpisode.chapters?.nodes?.mapNotNull { it.properties }
 
-                binding.recyclerViewChapters.apply {
-                    layoutManager = LinearLayoutManager(context)
-                    adapter = chaptersAdapter
-                }
                 if (chapters?.isNotEmpty() == true) {
+                    buttonListIcon.visible
+                    binding.recyclerViewChapters.apply {
+                        layoutManager = LinearLayoutManager(context)
+                        adapter = chaptersAdapter
+                    }
                     chaptersAdapter.submitList(chapters)
                 }
 

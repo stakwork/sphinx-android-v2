@@ -52,7 +52,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.parcelize.Parcelize
 import javax.inject.Inject
 
-
 @AndroidEntryPoint
 class CallActivity : AppCompatActivity() {
 
@@ -73,6 +72,7 @@ class CallActivity : AppCompatActivity() {
     private var lastToast: Toast? = null
 
     private var bottomSheet: ParticipantsBottomSheetFragment? = null
+    private var isBottomSheetVisible = false
 
     private val viewModel: CallViewModel by viewModelByFactory {
         val args = intent.getParcelableExtra<BundleArgs>(KEY_ARGS)
@@ -138,8 +138,14 @@ class CallActivity : AppCompatActivity() {
                         )
                     }
                     audienceAdapter.update(items)
+                    
+                    // Update bottom sheet if visible
+                    if (isBottomSheetVisible) {
+                        bottomSheet?.setParticipants(participants.toMutableList(), viewModel.participantColors)
+                    }
                 }
         }
+
         // speaker view setup
         val speakerAdapter = GroupieAdapter()
         binding.speakerView.apply {
@@ -243,10 +249,24 @@ class CallActivity : AppCompatActivity() {
 
         lifecycleScope.launchWhenCreated {
             viewModel.participants.collect { participants ->
+                // Create or update bottom sheet
                 if (bottomSheet == null) {
-                    bottomSheet = ParticipantsBottomSheetFragment.newInstance(participants.toMutableList(), viewModel.participantColors)
+                    bottomSheet = ParticipantsBottomSheetFragment.newInstance(participants.toMutableList(), viewModel.participantColors).apply {
+                        setOnDismissListener {
+                            isBottomSheetVisible = false
+                        }
+                    }
                 } else {
                     bottomSheet?.setParticipants(participants.toMutableList(), viewModel.participantColors)
+                }
+                
+                // Update the participant count on the badge
+                val participantCountBadge = findViewById<TextView>(R.id.participantCountBadge)
+                if (participants.isNotEmpty()) {
+                    participantCountBadge.visibility = View.VISIBLE
+                    participantCountBadge.text = participants.size.toString()
+                } else {
+                    participantCountBadge.visibility = View.GONE
                 }
             }
         }
@@ -266,7 +286,7 @@ class CallActivity : AppCompatActivity() {
             if (enabled) {
                 binding.camera.clearColorFilter()
             } else {
-                binding.camera.setColorFilter(ContextCompat.getColor(this, R.color.disabled_icons_color)) // Apply red tint when off
+                binding.camera.setColorFilter(ContextCompat.getColor(this, R.color.disabled_icons_color))
             }
 
             binding.camera.background = if (enabled) {
@@ -280,7 +300,6 @@ class CallActivity : AppCompatActivity() {
             } else {
                 View.GONE
             }
-
 
             binding.flipCamera.isEnabled = enabled
         }
@@ -298,7 +317,7 @@ class CallActivity : AppCompatActivity() {
             if (enabled) {
                 binding.mic.clearColorFilter()
             } else {
-                binding.mic.setColorFilter(ContextCompat.getColor(this, R.color.disabled_icons_color)) // Apply red tint when off
+                binding.mic.setColorFilter(ContextCompat.getColor(this, R.color.disabled_icons_color))
             }
 
             binding.mic.background = if (enabled) {
@@ -308,70 +327,13 @@ class CallActivity : AppCompatActivity() {
             }
         }
 
-
         binding.flipCamera.setOnClickListener { viewModel.flipCamera() }
-
-        /* viewModel.screenshareEnabled.observe(this) { enabled ->
-            binding.screenShare.setOnClickListener {
-                if (enabled) {
-                    viewModel.stopScreenCapture()
-                } else {
-                    requestMediaProjection()
-                }
-            }
-            binding.screenShare.setImageResource(
-                if (enabled) {
-                    R.drawable.baseline_cast_connected_24
-                } else {
-                    R.drawable.baseline_cast_24
-                },
-            )
-        }
-
-        binding.message.setOnClickListener {
-            val editText = EditText(this)
-            AlertDialog.Builder(this)
-                .setTitle("Send Message")
-                .setView(editText)
-                .setPositiveButton("Send") { dialog, _ ->
-                    viewModel.sendData(editText.text?.toString() ?: "")
-                }
-                .setNegativeButton("Cancel") { _, _ -> }
-                .create()
-                .show()
-        }
-©
-        viewModel.enhancedNsEnabled.observe(this) { enabled ->
-            binding.enhancedNs.visibility = if (enabled) {
-                android.view.View.VISIBLE
-            } else {
-                android.view.View.GONE
-            }
-        }
-
-        binding.enhancedNs.setOnClickListener {
-            showAudioProcessorSwitchDialog(viewModel)
-        }*/
 
         binding.exit.setOnClickListener {
             lastToast?.cancel()
             viewModel.stopRecording()
             finish()
         }
-
-
-//        binding.audioSelect.setOnClickListener {
-//            showSelectAudioDeviceDialog(viewModel)
-//        }
-        /* lifecycleScope.launchWhenCreated {
-            viewModel.permissionAllowed.collect { allowed ->
-                val resource = if (allowed) R.drawable.account_cancel_outline else R.drawable.account_cancel
-                binding.permissions.setImageResource(resource)
-            }
-        }
-        binding.permissions.setOnClickListener {
-            viewModel.toggleSubscriptionPermissions()
-        }*/
 
         binding.debugMenu.setOnClickListener {
             showDebugMenuDialog(viewModel)
@@ -382,28 +344,16 @@ class CallActivity : AppCompatActivity() {
         }
 
         binding.listParticipants.setOnClickListener {
-            if (bottomSheet?.isAdded == false) {
-                bottomSheet?.show(supportFragmentManager, bottomSheet?.tag)
+            bottomSheet?.let { sheet ->
+                if (!sheet.isAdded) {
+                    sheet.show(supportFragmentManager, sheet.tag)
+                    isBottomSheetVisible = true
+                }
             }
         }
 
         binding.recordButton.setOnClickListener {
             viewModel.toggleRecording()
-        }
-
-        lifecycleScope.launchWhenCreated {
-            viewModel.participants.collect { participants ->
-                // Update the participant count on the badge
-                val participantCountBadge = findViewById<TextView>(R.id.participantCountBadge)
-                if (participants.isNotEmpty()) {
-                    // Show badge and set the count
-                    participantCountBadge.visibility = View.VISIBLE
-                    participantCountBadge.text = participants.size.toString()
-                } else {
-                    // Hide badge if no participants
-                    participantCountBadge.visibility = View.GONE
-                }
-            }
         }
     }
 
@@ -418,7 +368,6 @@ class CallActivity : AppCompatActivity() {
             this@CallActivity,
             messageRes
         ).let { response ->
-
             if (response is ToastUtilsResponse.Success) {
                 lastToast = response.toast
             }
@@ -463,9 +412,8 @@ class CallActivity : AppCompatActivity() {
     }
 
     override fun onUserLeaveHint() {
-        // Trigger PiP mode when the user presses the home button or switches apps
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val aspectRatio = Rational(9, 16) // Aspect ratio of the PiP window
+            val aspectRatio = Rational(9, 16)
             val pipParams = PictureInPictureParams.Builder()
                 .setAspectRatio(aspectRatio)
                 .build()
@@ -474,17 +422,15 @@ class CallActivity : AppCompatActivity() {
             binding.controlsBox.visibility = android.view.View.GONE
             binding.controlsBox2.visibility = android.view.View.GONE
             binding.audienceRow.visibility = android.view.View.GONE
-
         }
     }
 
-    // Function to start Picture-in-Picture mode
     @Deprecated("Deprecated in Java")
     override fun enterPictureInPictureMode() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val aspectRatio = Rational(9, 16) // Define the aspect ratio of the PiP window
+            val aspectRatio = Rational(9, 16)
             val pipParams = PictureInPictureParams.Builder()
-                .setAspectRatio(aspectRatio)  // Set aspect ratio
+                .setAspectRatio(aspectRatio)
                 .build()
             enterPictureInPictureMode(pipParams)
 
@@ -527,6 +473,8 @@ class CallActivity : AppCompatActivity() {
         binding.speakerView.adapter = null
         lastToast?.cancel()
         lastToast = null
+        bottomSheet?.dismiss()
+        bottomSheet = null
 
         super.onDestroy()
     }

@@ -37,7 +37,6 @@ class ParticipantsBottomSheetFragment : BottomSheetDialogFragment() {
     lateinit var imageLoader: ImageLoader<ImageView>
 
     private lateinit var adapter: ParticipantAdapter
-
     private var _binding: FragmentParticipantsBinding? = null
     private val binding get() = _binding!! // Only use when safe
 
@@ -49,20 +48,27 @@ class ParticipantsBottomSheetFragment : BottomSheetDialogFragment() {
             participants: MutableList<Participant>,
             participantColors: MutableMap<String, Int>
         ) = ParticipantsBottomSheetFragment().apply {
-            this.participants = participants
-            this.participantColors = participantColors
+            this.participants = participants.toMutableList() // Create new mutable list
+            this.participantColors = participantColors.toMutableMap() // Create new mutable map
         }
     }
 
     override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
+        inflater: LayoutInflater, 
+        container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
         _binding = FragmentParticipantsBinding.inflate(inflater, container, false)
 
-        adapter = ParticipantAdapter(requireContext(), participants, imageLoader, lifecycleScope, participantColors)
+        adapter = ParticipantAdapter(
+            requireContext(), 
+            participants.toMutableList(), // Pass a new copy
+            imageLoader, 
+            lifecycleScope, 
+            participantColors.toMutableMap() // Pass a new copy
+        )
+        
         binding.listView.adapter = adapter
-
         updateParticipantCount()
 
         binding.closeButton.setOnClickListener {
@@ -81,12 +87,12 @@ class ParticipantsBottomSheetFragment : BottomSheetDialogFragment() {
         newParticipants: MutableList<Participant>,
         newParticipantColors: MutableMap<String, Int>
     ) {
-        this.participants = newParticipants
-        this.participantColors = newParticipantColors
+        this.participants = newParticipants.toMutableList() // Create new mutable list
+        this.participantColors = newParticipantColors.toMutableMap() // Create new mutable map
 
-        if (_binding != null) { // Ensure the view exists
-            updateParticipantCount()
+        if (::adapter.isInitialized) {
             adapter.setParticipants(participants, participantColors)
+            updateParticipantCount()
         }
     }
 
@@ -105,7 +111,19 @@ class ParticipantsBottomSheetFragment : BottomSheetDialogFragment() {
         private var participantColors: MutableMap<String, Int>
     ) : ArrayAdapter<Participant>(context, 0, participants) {
 
-        private val moshi: Moshi = Moshi.Builder().build() // Reuse instead of recreating in getView()
+        private val moshi: Moshi = Moshi.Builder().build()
+
+        override fun getCount(): Int {
+            return participants.size
+        }
+
+        override fun getItem(position: Int): Participant? {
+            return if (position in 0 until participants.size) {
+                participants[position]
+            } else {
+                null
+            }
+        }
 
         override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
             val viewHolder: ViewHolder
@@ -165,11 +183,13 @@ class ParticipantsBottomSheetFragment : BottomSheetDialogFragment() {
         }
 
         fun setParticipants(
-            participants: MutableList<Participant>,
-            participantColors: MutableMap<String, Int>
+            newParticipants: MutableList<Participant>,
+            newParticipantColors: MutableMap<String, Int>
         ) {
-            this.participants = participants
-            this.participantColors = participantColors
+            this.participants = newParticipants.toMutableList() // Create new mutable list
+            this.participantColors = newParticipantColors.toMutableMap() // Create new mutable map
+            clear()
+            addAll(participants)
             notifyDataSetChanged()
         }
 

@@ -90,6 +90,7 @@ internal class PodcastPlayerFragment : SideEffectFragment<
 
         viewModel.trackPodcastConsumed()
         viewModel.forceFeedReload()
+        lastChaptersEpisodeId = null
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -405,6 +406,7 @@ internal class PodcastPlayerFragment : SideEffectFragment<
             }
         }
     }
+    private var lastChaptersEpisodeId: String? = null
 
     @SuppressLint("ClickableViewAccessibility")
     private suspend fun showPodcastInfo(podcast: Podcast) {
@@ -425,8 +427,12 @@ internal class PodcastPlayerFragment : SideEffectFragment<
             } else {
                 podcast.getLastDownloadedEpisode()
             }
-            addChapterMarkers(podcast)
 
+            val episodeId = currentEpisode?.id?.value
+            if (episodeId != null && lastChaptersEpisodeId != episodeId) {
+                addChapterMarkers(podcast)
+                lastChaptersEpisodeId = episodeId
+            }
             textViewEpisodeTitleLabel.text = currentEpisode?.title?.value ?: ""
 
             podcast.imageToShow?.value?.let { podcastImage ->
@@ -503,29 +509,31 @@ internal class PodcastPlayerFragment : SideEffectFragment<
             val rightPadding = slider.paddingRight
             val trackWidth = sliderWidth - leftPadding - rightPadding
 
+            val density = resources.displayMetrics.density
+            val markerSizeDp = 12
+            val markerSizePx = (markerSizeDp * density).toInt()
+            val halfMarker = markerSizePx / 2
+
             chapters.forEach { chapter ->
                 val timeMs = viewModel.parseTimestampToMillis(chapter.timestamp ?: "00:00:00")
                 val positionRatio = timeMs.toFloat() / duration.toFloat()
 
-                val markerWidth = 20
-                val halfMarker = markerWidth / 2
-
                 val markerX = leftPadding + (trackWidth * positionRatio).toInt()
-
                 val clampedMarkerX = markerX.coerceIn(leftPadding + halfMarker, sliderWidth - rightPadding - halfMarker)
 
                 val marker = View(requireContext()).apply {
-                    layoutParams = FrameLayout.LayoutParams(markerWidth, markerWidth).apply {
-                        gravity = Gravity.START
+                    layoutParams = FrameLayout.LayoutParams(markerSizePx, markerSizePx).apply {
+                        gravity = Gravity.START or Gravity.CENTER_VERTICAL
                         marginStart = clampedMarkerX - halfMarker
-                        topMargin = slider.height / 2 - halfMarker
                     }
-                    background = ContextCompat.getDrawable(requireContext(), R_common.drawable.podcast_player_chapter_circle)
+                    background = ContextCompat.getDrawable(requireContext(), R_common.drawable.podcast_player_seek_bar_thumb)
                     isClickable = true
                     setOnClickListener {
                         viewModel.seekTo(timeMs)
                     }
+                    translationZ = 5f
                 }
+
                 overlay.addView(marker)
             }
         }
@@ -583,6 +591,7 @@ internal class PodcastPlayerFragment : SideEffectFragment<
     }
 
     private suspend fun loadingEpisode(episode: PodcastEpisode) {
+        lastChaptersEpisodeId = null
         binding.apply {
             textViewEpisodeTitleLabel.text = episode.title.value
 

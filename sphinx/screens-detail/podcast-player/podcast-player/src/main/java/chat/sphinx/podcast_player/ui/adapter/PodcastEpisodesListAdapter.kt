@@ -198,8 +198,9 @@ internal class PodcastEpisodesListAdapter(
 
         private var disposable: Disposable? = null
         private var episode: PodcastEpisode? = null
-        private val chapterListAdapter = ChapterListAdapter(lifecycleOwner)
-
+        private val chapterListAdapter = ChapterListAdapter(lifecycleOwner) { timeMillis ->
+            viewModel.seekTo(timeMillis)
+        }
         init {
             binding.buttonPlayEpisode.setOnClickListener {
                 playEpisodeFromList()
@@ -278,7 +279,10 @@ internal class PodcastEpisodesListAdapter(
                 episode = podcastEpisode
                 disposable?.dispose()
 
-                val chaptersAdapter = ChapterListAdapter(lifecycleOwner)
+                val chaptersAdapter = ChapterListAdapter(lifecycleOwner) { timeMillis ->
+                    // When a chapter is clicked, call the seekTo method in your view model
+                    viewModel.seekTo(timeMillis)
+                }
                 val chapters = podcastEpisode.chapters?.nodes?.mapNotNull { it.properties }
 
                 if (chapters?.isNotEmpty() == true) {

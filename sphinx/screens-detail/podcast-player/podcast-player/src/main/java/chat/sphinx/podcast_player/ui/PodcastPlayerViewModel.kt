@@ -495,6 +495,16 @@ internal class PodcastPlayerViewModel @Inject constructor(
         }
     }
 
+    fun parseTimestampToMillis(timestamp: String?): Long {
+        if (timestamp.isNullOrBlank()) return 0L
+        val parts = timestamp.split(":")
+        if (parts.size != 3) return 0L
+        val hours = parts[0].toLongOrNull() ?: 0L
+        val minutes = parts[1].toLongOrNull() ?: 0L
+        val seconds = parts[2].toLongOrNull() ?: 0L
+        return (hours * 3600 + minutes * 60 + seconds) * 1000L
+    }
+
     fun seekTo(timeMilliseconds: Long) {
         viewModelScope.launch(mainImmediate) {
             getPodcastFeed()?.let { podcast ->

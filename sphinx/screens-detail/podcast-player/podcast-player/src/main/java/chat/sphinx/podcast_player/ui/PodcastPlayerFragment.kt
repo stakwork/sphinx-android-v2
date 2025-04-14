@@ -5,6 +5,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Bundle
 import android.view.ContextThemeWrapper
+import android.view.Gravity
 import android.view.KeyEvent
 import android.view.MenuItem
 import android.view.View
@@ -424,6 +425,7 @@ internal class PodcastPlayerFragment : SideEffectFragment<
             } else {
                 podcast.getLastDownloadedEpisode()
             }
+            addChapterMarkers(podcast)
 
             textViewEpisodeTitleLabel.text = currentEpisode?.title?.value ?: ""
 
@@ -480,6 +482,52 @@ internal class PodcastPlayerFragment : SideEffectFragment<
 
             toggleLoadingWheel(false)
             addPodcastOnClickListeners(podcast)
+        }
+    }
+
+    private fun addChapterMarkers(podcast: Podcast) {
+        val slider = binding.includeLayoutEpisodeSliderControl.seekBarCurrentEpisodeProgress
+        val overlay = binding.includeLayoutEpisodeSliderControl.frameLayoutSeekbarOverlay
+        overlay.removeAllViews()
+
+        val duration = podcast.getCurrentEpisodeDuration(viewModel::retrieveEpisodeDuration)
+
+        val chapters = podcast.getCurrentEpisode()?.chapters?.nodes?.mapNotNull { it.properties }
+            ?.filter { !it.timestamp.isNullOrBlank() }
+
+        if (chapters.isNullOrEmpty() || duration <= 0) return
+
+        slider.post {
+            val sliderWidth = slider.width
+            val leftPadding = slider.paddingLeft
+            val rightPadding = slider.paddingRight
+            val trackWidth = sliderWidth - leftPadding - rightPadding
+
+            chapters.forEach { chapter ->
+                val timeMs = viewModel.parseTimestampToMillis(chapter.timestamp ?: "00:00:00")
+                val positionRatio = timeMs.toFloat() / duration.toFloat()
+
+                val markerWidth = 20
+                val halfMarker = markerWidth / 2
+
+                val markerX = leftPadding + (trackWidth * positionRatio).toInt()
+
+                val clampedMarkerX = markerX.coerceIn(leftPadding + halfMarker, sliderWidth - rightPadding - halfMarker)
+
+                val marker = View(requireContext()).apply {
+                    layoutParams = FrameLayout.LayoutParams(markerWidth, markerWidth).apply {
+                        gravity = Gravity.START
+                        marginStart = clampedMarkerX - halfMarker
+                        topMargin = slider.height / 2 - halfMarker
+                    }
+                    background = ContextCompat.getDrawable(requireContext(), R_common.drawable.podcast_player_chapter_circle)
+                    isClickable = true
+                    setOnClickListener {
+                        viewModel.seekTo(timeMs)
+                    }
+                }
+                overlay.addView(marker)
+            }
         }
     }
 

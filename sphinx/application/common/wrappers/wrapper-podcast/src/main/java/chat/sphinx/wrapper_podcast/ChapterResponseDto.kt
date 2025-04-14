@@ -39,4 +39,8 @@ data class ChapterProperties(
     val media_url: String?,
     val status: String?,
     val date: Long?
-)
+) {
+    val isAdBoolean: Boolean
+        get() = is_ad?.equals("True", ignoreCase = true) == true
+
+}

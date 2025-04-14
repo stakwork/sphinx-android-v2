@@ -521,12 +521,17 @@ internal class PodcastPlayerFragment : SideEffectFragment<
                 val markerX = leftPadding + (trackWidth * positionRatio).toInt()
                 val clampedMarkerX = markerX.coerceIn(leftPadding + halfMarker, sliderWidth - rightPadding - halfMarker)
 
+                val isAd = chapter.isAdBoolean
+
                 val marker = View(requireContext()).apply {
                     layoutParams = FrameLayout.LayoutParams(markerSizePx, markerSizePx).apply {
                         gravity = Gravity.START or Gravity.CENTER_VERTICAL
                         marginStart = clampedMarkerX - halfMarker
                     }
-                    background = ContextCompat.getDrawable(requireContext(), R_common.drawable.podcast_player_seek_bar_thumb)
+                    background = ContextCompat.getDrawable(
+                        requireContext(),
+                        if (isAd) R_common.drawable.podcast_player_seek_bar_ad else R_common.drawable.podcast_player_seek_bar_thumb
+                    )
                     isClickable = true
                     setOnClickListener {
                         viewModel.seekTo(timeMs)

@@ -5,10 +5,10 @@
     android:id="@+id/layout_constraint_chat_holder"
     android:layout_width="match_parent"
     android:layout_height="@dimen/recycler_view_holder_height"
-    android:clickable="true"
-    android:focusable="true"
     android:background="@drawable/chat_holder_ripple"
+    android:clickable="true"
     android:elevation="4dp"
+    android:focusable="true"
     tools:ignore="RtlSymmetry">
 
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -20,9 +20,32 @@
         app:layout_constraintTop_toTopOf="parent">
 
         <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/xyz"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="visible">
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:background="@drawable/dotted_circle"
+                android:layout_marginStart="8dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginEnd="8dp"
+                android:layout_marginBottom="8dp"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintDimensionRatio="1:1" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/layout_constraint_dashboard_chat_holder_contact"
             android:layout_width="match_parent"
-            android:layout_height="match_parent">
+            android:layout_height="match_parent"
+            tools:layout_editor_absoluteX="0dp"
+            tools:layout_editor_absoluteY="16dp">
 
             <include
                 android:id="@+id/include_dashboard_chat_holder_initial"
@@ -30,17 +53,17 @@
                 android:layout_width="@dimen/default_chat_initial_image_xy"
                 android:layout_height="@dimen/default_chat_initial_image_xy"
                 app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/layout_constraint_dashboard_chat_holder_invite"
-            android:visibility="gone"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:visibility="gone"
             tools:visibility="visible">
 
             <androidx.appcompat.widget.AppCompatImageView
@@ -80,15 +103,15 @@
                 android:ellipsize="end"
                 android:fontFamily="@font/roboto_regular"
                 android:gravity="center|start"
+                android:paddingTop="15dp"
                 android:singleLine="true"
                 android:textColor="@color/primaryText"
                 android:textSize="17sp"
-                android:paddingTop="15dp"
                 app:layout_constrainedWidth="true"
-                app:layout_constraintHorizontal_bias="0"
-                app:layout_constraintHorizontal_chainStyle="packed"
                 app:layout_constraintBottom_toTopOf="@+id/text_view_chat_holder_message"
                 app:layout_constraintEnd_toStartOf="@+id/image_view_chat_holder_lock"
+                app:layout_constraintHorizontal_bias="0"
+                app:layout_constraintHorizontal_chainStyle="packed"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
                 tools:text="Planet Sphinx" />
@@ -100,16 +123,16 @@
                 android:layout_marginStart="4dp"
                 android:layout_marginBottom="3dp"
                 android:fontFamily="@font/material_icons_regular"
+                android:gravity="center|start"
+                android:paddingTop="15dp"
                 android:singleLine="true"
                 android:text="@string/material_icon_name_lock_open"
                 android:textColor="@color/secondaryText"
                 android:textSize="15sp"
-                android:paddingTop="15dp"
-                android:gravity="center|start"
                 app:layout_constraintBottom_toBottomOf="@+id/text_view_dashboard_chat_holder_name"
-                app:layout_constraintTop_toTopOf="@+id/text_view_dashboard_chat_holder_name"
+                app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toEndOf="@id/text_view_dashboard_chat_holder_name"
-                app:layout_constraintEnd_toEndOf="parent"/>
+                app:layout_constraintTop_toTopOf="@+id/text_view_dashboard_chat_holder_name" />
 
             <androidx.appcompat.widget.AppCompatTextView
                 android:id="@+id/text_view_chat_holder_message_icon"
@@ -118,17 +141,17 @@
                 android:ellipsize="end"
                 android:fontFamily="@font/material_icons_regular"
                 android:gravity="center_vertical"
+                android:paddingEnd="3dp"
                 android:paddingBottom="15dp"
                 android:singleLine="true"
                 android:textColor="@color/primaryGreen"
                 android:textSize="17sp"
-                android:paddingEnd="3dp"
                 android:visibility="gone"
                 app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/text_view_dashboard_chat_holder_name"
                 app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/text_view_dashboard_chat_holder_name"
                 tools:text="done"
-                tools:visibility="visible"/>
+                tools:visibility="visible" />
 
             <androidx.appcompat.widget.AppCompatTextView
                 android:id="@+id/text_view_chat_holder_message"
@@ -142,10 +165,28 @@
                 android:textColor="@color/secondaryText"
                 android:textSize="14sp"
                 app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/text_view_dashboard_chat_holder_name"
-                app:layout_constraintStart_toEndOf="@+id/text_view_chat_holder_message_icon"
                 app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintHorizontal_bias="0.0"
+                app:layout_constraintStart_toEndOf="@+id/text_view_chat_holder_message_icon"
+                app:layout_constraintTop_toBottomOf="@+id/text_view_dashboard_chat_holder_name"
                 tools:text="This is a test message" />
+
+            <androidx.appcompat.widget.AppCompatTextView
+                android:id="@+id/text_view_chat_holder_pending_message"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="15dp"
+                android:fontFamily="@font/roboto_regular"
+                android:gravity="center_vertical"
+                android:singleLine="true"
+                android:text="Waiting for approval"
+                android:textColor="@color/secondaryText"
+                android:textSize="14sp"
+                android:visibility="gone"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/text_view_chat_holder_centered_name" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -166,11 +207,11 @@
                 android:textColor="@color/primaryText"
                 android:textSize="17sp"
                 app:layout_constrainedWidth="true"
+                app:layout_constraintEnd_toStartOf="@+id/image_view_chat_holder_centered_lock"
                 app:layout_constraintHorizontal_bias="0"
                 app:layout_constraintHorizontal_chainStyle="packed"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toStartOf="@+id/image_view_chat_holder_centered_lock"
-                tools:text="Planet Sphinx"/>
+                tools:text="Planet Sphinx" />
 
             <androidx.appcompat.widget.AppCompatTextView
                 android:id="@+id/image_view_chat_holder_centered_lock"
@@ -178,11 +219,11 @@
                 android:layout_height="match_parent"
                 android:layout_marginStart="4dp"
                 android:fontFamily="@font/material_icons_regular"
+                android:gravity="center_vertical|start"
                 android:singleLine="true"
                 android:text="@string/material_icon_name_lock"
                 android:textColor="@color/secondaryText"
                 android:textSize="15sp"
-                android:gravity="center_vertical|start"
                 app:layout_constraintStart_toEndOf="@id/text_view_chat_holder_centered_name" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
@@ -201,31 +242,31 @@
             android:layout_width="0dp"
             android:layout_height="0dp"
             android:orientation="horizontal"
-            app:layout_constraintGuide_percent=".5" />
+            app:layout_constraintGuide_end="45dp" />
 
         <androidx.appcompat.widget.AppCompatImageView
             android:id="@+id/image_view_chat_holder_notification"
             android:layout_width="14dp"
             android:layout_height="14dp"
+            android:layout_marginEnd="@dimen/default_half_layout_margin"
             android:src="@drawable/ic_baseline_notifications_off_24"
             android:tint="@color/placeholderText"
             android:visibility="invisible"
-            android:layout_marginEnd="@dimen/default_half_layout_margin"
-            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintBottom_toBottomOf="@+id/text_view_chat_holder_time"
-            app:layout_constraintTop_toTopOf="@+id/text_view_chat_holder_time"
             app:layout_constraintEnd_toStartOf="@+id/text_view_chat_holder_time"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/text_view_chat_holder_time"
             tools:visibility="visible" />
 
         <androidx.appcompat.widget.AppCompatTextView
             android:id="@+id/text_view_chat_holder_time"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/default_small_layout_margin"
             android:fontFamily="@font/roboto_regular"
             android:gravity="center_vertical|end"
             android:textColor="@color/placeholderText"
             android:textSize="10sp"
-            android:layout_marginBottom="@dimen/default_small_layout_margin"
             app:layout_constraintBottom_toTopOf="@+id/guide5"
             app:layout_constraintEnd_toEndOf="parent"
             tools:ignore="SmallSp"
@@ -235,9 +276,9 @@
             android:id="@+id/layout_constraint_dashboard_chat_holder_invite_price"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/default_tiny_layout_margin"
             android:background="@drawable/background_invite_price_text"
             android:visibility="gone"
-            android:layout_marginBottom="@dimen/default_tiny_layout_margin"
             app:layout_constraintBottom_toTopOf="@+id/guide5"
             app:layout_constraintEnd_toEndOf="parent"
             tools:visibility="gone">
@@ -246,15 +287,15 @@
                 android:id="@+id/text_view_dashboard_chat_holder_invite_price"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:paddingHorizontal="7dp"
                 android:fontFamily="@font/roboto_medium"
                 android:gravity="center"
+                android:paddingHorizontal="7dp"
                 android:textColor="@android:color/white"
                 android:textSize="12sp"
                 app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
                 tools:ignore="SmallSp"
                 tools:text="2 000" />
 
@@ -269,20 +310,20 @@
             <androidx.appcompat.widget.AppCompatTextView
                 android:id="@+id/text_view_dashboard_chat_holder_mentions_count"
                 android:layout_width="wrap_content"
-                android:minWidth="@dimen/dashboard_badge_count_xy"
                 android:layout_height="@dimen/dashboard_badge_count_xy"
-                android:paddingHorizontal="@dimen/dashboard_badge_count_padding_horizontal"
-                android:fontFamily="@font/roboto_regular"
-                android:textSize="11sp"
-                android:textColor="@android:color/white"
-                tools:text="9999"
-                android:gravity="center"
                 android:background="@drawable/chat_initials_circle"
                 android:backgroundTint="@color/primaryBlue"
-                app:layout_constraintTop_toTopOf="parent"
+                android:fontFamily="@font/roboto_regular"
+                android:gravity="center"
+                android:minWidth="@dimen/dashboard_badge_count_xy"
+                android:paddingHorizontal="@dimen/dashboard_badge_count_padding_horizontal"
+                android:textColor="@android:color/white"
+                android:textSize="11sp"
+                android:visibility="gone"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                android:visibility="gone"/>
+                app:layout_constraintTop_toTopOf="parent"
+                tools:text="9999" />
 
             <androidx.appcompat.widget.AppCompatTextView
                 android:id="@+id/text_view_dashboard_chat_holder_badge_count"

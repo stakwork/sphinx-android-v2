@@ -144,6 +144,13 @@
         />
 
     <include
+        android:id="@+id/pending_contact_view"
+        layout="@layout/layout_pending_chat"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        tools:visibility="visible" />
+
+    <include
         android:id="@+id/include_chat_contact_menu"
         layout="@layout/layout_chat_menu" />
 
@@ -166,5 +173,6 @@
         app:layout_constraintBottom_toTopOf="@+id/layout_constraint_chat_footer_container"
         app:layout_constraintTop_toBottomOf="@+id/layout_constraint_chat_header_container"
         app:layout_constraintEnd_toEndOf="parent" />
+
 
 </androidx.constraintlayout.widget.ConstraintLayout>

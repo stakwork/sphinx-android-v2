@@ -1,19 +1,13 @@
 package com.example.call_activity
 
-import android.app.Activity
 import android.content.Context
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.ViewTreeObserver
 import android.widget.ArrayAdapter
 import android.widget.ImageView
-import android.widget.ListView
 import android.widget.TextView
-import androidx.annotation.ColorInt
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
 import chat.sphinx.call_activity.R
@@ -26,7 +20,6 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.squareup.moshi.Moshi
 import io.livekit.android.room.participant.Participant
 import kotlinx.coroutines.launch
-import dagger.hilt.android.AndroidEntryPoint
 import java.util.Locale
 import javax.inject.Inject
 
@@ -36,62 +29,81 @@ class ParticipantsBottomSheetFragment : BottomSheetDialogFragment() {
     @Inject
     lateinit var imageLoader: ImageLoader<ImageView>
 
-    private lateinit var adapter: ParticipantAdapter
     private var _binding: FragmentParticipantsBinding? = null
-    private val binding get() = _binding!! // Only use when safe
+    private val binding get() = _binding!!
 
-    private var participants: MutableList<Participant> = mutableListOf()
-    private var participantColors: MutableMap<String, Int> = mutableMapOf()
+    private lateinit var adapter: ParticipantAdapter
+    private var participants: List<Participant> = emptyList()
+    private var participantColors: Map<String, Int> = emptyMap()
 
     companion object {
+        private const val ARG_PARTICIPANTS = "participants"
+        private const val ARG_COLORS = "participant_colors"
+
         fun newInstance(
-            participants: MutableList<Participant>,
-            participantColors: MutableMap<String, Int>
-        ) = ParticipantsBottomSheetFragment().apply {
-            this.participants = participants.toMutableList() // Create new mutable list
-            this.participantColors = participantColors.toMutableMap() // Create new mutable map
+            participants: List<Participant>,
+            participantColors: Map<String, Int>
+        ): ParticipantsBottomSheetFragment {
+            return ParticipantsBottomSheetFragment().apply {
+                arguments = Bundle().apply {
+                    putParcelableArrayList(ARG_PARTICIPANTS, ArrayList(participants))
+                    putSerializable(ARG_COLORS, HashMap(participantColors))
+                }
+            }
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        arguments?.let {
+            participants = it.getParcelableArrayList<Participant>(ARG_PARTICIPANTS) ?: emptyList()
+            @Suppress("UNCHECKED_CAST")
+            participantColors = it.getSerializable(ARG_COLORS) as? Map<String, Int> ?: emptyMap()
         }
     }
 
     override fun onCreateView(
-        inflater: LayoutInflater, 
+        inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
         _binding = FragmentParticipantsBinding.inflate(inflater, container, false)
+        return binding.root
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
         adapter = ParticipantAdapter(
-            requireContext(), 
-            participants.toMutableList(), // Pass a new copy
-            imageLoader, 
-            lifecycleScope, 
-            participantColors.toMutableMap() // Pass a new copy
+            requireContext(),
+            participants,
+            imageLoader,
+            viewLifecycleOwner.lifecycleScope,
+            participantColors
         )
-        
         binding.listView.adapter = adapter
+
         updateParticipantCount()
 
         binding.closeButton.setOnClickListener {
             dismiss()
         }
-
-        return binding.root
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
-        _binding = null // Avoid memory leaks
+        _binding = null
     }
 
-    fun setParticipants(
-        newParticipants: MutableList<Participant>,
-        newParticipantColors: MutableMap<String, Int>
+    fun updateParticipants(
+        newParticipants: List<Participant>,
+        newParticipantColors: Map<String, Int>
     ) {
-        this.participants = newParticipants.toMutableList() // Create new mutable list
-        this.participantColors = newParticipantColors.toMutableMap() // Create new mutable map
+        participants = newParticipants
+        participantColors = newParticipantColors
 
         if (::adapter.isInitialized) {
-            adapter.setParticipants(participants, participantColors)
+            adapter.updateParticipants(newParticipants, newParticipantColors)
             updateParticipantCount()
         }
     }
@@ -105,25 +117,17 @@ class ParticipantsBottomSheetFragment : BottomSheetDialogFragment() {
 
     class ParticipantAdapter(
         context: Context,
-        private var participants: MutableList<Participant>,
+        private var participants: List<Participant>,
         private val imageLoader: ImageLoader<ImageView>,
         private val lifecycleScope: androidx.lifecycle.LifecycleCoroutineScope,
-        private var participantColors: MutableMap<String, Int>
+        private var participantColors: Map<String, Int>
     ) : ArrayAdapter<Participant>(context, 0, participants) {
 
         private val moshi: Moshi = Moshi.Builder().build()
 
-        override fun getCount(): Int {
-            return participants.size
-        }
+        override fun getCount(): Int = participants.size
 
-        override fun getItem(position: Int): Participant? {
-            return if (position in 0 until participants.size) {
-                participants[position]
-            } else {
-                null
-            }
-        }
+        override fun getItem(position: Int): Participant? = participants.getOrNull(position)
 
         override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
             val viewHolder: ViewHolder
@@ -138,12 +142,18 @@ class ParticipantsBottomSheetFragment : BottomSheetDialogFragment() {
                 viewHolder = convertView.tag as ViewHolder
             }
 
-            val participant = getItem(position) ?: return view
+            getItem(position)?.let { participant ->
+                bindParticipant(viewHolder, participant)
+            }
 
+            return view
+        }
+
+        private fun bindParticipant(viewHolder: ViewHolder, participant: Participant) {
             // Set participant name
             viewHolder.nameTextView.text = participant.name
 
-            // Camera status visibility
+            // Camera status
             viewHolder.cameraStatusImageView.apply {
                 visibility = if (participant.isCameraEnabled()) View.VISIBLE else View.GONE
                 if (visibility == View.VISIBLE) setImageResource(R.drawable.camera)
@@ -178,22 +188,17 @@ class ParticipantsBottomSheetFragment : BottomSheetDialogFragment() {
                     setBackgroundRandomColor(R.drawable.circle_icon_4, color)
                 }
             }
-
-            return view
         }
 
-        fun setParticipants(
-            newParticipants: MutableList<Participant>,
-            newParticipantColors: MutableMap<String, Int>
+        fun updateParticipants(
+            newParticipants: List<Participant>,
+            newParticipantColors: Map<String, Int>
         ) {
-            this.participants = newParticipants.toMutableList() // Create new mutable list
-            this.participantColors = newParticipantColors.toMutableMap() // Create new mutable map
-            clear()
-            addAll(participants)
+            participants = newParticipants
+            participantColors = newParticipantColors
             notifyDataSetChanged()
         }
 
-        // ViewHolder to optimize findViewById calls
         private class ViewHolder(view: View) {
             val nameTextView: TextView = view.findViewById(R.id.participantName)
             val cameraStatusImageView: ImageView = view.findViewById(R.id.cameraStatus)

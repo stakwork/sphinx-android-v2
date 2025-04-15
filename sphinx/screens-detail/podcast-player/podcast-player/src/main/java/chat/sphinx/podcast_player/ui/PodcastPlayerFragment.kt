@@ -84,6 +84,7 @@ internal class PodcastPlayerFragment : SideEffectFragment<
     protected lateinit var connectivityHelper: ConnectivityHelper
 
     private val args: PodcastPlayerFragmentArgs by navArgs()
+    private var isSkipAdEnabled: Boolean = false
 
     override fun onDestroyView() {
         super.onDestroyView()
@@ -412,6 +413,7 @@ internal class PodcastPlayerFragment : SideEffectFragment<
     private suspend fun showPodcastInfo(podcast: Podcast) {
         binding.apply {
 
+
             val notLinkedToChat = podcast.chatId.value == ChatId.NULL_CHAT_ID.toLong()
             textViewSubscribeButton.goneIfFalse(notLinkedToChat)
 
@@ -422,10 +424,25 @@ internal class PodcastPlayerFragment : SideEffectFragment<
             }
 
             var currentEpisode: PodcastEpisode? = podcast.getCurrentEpisode()
-            currentEpisode = if (connectivityHelper.isNetworkConnected() || currentEpisode?.downloaded == true) {
-                currentEpisode
+            currentEpisode =
+                if (connectivityHelper.isNetworkConnected() || currentEpisode?.downloaded == true) {
+                    currentEpisode
+                } else {
+                    podcast.getLastDownloadedEpisode()
+                }
+
+            val hasChapters = currentEpisode?.chapters?.nodes?.isNotEmpty() == true
+
+            if (hasChapters) {
+                binding.includeLayoutPodcastEpisodesList.buttonSkipAdd.visible
+                updateSkipAdButtonUI()
+
+                binding.includeLayoutPodcastEpisodesList.buttonSkipAdd.setOnClickListener {
+                    isSkipAdEnabled = !isSkipAdEnabled
+                    updateSkipAdButtonUI()
+                }
             } else {
-                podcast.getLastDownloadedEpisode()
+                binding.includeLayoutPodcastEpisodesList.buttonSkipAdd.gone
             }
 
             val episodeId = currentEpisode?.id?.value
@@ -540,6 +557,20 @@ internal class PodcastPlayerFragment : SideEffectFragment<
                 }
 
                 overlay.addView(marker)
+            }
+        }
+    }
+
+    private fun updateSkipAdButtonUI() {
+        binding.includeLayoutPodcastEpisodesList.buttonSkipAdd.apply {
+            if (isSkipAdEnabled) {
+                setTextColor(ContextCompat.getColor(requireContext(), android.R.color.white))
+                backgroundTintList = ContextCompat.getColorStateList(requireContext(), chat.sphinx.resources.R.color.primaryGreen)
+                text = getString(R.string.podcast_skip_ad_enabled)
+            } else {
+                setTextColor(ContextCompat.getColor(requireContext(), chat.sphinx.resources.R.color.secondaryText))
+                backgroundTintList = ContextCompat.getColorStateList(requireContext(), android.R.color.secondary_text_dark)
+                text = getString(R.string.podcast_skip_ad_disabled)
             }
         }
     }

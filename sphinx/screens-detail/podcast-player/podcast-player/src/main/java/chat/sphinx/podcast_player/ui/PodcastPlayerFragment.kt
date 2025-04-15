@@ -503,6 +503,10 @@ internal class PodcastPlayerFragment : SideEffectFragment<
 
             if (!draggingTimeSlider && currentEpisode != null) setTimeLabelsAndProgressBar(podcast)
 
+            if (isSkipAdEnabled && hasChapters) {
+                checkAndSkipAds(podcast)
+            }
+
             toggleLoadingWheel(false)
             addPodcastOnClickListeners(podcast)
         }
@@ -557,6 +561,44 @@ internal class PodcastPlayerFragment : SideEffectFragment<
                 }
 
                 overlay.addView(marker)
+            }
+        }
+    }
+
+    private fun checkAndSkipAds(podcast: Podcast) {
+        val currentEpisode = podcast.getCurrentEpisode() ?: return
+
+        val chaptersProperties = currentEpisode.chapters?.nodes
+            ?.mapNotNull { it.properties }
+            ?.filter { !it.timestamp.isNullOrBlank() }
+            ?.sortedBy { viewModel.parseTimestampToMillis(it.timestamp) }
+            ?: return
+
+        val currentTime = podcast.timeMilliSeconds
+        val episodeDuration = podcast.getCurrentEpisodeDuration(viewModel::retrieveEpisodeDuration)
+
+        // Loop through the chapters to see if we are inside an ad chapter.
+        for (i in chaptersProperties.indices) {
+            val chapterStart = viewModel.parseTimestampToMillis(chaptersProperties[i].timestamp)
+            val chapterEnd = if (i + 1 < chaptersProperties.size) {
+                viewModel.parseTimestampToMillis(chaptersProperties[i + 1].timestamp)
+            } else {
+                episodeDuration
+            }
+
+            if (chaptersProperties[i].isAdBoolean && currentTime in chapterStart until chapterEnd) {
+                // Find the first non-ad chapter (in case multiple ad chapters)
+                var targetIndex = i + 1
+                while (targetIndex < chaptersProperties.size && chaptersProperties[targetIndex].isAdBoolean) {
+                    targetIndex++
+                }
+                val skipToTime = if (targetIndex < chaptersProperties.size) {
+                    viewModel.parseTimestampToMillis(chaptersProperties[targetIndex].timestamp)
+                } else {
+                    episodeDuration
+                }
+                viewModel.seekTo(skipToTime)
+                break
             }
         }
     }

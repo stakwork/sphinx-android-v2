@@ -78,17 +78,20 @@ class ParticipantsBottomSheetFragment : BottomSheetDialogFragment() {
     }
 
     fun setParticipants(
-        newParticipants: MutableList<Participant>,
-        newParticipantColors: MutableMap<String, Int>
-    ) {
-        this.participants = newParticipants
-        this.participantColors = newParticipantColors
+    newParticipants: MutableList<Participant>,
+    newParticipantColors: MutableMap<String, Int>
+) {
+    this.participants.clear()
+    this.participants.addAll(newParticipants)
+    this.participantColors.clear()
+    this.participantColors.putAll(newParticipantColors)
 
-        if (_binding != null) { // Ensure the view exists
-            updateParticipantCount()
-            adapter.setParticipants(participants, participantColors)
-        }
+    if (isAdded && _binding != null) { // Check both isAdded and binding
+        updateParticipantCount()
+        adapter.setParticipants(participants, participantColors)
+        binding.listView.invalidateViews()
     }
+}
 
     private fun updateParticipantCount() {
         binding.participantCountText.text = when (participants.size) {
@@ -106,10 +109,10 @@ class ParticipantsBottomSheetFragment : BottomSheetDialogFragment() {
     ) : ArrayAdapter<Participant>(context, 0, participants) {
 
         private val moshi: Moshi = Moshi.Builder().build() // Reuse instead of recreating in getView()
-
-        override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
-            val viewHolder: ViewHolder
-            val view: View
+           override fun getItemId(position: Int): Long {
+    return participants.getOrNull(position)?.sid?.hashCode()?.toLong() ?: super.getItemId(position)
+}
+       
 
             if (convertView == null) {
                 view = LayoutInflater.from(context).inflate(R.layout.participant_list_item, parent, false)
@@ -163,16 +166,17 @@ class ParticipantsBottomSheetFragment : BottomSheetDialogFragment() {
 
             return view
         }
-
-        fun setParticipants(
-            participants: MutableList<Participant>,
-            participantColors: MutableMap<String, Int>
-        ) {
-            this.participants = participants
-            this.participantColors = participantColors
-            notifyDataSetChanged()
-        }
-
+fun setParticipants(
+    participants: MutableList<Participant>,
+    participantColors: MutableMap<String, Int>
+) {
+    clear()
+    addAll(participants)
+    this.participantColors.clear()
+    this.participantColors.putAll(participantColors)
+    notifyDataSetChanged()
+    notifyAll()
+}
         // ViewHolder to optimize findViewById calls
         private class ViewHolder(view: View) {
             val nameTextView: TextView = view.findViewById(R.id.participantName)

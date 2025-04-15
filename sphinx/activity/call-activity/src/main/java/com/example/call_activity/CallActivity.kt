@@ -241,15 +241,44 @@ class CallActivity : AppCompatActivity() {
             }
         }
 
-        lifecycleScope.launchWhenCreated {
-            viewModel.participants.collect { participants ->
-                if (bottomSheet == null) {
-                    bottomSheet = ParticipantsBottomSheetFragment.newInstance(participants.toMutableList(), viewModel.participantColors)
-                } else {
-                    bottomSheet?.setParticipants(participants.toMutableList(), viewModel.participantColors)
-                }
+      lifecycleScope.launchWhenCreated {
+    viewModel.participants.collect { participants ->
+        // Update or create bottom sheet
+        if (bottomSheet == null) {
+            bottomSheet = ParticipantsBottomSheetFragment.newInstance(
+                participants.toMutableList(), 
+                viewModel.participantColors
+            ).apply {
+                // Set up the fragment to handle updates
+                this.participantsList = participants.toMutableList()
+                this.colorsMap = viewModel.participantColors.toMutableMap()
             }
         }
+        
+        // Update existing bottom sheet
+        bottomSheet?.let { sheet ->
+            sheet.participantsList?.clear()
+            sheet.participantsList?.addAll(participants)
+            sheet.colorsMap?.clear()
+            sheet.colorsMap?.putAll(viewModel.participantColors)
+            
+            // Force UI update
+            sheet.view?.let { view ->
+                val recyclerView = view.findViewById<RecyclerView>(R.id.recyclerView)
+                recyclerView?.adapter?.notifyDataSetChanged()
+                
+                // Update count if available
+                val countView = view.findViewById<TextView>(R.id.participantCount)
+                countView?.text = participants.size.toString()
+            }
+        }
+        
+        // Update the badge in activity
+        val participantCountBadge = findViewById<TextView>(R.id.participantCountBadge)
+        participantCountBadge.visibility = if (participants.isNotEmpty()) View.VISIBLE else View.GONE
+        participantCountBadge.text = participants.size.toString()
+    }
+}
 
         // Controls setup
         viewModel.cameraEnabled.observe(this) { enabled ->
@@ -546,3 +575,19 @@ class CallActivity : AppCompatActivity() {
         val roomName: String? = null
     ) : Parcelable
 }
+// Extension properties for ParticipantsBottomSheetFragment
+var ParticipantsBottomSheetFragment.participantsList: MutableList<Participant>?
+    get() = arguments?.getParcelableArrayList<Participant>("participants")
+    set(value) {
+        arguments = (arguments ?: Bundle()).apply {
+            putParcelableArrayList("participants", ArrayList(value ?: emptyList()))
+        }
+    }
+
+var ParticipantsBottomSheetFragment.colorsMap: MutableMap<String, Int>?
+    get() = arguments?.getSerializable("colors") as? MutableMap<String, Int>
+    set(value) {
+        arguments = (arguments ?: Bundle()).apply {
+            putSerializable("colors", HashMap(value ?: emptyMap()))
+        }
+    }

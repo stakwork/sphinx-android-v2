@@ -20,11 +20,8 @@ class ChapterListAdapter(
     }
 
     fun submitList(list: List<ChapterProperties>) {
-        val filteredList = list.filter {
-            !it.name.isNullOrBlank() && !it.timestamp.isNullOrBlank()
-        }
         chapters.clear()
-        chapters.addAll(filteredList)
+        chapters.addAll(list)
         notifyDataSetChanged()
     }
 

@@ -1,6 +1,7 @@
 package chat.sphinx.feature_network_query_podcast_search
 
 import chat.sphinx.concept_network_query_feed_search.NetworkQueryFeedSearch
+import chat.sphinx.concept_network_query_feed_search.model.CreateProjectResponseDto
 import chat.sphinx.concept_network_query_feed_search.model.EpisodeNodeResponseDto
 import chat.sphinx.concept_network_query_feed_search.model.FeedSearchResultDto
 import chat.sphinx.concept_network_relay_call.NetworkRelayCall
@@ -8,6 +9,7 @@ import chat.sphinx.kotlin_response.LoadResponse
 import chat.sphinx.kotlin_response.ResponseError
 import chat.sphinx.wrapper_common.feed.FeedType
 import chat.sphinx.wrapper_common.feed.isPodcast
+import chat.sphinx.wrapper_common.time
 import chat.sphinx.wrapper_feed.FeedReferenceId
 import chat.sphinx.wrapper_feed.FeedTitle
 import chat.sphinx.wrapper_podcast.ChapterResponseDto
@@ -71,6 +73,45 @@ class NetworkQueryFeedSearchImpl(
             accept400AsSuccess = true
         )
     }
+
+    override fun createStakworkProject(
+        podcastEpisode: PodcastEpisode,
+        feedTitle: FeedTitle,
+        workflowId: Int,
+        token: String,
+        referenceId: FeedReferenceId
+    ): Flow<LoadResponse<CreateProjectResponseDto, ResponseError>> {
+
+        val mediaUrl = podcastEpisode.enclosureUrl.value
+        val requestBody = mapOf(
+            "name" to mediaUrl,
+            "workflow_id" to workflowId,
+            "workflow_params" to mapOf(
+                "set_var" to mapOf(
+                    "attributes" to mapOf(
+                        "vars" to mapOf(
+                            "media_url" to mediaUrl,
+                            "ref_id" to referenceId.value,
+                            "episode_publish_date" to (podcastEpisode.date?.time?.div(1000) ?: 0),
+                            "episode_title" to podcastEpisode.title.value,
+                            "episode_thumbnail_url" to (podcastEpisode.image?.value ?: ""),
+                            "show_title" to (feedTitle.value)
+                        )
+                    )
+                )
+            )
+        )
+
+        return networkRelayCall.post(
+            url = "https://api.stakwork.com/api/v1/projects",
+            responseJsonClass = CreateProjectResponseDto::class.java,
+            requestBodyJsonClass = Map::class.java,
+            requestBody = requestBody,
+            mediaType = "application/json",
+            headers = mapOf("Authorization" to "Bearer ${token}")
+        )
+    }
+
 
     override fun getChaptersData(referenceId: FeedReferenceId): Flow<LoadResponse<ChapterResponseDto, ResponseError>> {
         return networkRelayCall.get(

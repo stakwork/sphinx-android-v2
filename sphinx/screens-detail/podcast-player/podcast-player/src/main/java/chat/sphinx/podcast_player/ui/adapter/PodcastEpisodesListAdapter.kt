@@ -285,14 +285,17 @@ internal class PodcastEpisodesListAdapter(
                     viewModel.seekTo(timeMillis)
                 }
                 val chapters = podcastEpisode.chapters?.nodes?.mapNotNull { it.properties }
+                val chaptersList = chapters?.filter {
+                    !it.name.isNullOrBlank() && !it.timestamp.isNullOrBlank()
+                }
 
-                if (chapters?.isNotEmpty() == true) {
+                if (chaptersList?.isNotEmpty() == true) {
                     buttonListIcon.visible
                     binding.recyclerViewChapters.apply {
                         layoutManager = LinearLayoutManager(context)
                         adapter = chaptersAdapter
                     }
-                    chaptersAdapter.submitList(chapters)
+                    chaptersAdapter.submitList(chaptersList)
                 }
 
                 // General info

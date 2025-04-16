@@ -6092,7 +6092,9 @@ abstract class SphinxRepository(
 
     override suspend fun checkIfEpisodeNodeExists(
         podcastEpisode: PodcastEpisode,
-        podcastTitle: FeedTitle
+        podcastTitle: FeedTitle,
+        workflowId: Int?,
+        token: String?
     ) {
         networkQueryFeedSearch.checkIfEpisodeNodeExists(podcastEpisode, podcastTitle).collect { response ->
             @Exhaustive
@@ -6110,8 +6112,30 @@ abstract class SphinxRepository(
                     ) {
                         getChaptersData(referenceId!!, podcastEpisode.id)
                     } else if (response.value.success == true) {
-                        // POST create new Graph Mindset Run
-                    } else { }
+
+                        if (workflowId != null && token != null && referenceId != null) {
+                            networkQueryFeedSearch.createStakworkProject(
+                                podcastEpisode,
+                                podcastTitle,
+                                workflowId,
+                                token,
+                                referenceId
+                            ).collect { projectResponse ->
+                                when (projectResponse) {
+                                    is LoadResponse.Loading -> {}
+                                    is Response.Error -> {
+                                        val t = projectResponse
+                                    }
+
+                                    is Response.Success -> {
+                                        val t = projectResponse
+                                    }
+                                }
+                            }
+                            // POST create new Graph Mindset Run
+                        } else {
+                        }
+                    }
                 }
             }
         }
@@ -6135,9 +6159,7 @@ abstract class SphinxRepository(
                             val feedChaptersData = adapter.toJson(response.value).toFeedChapterData()
                             queries.feedItemUpdateChaptersData(feedChaptersData, id)
 
-                        } catch (e: Exception) {
-
-                        }
+                        } catch (e: Exception) { }
                     }
                 }
             }

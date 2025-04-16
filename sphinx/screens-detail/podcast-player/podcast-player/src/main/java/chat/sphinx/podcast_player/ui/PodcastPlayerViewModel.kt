@@ -456,7 +456,15 @@ internal class PodcastPlayerViewModel @Inject constructor(
                         if (referenceIdExist) {
                             feedRepository.getChaptersData(episode.referenceId!!, episode.id)
                         } else {
-                            feedRepository.checkIfEpisodeNodeExists(episode, podcast.title)
+                            val workflowId = chat.sphinx.podcast_player.BuildConfig.GRAPH_MINDSET_WORKFLOW_ID.toInt()
+                            val token = chat.sphinx.podcast_player.BuildConfig.GRAPH_MINDSET_TOKEN
+
+                            feedRepository.checkIfEpisodeNodeExists(
+                                episode,
+                                podcast.title,
+                                workflowId,
+                                token
+                            )
                         }
                     }
                 }

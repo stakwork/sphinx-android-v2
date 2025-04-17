@@ -1,6 +1,7 @@
 package chat.sphinx.concept_network_query_feed_search
 
 import chat.sphinx.concept_network_query_feed_search.model.CreateProjectResponseDto
+import chat.sphinx.concept_network_query_feed_search.model.EpisodeNodeDetailsDto
 import chat.sphinx.concept_network_query_feed_search.model.EpisodeNodeResponseDto
 import chat.sphinx.concept_network_query_feed_search.model.FeedSearchResultDto
 import chat.sphinx.kotlin_response.LoadResponse
@@ -30,6 +31,8 @@ abstract class NetworkQueryFeedSearch {
         token: String,
         referenceId: FeedReferenceId
     ): Flow<LoadResponse<CreateProjectResponseDto, ResponseError>>
+
+    abstract fun getEpisodeNodeDetails(referenceId: FeedReferenceId): Flow<LoadResponse<EpisodeNodeDetailsDto, ResponseError>>
 
     abstract fun getChaptersData(referenceId: FeedReferenceId): Flow<LoadResponse<ChapterResponseDto, ResponseError>>
 

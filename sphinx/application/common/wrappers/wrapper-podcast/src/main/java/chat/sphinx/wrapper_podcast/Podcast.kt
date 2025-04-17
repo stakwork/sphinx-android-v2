@@ -368,7 +368,11 @@ data class Podcast(
 
         getCurrentEpisodeDuration(durationRetrieverHandle)
 
-        referenceIdExist?.invoke(episode.referenceId != null)
+        val hasChapters = episode.chapters?.nodes?.any{ it.node_type == "Chapter" } == true
+
+        if (!hasChapters) {
+            referenceIdExist?.invoke(episode.referenceId != null)
+        }
     }
 
     fun didSeekTo(timeMilliseconds: Long) {

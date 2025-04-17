@@ -6110,7 +6110,7 @@ abstract class SphinxRepository(
                     if (response.value.errorCode?.contains("already exists") == true ||
                         response.value.node_key != null
                     ) {
-                        getChaptersData(referenceId!!, podcastEpisode.id)
+                        getChaptersData(podcastEpisode, podcastTitle, referenceId!!, podcastEpisode.id, workflowId, token)
                     } else if (response.value.success == true) {
 
                         if (workflowId != null && token != null && referenceId != null) {
@@ -6123,17 +6123,10 @@ abstract class SphinxRepository(
                             ).collect { projectResponse ->
                                 when (projectResponse) {
                                     is LoadResponse.Loading -> {}
-                                    is Response.Error -> {
-                                        val t = projectResponse
-                                    }
-
-                                    is Response.Success -> {
-                                        val t = projectResponse
-                                    }
+                                    is Response.Error -> {}
+                                    is Response.Success -> {}
                                 }
                             }
-                            // POST create new Graph Mindset Run
-                        } else {
                         }
                     }
                 }
@@ -6141,29 +6134,88 @@ abstract class SphinxRepository(
         }
     }
 
-        override suspend fun getChaptersData(referenceId: FeedReferenceId, id: FeedId) {
-            networkQueryFeedSearch.getChaptersData(referenceId).collect { response ->
-                @Exhaustive
-                when (response) {
-                    is LoadResponse.Loading -> {}
-                    is Response.Error -> {}
-                    is Response.Success -> {
-                        val queries = coreDB.getSphinxDatabaseQueries()
-
-                        try {
-                            val moshi = Moshi.Builder()
-                                .add(KotlinJsonAdapterFactory())
-                                .build()
-
-                            val adapter = moshi.adapter(ChapterResponseDto::class.java)
-                            val feedChaptersData = adapter.toJson(response.value).toFeedChapterData()
-                            queries.feedItemUpdateChaptersData(feedChaptersData, id)
-
-                        } catch (e: Exception) { }
+    override suspend fun getEpisodeNodeDetails(
+        podcastEpisode: PodcastEpisode,
+        podcastTitle: FeedTitle,
+        referenceId: FeedReferenceId,
+        workflowId: Int?,
+        token: String?
+    ) {
+        networkQueryFeedSearch.getEpisodeNodeDetails(referenceId).collect { episodeResponse ->
+            when (episodeResponse) {
+                is LoadResponse.Loading -> {}
+                is Response.Error -> {}
+                is Response.Success -> {
+                    val hasProjectId =  episodeResponse.value.properties?.project_id?.isNotEmpty() == true
+                    if (!hasProjectId) {
+                        if (workflowId != null && token != null) {
+                            networkQueryFeedSearch.createStakworkProject(
+                                podcastEpisode,
+                                podcastTitle,
+                                workflowId,
+                                token,
+                                referenceId
+                            ).collect { projectResponse ->
+                                when (projectResponse) {
+                                    is LoadResponse.Loading -> {}
+                                    is Response.Error -> {}
+                                    is Response.Success -> {}
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
+    }
+
+    override suspend fun getChaptersData(
+        podcastEpisode: PodcastEpisode,
+        podcastTitle: FeedTitle,
+        referenceId: FeedReferenceId,
+        id: FeedId,
+        workflowId: Int?,
+        token: String?
+    ) {
+        networkQueryFeedSearch.getChaptersData(referenceId).collect { response ->
+            @Exhaustive
+            when (response) {
+                is LoadResponse.Loading -> {}
+                is Response.Error -> {}
+                is Response.Success -> {
+                    val queries = coreDB.getSphinxDatabaseQueries()
+
+                    try {
+                        val moshi = Moshi.Builder()
+                            .add(KotlinJsonAdapterFactory())
+                            .build()
+
+                        val adapter = moshi.adapter(ChapterResponseDto::class.java)
+                        val chapterResponseDto = response.value
+
+                        val hasChapters = chapterResponseDto.nodes.any { it.node_type == "Chapter" }
+
+                        if (hasChapters) {
+                            val feedChaptersData =
+                                adapter.toJson(chapterResponseDto).toFeedChapterData()
+                            queries.feedItemUpdateChaptersData(feedChaptersData, id)
+                        } else {
+                            getEpisodeNodeDetails(
+                                podcastEpisode,
+                                podcastTitle,
+                                referenceId,
+                                workflowId,
+                                token
+                            )
+                        }
+
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
+        }
+    }
 
 
     private suspend fun mapPodcast(

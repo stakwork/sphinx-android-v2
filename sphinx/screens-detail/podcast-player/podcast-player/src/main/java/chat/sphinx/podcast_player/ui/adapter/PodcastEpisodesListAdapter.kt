@@ -87,6 +87,7 @@ internal class PodcastEpisodesListAdapter(
                                     old.played == new.played &&
                                     old.durationMilliseconds == new.durationMilliseconds &&
                                     old.currentTimeSeconds == new.currentTimeSeconds &&
+                                    old.chapters?.nodes == new.chapters?.nodes &&
                                     viewModel.isFeedItemDownloadInProgress(old.id) == viewModel.isFeedItemDownloadInProgress(new.id) &&
                                     viewModel.isEpisodeSoundPlaying(old) == viewModel.isEpisodeSoundPlaying(new)
 
@@ -167,6 +168,7 @@ internal class PodcastEpisodesListAdapter(
             }
         }
     }
+
 
     override fun getItemCount(): Int {
         return podcastEpisodes.size

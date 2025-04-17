@@ -2,6 +2,7 @@ package chat.sphinx.feature_network_query_podcast_search
 
 import chat.sphinx.concept_network_query_feed_search.NetworkQueryFeedSearch
 import chat.sphinx.concept_network_query_feed_search.model.CreateProjectResponseDto
+import chat.sphinx.concept_network_query_feed_search.model.EpisodeNodeDetailsDto
 import chat.sphinx.concept_network_query_feed_search.model.EpisodeNodeResponseDto
 import chat.sphinx.concept_network_query_feed_search.model.FeedSearchResultDto
 import chat.sphinx.concept_network_relay_call.NetworkRelayCall
@@ -25,6 +26,7 @@ class NetworkQueryFeedSearchImpl(
         private const val GRAPH_MINDSET_BASE_URL = "https://graphmindset.sphinx.chat"
         private const val GRAPH_MINDSET_ADD_NODE_URL = "https://graphmindset.sphinx.chat/api/add_node?sig=&msg="
         private const val ENDPOINT_GET_CHAPTERS = "$GRAPH_MINDSET_BASE_URL/api/graph/subgraph?start_node=%s&include_properties=true&depth=1&node_type=%%5B%%27Chapter%%27%%5D"
+        private const val ENDPOINT_STAKWORK_PROJECT = "https://api.stakwork.com/api/v1/projects"
 
         private const val ENDPOINT_PODCAST_SEARCH = "$TRIBES_DEFAULT_SERVER_URL/search_podcasts?q=%s"
         private const val ENDPOINT_YOUTUBE_SEARCH = "$TRIBES_DEFAULT_SERVER_URL/search_youtube?q=%s"
@@ -103,7 +105,7 @@ class NetworkQueryFeedSearchImpl(
         )
 
         return networkRelayCall.post(
-            url = "https://api.stakwork.com/api/v1/projects",
+            url = ENDPOINT_STAKWORK_PROJECT,
             responseJsonClass = CreateProjectResponseDto::class.java,
             requestBodyJsonClass = Map::class.java,
             requestBody = requestBody,
@@ -112,6 +114,14 @@ class NetworkQueryFeedSearchImpl(
         )
     }
 
+    override fun getEpisodeNodeDetails(referenceId: FeedReferenceId): Flow<LoadResponse<EpisodeNodeDetailsDto, ResponseError>> {
+        val url = "$GRAPH_MINDSET_BASE_URL/api/node/${referenceId.value}"
+
+        return networkRelayCall.get(
+            url = url,
+            responseJsonClass = EpisodeNodeDetailsDto::class.java
+        )
+    }
 
     override fun getChaptersData(referenceId: FeedReferenceId): Flow<LoadResponse<ChapterResponseDto, ResponseError>> {
         return networkRelayCall.get(

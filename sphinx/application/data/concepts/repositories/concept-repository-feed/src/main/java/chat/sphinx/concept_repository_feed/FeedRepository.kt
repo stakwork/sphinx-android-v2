@@ -25,7 +25,21 @@ interface FeedRepository {
         workflowId: Int?,
         token: String?
     )
-    suspend fun getChaptersData(referenceId: FeedReferenceId, id: FeedId)
+    suspend fun getEpisodeNodeDetails(
+        podcastEpisode: PodcastEpisode,
+        podcastTitle: FeedTitle,
+        referenceId: FeedReferenceId,
+        workflowId: Int?,
+        token: String?
+    )
+    suspend fun getChaptersData(
+        podcastEpisode: PodcastEpisode,
+        podcastTitle: FeedTitle,
+        referenceId: FeedReferenceId,
+        id: FeedId,
+        workflowId: Int?,
+        token: String?
+    )
     fun searchFeedsBy(
         searchTerm: String,
         feedType: FeedType?,

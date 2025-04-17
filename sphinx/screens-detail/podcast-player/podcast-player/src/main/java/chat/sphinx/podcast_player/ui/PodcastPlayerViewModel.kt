@@ -453,12 +453,19 @@ internal class PodcastPlayerViewModel @Inject constructor(
                     ::retrieveEpisodeDuration
                 ) { referenceIdExist ->
                     viewModelScope.launch(mainImmediate) {
-                        if (referenceIdExist) {
-                            feedRepository.getChaptersData(episode.referenceId!!, episode.id)
-                        } else {
-                            val workflowId = chat.sphinx.podcast_player.BuildConfig.GRAPH_MINDSET_WORKFLOW_ID.toInt()
-                            val token = chat.sphinx.podcast_player.BuildConfig.GRAPH_MINDSET_TOKEN
+                        val workflowId = chat.sphinx.podcast_player.BuildConfig.GRAPH_MINDSET_WORKFLOW_ID.toInt()
+                        val token = chat.sphinx.podcast_player.BuildConfig.GRAPH_MINDSET_TOKEN
 
+                        if (referenceIdExist) {
+                            feedRepository.getChaptersData(
+                                episode,
+                                podcast.title,
+                                episode.referenceId!!,
+                                episode.id,
+                                workflowId,
+                                token
+                            )
+                        } else {
                             feedRepository.checkIfEpisodeNodeExists(
                                 episode,
                                 podcast.title,

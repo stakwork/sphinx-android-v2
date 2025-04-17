@@ -1,27 +1,25 @@
-<androidx.constraintlayout.widget.ConstraintLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/headerBG"
-    android:paddingHorizontal="16dp">
+    android:background="@color/body">
 
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/profile_card"
         android:layout_width="96dp"
         android:layout_height="96dp"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toTopOf="@id/text_view_pending_title"
-        android:layout_marginTop="100dp"
+        android:layout_marginTop="120dp"
         android:layout_marginBottom="16dp"
+        android:foreground="?attr/selectableItemBackgroundBorderless"
         app:cardCornerRadius="48dp"
         app:cardElevation="4dp"
+        app:layout_constraintBottom_toTopOf="@id/text_view_pending_title"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
         app:strokeColor="@color/primaryBlue"
-        app:strokeWidth="1dp"
-        android:foreground="?attr/selectableItemBackgroundBorderless">
+        app:strokeWidth="1dp">
 
         <FrameLayout
             android:id="@+id/profile_container"
@@ -29,24 +27,30 @@
             android:layout_height="match_parent">
 
             <View
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="match_parent"
+                android:visibility="visible"
                 android:background="@drawable/dotted_circle" />
 
-            <include
+            <ImageView
                 android:id="@+id/include_dashboard_chat_holder_initial"
-                layout="@layout/layout_chat_image_initial_holder"
-                android:layout_width="@dimen/default_chat_initial_image_xy"
-                android:layout_height="@dimen/default_chat_initial_image_xy"
-                android:layout_gravity="center" />
+                android:layout_width="69dp"
+                android:layout_height="64dp"
+                android:layout_gravity="center"
+                android:layout_margin="4dp"
+                android:contentDescription="@string/image_description"
+                android:src="@drawable/ic_profile_avatar_circle"
+                android:visibility="visible" />
 
             <ImageView
                 android:id="@+id/image_clock"
-                android:layout_width="23dp"
-                android:layout_height="23dp"
+                android:layout_width="21dp"
+                android:layout_height="21dp"
                 android:layout_gravity="bottom|end"
                 android:layout_margin="4dp"
-                android:contentDescription="@string/clock_icon"
+                android:contentDescription="@string/image_description"
+                android:background="@color/body"
+                android:visibility="visible"
                 android:src="@drawable/ic_clock" />
         </FrameLayout>
     </com.google.android.material.card.MaterialCardView>
@@ -63,31 +67,30 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:gravity="center"
-        android:text="Test"
-        android:textColor="@color/gph_white"
-        android:textSize="24sp"
-        android:textStyle="bold"
         android:letterSpacing="0.02"
+        android:text="Test"
+        android:textColor="@color/primaryText"
+        android:textSize="17sp"
+        android:textStyle="bold"
         app:fontFamily="@font/roboto_medium"
         app:layout_constraintTop_toBottomOf="@id/profile_card"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/text_view_chat_header_lock"
-        app:layout_constraintHorizontal_chainStyle="packed"/>
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"/>
 
     <androidx.appcompat.widget.AppCompatTextView
         android:id="@+id/text_view_chat_header_lock"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:fontFamily="@font/material_icons_regular"
-        android:textSize="25sp"
-        android:textColor="@color/washedOutReceivedText"
-        android:text="@string/material_icon_name_lock"
         android:layout_marginStart="8dp"
+        android:fontFamily="@font/material_icons_regular"
+        android:text="@string/material_icon_name_lock"
+        android:textColor="@color/washedOutReceivedText"
+        android:textSize="17sp"
+        android:visibility="visible"
         app:layout_constraintTop_toTopOf="@id/text_view_pending_title"
         app:layout_constraintBottom_toBottomOf="@id/text_view_pending_title"
-        app:layout_constraintStart_toEndOf="@+id/text_view_pending_title"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:visibility="gone" />
+        app:layout_constraintStart_toEndOf="@id/text_view_pending_title"/>
 
 
     <com.google.android.material.textview.MaterialTextView
@@ -95,59 +98,56 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="32dp"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="16dp"
         android:drawablePadding="8dp"
-        android:drawableTint="@color/amp_gray"
+        android:drawableTint="@color/dashboardWashedOutText"
         android:gravity="center"
         android:text="Invited on April 11, 2025"
-        android:textColor="@color/amp_gray"
-        android:textSize="14sp"
+        android:textColor="@color/dashboardWashedOutText"
+        android:textSize="13sp"
+        android:visibility="gone"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.625"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/text_view_pending_title"
-        android:visibility="visible"/>
+        app:layout_constraintTop_toBottomOf="@id/text_view_pending_title" />
 
     <com.google.android.material.textview.MaterialTextView
         android:id="@+id/text_view_pending_description"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="32dp"
-        android:layout_marginTop="388dp"
         android:gravity="center"
         android:lineSpacingMultiplier="1.2"
         android:paddingHorizontal="16dp"
         android:paddingVertical="8dp"
         android:text="Your chats will be enabled as soon as your contact goes online"
-        android:textColor="@color/amp_gray"
-        android:textSize="16sp"
-        app:cornerRadius="8dp"
+        android:textColor="@color/mainBottomIcons"
+        android:textSize="13sp"
+        android:visibility="visible"
         app:fontFamily="@font/roboto_regular"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.375"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/chat_invite_time"
-        android:visibility="visible"/>
+        app:layout_constraintVertical_bias="0.923" />
 
     <com.google.android.material.textview.MaterialTextView
         android:id="@+id/text_view_encryption_notice"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
+        android:layout_width="212dp"
+        android:layout_height="55dp"
         android:layout_marginHorizontal="32dp"
         android:gravity="center"
         android:lineSpacingMultiplier="1.2"
         android:text="Messages and calls are secured with end-to-end encryption"
-        android:textColor="@color/amp_gray"
+        android:textColor="@color/dashboardWashedOutText"
         android:textSize="14sp"
-        android:visibility="gone"
-        app:drawableTint="@color/amp_gray"
-        app:drawableTopCompat="@drawable/ic_lock_outline"
+        android:visibility="visible"
+        app:drawableTint="@color/dashboardWashedOutText"
         app:fontFamily="@font/roboto_regular"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/text_view_pending_title"
-        app:layout_constraintVertical_bias="0.0" />
+        app:layout_constraintVertical_bias="0.016" />
 
     <include
         android:id="@+id/chatFooterContainer"
@@ -155,9 +155,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/gph_white"
-        android:layout_marginTop="380dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/chat_invite_time"
-        android:visibility="gone"/>
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

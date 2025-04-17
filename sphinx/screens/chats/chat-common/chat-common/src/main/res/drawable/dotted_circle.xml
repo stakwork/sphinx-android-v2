@@ -4,8 +4,8 @@
 
     <solid android:color="@android:color/transparent"/>
     <stroke
-        android:color="@android:color/darker_gray"
-        android:width="2dp"
-        android:dashWidth="10dp"
+        android:color="@color/placeholderText"
+        android:width="1dp"
+        android:dashWidth="4dp"
         android:dashGap="4dp"/>
 </shape>

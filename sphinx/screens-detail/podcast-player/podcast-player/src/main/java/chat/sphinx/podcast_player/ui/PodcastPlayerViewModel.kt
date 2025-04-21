@@ -491,6 +491,16 @@ internal class PodcastPlayerViewModel @Inject constructor(
                         podcast.getUpdatedContentEpisodeStatus()
                     )
                 )
+
+
+                // Reload podcast to show chapters on UI
+
+                delay(2000L)
+
+                feedRepository.getPodcastById(podcast.id).firstOrNull()?.let { updatedPodcast ->
+                    setPodcastFeed(updatedPodcast)
+                    forceListReload()
+                }
             }
         }
     }

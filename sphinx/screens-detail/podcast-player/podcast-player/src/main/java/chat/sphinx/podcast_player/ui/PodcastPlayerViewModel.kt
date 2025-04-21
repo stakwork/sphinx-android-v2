@@ -901,6 +901,16 @@ internal class PodcastPlayerViewModel @Inject constructor(
         }
     }
 
+    fun showSkipAdToast(){
+        viewModelScope.launch(mainImmediate) {
+            submitSideEffect(
+                PodcastPlayerSideEffect.Notify(
+                    app.getString(R_common.string.skipping_ad_three_sec)
+                )
+            )
+        }
+    }
+
     private fun forceListReload() {
         when (val viewState = viewStateContainer.viewStateFlow.value) {
             is PodcastPlayerViewState.PodcastLoaded -> {

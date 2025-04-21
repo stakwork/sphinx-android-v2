@@ -565,6 +565,8 @@ internal class PodcastPlayerFragment : SideEffectFragment<
         }
     }
 
+    private var adSkipToastShown = false
+
     private fun checkAndSkipAds(podcast: Podcast) {
         val currentEpisode = podcast.getCurrentEpisode() ?: return
 
@@ -577,7 +579,6 @@ internal class PodcastPlayerFragment : SideEffectFragment<
         val currentTime = podcast.timeMilliSeconds
         val episodeDuration = podcast.getCurrentEpisodeDuration(viewModel::retrieveEpisodeDuration)
 
-        // Loop through the chapters to see if we are inside an ad chapter.
         for (i in chaptersProperties.indices) {
             val chapterStart = viewModel.parseTimestampToMillis(chaptersProperties[i].timestamp)
             val chapterEnd = if (i + 1 < chaptersProperties.size) {
@@ -586,17 +587,30 @@ internal class PodcastPlayerFragment : SideEffectFragment<
                 episodeDuration
             }
 
+            if (!chaptersProperties[i].isAdBoolean && i + 1 < chaptersProperties.size) {
+                val nextChapter = chaptersProperties[i + 1]
+                val nextStart = viewModel.parseTimestampToMillis(nextChapter.timestamp)
+                val timeUntilNext = nextStart - currentTime
+
+                if (nextChapter.isAdBoolean && timeUntilNext in 2500..3500 && !adSkipToastShown) {
+                    adSkipToastShown = true
+                    viewModel.showSkipAdToast()
+                }
+            }
+
             if (chaptersProperties[i].isAdBoolean && currentTime in chapterStart until chapterEnd) {
-                // Find the first non-ad chapter (in case multiple ad chapters)
                 var targetIndex = i + 1
                 while (targetIndex < chaptersProperties.size && chaptersProperties[targetIndex].isAdBoolean) {
                     targetIndex++
                 }
+
                 val skipToTime = if (targetIndex < chaptersProperties.size) {
                     viewModel.parseTimestampToMillis(chaptersProperties[targetIndex].timestamp)
                 } else {
                     episodeDuration
                 }
+
+                adSkipToastShown = false
                 viewModel.seekTo(skipToTime)
                 break
             }

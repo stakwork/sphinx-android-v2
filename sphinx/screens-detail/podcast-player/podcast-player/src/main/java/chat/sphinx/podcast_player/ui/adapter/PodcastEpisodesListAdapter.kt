@@ -287,8 +287,11 @@ internal class PodcastEpisodesListAdapter(
                     viewModel.seekTo(timeMillis)
                 }
                 val chapters = podcastEpisode.chapters?.nodes?.mapNotNull { it.properties }
+
                 val chaptersList = chapters?.filter {
                     !it.name.isNullOrBlank() && !it.timestamp.isNullOrBlank()
+                }?.sortedBy {
+                    viewModel.parseTimestampToMillis(it.timestamp!!)
                 }
 
                 if (chaptersList?.isNotEmpty() == true) {

@@ -62,6 +62,7 @@
     <string name="badges_state_error">更改徽章狀態失敗</string>
 
     <string name="balance_too_low">餘額過低</string>
+    <string name="skipping_ad_three_sec">Skipping ads in 3 seconds</string>
     <string name="boost_amount_too_low">加速金額必須大於0</string>
     <string name="invalid_invoice">Invalid invoice</string>
     <string name="router_url_not_found">Router URL not found</string>

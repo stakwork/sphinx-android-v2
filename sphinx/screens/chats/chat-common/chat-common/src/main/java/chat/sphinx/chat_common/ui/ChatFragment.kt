@@ -88,6 +88,7 @@ import chat.sphinx.wrapper_common.lightning.toSat
 import chat.sphinx.wrapper_common.message.MessageId
 import chat.sphinx.wrapper_common.util.getHHMMSSString
 import chat.sphinx.wrapper_common.util.getHHMMString
+import chat.sphinx.wrapper_common.util.getInitials
 import chat.sphinx.wrapper_meme_server.headerKey
 import chat.sphinx.wrapper_meme_server.headerValue
 import chat.sphinx.wrapper_message.*
@@ -137,6 +138,7 @@ abstract class ChatFragment<
     protected abstract val threadOriginalMessageBinding: LayoutThreadOriginalMessageBinding?
     protected abstract val scrollDownButtonBinding: LayoutScrollDownButtonBinding
     protected abstract val shimmerBinding: LayoutShimmerContainerBinding
+    protected abstract val inactiveContactPlaceHolder: LayoutChatInactiveContactPlaceholderBinding
 
     protected abstract val menuEnablePayments: Boolean
 
@@ -1207,6 +1209,32 @@ abstract class ChatFragment<
                                     } else {
                                         setTextColorExt(R_common.color.sphinxOrange)
                                         textViewChatHeaderLock.text = getString(R_common.string.material_icon_name_lock_open)
+
+                                        // Place Holder
+                                        recyclerView.gone
+
+                                        inactiveContactPlaceHolder.apply {
+                                            root.visible
+                                            initialsHolderPlaceholder.textViewInitials.apply {
+                                                visible
+                                                text = viewState.chatHeaderName.getInitials()
+                                                setBackgroundRandomColor(
+                                                    R_common.drawable.chat_initials_circle,
+                                                    Color.parseColor(
+                                                        userColorsHelper.getHexCodeForKey(
+                                                            viewState.colorKey,
+                                                            root.context.getRandomHexCode(),
+                                                        )
+                                                    ),
+                                                )
+                                            }
+                                            textViewPlaceholderName.text = viewState.chatHeaderName
+                                            textViewPlaceholderInvited.text = root.context.getString(
+                                                R.string.chat_placeholder_invited,
+                                                viewState.createdAt ?: "-"
+                                            )
+                                        }
+
                                     }
                                 }
                             }

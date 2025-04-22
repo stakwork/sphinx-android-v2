@@ -183,6 +183,7 @@
     <string name="message_pinned">メッセージをピン留めしました</string>
     <string name="message_unpinned">メッセージのピン留めを外しました</string>
     <string name="pin_message_error">エラーが発生しました。後でもう一度お試しください</string>
+    <string name="chat_placeholder_invited">Invited on %s</string>
 
     <string name="cancel_search">キャンセル</string>
 </resources>

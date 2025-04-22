@@ -80,6 +80,10 @@ internal class ChatGroupFragment: ChatFragment<
         LayoutShimmerContainerBinding::bind, R.id.include_chat_group_shimmer_container
     )
 
+    override val inactiveContactPlaceHolder: LayoutChatInactiveContactPlaceholderBinding by viewBinding(
+        LayoutChatInactiveContactPlaceholderBinding::bind, R.id.include_chat_inactive_contact_placeholder
+    )
+
     override val pinHeaderBinding: LayoutChatPinedMessageHeaderBinding?
         get() = null
 

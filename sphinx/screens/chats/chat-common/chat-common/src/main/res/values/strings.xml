@@ -211,5 +211,6 @@
     <string name="url" translatable="false">URL</string>
     <string name="save_values" translatable="false">Save Values</string>
     <string name="reset_values" translatable="false">Reset Values</string>
+    <string name="chat_placeholder_invited">Invited on %s</string>
 
 </resources>

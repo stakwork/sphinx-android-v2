@@ -34,6 +34,19 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 
+            <include
+                android:id="@+id/initials_dashboard_pending_chat_holder"
+                layout="@layout/layout_chat_dotted_circle_image_initial_holder"
+                android:layout_width="@dimen/default_header_navigation_xy"
+                android:layout_height="@dimen/default_header_navigation_xy"
+                app:layout_constraintDimensionRatio="1:1"
+                android:visibility="gone"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+
         </androidx.constraintlayout.widget.ConstraintLayout>
 
         <androidx.constraintlayout.widget.ConstraintLayout
@@ -129,6 +142,20 @@
                 app:layout_constraintStart_toStartOf="parent"
                 tools:text="done"
                 tools:visibility="visible"/>
+
+            <!-- Clock Icon -->
+            <androidx.appcompat.widget.AppCompatImageView
+                android:id="@+id/start_icon_clock"
+                android:layout_width="20dp"
+                android:layout_height="0dp"
+                android:visibility="gone"
+                android:src="@drawable/ic_clock_black_24dp"
+                android:paddingEnd="3dp"
+                android:paddingBottom="12dp"
+                android:tint="@color/secondaryText"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/text_view_dashboard_chat_holder_name"
+                app:layout_constraintStart_toStartOf="parent" />
 
             <androidx.appcompat.widget.AppCompatTextView
                 android:id="@+id/text_view_chat_holder_message"

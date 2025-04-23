@@ -46,6 +46,7 @@ sealed class InitialHolderViewState {
     data class Initials(
         val initials: String,
         val colorKey: String,
+        val isPending: Boolean = false
     ): InitialHolderViewState() {
         override suspend fun setInitialHolder(
             textViewInitials: TextView,

@@ -10,6 +10,7 @@
     <string name="uploading">Nag-a-upload</string>
     <string name="unknown">Hindi makilala</string>
     <string name="decryption_error">ERROR SA DECRYPTION...</string>
+    <string name="waiting_for_approval">Waiting for approval</string>
     <string name="null_name_error">ERROR: WALANG PANGALAN</string>
     <string name="public_key">Pampublikong susi</string>
     <string name="confirm">Kumpirmahin</string>

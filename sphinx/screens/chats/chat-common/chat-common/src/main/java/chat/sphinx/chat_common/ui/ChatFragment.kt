@@ -97,6 +97,7 @@ import chat.sphinx.wrapper_view.Dp
 import io.matthewnelson.android_feature_screens.util.gone
 import io.matthewnelson.android_feature_screens.util.goneIfFalse
 import io.matthewnelson.android_feature_screens.util.goneIfTrue
+import io.matthewnelson.android_feature_screens.util.invisible
 import io.matthewnelson.android_feature_screens.util.visible
 import io.matthewnelson.android_feature_viewmodel.submitSideEffect
 import io.matthewnelson.android_feature_viewmodel.updateViewState
@@ -1206,11 +1207,13 @@ abstract class ChatFragment<
                                     if (available) {
                                         setTextColorExt(R_common.color.primaryGreen)
                                         textViewChatHeaderLock.text = getString(R_common.string.material_icon_name_lock)
+                                        recyclerView.visible
+                                        inactiveContactPlaceHolder.root.gone
                                     } else {
                                         setTextColorExt(R_common.color.sphinxOrange)
                                         textViewChatHeaderLock.text = getString(R_common.string.material_icon_name_lock_open)
 
-                                        // Place Holder
+                                        // Inactive conversation placeholder
                                         recyclerView.gone
 
                                         inactiveContactPlaceHolder.apply {
@@ -1293,19 +1296,42 @@ abstract class ChatFragment<
                     @Exhaustive
                     when (viewState) {
                         is InitialHolderViewState.Initials -> {
-                            imageViewChatPicture.gone
-                            textViewInitials.apply {
-                                visible
-                                text = viewState.initials
-                                setBackgroundRandomColor(
-                                    R_common.drawable.chat_initials_circle,
-                                    Color.parseColor(
-                                        userColorsHelper.getHexCodeForKey(
-                                            viewState.colorKey,
-                                            root.context.getRandomHexCode(),
+                            if (viewState.isPending) {
+                                root.invisible
+                                headerBinding.layoutPendingContactInitialHolder.apply {
+                                    root.visible
+                                    iconClock.gone
+                                    textViewInitials.apply {
+                                        visible
+                                        text = viewState.initials
+                                        setBackgroundRandomColor(
+                                            R_common.drawable.chat_initials_circle,
+                                            Color.parseColor(
+                                                userColorsHelper.getHexCodeForKey(
+                                                    viewState.colorKey,
+                                                    root.context.getRandomHexCode(),
+                                                )
+                                            ),
                                         )
-                                    ),
-                                )
+                                    }
+                                }
+                            } else {
+                                headerBinding.layoutPendingContactInitialHolder.root.gone
+                                root.visible
+                                imageViewChatPicture.gone
+                                textViewInitials.apply {
+                                    visible
+                                    text = viewState.initials
+                                    setBackgroundRandomColor(
+                                        R_common.drawable.chat_initials_circle,
+                                        Color.parseColor(
+                                            userColorsHelper.getHexCodeForKey(
+                                                viewState.colorKey,
+                                                root.context.getRandomHexCode(),
+                                            )
+                                        ),
+                                    )
+                                }
                             }
 
                         }

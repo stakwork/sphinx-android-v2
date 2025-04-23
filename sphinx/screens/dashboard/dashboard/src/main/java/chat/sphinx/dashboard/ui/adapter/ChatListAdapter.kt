@@ -4,6 +4,7 @@ import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.widget.ImageView
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.*
 import androidx.recyclerview.widget.DiffUtil
@@ -30,6 +31,7 @@ import chat.sphinx.resources.R as R_common
 import io.matthewnelson.android_feature_screens.util.gone
 import io.matthewnelson.android_feature_screens.util.goneIfFalse
 import io.matthewnelson.android_feature_screens.util.goneIfTrue
+import io.matthewnelson.android_feature_screens.util.invisible
 import io.matthewnelson.android_feature_screens.util.invisibleIfFalse
 import io.matthewnelson.android_feature_screens.util.visible
 import io.matthewnelson.android_feature_viewmodel.util.OnStopSupervisor
@@ -271,6 +273,8 @@ internal class ChatListAdapter(
                 badgeJob?.cancel()
                 mentionsJob?.cancel()
 
+                val isPending = dashboardChat is DashboardChat.Inactive.Conversation
+
                 // Set Defaults
                 layoutConstraintChatHolderBorder.goneIfFalse(position != dashboardChats.lastIndex)
                 textViewDashboardChatHolderName.setTextColorExt(android.R.color.white)
@@ -280,40 +284,64 @@ internal class ChatListAdapter(
 
                 // Image
                 dashboardChat.photoUrl.let { url ->
-
-                    includeDashboardChatHolderInitial.apply {
-                        imageViewChatPicture.goneIfFalse(url != null)
-                        textViewInitials.goneIfFalse(url == null)
-                    }
-
-                    if (url != null) {
-                        onStopSupervisor.scope.launch(viewModel.dispatchers.mainImmediate) {
-                            imageLoader.load(
-                                includeDashboardChatHolderInitial.imageViewChatPicture,
-                                url.value,
-                                imageLoaderOptions
-                            )
-                        }
-                    } else {
-                        includeDashboardChatHolderInitial.textViewInitials.text =
-                            dashboardChat.chatName?.getInitials() ?: ""
+                    if (isPending) {
+                        includeDashboardChatHolderInitial.root.invisible
 
                         onStopSupervisor.scope.launch(viewModel.mainImmediate) {
-                            includeDashboardChatHolderInitial.textViewInitials
-                                .setInitialsColor(
-                                    dashboardChat.getColorKey()?.let { colorKey ->
+                            initialsDashboardPendingChatHolder.apply {
+                                root.visible
+                                iconClock.gone
+                                textViewInitials.apply {
+                                    visible
+                                    text = dashboardChat.chatName?.getInitials() ?: ""
+                                    setBackgroundRandomColor(
+                                        R_common.drawable.chat_initials_circle,
                                         Color.parseColor(
-                                            userColorsHelper.getHexCodeForKey(
-                                                colorKey,
-                                                root.context.getRandomHexCode()
-                                            )
-                                        )
-                                    },
-                                    R_common.drawable.chat_initials_circle
+                                            dashboardChat.getColorKey()?.let { colorKey ->
+                                                userColorsHelper.getHexCodeForKey(
+                                                    colorKey,
+                                                    root.context.getRandomHexCode(),
+                                                )
+                                            }
+                                        ),
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        includeDashboardChatHolderInitial.apply {
+                            imageViewChatPicture.goneIfFalse(url != null)
+                            textViewInitials.goneIfFalse(url == null)
+                        }
+
+                        if (url != null) {
+                            onStopSupervisor.scope.launch(viewModel.dispatchers.mainImmediate) {
+                                imageLoader.load(
+                                    includeDashboardChatHolderInitial.imageViewChatPicture,
+                                    url.value,
+                                    imageLoaderOptions
                                 )
+                            }
+                        } else {
+                            includeDashboardChatHolderInitial.textViewInitials.text =
+                                dashboardChat.chatName?.getInitials() ?: ""
+
+                            onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+                                includeDashboardChatHolderInitial.textViewInitials
+                                    .setInitialsColor(
+                                        dashboardChat.getColorKey()?.let { colorKey ->
+                                            Color.parseColor(
+                                                userColorsHelper.getHexCodeForKey(
+                                                    colorKey,
+                                                    root.context.getRandomHexCode()
+                                                )
+                                            )
+                                        },
+                                        R_common.drawable.chat_initials_circle
+                                    )
+                            }
                         }
                     }
-
                 }
 
                 // Name
@@ -332,7 +360,9 @@ internal class ChatListAdapter(
                 textViewChatHolderCenteredName.text = chatName
 
                 val chatHasMessages = (dashboardChat as? DashboardChat.Active)?.message != null
-                val activeChatOrInvite = ((dashboardChat is DashboardChat.Active && chatHasMessages) || dashboardChat is DashboardChat.Inactive.Invite)
+                val activeChatOrInvite = ((dashboardChat is DashboardChat.Active && chatHasMessages)
+                        || dashboardChat is DashboardChat.Inactive.Invite
+                        || isPending)
                 layoutConstraintDashboardChatHolderMessage.invisibleIfFalse(activeChatOrInvite)
                 layoutConstraintDashboardChatNoMessageHolder.invisibleIfFalse(!activeChatOrInvite)
 
@@ -365,7 +395,8 @@ internal class ChatListAdapter(
                 textViewChatHolderTime.text = dashboardChat.getDisplayTime(today00)
 
                 // Message
-                val messageText = dashboardChat.getMessageText(root.context)
+
+                val messageText = if (isPending) getString(R_common.string.waiting_for_approval) else dashboardChat.getMessageText(root.context)
                 val hasUnseenMessages = dashboardChat.hasUnseenMessages()
 
                 if (messageText == root.context.getString(R_common.string.decryption_error)) {
@@ -378,6 +409,21 @@ internal class ChatListAdapter(
 
                 textViewChatHolderMessage.text = messageText
                 textViewChatHolderMessage.goneIfTrue(messageText.isEmpty())
+
+                if (isPending) {
+                    startIconClock.visible
+                    val layoutParams = textViewChatHolderMessage.layoutParams as ConstraintLayout.LayoutParams
+                    layoutParams.startToEnd = R.id.start_icon_clock
+                    layoutParams.startToStart = ConstraintLayout.LayoutParams.UNSET
+                    layoutParams.startToStart = ConstraintLayout.LayoutParams.UNSET
+                    textViewChatHolderMessage.layoutParams = layoutParams
+                } else {
+                    val layoutParams = textViewChatHolderMessage.layoutParams as ConstraintLayout.LayoutParams
+                    layoutParams.startToEnd = R.id.text_view_chat_holder_message_icon
+                    layoutParams.startToStart = ConstraintLayout.LayoutParams.UNSET
+                    layoutParams.startToStart = ConstraintLayout.LayoutParams.UNSET
+                    textViewChatHolderMessage.layoutParams = layoutParams
+                }
 
                 handleInviteLayouts()
 

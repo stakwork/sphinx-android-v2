@@ -82,6 +82,7 @@ import chat.sphinx.menu_bottom.ui.MenuBottomViewState
 import chat.sphinx.resources.*
 import chat.sphinx.wrapper_chat.getColorKey
 import chat.sphinx.wrapper_chat.isConversation
+import chat.sphinx.wrapper_chat.isPending
 import chat.sphinx.wrapper_common.FileSize
 import chat.sphinx.wrapper_common.asFormattedString
 import chat.sphinx.wrapper_common.chat.PushNotificationLink
@@ -1381,7 +1382,7 @@ abstract class ChatFragment<
             viewModel.messageHolderViewStateFlow.collect { messages ->
                 val chat = viewModel.getChat()
 
-                if (messages.isEmpty() && chat.type.isConversation()) {
+                if (messages.isEmpty() && chat.type.isConversation() && !chat.status.isPending()) {
                     val url = chat.photoUrl
 
                     recyclerView.gone
@@ -1394,6 +1395,7 @@ abstract class ChatFragment<
                         textViewPlaceholderHint.text = getString(R.string.chat_placeholder_secure)
 
                         includeEmptyChatHolderInitial.apply {
+                            root.visible
                             imageViewChatPicture.goneIfFalse(url != null)
                             textViewInitials.goneIfFalse(url == null)
                         }
@@ -1428,7 +1430,11 @@ abstract class ChatFragment<
                     }
                 } else {
                     recyclerView.visible
-                    inactiveContactPlaceHolder.root.gone
+                    if (chat.type.isConversation() && chat.status.isPending()) {
+                       inactiveContactPlaceHolder.root.visible
+                    } else {
+                        inactiveContactPlaceHolder.root.gone
+                    }
                 }
             }
         }

@@ -183,6 +183,7 @@
     <string name="pin_message_error">出錯，請稍後再試</string>
 
     <string name="chat_placeholder_invited">Invited on %s</string>
+    <string name="chat_placeholder_secure">Messages and calls are secured\nwith end to end encryption</string>
 
     <string name="cancel_search">取消</string>
 

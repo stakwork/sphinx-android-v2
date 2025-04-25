@@ -147,6 +147,7 @@
     <string name="message_unpinned">Hindi Naka-pin ang Mensahe</string>
     <string name="pin_message_error">May nangyaring mali. Pakisubukang muli mamaya</string>
     <string name="chat_placeholder_invited">Invited on %s</string>
+    <string name="chat_placeholder_secure">Messages and calls are secured\nwith end to end encryption</string>
 
     <string name="cancel_search">CANCEL</string>
 </resources>

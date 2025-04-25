@@ -80,6 +80,8 @@ import chat.sphinx.menu_bottom.model.MenuBottomOption
 import chat.sphinx.menu_bottom.ui.BottomMenu
 import chat.sphinx.menu_bottom.ui.MenuBottomViewState
 import chat.sphinx.resources.*
+import chat.sphinx.wrapper_chat.getColorKey
+import chat.sphinx.wrapper_chat.isConversation
 import chat.sphinx.wrapper_common.FileSize
 import chat.sphinx.wrapper_common.asFormattedString
 import chat.sphinx.wrapper_common.chat.PushNotificationLink
@@ -105,6 +107,8 @@ import io.matthewnelson.concept_views.viewstate.collect
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 
 abstract class ChatFragment<
@@ -1004,6 +1008,12 @@ abstract class ChatFragment<
     private val fullScreenViewStateJobs: MutableList<Job> = ArrayList(1)
     private val fullScreenViewStateDisposables: MutableList<Disposable> = ArrayList(1)
 
+    private val imageLoaderOptions: ImageLoaderOptions by lazy {
+        ImageLoaderOptions.Builder()
+            .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
+            .build()
+    }
+
     override fun subscribeToViewStateFlow() {
         super.subscribeToViewStateFlow()
 
@@ -1363,6 +1373,62 @@ abstract class ChatFragment<
                             }
                         }
                     }
+                }
+            }
+        }
+
+        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+            viewModel.messageHolderViewStateFlow.collect { messages ->
+                val chat = viewModel.getChat()
+
+                if (messages.isEmpty() && chat.type.isConversation()) {
+                    val url = chat.photoUrl
+
+                    recyclerView.gone
+                    inactiveContactPlaceHolder.apply {
+                        root.visible
+                        initialsHolderPlaceholder.root.invisible
+
+                        textViewPlaceholderName.text = chat.name?.value
+                        textViewPlaceholderInvited.invisible
+                        textViewPlaceholderHint.text = getString(R.string.chat_placeholder_secure)
+
+                        includeEmptyChatHolderInitial.apply {
+                            imageViewChatPicture.goneIfFalse(url != null)
+                            textViewInitials.goneIfFalse(url == null)
+                        }
+
+                        if (url != null) {
+                            onStopSupervisor.scope.launch(viewModel.dispatchers.mainImmediate) {
+                                imageLoader.load(
+                                    includeEmptyChatHolderInitial.imageViewChatPicture,
+                                    url.value,
+                                    imageLoaderOptions
+                                )
+                            }
+                        } else {
+                            includeEmptyChatHolderInitial.textViewInitials.text =
+                                chat.name?.value?.getInitials() ?: ""
+
+                            onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+                                includeEmptyChatHolderInitial.textViewInitials
+                                    .setInitialsColor(
+                                        chat.getColorKey()?.let { colorKey ->
+                                            Color.parseColor(
+                                                userColorsHelper.getHexCodeForKey(
+                                                    colorKey,
+                                                    root.context.getRandomHexCode()
+                                                )
+                                            )
+                                        },
+                                        R_common.drawable.chat_initials_circle
+                                    )
+                            }
+                        }
+                    }
+                } else {
+                    recyclerView.visible
+                    inactiveContactPlaceHolder.root.gone
                 }
             }
         }

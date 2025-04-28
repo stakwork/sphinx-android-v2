@@ -121,7 +121,6 @@ internal class PodcastPlayerViewModel @Inject constructor(
             feedRepository.getPodcastById(args.feedId)
         }
 
-
     private suspend fun getOwner(): Contact {
         return contactRepository.accountOwner.value.let { contact ->
             if (contact != null) {

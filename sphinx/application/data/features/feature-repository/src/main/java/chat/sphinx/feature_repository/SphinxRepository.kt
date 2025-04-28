@@ -271,6 +271,10 @@ abstract class SphinxRepository(
         MutableStateFlow(null)
     }
 
+    override val createProjectTimestamps: MutableStateFlow<MutableMap<String, Long>> by lazy {
+        MutableStateFlow(mutableMapOf())
+    }
+
     init {
         connectManager.addListener(this)
         memeServerTokenHandler.addListener(this)
@@ -6114,6 +6118,9 @@ abstract class SphinxRepository(
                     } else if (response.value.success == true) {
 
                         if (workflowId != null && token != null && referenceId != null) {
+
+                            createProjectTimestamps.value[podcastEpisode.id.value] = System.currentTimeMillis()
+
                             networkQueryFeedSearch.createStakworkProject(
                                 podcastEpisode,
                                 podcastTitle,
@@ -6149,6 +6156,9 @@ abstract class SphinxRepository(
                     val hasProjectId =  episodeResponse.value.properties?.project_id?.isNotEmpty() == true
                     if (!hasProjectId) {
                         if (workflowId != null && token != null) {
+
+                            createProjectTimestamps.value[podcastEpisode.id.value] = System.currentTimeMillis()
+
                             networkQueryFeedSearch.createStakworkProject(
                                 podcastEpisode,
                                 podcastTitle,
@@ -6168,7 +6178,6 @@ abstract class SphinxRepository(
             }
         }
     }
-
     override suspend fun getChaptersData(
         podcastEpisode: PodcastEpisode,
         podcastTitle: FeedTitle,
@@ -6177,6 +6186,14 @@ abstract class SphinxRepository(
         workflowId: Int?,
         token: String?
     ) {
+
+        val lastProjectTimestamp = createProjectTimestamps.value[podcastEpisode.id.value]
+        val currentTime = System.currentTimeMillis()
+
+        if (lastProjectTimestamp != null && currentTime - lastProjectTimestamp < 60 * 60 * 1000) {
+            return
+        }
+
         networkQueryFeedSearch.getChaptersData(referenceId).collect { response ->
             @Exhaustive
             when (response) {

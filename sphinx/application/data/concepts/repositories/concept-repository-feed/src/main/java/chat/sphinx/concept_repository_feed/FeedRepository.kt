@@ -17,6 +17,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 
 interface FeedRepository {
+
+    val createProjectTimestamps: MutableStateFlow<MutableMap<String, Long>> // Key: episodeId, Value: timestampMillis
+
     fun getPodcastByChatId(chatId: ChatId): Flow<Podcast?>
     fun getPodcastById(feedId: FeedId): Flow<Podcast?>
     suspend fun checkIfEpisodeNodeExists(

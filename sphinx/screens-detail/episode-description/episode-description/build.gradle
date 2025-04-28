@@ -4,6 +4,7 @@ plugins {
     id 'androidx.navigation.safeargs'
     id 'kotlin-android'
     id 'kotlin-kapt'
+    id 'com.google.android.libraries.mapsplatform.secrets-gradle-plugin'
 }
 
 android {
@@ -11,6 +12,7 @@ android {
     buildToolsVersion versions.buildTools
 
     buildFeatures.viewBinding = true
+    buildFeatures.buildConfig = true
     defaultConfig {
         minSdkVersion versions.minSdk
         targetSdkVersion versions.targetSdk
@@ -53,4 +55,11 @@ dependencies {
 
     implementation deps.google.hilt
     kapt kaptDeps.google.hilt
+}
+
+
+secrets {
+    // A properties file containing default secret values. This file can be checked in version
+    // control.
+    defaultPropertiesFileName = 'local.defaults.properties'
 }

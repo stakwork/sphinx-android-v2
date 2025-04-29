@@ -30,7 +30,6 @@ import chat.sphinx.concept_service_media.UserAction
 import chat.sphinx.concept_view_model_coordinator.ResponseHolder
 import chat.sphinx.feature_view_model_coordinator.RequestCatcher
 import chat.sphinx.kotlin_response.Response
-import chat.sphinx.podcast_player.R
 import chat.sphinx.resources.R as R_common
 import chat.sphinx.podcast_player.coordinator.PodcastPlayerViewModelCoordinator
 import chat.sphinx.podcast_player.navigation.BackType
@@ -121,7 +120,6 @@ internal class PodcastPlayerViewModel @Inject constructor(
         } else {
             feedRepository.getPodcastById(args.feedId)
         }
-
 
     private suspend fun getOwner(): Contact {
         return contactRepository.accountOwner.value.let { contact ->
@@ -452,7 +450,30 @@ internal class PodcastPlayerViewModel @Inject constructor(
                     episode,
                     episode.currentTimeMilliseconds ?: 0,
                     ::retrieveEpisodeDuration
-                )
+                ) { referenceIdExist ->
+                    viewModelScope.launch(mainImmediate) {
+                        val workflowId = chat.sphinx.podcast_player.BuildConfig.GRAPH_MINDSET_WORKFLOW_ID.toInt()
+                        val token = chat.sphinx.podcast_player.BuildConfig.GRAPH_MINDSET_TOKEN
+
+                        if (referenceIdExist) {
+                            feedRepository.getChaptersData(
+                                episode,
+                                podcast.title,
+                                episode.referenceId!!,
+                                episode.id,
+                                workflowId,
+                                token
+                            )
+                        } else {
+                            feedRepository.checkIfEpisodeNodeExists(
+                                episode,
+                                podcast.title,
+                                workflowId,
+                                token
+                            )
+                        }
+                    }
+                }
 
                 viewStateContainer.updateViewState(
                     PodcastPlayerViewState.EpisodePlayed(
@@ -469,6 +490,16 @@ internal class PodcastPlayerViewModel @Inject constructor(
                         podcast.getUpdatedContentEpisodeStatus()
                     )
                 )
+
+
+                // Reload podcast to show chapters on UI
+
+                delay(2000L)
+
+                feedRepository.getPodcastById(podcast.id).firstOrNull()?.let { updatedPodcast ->
+                    setPodcastFeed(updatedPodcast)
+                    forceListReload()
+                }
             }
         }
     }
@@ -486,6 +517,16 @@ internal class PodcastPlayerViewModel @Inject constructor(
                 )
             }
         }
+    }
+
+    fun parseTimestampToMillis(timestamp: String?): Long {
+        if (timestamp.isNullOrBlank()) return 0L
+        val parts = timestamp.split(":")
+        if (parts.size != 3) return 0L
+        val hours = parts[0].toLongOrNull() ?: 0L
+        val minutes = parts[1].toLongOrNull() ?: 0L
+        val seconds = parts[2].toLongOrNull() ?: 0L
+        return (hours * 3600 + minutes * 60 + seconds) * 1000L
     }
 
     fun seekTo(timeMilliseconds: Long) {
@@ -856,6 +897,16 @@ internal class PodcastPlayerViewModel @Inject constructor(
                     if (podcast.subscribed.isTrue()) Subscribed.False else Subscribed.True,
                 )
             }
+        }
+    }
+
+    fun showSkipAdToast(){
+        viewModelScope.launch(mainImmediate) {
+            submitSideEffect(
+                PodcastPlayerSideEffect.Notify(
+                    app.getString(R_common.string.skipping_ad_three_sec)
+                )
+            )
         }
     }
 

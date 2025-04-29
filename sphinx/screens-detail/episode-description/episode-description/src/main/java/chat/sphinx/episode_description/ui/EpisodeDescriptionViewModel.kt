@@ -17,6 +17,7 @@ import chat.sphinx.concept_repository_media.RepositoryMedia
 import chat.sphinx.concept_service_media.MediaPlayerServiceController
 import chat.sphinx.concept_service_media.MediaPlayerServiceState
 import chat.sphinx.concept_service_media.UserAction
+import chat.sphinx.create_description.BuildConfig
 import chat.sphinx.create_description.R
 import chat.sphinx.episode_description.model.FeedItemDescription
 import chat.sphinx.episode_description.navigation.EpisodeDescriptionNavigator
@@ -258,7 +259,30 @@ internal class EpisodeDescriptionViewModel @Inject constructor(
                         episode,
                         episode.currentTimeMilliseconds ?: 0,
                         ::retrieveEpisodeDuration
-                    )
+                    ) { referenceIdExist ->
+                        viewModelScope.launch(mainImmediate) {
+                            val workflowId = BuildConfig.GRAPH_MINDSET_WORKFLOW_ID.toInt()
+                            val token = BuildConfig.GRAPH_MINDSET_TOKEN
+
+                            if (referenceIdExist) {
+                                feedRepository.getChaptersData(
+                                    episode,
+                                    podcast.title,
+                                    episode.referenceId!!,
+                                    episode.id,
+                                    workflowId,
+                                    token
+                                )
+                            } else {
+                                feedRepository.checkIfEpisodeNodeExists(
+                                    episode,
+                                    podcast.title,
+                                    workflowId,
+                                    token
+                                )
+                            }
+                        }
+                    }
 
                     mediaPlayerServiceController.submitAction(
                         UserAction.ServiceAction.Play(

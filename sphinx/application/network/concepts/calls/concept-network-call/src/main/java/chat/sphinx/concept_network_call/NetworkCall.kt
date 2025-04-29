@@ -117,6 +117,7 @@ abstract class NetworkCall {
         requestBody: RequestBody,
         mediaType: String? = "application/json",
         headers: Map<String, String>? = null,
+        accept400AsSuccess: Boolean = false
     ): Flow<LoadResponse<T, ResponseError>>
 
     abstract fun <T: Any, RequestBody: Any> postList(
@@ -151,7 +152,8 @@ abstract class NetworkCall {
     abstract suspend fun <T: Any> call(
         responseJsonClass: Class<T>,
         request: Request,
-        useExtendedNetworkCallClient: Boolean = false
+        useExtendedNetworkCallClient: Boolean = false,
+        accept400AsSuccess: Boolean = false
     ): T
 
     @Throws(NullPointerException::class, IOException::class)

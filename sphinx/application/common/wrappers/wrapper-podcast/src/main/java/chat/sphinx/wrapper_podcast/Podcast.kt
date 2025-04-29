@@ -194,6 +194,7 @@ data class Podcast(
             episodeCopy.playing = episode.playing
             episodeCopy.contentEpisodeStatus = episode.contentEpisodeStatus
             episodeCopy.played = episode.played
+            episodeCopy.chapters = episode.chapters
 
             episodesList.add(episodeCopy)
         }
@@ -209,6 +210,7 @@ data class Podcast(
                 episodeCopy.playing = episode.playing
                 episodeCopy.contentEpisodeStatus = episode.contentEpisodeStatus
                 episodeCopy.played = episode.played
+                episodeCopy.chapters = episode.chapters
 
                 episodesList.add(episodeCopy)
             }
@@ -348,7 +350,8 @@ data class Podcast(
     fun willStartPlayingEpisode(
         episode: PodcastEpisode,
         timeMilliseconds: Long,
-        durationRetrieverHandle: (episode: PodcastEpisode) -> Long
+        durationRetrieverHandle: (episode: PodcastEpisode) -> Long,
+        referenceIdExist: ((Boolean) -> Unit)? = null
     ) {
         val episodeId = episode.id.value
         val didChangeEpisode = this.episodeId != episodeId
@@ -364,6 +367,12 @@ data class Podcast(
         this.timeMilliSeconds = timeMilliseconds
 
         getCurrentEpisodeDuration(durationRetrieverHandle)
+
+        val hasChapters = episode.chapters?.nodes?.any{ it.node_type == "Chapter" } == true
+
+        if (!hasChapters) {
+            referenceIdExist?.invoke(episode.referenceId != null)
+        }
     }
 
     fun didSeekTo(timeMilliseconds: Long) {

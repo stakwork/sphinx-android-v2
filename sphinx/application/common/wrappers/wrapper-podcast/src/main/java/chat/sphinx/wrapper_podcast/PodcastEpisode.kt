@@ -2,7 +2,6 @@ package chat.sphinx.wrapper_podcast
 
 import chat.sphinx.wrapper_common.DateTime
 import chat.sphinx.wrapper_common.PhotoUrl
-import chat.sphinx.wrapper_common.chatTimeFormat
 import chat.sphinx.wrapper_common.feed.FeedId
 import chat.sphinx.wrapper_common.feed.FeedType
 import chat.sphinx.wrapper_common.feed.FeedUrl
@@ -32,7 +31,9 @@ data class PodcastEpisode(
     val clipEndTime: Int? = null,
     val topics: List<String> = listOf(),
     val people: List<String> = listOf(),
-    val recommendationPubKey: String? = null
+    val recommendationPubKey: String? = null,
+    val referenceId: FeedReferenceId?,
+    val chaptersData: FeedChaptersData?
 ): DownloadableFeedItem {
 
     companion object {
@@ -181,6 +182,9 @@ data class PodcastEpisode(
         get() {
             return recommendationPubKey?.toFeedDestinationAddress() != null
         }
+
+    var chapters: ChapterResponseDto? = null
+
 }
 
 @Suppress("NOTHING_TO_INLINE")

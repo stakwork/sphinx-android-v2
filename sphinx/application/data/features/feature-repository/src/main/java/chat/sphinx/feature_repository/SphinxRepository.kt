@@ -137,12 +137,15 @@ import chat.sphinx.wrapper_message.MsgSender.Companion.toMsgSender
 import chat.sphinx.wrapper_message.MsgSender.Companion.toMsgSenderNull
 import chat.sphinx.wrapper_message_media.*
 import chat.sphinx.wrapper_message_media.token.MediaHost
+import chat.sphinx.wrapper_podcast.ChapterResponseDto
 import chat.sphinx.wrapper_podcast.FeedRecommendation
 import chat.sphinx.wrapper_podcast.FeedSearchResultRow
 import chat.sphinx.wrapper_podcast.Podcast
+import chat.sphinx.wrapper_podcast.PodcastEpisode
 import chat.sphinx.wrapper_rsa.RsaPrivateKey
 import chat.sphinx.wrapper_rsa.RsaPublicKey
 import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.squareup.sqldelight.runtime.coroutines.asFlow
 import com.squareup.sqldelight.runtime.coroutines.mapToList
 import com.squareup.sqldelight.runtime.coroutines.mapToOneOrNull
@@ -266,6 +269,10 @@ abstract class SphinxRepository(
 
     override val restoreMinIndex: MutableStateFlow<Long?> by lazy {
         MutableStateFlow(null)
+    }
+
+    override val createProjectTimestamps: MutableStateFlow<MutableMap<String, Long>> by lazy {
+        MutableStateFlow(mutableMapOf())
     }
 
     init {
@@ -5617,6 +5624,8 @@ abstract class SphinxRepository(
                 episode.link ?: FeedUrl(""),
                 FeedId(FeedRecommendation.RECOMMENDATION_PODCAST_ID),
                 FeedItemDuration(0),
+                null,
+                null,
                 null
             )
 
@@ -6085,6 +6094,146 @@ abstract class SphinxRepository(
             }
     }
 
+    override suspend fun checkIfEpisodeNodeExists(
+        podcastEpisode: PodcastEpisode,
+        podcastTitle: FeedTitle,
+        workflowId: Int?,
+        token: String?
+    ) {
+        networkQueryFeedSearch.checkIfEpisodeNodeExists(podcastEpisode, podcastTitle).collect { response ->
+            @Exhaustive
+            when (response) {
+                is LoadResponse.Loading -> {}
+                is Response.Error -> {}
+                is Response.Success -> {
+                    val queries = coreDB.getSphinxDatabaseQueries()
+                    val referenceId = response.value.data?.ref_id?.toFeedReferenceId()
+
+                    queries.feedItemUpdateReferenceId(referenceId, podcastEpisode.id)
+
+                    if (response.value.errorCode?.contains("already exists") == true ||
+                        response.value.node_key != null
+                    ) {
+                        getChaptersData(podcastEpisode, podcastTitle, referenceId!!, podcastEpisode.id, workflowId, token)
+                    } else if (response.value.success == true) {
+
+                        if (workflowId != null && token != null && referenceId != null) {
+
+                            createProjectTimestamps.value[podcastEpisode.id.value] = System.currentTimeMillis()
+
+                            networkQueryFeedSearch.createStakworkProject(
+                                podcastEpisode,
+                                podcastTitle,
+                                workflowId,
+                                token,
+                                referenceId
+                            ).collect { projectResponse ->
+                                when (projectResponse) {
+                                    is LoadResponse.Loading -> {}
+                                    is Response.Error -> {}
+                                    is Response.Success -> {}
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    override suspend fun getEpisodeNodeDetails(
+        podcastEpisode: PodcastEpisode,
+        podcastTitle: FeedTitle,
+        referenceId: FeedReferenceId,
+        workflowId: Int?,
+        token: String?
+    ) {
+        networkQueryFeedSearch.getEpisodeNodeDetails(referenceId).collect { episodeResponse ->
+            when (episodeResponse) {
+                is LoadResponse.Loading -> {}
+                is Response.Error -> {}
+                is Response.Success -> {
+                    val hasProjectId =  episodeResponse.value.properties?.project_id?.isNotEmpty() == true
+                    if (!hasProjectId) {
+                        if (workflowId != null && token != null) {
+
+                            createProjectTimestamps.value[podcastEpisode.id.value] = System.currentTimeMillis()
+
+                            networkQueryFeedSearch.createStakworkProject(
+                                podcastEpisode,
+                                podcastTitle,
+                                workflowId,
+                                token,
+                                referenceId
+                            ).collect { projectResponse ->
+                                when (projectResponse) {
+                                    is LoadResponse.Loading -> {}
+                                    is Response.Error -> {}
+                                    is Response.Success -> {}
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    override suspend fun getChaptersData(
+        podcastEpisode: PodcastEpisode,
+        podcastTitle: FeedTitle,
+        referenceId: FeedReferenceId,
+        id: FeedId,
+        workflowId: Int?,
+        token: String?
+    ) {
+
+        val lastProjectTimestamp = createProjectTimestamps.value[podcastEpisode.id.value]
+        val currentTime = System.currentTimeMillis()
+
+        if (lastProjectTimestamp != null && currentTime - lastProjectTimestamp < 60 * 60 * 1000) {
+            return
+        }
+
+        networkQueryFeedSearch.getChaptersData(referenceId).collect { response ->
+            @Exhaustive
+            when (response) {
+                is LoadResponse.Loading -> {}
+                is Response.Error -> {}
+                is Response.Success -> {
+                    val queries = coreDB.getSphinxDatabaseQueries()
+
+                    try {
+                        val moshi = Moshi.Builder()
+                            .add(KotlinJsonAdapterFactory())
+                            .build()
+
+                        val adapter = moshi.adapter(ChapterResponseDto::class.java)
+                        val chapterResponseDto = response.value
+
+                        val hasChapters = chapterResponseDto.nodes.any { it.node_type == "Chapter" }
+
+                        if (hasChapters) {
+                            val feedChaptersData =
+                                adapter.toJson(chapterResponseDto).toFeedChapterData()
+                            queries.feedItemUpdateChaptersData(feedChaptersData, id)
+                        } else {
+                            getEpisodeNodeDetails(
+                                podcastEpisode,
+                                podcastTitle,
+                                referenceId,
+                                workflowId,
+                                token
+                            )
+                        }
+
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
+        }
+    }
+
 
     private suspend fun mapPodcast(
         podcast: Podcast,
@@ -6097,6 +6246,23 @@ abstract class SphinxRepository(
 
         val episodes = queries.feedItemsGetByFeedId(podcast.id).executeAsList().map {
             podcastEpisodeDboPresenterMapper.mapFrom(it, podcast)
+        }
+
+        val moshi = Moshi.Builder()
+            .add(KotlinJsonAdapterFactory())
+            .build()
+
+        val adapter = moshi.adapter(ChapterResponseDto::class.java).lenient()
+
+        episodes.forEach { episode ->
+            episode.chaptersData?.value?.let { chaptersJson ->
+                try {
+                    val parsedChapters: ChapterResponseDto? = adapter.fromJson(chaptersJson)
+                    episode.chapters = parsedChapters
+                } catch (e: Exception) {
+                    episode.chapters = null
+                }
+            }
         }
 
         val destinations = queries.feedDestinationsGetByFeedId(podcast.id).executeAsList().map {

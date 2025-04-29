@@ -34,7 +34,9 @@ import chat.sphinx.wrapper_common.message.MessageUUID
 import chat.sphinx.wrapper_common.util.getInitials
 import chat.sphinx.wrapper_contact.Contact
 import chat.sphinx.wrapper_contact.ContactAlias
+import chat.sphinx.wrapper_contact.ContactStatus
 import chat.sphinx.wrapper_contact.getColorKey
+import chat.sphinx.wrapper_contact.isPending
 import chat.sphinx.wrapper_message.Message
 import chat.sphinx.wrapper_message.PodcastClip
 import chat.sphinx.wrapper_message.ThreadUUID
@@ -147,11 +149,11 @@ internal class ChatContactViewModel @Inject constructor(
                         InitialHolderViewState.Url(photoUrl)
                     )
                 } ?: contact.alias?.let { alias ->
-
                     emit(
                         InitialHolderViewState.Initials(
                             alias.value.getInitials(),
-                            contact.getColorKey()
+                            contact.getColorKey(),
+                            contact.status.isPending()
                         )
                     )
                 } ?: emit(

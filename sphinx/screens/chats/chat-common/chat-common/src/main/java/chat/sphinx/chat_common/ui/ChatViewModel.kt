@@ -8,8 +8,6 @@ import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.pdf.PdfRenderer
-import android.icu.text.SimpleDateFormat
-import android.icu.util.TimeZone
 import android.net.Uri
 import android.os.Build
 import android.os.ParcelFileDescriptor
@@ -71,7 +69,6 @@ import chat.sphinx.concept_repository_message.MessageRepository
 import chat.sphinx.concept_repository_message.model.SendMessage
 import chat.sphinx.concept_view_model_coordinator.ViewModelCoordinator
 import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
-import chat.sphinx.example.wrapper_mqtt.MessageMetadata
 import chat.sphinx.highlighting_tool.boldTexts
 import chat.sphinx.highlighting_tool.markDownLinkTexts
 import chat.sphinx.highlighting_tool.replacingMarkdown
@@ -91,6 +88,7 @@ import chat.sphinx.wrapper_common.lightning.*
 import chat.sphinx.wrapper_common.message.*
 import chat.sphinx.wrapper_common.tribe.TribeJoinLink
 import chat.sphinx.wrapper_common.tribe.toTribeJoinLink
+import chat.sphinx.wrapper_common.util.toFormattedDate
 import chat.sphinx.wrapper_contact.*
 import chat.sphinx.wrapper_feed.Feed
 import chat.sphinx.wrapper_feed.isNewsletter
@@ -123,9 +121,6 @@ import org.jitsi.meet.sdk.JitsiMeetActivity
 import org.jitsi.meet.sdk.JitsiMeetConferenceOptions
 import org.jitsi.meet.sdk.JitsiMeetUserInfo
 import java.io.*
-import java.time.LocalDateTime
-import java.util.Date
-import java.util.Locale
 
 
 @JvmSynthetic
@@ -268,7 +263,9 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                                 chatHeaderName = contact.alias?.value ?: "",
                                 showLock = currentState.showLock || contact.isEncrypted(),
                                 isMuted = currentState.isMuted,
-                                isChatAvailable = getChat().status.isApproved()
+                                isChatAvailable = getChat().status.isApproved(),
+                                createdAt = contact.createdAt.time.toFormattedDate(),
+                                colorKey = contact.getColorKey()
                             )
                         }
                     }
@@ -288,7 +285,9 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                         chatHeaderName = chat?.name?.value ?: getChatInfo()?.first?.value ?: "",
                         showLock = chat != null,
                         isMuted = chat?.notify?.isMuteChat() == true,
-                        isChatAvailable = chat?.status?.isApproved() ?: false
+                        isChatAvailable = chat?.status?.isApproved() ?: false,
+                        createdAt = chat?.createdAt?.time?.toFormattedDate(),
+                        colorKey = chat?.getColorKey() ?: ""
                     )
 
                     chat?.let { nnChat ->

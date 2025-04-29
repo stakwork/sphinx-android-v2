@@ -10,6 +10,7 @@
     <string name="uploading">Nag-a-upload</string>
     <string name="unknown">Hindi makilala</string>
     <string name="decryption_error">ERROR SA DECRYPTION...</string>
+    <string name="waiting_for_approval">Waiting for approval</string>
     <string name="null_name_error">ERROR: WALANG PANGALAN</string>
     <string name="public_key">Pampublikong susi</string>
     <string name="confirm">Kumpirmahin</string>
@@ -275,5 +276,5 @@
     <string name="connect_manager_load_transactions_error">Error loading transactions</string>
     <string name="alert_confirm_delete_invite_title">Delete Invite</string>
     <string name="alert_confirm_delete_invite_message">Are you sure you want to delete this invite?</string>
-
+    <string name="chat_placeholder_hint">Your chat will be enabled as soon as your\ncontact goes online</string>
 </resources>

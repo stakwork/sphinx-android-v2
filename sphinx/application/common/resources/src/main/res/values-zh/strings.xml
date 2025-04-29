@@ -13,6 +13,7 @@
     <string name="uploading">上傳中</string>
     <string name="unknown">未知資料</string>
     <string name="decryption_error">解密失敗...</string>
+    <string name="waiting_for_approval">Waiting for approval</string>
     <string name="null_name_error">錯誤: 無填 姓名</string>
     <string name="public_key">節點住址</string>
     <string name="confirm">確認</string>
@@ -204,5 +205,6 @@
     <string name="connect_manager_load_transactions_error">Error loading transactions</string>
     <string name="alert_confirm_delete_invite_title">Delete Invite</string>
     <string name="alert_confirm_delete_invite_message">Are you sure you want to delete this invite?</string>
+    <string name="chat_placeholder_hint">Your chat will be enabled as soon as your\ncontact goes online</string>
 
 </resources>

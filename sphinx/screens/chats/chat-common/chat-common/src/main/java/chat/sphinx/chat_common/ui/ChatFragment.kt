@@ -80,6 +80,9 @@ import chat.sphinx.menu_bottom.model.MenuBottomOption
 import chat.sphinx.menu_bottom.ui.BottomMenu
 import chat.sphinx.menu_bottom.ui.MenuBottomViewState
 import chat.sphinx.resources.*
+import chat.sphinx.wrapper_chat.getColorKey
+import chat.sphinx.wrapper_chat.isConversation
+import chat.sphinx.wrapper_chat.isPending
 import chat.sphinx.wrapper_common.FileSize
 import chat.sphinx.wrapper_common.asFormattedString
 import chat.sphinx.wrapper_common.chat.PushNotificationLink
@@ -88,6 +91,7 @@ import chat.sphinx.wrapper_common.lightning.toSat
 import chat.sphinx.wrapper_common.message.MessageId
 import chat.sphinx.wrapper_common.util.getHHMMSSString
 import chat.sphinx.wrapper_common.util.getHHMMString
+import chat.sphinx.wrapper_common.util.getInitials
 import chat.sphinx.wrapper_meme_server.headerKey
 import chat.sphinx.wrapper_meme_server.headerValue
 import chat.sphinx.wrapper_message.*
@@ -96,6 +100,7 @@ import chat.sphinx.wrapper_view.Dp
 import io.matthewnelson.android_feature_screens.util.gone
 import io.matthewnelson.android_feature_screens.util.goneIfFalse
 import io.matthewnelson.android_feature_screens.util.goneIfTrue
+import io.matthewnelson.android_feature_screens.util.invisible
 import io.matthewnelson.android_feature_screens.util.visible
 import io.matthewnelson.android_feature_viewmodel.submitSideEffect
 import io.matthewnelson.android_feature_viewmodel.updateViewState
@@ -103,6 +108,8 @@ import io.matthewnelson.concept_views.viewstate.collect
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 
 abstract class ChatFragment<
@@ -137,6 +144,7 @@ abstract class ChatFragment<
     protected abstract val threadOriginalMessageBinding: LayoutThreadOriginalMessageBinding?
     protected abstract val scrollDownButtonBinding: LayoutScrollDownButtonBinding
     protected abstract val shimmerBinding: LayoutShimmerContainerBinding
+    protected abstract val inactiveContactPlaceHolder: LayoutChatInactiveContactPlaceholderBinding
 
     protected abstract val menuEnablePayments: Boolean
 
@@ -1001,6 +1009,12 @@ abstract class ChatFragment<
     private val fullScreenViewStateJobs: MutableList<Job> = ArrayList(1)
     private val fullScreenViewStateDisposables: MutableList<Disposable> = ArrayList(1)
 
+    private val imageLoaderOptions: ImageLoaderOptions by lazy {
+        ImageLoaderOptions.Builder()
+            .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
+            .build()
+    }
+
     override fun subscribeToViewStateFlow() {
         super.subscribeToViewStateFlow()
 
@@ -1204,9 +1218,37 @@ abstract class ChatFragment<
                                     if (available) {
                                         setTextColorExt(R_common.color.primaryGreen)
                                         textViewChatHeaderLock.text = getString(R_common.string.material_icon_name_lock)
+                                        recyclerView.visible
+                                        inactiveContactPlaceHolder.root.gone
                                     } else {
                                         setTextColorExt(R_common.color.sphinxOrange)
                                         textViewChatHeaderLock.text = getString(R_common.string.material_icon_name_lock_open)
+
+                                        // Inactive conversation placeholder
+                                        recyclerView.gone
+
+                                        inactiveContactPlaceHolder.apply {
+                                            root.visible
+                                            initialsHolderPlaceholder.textViewInitials.apply {
+                                                visible
+                                                text = viewState.chatHeaderName.getInitials()
+                                                setBackgroundRandomColor(
+                                                    R_common.drawable.chat_initials_circle,
+                                                    Color.parseColor(
+                                                        userColorsHelper.getHexCodeForKey(
+                                                            viewState.colorKey,
+                                                            root.context.getRandomHexCode(),
+                                                        )
+                                                    ),
+                                                )
+                                            }
+                                            textViewPlaceholderName.text = viewState.chatHeaderName
+                                            textViewPlaceholderInvited.text = root.context.getString(
+                                                R.string.chat_placeholder_invited,
+                                                viewState.createdAt ?: "-"
+                                            )
+                                        }
+
                                     }
                                 }
                             }
@@ -1265,19 +1307,42 @@ abstract class ChatFragment<
                     @Exhaustive
                     when (viewState) {
                         is InitialHolderViewState.Initials -> {
-                            imageViewChatPicture.gone
-                            textViewInitials.apply {
-                                visible
-                                text = viewState.initials
-                                setBackgroundRandomColor(
-                                    R_common.drawable.chat_initials_circle,
-                                    Color.parseColor(
-                                        userColorsHelper.getHexCodeForKey(
-                                            viewState.colorKey,
-                                            root.context.getRandomHexCode(),
+                            if (viewState.isPending) {
+                                root.invisible
+                                headerBinding.layoutPendingContactInitialHolder.apply {
+                                    root.visible
+                                    iconClock.gone
+                                    textViewInitials.apply {
+                                        visible
+                                        text = viewState.initials
+                                        setBackgroundRandomColor(
+                                            R_common.drawable.chat_initials_circle,
+                                            Color.parseColor(
+                                                userColorsHelper.getHexCodeForKey(
+                                                    viewState.colorKey,
+                                                    root.context.getRandomHexCode(),
+                                                )
+                                            ),
                                         )
-                                    ),
-                                )
+                                    }
+                                }
+                            } else {
+                                headerBinding.layoutPendingContactInitialHolder.root.gone
+                                root.visible
+                                imageViewChatPicture.gone
+                                textViewInitials.apply {
+                                    visible
+                                    text = viewState.initials
+                                    setBackgroundRandomColor(
+                                        R_common.drawable.chat_initials_circle,
+                                        Color.parseColor(
+                                            userColorsHelper.getHexCodeForKey(
+                                                viewState.colorKey,
+                                                root.context.getRandomHexCode(),
+                                            )
+                                        ),
+                                    )
+                                }
                             }
 
                         }
@@ -1308,6 +1373,67 @@ abstract class ChatFragment<
                                 headerInitialHolderViewStateJobs.add(job)
                             }
                         }
+                    }
+                }
+            }
+        }
+
+        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+            viewModel.messageHolderViewStateFlow.collect { messages ->
+                val chat = viewModel.getChat()
+
+                if (messages.isEmpty() && chat.type.isConversation() && !chat.status.isPending()) {
+                    val url = chat.photoUrl
+
+                    recyclerView.gone
+                    inactiveContactPlaceHolder.apply {
+                        root.visible
+                        initialsHolderPlaceholder.root.invisible
+
+                        textViewPlaceholderName.text = chat.name?.value
+                        textViewPlaceholderInvited.invisible
+                        textViewPlaceholderHint.text = getString(R.string.chat_placeholder_secure)
+
+                        includeEmptyChatHolderInitial.apply {
+                            root.visible
+                            imageViewChatPicture.goneIfFalse(url != null)
+                            textViewInitials.goneIfFalse(url == null)
+                        }
+
+                        if (url != null) {
+                            onStopSupervisor.scope.launch(viewModel.dispatchers.mainImmediate) {
+                                imageLoader.load(
+                                    includeEmptyChatHolderInitial.imageViewChatPicture,
+                                    url.value,
+                                    imageLoaderOptions
+                                )
+                            }
+                        } else {
+                            includeEmptyChatHolderInitial.textViewInitials.text =
+                                chat.name?.value?.getInitials() ?: ""
+
+                            onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+                                includeEmptyChatHolderInitial.textViewInitials
+                                    .setInitialsColor(
+                                        chat.getColorKey()?.let { colorKey ->
+                                            Color.parseColor(
+                                                userColorsHelper.getHexCodeForKey(
+                                                    colorKey,
+                                                    root.context.getRandomHexCode()
+                                                )
+                                            )
+                                        },
+                                        R_common.drawable.chat_initials_circle
+                                    )
+                            }
+                        }
+                    }
+                } else {
+                    recyclerView.visible
+                    if (chat.type.isConversation() && chat.status.isPending()) {
+                       inactiveContactPlaceHolder.root.visible
+                    } else {
+                        inactiveContactPlaceHolder.root.gone
                     }
                 }
             }

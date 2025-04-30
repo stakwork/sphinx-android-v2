@@ -1,5 +1,9 @@
 # ChangeLog
 
+## Version 1.0.0-alpha45 (2025-04-02)
+- Adds support for podcast episode chapters and ads
+  - Adds place holder view for pending contacts and empty chats
+
 ## Version 1.0.0-alpha44 (2025-04-02)
 - Upgrades LiveKit library
 

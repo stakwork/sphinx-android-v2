@@ -266,7 +266,7 @@ internal class TribeAppViewModel @Inject constructor(
                 identifier = lastLsat.id.value,
                 paths = lastLsat.paths?.value,
                 status = lastLsat.status.value.toString(),
-                success = true,
+                success = 1,
                 budget = null,
                 lsat = null
 
@@ -282,7 +282,7 @@ internal class TribeAppViewModel @Inject constructor(
                 identifier = null,
                 paths = null,
                 status = null,
-                success = false,
+                success = 0,
                 budget = null,
                 lsat = null
             ).toJson(moshi)
@@ -398,7 +398,7 @@ internal class TribeAppViewModel @Inject constructor(
                                                     preimage
                                                 ),
                                                 budget = budget,
-                                                success = true,
+                                                success = 1,
                                                 macaroon = null,
                                                 paymentRequest = null,
                                                 preimage = null,
@@ -467,7 +467,7 @@ internal class TribeAppViewModel @Inject constructor(
                                                                     preimage
                                                                 ),
                                                                 budget = budget,
-                                                                success = true,
+                                                                success = 1,
                                                                 macaroon = null,
                                                                 paymentRequest = null,
                                                                 preimage = null,
@@ -521,7 +521,7 @@ internal class TribeAppViewModel @Inject constructor(
                     application = webViewDto.application ?: "",
                     password = password ?: "",
                     lsat = retrieveLsatString(lsatOnDb.macaroon.value, lsatOnDb.preimage?.value),
-                    success = true,
+                    success = 1,
                     macaroon = null,
                     paymentRequest = null,
                     preimage = null,
@@ -547,7 +547,7 @@ internal class TribeAppViewModel @Inject constructor(
             identifier = null,
             paths = null,
             status = null,
-            success = false,
+            success = 0,
             budget = amount?.value,
             lsat = null
         ).toJson(moshi)

@@ -14,7 +14,7 @@ data class SendLsat(
     val identifier: String?,
     val paths: String?,
     val status: String?,
-    val success: Boolean,
+    val success: Int,
     val budget: Long?,
     val lsat: String?
 )

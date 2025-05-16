@@ -70,61 +70,6 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/text_view_dashboard_people_popup_name"/>
 
-        <androidx.appcompat.widget.AppCompatTextView
-            android:id="@+id/text_view_dashboard_people_popup_description"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:fontFamily="@font/roboto_regular"
-            android:gravity="center"
-            android:text="@string/dashboard_connect_description_missing"
-            android:textColor="@color/secondaryText"
-            android:textSize="@dimen/dashboard_connect_popup_description_text_size"
-            android:layout_marginTop="@dimen/default_layout_margin"
-            android:layout_marginHorizontal="@dimen/default_layout_margin"
-            android:maxLines="3"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/text_view_dashboard_people_popup_price_to_meet" />
-
-        <androidx.constraintlayout.widget.ConstraintLayout
-            android:id="@+id/layout_constraint_dashboard_people_popup_message_container"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginHorizontal="@dimen/default_layout_margin"
-            android:layout_marginVertical="@dimen/default_double_layout_margin"
-            app:layout_constraintTop_toBottomOf="@+id/text_view_dashboard_people_popup_description"
-            app:layout_constraintBottom_toTopOf="@+id/layout_constraint_button_connect">
-
-            <androidx.appcompat.widget.AppCompatEditText
-                android:id="@+id/edit_text_dashboard_people_popup_message"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textColor="@color/text"
-                android:fontFamily="@font/roboto_regular"
-                android:hint="@string/dashboard_connect_initial_message_hint"
-                android:textColorHint="@color/lightDivider"
-                app:backgroundTint="@android:color/transparent"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                android:gravity="center"
-                android:textSize="@dimen/dashboard_connect_popup_form_edit_view_text_size"
-                android:inputType="textVisiblePassword|textCapSentences|textMultiLine"
-                android:layout_marginLeft="@dimen/default_form_edit_text_left_margin"
-                android:layout_marginBottom="@dimen/default_small_layout_margin"
-                android:singleLine="false"
-                android:maxLines="3"/>
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="@color/lightDivider"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toEndOf="parent" />
-
-        </androidx.constraintlayout.widget.ConstraintLayout>
-
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/layout_constraint_button_connect"
             android:layout_width="match_parent"

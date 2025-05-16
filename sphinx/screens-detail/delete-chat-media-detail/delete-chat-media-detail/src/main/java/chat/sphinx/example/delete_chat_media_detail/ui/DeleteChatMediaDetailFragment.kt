@@ -30,6 +30,7 @@ import chat.sphinx.insetter_activity.addNavigationBarPadding
 import chat.sphinx.screen_detail_fragment.SideEffectDetailFragment
 import chat.sphinx.wrapper_common.calculateSize
 import chat.sphinx.wrapper_message_media.MediaType
+import chat.sphinx.resources.R as R_common
 import com.google.android.material.tabs.TabLayout
 import dagger.hilt.android.AndroidEntryPoint
 import io.matthewnelson.android_feature_screens.util.gone
@@ -123,7 +124,7 @@ internal class DeleteChatMediaDetailFragment: SideEffectDetailFragment<
 
     private fun setUpHeader() {
         binding.apply {
-            includeManageMediaElementHeader.textViewHeader.text = getString(R.string.chats)
+            includeManageMediaElementHeader.textViewHeader.text = getString(R_common.string.chats)
         }
     }
 
@@ -180,8 +181,8 @@ internal class DeleteChatMediaDetailFragment: SideEffectDetailFragment<
     private fun setUpTabs() {
 
         binding.apply {
-            tabLayoutDeleteTabs.addTab(tabLayoutDeleteTabs.newTab().setText(getString(R.string.delete_chat_media)))
-            tabLayoutDeleteTabs.addTab(tabLayoutDeleteTabs.newTab().setText(getString(R.string.delete_chat_files)))
+            tabLayoutDeleteTabs.addTab(tabLayoutDeleteTabs.newTab().setText(getString(R_common.string.delete_chat_media)))
+            tabLayoutDeleteTabs.addTab(tabLayoutDeleteTabs.newTab().setText(getString(R_common.string.delete_chat_files)))
 
             tabLayoutDeleteTabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
                 override fun onTabSelected(tab: TabLayout.Tab) {
@@ -222,7 +223,7 @@ internal class DeleteChatMediaDetailFragment: SideEffectDetailFragment<
                     textViewManageStorageElementNumber.text = viewState.totalSizeFiles
                 }
 
-                binding.includeDeleteNotification.textViewDeleteDescription.text = getString(R.string.manage_storage_delete_chats)
+                binding.includeDeleteNotification.textViewDeleteDescription.text = getString(R_common.string.manage_storage_delete_chats)
                 binding.includeManageMediaElementHeader.constraintLayoutDeleteElementContainerTrash.goneIfFalse(viewState.files.isNotEmpty())
                 binding.textViewFilesNoFound.goneIfFalse(viewState.files.isEmpty())
             }
@@ -256,7 +257,7 @@ internal class DeleteChatMediaDetailFragment: SideEffectDetailFragment<
                             constraintDeleteSuccessfullyContainer.visible
 
                             binding.includeDeleteNotification.textViewManageStorageAllTypeText.text =
-                                getString(R.string.manage_storage_deleted_all_files)
+                                getString(R_common.string.manage_storage_deleted_all_files)
                         }
                     }
                 }
@@ -267,7 +268,7 @@ internal class DeleteChatMediaDetailFragment: SideEffectDetailFragment<
             viewModel.itemsTotalSizeStateFlow.collect { deletedSize ->
                 binding.includeDeleteNotification.textViewManageStorageFreeSpaceText.text =
                     String.format(
-                        getString(R.string.manage_storage_deleted_free_space),
+                        getString(R_common.string.manage_storage_deleted_free_space),
                         deletedSize.calculateSize()
                     )
             }
@@ -299,7 +300,7 @@ internal class DeleteChatMediaDetailFragment: SideEffectDetailFragment<
                     when (viewState) {
                         is DeleteChatItemsNotificationViewState.Closed -> {}
                         is DeleteChatItemsNotificationViewState.Open -> {
-                            includeLayoutManageStorageDeleteDetails.textViewStorageDeleteHeader.text = getString(R.string.manage_storage_delete_selected_items)
+                            includeLayoutManageStorageDeleteDetails.textViewStorageDeleteHeader.text = getString(R_common.string.manage_storage_delete_selected_items)
                         }
                     }
                     root.setTransitionDuration(300)

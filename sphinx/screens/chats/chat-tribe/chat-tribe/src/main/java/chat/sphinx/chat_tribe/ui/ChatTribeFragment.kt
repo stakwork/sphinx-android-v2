@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.Log
 import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.InputMethodManager
@@ -34,6 +35,8 @@ import chat.sphinx.chat_common.ui.viewstate.messagereply.MessageReplyViewState
 import chat.sphinx.chat_common.ui.viewstate.thread.ThreadHeaderViewState
 import chat.sphinx.chat_common.util.VideoThumbnailUtil
 import chat.sphinx.chat_tribe.R
+import chat.sphinx.chat_common.R as R_chat_common
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.chat_tribe.adapters.BadgesItemAdapter
 import chat.sphinx.chat_tribe.adapters.MessageMentionsAdapter
 import chat.sphinx.chat_tribe.databinding.FragmentChatTribeBinding
@@ -49,6 +52,12 @@ import chat.sphinx.concept_image_loader.ImageLoader
 import chat.sphinx.concept_image_loader.ImageLoaderOptions
 import chat.sphinx.concept_image_loader.Transformation
 import chat.sphinx.concept_user_colors_helper.UserColorsHelper
+import chat.sphinx.highlighting_tool.SphinxHighlightingTool
+import chat.sphinx.highlighting_tool.SphinxUrlSpan
+import chat.sphinx.highlighting_tool.boldTexts
+import chat.sphinx.highlighting_tool.highlightedTexts
+import chat.sphinx.highlighting_tool.markDownLinkTexts
+import chat.sphinx.highlighting_tool.replacingMarkdown
 import chat.sphinx.insetter_activity.InsetterActivity
 import chat.sphinx.insetter_activity.addKeyboardPadding
 import chat.sphinx.insetter_activity.addNavigationBarPadding
@@ -66,7 +75,6 @@ import chat.sphinx.resources.setBackgroundRandomColor
 import chat.sphinx.wrapper_chat.protocolLessUrl
 import chat.sphinx.wrapper_common.lightning.asFormattedString
 import chat.sphinx.wrapper_common.util.getInitials
-import chat.sphinx.wrapper_view.Px
 import dagger.hilt.android.AndroidEntryPoint
 import io.matthewnelson.android_feature_screens.util.gone
 import io.matthewnelson.android_feature_screens.util.goneIfFalse
@@ -76,7 +84,6 @@ import io.matthewnelson.android_feature_viewmodel.submitSideEffect
 import io.matthewnelson.concept_views.viewstate.collect
 import io.matthewnelson.concept_views.viewstate.value
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -129,6 +136,8 @@ internal class ChatTribeFragment: ChatFragment<
         get() = binding.includeChatTribeScrollDown
     override val shimmerBinding: LayoutShimmerContainerBinding
         get() = binding.includeChatTribeShimmerContainer
+    override val inactiveContactPlaceHolder: LayoutChatInactiveContactPlaceholderBinding
+        get() = binding.includeChatInactiveContactPlaceholder
     override val attachmentFullscreenBinding: LayoutAttachmentFullscreenBinding
         get() = binding.includeChatTribeAttachmentFullscreen
     private val mentionMembersPopup: LayoutChatTribeMemberMentionPopupBinding
@@ -330,7 +339,13 @@ internal class ChatTribeFragment: ChatFragment<
             (requireActivity() as InsetterActivity).addNavigationBarPadding(layoutConstraintBudget)
 
             buttonAuthorize.setOnClickListener {
-                tribeAppViewModel.authorizeWebApp(editTextSatsAmount.text.toString())
+                val amount = editTextSatsAmount.text.toString()
+
+                if (amount.isEmpty()) {
+                    tribeAppViewModel.processAuthorize()
+                } else {
+                    tribeAppViewModel.processSetBudget(amount.toLong())
+                }
             }
             textViewDetailScreenClose.setOnClickListener {
                 tribeAppViewModel.hideAuthorizePopup()
@@ -353,7 +368,14 @@ internal class ChatTribeFragment: ChatFragment<
             }
         }
 
-        mentionMembersPopup.listviewMentionTribeMembers.adapter = MessageMentionsAdapter(binding.root.context, mutableListOf())
+        mentionMembersPopup.listviewMentionTribeMembers.adapter = MessageMentionsAdapter(
+            binding.root.context,
+            mutableListOf(),
+            onStopSupervisor,
+            viewModel,
+            imageLoader,
+            userColorsHelper
+        )
 
         tribeMemberProfileBinding.includeLayoutTribeMemberProfileDetails
             .includeLayoutTribeProfileInfoContainer.recyclerViewBadges
@@ -380,7 +402,7 @@ internal class ChatTribeFragment: ChatFragment<
                 imageView,
                 photoUrl,
                 ImageLoaderOptions.Builder()
-                    .placeholderResId(R.drawable.sphinx_icon)
+                    .placeholderResId(R_common.drawable.sphinx_icon)
                     .transformation(Transformation.CircleCrop)
                     .build()
             )
@@ -388,6 +410,9 @@ internal class ChatTribeFragment: ChatFragment<
     }
     private fun loadWebView(url: String) {
         webView.settings.javaScriptEnabled = true
+        webView.settings.domStorageEnabled = true
+        webView.settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+
         webView.addJavascriptInterface(tribeAppViewModel, "Android")
 
         webView.webViewClient = object : WebViewClient() {
@@ -397,15 +422,18 @@ internal class ChatTribeFragment: ChatFragment<
             ): Boolean {
                 val url = request?.url.toString()
                 view?.loadUrl(url)
-                return super.shouldOverrideUrlLoading(view, request)
+                Log.d("WebView", "shouldOverrideUrlLoading: $url")
+                return true // Changed to true to indicate WebView is handling the URL
             }
 
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                Log.d("WebView", "onPageStarted: $url")
                 super.onPageStarted(view, url, favicon)
             }
 
             override fun onPageFinished(view: WebView?, url: String?) {
                 tribeAppViewModel.didFinishLoadingWebView()
+                Log.d("WebView", "onPageFinished: $url")
                 super.onPageFinished(view, url)
             }
 
@@ -414,6 +442,7 @@ internal class ChatTribeFragment: ChatFragment<
                 request: WebResourceRequest,
                 error: WebResourceError
             ) {
+                Log.d("WebView", "onReceivedError: ${error.description}")
                 tribeAppViewModel.didFinishLoadingWebView()
                 super.onReceivedError(view, request, error)
             }
@@ -428,6 +457,15 @@ internal class ChatTribeFragment: ChatFragment<
                 }
             }
         }
+
+        // Additional error handling for JavaScript
+        webView.webChromeClient = object : WebChromeClient() {
+            override fun onConsoleMessage(consoleMessage: ConsoleMessage?): Boolean {
+                Log.d("WebView", "onConsoleMessage: ${consoleMessage?.message()}")
+                return super.onConsoleMessage(consoleMessage)
+            }
+        }
+
         webView.loadUrl(url)
     }
 
@@ -485,8 +523,8 @@ internal class ChatTribeFragment: ChatFragment<
 
         menuOptions.add(
             MenuBottomOption(
-                text = chat.sphinx.chat_common.R.string.bottom_menu_more_option_call,
-                textColor = chat.sphinx.chat_common.R.color.primaryBlueFontColor,
+                text = R_chat_common.string.bottom_menu_more_option_call,
+                textColor = R_common.color.primaryBlueFontColor,
                 onClick = {
                     viewModel.moreOptionsMenuHandler.updateViewState(
                         MenuBottomViewState.Closed
@@ -500,19 +538,19 @@ internal class ChatTribeFragment: ChatFragment<
 
         menuOptions.add(
             MenuBottomOption(
-                text = chat.sphinx.chat_common.R.string.bottom_menu_more_option_notification,
-                textColor = chat.sphinx.chat_common.R.color.primaryBlueFontColor,
+                text = R_chat_common.string.bottom_menu_more_option_notification,
+                textColor = R_common.color.primaryBlueFontColor,
                 onClick = {
                     viewModel.navigateToNotificationLevel()
                 }
             )
         )
 
-        if (viewModel.moreOptionsMenuStateFlow.value is MoreMenuOptionsViewState.OwnTribe) {
+        if (viewModel.moreOptionsMenuStateFlow.value is MoreMenuOptionsViewState.ShareTribeLinkAvailable) {
             menuOptions.add(
                 MenuBottomOption(
-                    text = chat.sphinx.chat_common.R.string.bottom_menu_more_option_share,
-                    textColor = chat.sphinx.chat_common.R.color.primaryBlueFontColor,
+                    text = R_chat_common.string.bottom_menu_more_option_share,
+                    textColor = R_common.color.primaryBlueFontColor,
                     onClick = {
                         viewModel.navigateToTribeShareScreen()
                     }
@@ -522,8 +560,8 @@ internal class ChatTribeFragment: ChatFragment<
 
         menuOptions.add(
             MenuBottomOption(
-                text = chat.sphinx.chat_common.R.string.bottom_menu_more_option_search,
-                textColor = chat.sphinx.chat_common.R.color.primaryBlueFontColor,
+                text = R_chat_common.string.bottom_menu_more_option_search,
+                textColor = R_common.color.primaryBlueFontColor,
                 onClick = {
                     lifecycleScope.launch(viewModel.mainImmediate) {
                         viewModel.searchMessages(null)
@@ -533,7 +571,7 @@ internal class ChatTribeFragment: ChatFragment<
         )
 
         bottomMenuMore.newBuilder(moreMenuBinding, viewLifecycleOwner)
-            .setHeaderText(chat.sphinx.chat_common.R.string.bottom_menu_more_header_text)
+            .setHeaderText(R_chat_common.string.bottom_menu_more_header_text)
             .setOptions(menuOptions)
             .build()
     }
@@ -561,7 +599,7 @@ internal class ChatTribeFragment: ChatFragment<
                                     imageViewProfilePicture,
                                     photoUrl.value,
                                     ImageLoaderOptions.Builder()
-                                        .placeholderResId(chat.sphinx.podcast_player.R.drawable.ic_profile_avatar_circle)
+                                        .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
                                         .transformation(Transformation.CircleCrop)
                                         .build()
                                 )
@@ -573,15 +611,15 @@ internal class ChatTribeFragment: ChatFragment<
                 }
             }
         }
-
-        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
-            tribeAppViewModel.budgetStateFlow.collect { sats ->
-                tribeAppBinding.includeLayoutTribeAppDetails.textViewRemainingBudget.text =
-                    String.format(getString(R.string.web_view_remaining_budget),
-                    sats.value.toString()
-                )
-            }
-        }
+        // Shows budget lable
+//        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+//            tribeAppViewModel.budgetStateFlow.collect { sats ->
+//                tribeAppBinding.includeLayoutTribeAppDetails.textViewRemainingBudget.text =
+//                    String.format(getString(R.string.web_view_remaining_budget),
+//                    sats.value.toString()
+//                )
+//            }
+//        }
 
         // TODO: Remove hackery (utilized now to update podcast object's sats per minute
         //  value if it's changed from tribe detail screen)
@@ -614,7 +652,7 @@ internal class ChatTribeFragment: ChatFragment<
                                     imageViewPodcastEpisode,
                                     imageUrl,
                                     ImageLoaderOptions.Builder()
-                                        .placeholderResId(chat.sphinx.podcast_player.R.drawable.ic_podcast_placeholder)
+                                        .placeholderResId(R_common.drawable.ic_podcast_placeholder)
                                         .build()
                                 )
                             }
@@ -691,7 +729,7 @@ internal class ChatTribeFragment: ChatFragment<
                         is PinedMessageDataViewState.Data -> {
                             binding.includeChatPinedMessageHeader.apply {
                                 root.goneIfFalse(true)
-                                textViewChatHeaderName.text = viewState.messageContent
+                                textViewChatHeaderName.text = viewState.messageContent.replacingMarkdown()
                             }
 
                             includeLayoutPinBottomTemplate.apply {
@@ -702,7 +740,7 @@ internal class ChatTribeFragment: ChatFragment<
                                         messageHolderPinImageInitialHolder.imageViewChatPicture,
                                         senderPhotoUrl.value,
                                         ImageLoaderOptions.Builder()
-                                            .placeholderResId(chat.sphinx.podcast_player.R.drawable.ic_profile_avatar_circle)
+                                            .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
                                             .transformation(Transformation.CircleCrop)
                                             .build()
                                     )
@@ -721,7 +759,17 @@ internal class ChatTribeFragment: ChatFragment<
                                 }
 
                                 includePinnedBottomMessageHolder.apply {
-                                    textViewPinnedBottomHeaderText.text = viewState.messageContent
+                                    textViewPinnedBottomHeaderText.text = viewState.messageContent.replacingMarkdown()
+
+                                    SphinxHighlightingTool.addMarkdowns(
+                                        textViewPinnedBottomHeaderText,
+                                        viewState.messageContent.highlightedTexts(),
+                                        viewState.messageContent.boldTexts(),
+                                        viewState.messageContent.markDownLinkTexts(),
+                                        null,
+                                        textViewPinnedBottomHeaderText.resources,
+                                        textViewPinnedBottomHeaderText.context
+                                    )
                                 }
                             }
                         }
@@ -773,7 +821,7 @@ internal class ChatTribeFragment: ChatFragment<
 
                                         senderInfo.third.let { colorKey ->
                                             setBackgroundRandomColor(
-                                                chat.sphinx.chat_common.R.drawable.chat_initials_circle,
+                                                R_common.drawable.chat_initials_circle,
                                                 Color.parseColor(
                                                     userColorsHelper.getHexCodeForKey(
                                                         colorKey,
@@ -791,7 +839,7 @@ internal class ChatTribeFragment: ChatFragment<
                                                 layoutContactInitialHolder.imageViewChatPicture,
                                                 photoUrl.value,
                                                 ImageLoaderOptions.Builder()
-                                                    .placeholderResId(chat.sphinx.podcast_player.R.drawable.ic_profile_avatar_circle)
+                                                    .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
                                                     .transformation(Transformation.CircleCrop)
                                                     .build()
                                             )
@@ -840,7 +888,7 @@ internal class ChatTribeFragment: ChatFragment<
                                 viewState.fileAttachment?.let { fileAttachment ->
                                     layoutConstraintMediaContainer.visible
                                     textViewAttachmentFileIcon.visible
-                                    textViewAttachmentFileIcon.text = getString(chat.sphinx.chat_common.R.string.material_icon_name_file_pdf)
+                                    textViewAttachmentFileIcon.text = getString(R_common.string.material_icon_name_file_pdf)
 
                                     (fileAttachment as? LayoutState.Bubble.ContainerSecond.FileAttachment.FileAvailable)?.let {
                                         threadOriginalMessageBinding?.textViewThreadMessageContent?.text = it.fileName?.value ?: "Unnamed File"
@@ -850,7 +898,7 @@ internal class ChatTribeFragment: ChatFragment<
                                 viewState.audioAttachment?.let { audioAttachment ->
                                     layoutConstraintMediaContainer.visible
                                     textViewAttachmentFileIcon.visible
-                                    textViewAttachmentFileIcon.text = getString(chat.sphinx.chat_common.R.string.material_icon_name_volume_up)
+                                    textViewAttachmentFileIcon.text = getString(R_common.string.material_icon_name_volume_up)
                                     threadOriginalMessageBinding?.textViewThreadMessageContent?.text = "Audio Clip"
                                 }
                             }
@@ -877,7 +925,7 @@ internal class ChatTribeFragment: ChatFragment<
                                 layoutBadgesArrowDownContainer.gone
                             }
 
-                            layoutConstraintTribeMemberContainer.layoutParams.height = resources.getDimensionPixelSize(R.dimen.tribe_member_collapsed_height)
+                            layoutConstraintTribeMemberContainer.layoutParams.height = resources.getDimensionPixelSize(R_common.dimen.tribe_member_collapsed_height)
                         }
                         is TribeMemberProfileViewState.FullScreen -> {
                             includeLayoutTribeProfileInfoContainer.apply {
@@ -909,20 +957,20 @@ internal class ChatTribeFragment: ChatFragment<
                         binding.includeChatTribeHeader.imageViewChatWebView.visible
 
                         binding.includeChatTribeHeader.imageViewChatWebView.setImageDrawable(
-                            ContextCompat.getDrawable(binding.root.context, R.drawable.ic_icon_web_view)
+                            ContextCompat.getDrawable(binding.root.context, R_common.drawable.ic_icon_web_view)
                         )
                     }
                     is WebAppViewState.AppAvailable.WebViewOpen.Loading -> {
                         binding.includeChatTribeHeader.imageViewChatWebView.visible
 
                         binding.includeChatTribeHeader.imageViewChatWebView.setImageDrawable(
-                            ContextCompat.getDrawable(binding.root.context, R.drawable.ic_icon_web_view_chat)
+                            ContextCompat.getDrawable(binding.root.context, R_common.drawable.ic_icon_web_view_chat)
                         )
 
                         tribeAppBinding.includeLayoutTribeAppDetails.layoutConstraintBudget.gone
                         tribeAppBinding.includeLayoutTribeAppDetails.layoutConstraintProgressBarContainer.visible
 
-                        viewState.appUrl?.let { url ->
+                        viewState.appUrl.let { url ->
                             loadWebView(url.value)
                             tribeAppBinding.includeLayoutTribeAppDetails.textViewWebUrl.text = url.protocolLessUrl
                         }
@@ -955,7 +1003,20 @@ internal class ChatTribeFragment: ChatFragment<
                     }
 
                     is WebViewViewState.RequestAuthorization -> {
-                        tribeAppBinding.includeLayoutTribeAppDetails.layoutConstraintAuthorizePopup.visible
+                        tribeAppBinding.includeLayoutTribeAppDetails.apply {
+                            layoutConstraintAuthorizePopup.visible
+                            textViewWithdraw.gone
+                            editTextSatsAmount.gone
+                            textViewReauthorize.gone
+                        }
+                    }
+                    is WebViewViewState.SetBudget -> {
+                        tribeAppBinding.includeLayoutTribeAppDetails.apply {
+                            layoutConstraintAuthorizePopup.visible
+                            textViewWithdraw.visible
+                            editTextSatsAmount.visible
+                            textViewReauthorize.visible
+                        }
                     }
                     is WebViewViewState.SendAuthorization -> {
                         webView.evaluateJavascript(
@@ -1001,7 +1062,7 @@ internal class ChatTribeFragment: ChatFragment<
                                 textViewInitials.apply {
                                     text = viewState.memberName.value.getInitials()
                                     setBackgroundRandomColor(
-                                        chat.sphinx.chat_common.R.drawable.chat_initials_circle,
+                                        R_common.drawable.chat_initials_circle,
                                         Color.parseColor(
                                             userColorsHelper.getHexCodeForKey(
                                                 viewState.colorKey,
@@ -1018,7 +1079,7 @@ internal class ChatTribeFragment: ChatFragment<
                                         imageViewMemberProfilePicture,
                                         photoUrl.value,
                                         ImageLoaderOptions.Builder()
-                                            .placeholderResId(chat.sphinx.podcast_player.R.drawable.ic_profile_avatar_circle)
+                                            .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
                                             .transformation(Transformation.CircleCrop)
                                             .build()
                                     )
@@ -1056,7 +1117,7 @@ internal class ChatTribeFragment: ChatFragment<
                                             imageViewTribeProfilePicture,
                                             photoUrl,
                                             ImageLoaderOptions.Builder()
-                                                .placeholderResId(chat.sphinx.podcast_player.R.drawable.ic_profile_avatar_circle)
+                                                .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
                                                 .transformation(Transformation.CircleCrop)
                                                 .build()
                                         )
@@ -1138,7 +1199,7 @@ internal class ChatTribeFragment: ChatFragment<
                                 layoutParams.height = listHeight
                                 requestLayout()
 
-                                (adapter as? MessageMentionsAdapter)?.let {
+                                (adapter as? MessageMentionsAdapter<*>)?.let {
                                     it.clear()
                                     it.addAll(viewState.mentions)
                                     it.notifyDataSetChanged()

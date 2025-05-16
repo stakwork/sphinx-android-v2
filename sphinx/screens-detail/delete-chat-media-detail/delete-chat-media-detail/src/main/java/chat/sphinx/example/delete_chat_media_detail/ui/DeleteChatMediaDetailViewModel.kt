@@ -24,6 +24,7 @@ import chat.sphinx.wrapper_message_media.isAudio
 import chat.sphinx.wrapper_message_media.isImage
 import chat.sphinx.wrapper_message_media.isPdf
 import chat.sphinx.wrapper_message_media.isVideo
+import chat.sphinx.resources.R as R_common
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.matthewnelson.android_feature_navigation.util.navArgs
 import io.matthewnelson.android_feature_viewmodel.SideEffectViewModel
@@ -129,7 +130,7 @@ internal class DeleteChatMediaDetailViewModel @Inject constructor(
                     )
 
                     submitSideEffect(
-                        DeleteNotifySideEffect(app.getString(R.string.manage_storage_error_delete))
+                        DeleteNotifySideEffect(app.getString(R_common.string.manage_storage_error_delete))
                     )
                 }
             }
@@ -156,12 +157,12 @@ internal class DeleteChatMediaDetailViewModel @Inject constructor(
 
             if (deleteResponse) {
                 submitSideEffect(
-                    DeleteNotifySideEffect(app.getString(R.string.manage_storage_delete_items_successfully))
+                    DeleteNotifySideEffect(app.getString(R_common.string.manage_storage_delete_items_successfully))
                 )
             }
             else {
                 submitSideEffect(
-                    DeleteNotifySideEffect(app.getString(R.string.manage_storage_error_delete))
+                    DeleteNotifySideEffect(app.getString(R_common.string.manage_storage_error_delete))
                 )
             }
 

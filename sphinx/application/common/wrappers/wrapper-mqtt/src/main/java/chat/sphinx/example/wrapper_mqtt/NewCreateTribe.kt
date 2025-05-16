@@ -21,6 +21,7 @@ data class NewCreateTribe(
     val unlisted: Boolean?,
     val private: Boolean?,
     val app_url: String?,
+    val second_brain_url: String?,
     val feed_url: String?,
     val feed_type: Int?,
     val created: Long?,
@@ -36,6 +37,18 @@ data class NewCreateTribe(
 
         val jsonAdapter = moshi.adapter(NewCreateTribe::class.java)
         return jsonAdapter.toJson(this)
+    }
+
+    fun getPricePerMessageInSats(): Long {
+        return if (price_per_message == 0L || price_per_message == null ) 0L else price_per_message / 1000
+    }
+
+    fun getPriceToJoinInSats(): Long {
+        return if (price_to_join == 0L || price_to_join == null) 0L else price_to_join / 1000
+    }
+
+    fun getEscrowAmountInSats(): Long {
+        return if (escrow_amount == 0L || escrow_amount == null) 0L else escrow_amount / 1000
     }
 
     companion object {

@@ -10,6 +10,7 @@
     <string name="uploading">Nag-a-upload</string>
     <string name="unknown">Hindi makilala</string>
     <string name="decryption_error">ERROR SA DECRYPTION...</string>
+    <string name="waiting_for_approval">Waiting for approval</string>
     <string name="null_name_error">ERROR: WALANG PANGALAN</string>
     <string name="public_key">Pampublikong susi</string>
     <string name="confirm">Kumpirmahin</string>
@@ -97,6 +98,7 @@
     <string name="payment_request">Kahilingan sa Pagbabayad</string>
     <string name="amount_n_sats">Halaga: %d sats</string>
     <string name="failed_to_request_payment">Nabigo ang kahilingan sa pagbabayad</string>
+    <string name="error_payment_empty_router">Empty Router URL</string>
     <string name="failed_to_approve_member">Nabigo sa pag-apruba ng miyembro</string>
     <string name="failed_to_reject_member">Nabigo sa pagtanggi ng miyembro</string>
     <string name="newsletter_article">ARTIKULO NG NEWSLETTER</string>
@@ -135,6 +137,11 @@
     <string name="badges_create_error">Nabigo sa paglikha ng badge</string>
     <string name="badges_state_error">Nabigo sa pagbabago ng estado ng badge</string>
     <string name="balance_too_low">Masyadong mababa ang balanse</string>
+    <string name="skipping_ad_three_sec">Skipping ads in 3 seconds</string>
+    <string name="invalid_invoice">Invalid invoice</string>
+    <string name="router_url_not_found">Router URL not found</string>
+    <string name="error_getting_route">Error getting route</string>
+    <string name="processing_invoice">Pinoproseso ang pagbabayad: Maaaring tumagal ng hanggang 60 segundo ang prosesong ito. Pagpasensyahan niyo na po</string>
     <string name="boost_amount_too_low">Ang halaga ng boost ay dapat higit sa 0</string>
     <string name="tribe_member_profile_send_sats">Magpadala ng Sats</string>
     <string name="tribe_member_profile_earn_badges">Kumita ng mga Badge</string>
@@ -230,6 +237,44 @@
     <string name="signer_phone_error_mqtt">Error sa pagkonekta sa MQTT</string>
     <string name="signer_phone_connected_to_mqtt">Nakakonekta ang telepono sa MQTT</string>
 
+    <!--    ConnectManager-->
 
-
+    <string name="connect_manager_generate_xpub_error">Error generating extended public key.</string>
+    <string name="connect_manager_generate_mnemonic_error">Error trying to generate mnemonic.</string>
+    <string name="connect_manager_process_invite_error">Error processing invite.</string>
+    <string name="connect_manager_mqtt_connect_error">Error connecting to MQTT server.</string>
+    <string name="connect_manager_subscribe_owner_error">Error subscribing to owner topic.</string>
+    <string name="connect_manager_mqtt_client_error">Error with MQTT client.</string>
+    <string name="connect_manager_mqtt_init_error">Error during MQTT initialization.</string>
+    <string name="connect_manager_send_message_error">Error sending message.</string>
+    <string name="connect_manager_delete_message_error">Error deleting message.</string>
+    <string name="connect_manager_join_tribe_error">Error joining tribe.</string>
+    <string name="connect_manager_create_tribe_error">Error creating tribe.</string>
+    <string name="connect_manager_create_invite_error">Error creating invite.</string>
+    <string name="connect_manager_delete_invite_error">Error deleting invite.</string>
+    <string name="connect_manager_create_invoice_error">Error creating invoice.</string>
+    <string name="connect_manager_server_pubkey_error">Error fetching server public key.</string>
+    <string name="connect_manager_pay_contact_invoice_error">Error paying contact invoice.</string>
+    <string name="connect_manager_pay_invoice_error">Error paying invoice.</string>
+    <string name="connect_manager_payment_hash_error">Error generating payment hash.</string>
+    <string name="connect_manager_list_tribe_members_error">Error listing tribe members.</string>
+    <string name="connect_manager_fetch_message_error">Error fetching message.</string>
+    <string name="connect_manager_fetch_first_message_error">Error fetching the first message.</string>
+    <string name="connect_manager_message_count_error">Error message count.</string>
+    <string name="connect_manager_set_device_id_error">Error setting device ID.</string>
+    <string name="connect_manager_set_router_url">Error setting router url.</string>
+    <string name="connect_manager_media_token_error">Error obtaining media token.</string>
+    <string name="connect_manager_read_message_error">Error reading message.</string>
+    <string name="connect_manager_get_read_messages_error">Error retrieving read messages.</string>
+    <string name="connect_manager_sign_bytes_error">Error signing bytes.</string>
+    <string name="connect_manager_set_mute_error">Error setting mute status.</string>
+    <string name="connect_manager_keysend_error">Error on keysend</string>
+    <string name="connect_manager_mqtt_reconnect_error">Error trying to reconnect.</string>
+    <string name="connect_manager_xpub_or_sign_error">Error generating xPub or signature issues</string>
+    <string name="connect_manager_parse_invite_error">Error parsing invite</string>
+    <string name="connect_manager_restore_connection_error">Error connecting to MQTT</string>
+    <string name="connect_manager_load_transactions_error">Error loading transactions</string>
+    <string name="alert_confirm_delete_invite_title">Delete Invite</string>
+    <string name="alert_confirm_delete_invite_message">Are you sure you want to delete this invite?</string>
+    <string name="chat_placeholder_hint">Your chat will be enabled as soon as your\ncontact goes online</string>
 </resources>

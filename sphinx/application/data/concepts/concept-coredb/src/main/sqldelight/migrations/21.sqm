@@ -1,0 +1,4 @@
+import chat.sphinx.wrapper_message.TagMessage;
+
+
+ALTER TABLE messageDbo ADD COLUMN tag_message TEXT AS TagMessage DEFAULT NULL;

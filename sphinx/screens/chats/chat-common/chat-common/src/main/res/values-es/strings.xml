@@ -27,7 +27,7 @@
     <!--  Message type invoices  -->
     <string name="request_expired">Solicitud caducada</string>
     <string name="request_expiration">Expira: %s</string>
-    <string name="invoice_paid_on">Invoice pagado en %s</string>
+    <string name="invoice_paid_on">Invoice de %s sats pagado el %s</string>
     <string name="alert_confirm_pay_chat_invoice_title">Confirmar Pago</string>
     <string name="alert_confirm_pay_chat_invoice_message">¿Estas seguro de que quieres pagar esta solicitud?</string>
 
@@ -198,6 +198,8 @@
     <string name="message_pinned">Mensaje Fijado</string>
     <string name="message_unpinned">Mensaje removido</string>
     <string name="pin_message_error">Ocurrió un error. Por favor inténtalo luego</string>
+    <string name="chat_placeholder_invited">Invitado el %s</string>
+    <string name="chat_placeholder_secure">Los mensajes y las llamadas están protegidos\ncon cifrado de extremo a extremo</string>
 
     <string name="cancel_search">CANCELAR</string>
 </resources>

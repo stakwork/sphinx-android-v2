@@ -14,6 +14,7 @@ import chat.sphinx.insetter_activity.InsetterActivity
 import chat.sphinx.insetter_activity.addNavigationBarPadding
 import chat.sphinx.resources.getString
 import chat.sphinx.screen_detail_fragment.SideEffectDetailFragment
+import chat.sphinx.resources.R as R_common
 import dagger.hilt.android.AndroidEntryPoint
 import io.matthewnelson.android_feature_screens.util.gone
 import io.matthewnelson.android_feature_screens.util.visible
@@ -108,7 +109,7 @@ internal class CreateBadgeFragment: SideEffectDetailFragment<
                     )
 
                     val badgesAmount = (viewState.badge.amountCreated?.minus(viewState.badge.amountIssued ?: 0)).toString()
-                    val badgesLeft = String.format(getString(R.string.badges_left), viewState.badge.amountCreated)
+                    val badgesLeft = String.format(getString(R_common.string.badges_left), viewState.badge.amountCreated)
 
                     textViewBadgeName.text = viewState.badge.name
                     textViewBadgesRowCount.text = badgesAmount

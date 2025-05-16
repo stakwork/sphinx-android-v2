@@ -36,6 +36,7 @@ import chat.sphinx.wrapper_common.lightning.asFormattedString
 import chat.sphinx.wrapper_common.lightning.toSat
 import chat.sphinx.wrapper_contact.isTrue
 import chat.sphinx.wrapper_contact.toPrivatePhoto
+import chat.sphinx.resources.R as R_common
 import dagger.hilt.android.AndroidEntryPoint
 import io.matthewnelson.android_feature_screens.ui.sideeffect.SideEffectFragment
 import io.matthewnelson.android_feature_screens.util.gone
@@ -44,6 +45,10 @@ import io.matthewnelson.android_feature_viewmodel.submitSideEffect
 import io.matthewnelson.concept_views.viewstate.collect
 import io.matthewnelson.concept_views.viewstate.value
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -88,6 +93,8 @@ internal class ProfileFragment: SideEffectFragment<
             binding.includeLayoutMenuBottomProfilePic,
             viewLifecycleOwner
         )
+
+        updateTimezoneAndDateTime()
     }
 
     private inner class BackPressHandler(
@@ -238,18 +245,6 @@ internal class ProfileFragment: SideEffectFragment<
             }
 
             includeProfileAdvancedContainerHolder.apply {
-                editTextProfileAdvancedContainerServerUrl.setOnFocusChangeListener { _, hasFocus ->
-                    if (hasFocus) {
-                        return@setOnFocusChangeListener
-                    }
-                    onStopSupervisor.scope.launch(viewModel.mainImmediate) {
-                        viewModel.updateRelayUrl(
-                            editTextProfileAdvancedContainerServerUrl.text?.toString()
-                        )
-                    }
-                }
-
-                removeFocusOnEnter(editTextProfileAdvancedContainerServerUrl)
 
                 seekBarProfileAdvancedContainerPinTimeout.setOnSeekBarChangeListener(
                     object : SeekBar.OnSeekBarChangeListener {
@@ -350,17 +345,6 @@ internal class ProfileFragment: SideEffectFragment<
         }
 
         onStopSupervisor.scope.launch(viewModel.mainImmediate) {
-            viewModel.relayUrlStateFlow.collect { relayUrl ->
-                relayUrl?.let { nnRelayUrl ->
-                    binding
-                        .includeProfileAdvancedContainerHolder
-                        .editTextProfileAdvancedContainerServerUrl
-                        .setText(nnRelayUrl)
-                }
-            }
-        }
-
-        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
             viewModel.meetingServerUrlStateFlow.collect { meetingServerUrl ->
                 meetingServerUrl?.let { nnMeetingServerUrl ->
                     binding
@@ -415,13 +399,13 @@ internal class ProfileFragment: SideEffectFragment<
                                     imageViewProfilePicture,
                                     url,
                                     ImageLoaderOptions.Builder()
-                                        .placeholderResId(R.drawable.ic_profile_avatar_circle)
+                                        .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
                                         .build()
                                 )
                             } ?: imageViewProfilePicture.setImageDrawable(
                                 ContextCompat.getDrawable(
                                     binding.root.context,
-                                    R.drawable.ic_profile_avatar_circle
+                                    R_common.drawable.ic_profile_avatar_circle
                                 )
                             )
 
@@ -469,16 +453,16 @@ internal class ProfileFragment: SideEffectFragment<
             when (viewState) {
                 is ProfileViewState.Advanced -> {
                     includeProfileTabsHolder.apply {
-                        buttonProfileTabBasic.setBackgroundColor(getColor(R.color.body))
-                        buttonProfileTabAdvanced.setBackgroundColor(getColor(R.color.primaryBlue))
+                        buttonProfileTabBasic.setBackgroundColor(getColor(R_common.color.body))
+                        buttonProfileTabAdvanced.setBackgroundColor(getColor(R_common.color.primaryBlue))
                     }
                     includeProfileBasicContainerHolder.root.gone
                     includeProfileAdvancedContainerHolder.root.visible
                 }
                 is ProfileViewState.Basic -> {
                     includeProfileTabsHolder.apply {
-                        buttonProfileTabBasic.setBackgroundColor(getColor(R.color.primaryBlue))
-                        buttonProfileTabAdvanced.setBackgroundColor(getColor(R.color.body))
+                        buttonProfileTabBasic.setBackgroundColor(getColor(R_common.color.primaryBlue))
+                        buttonProfileTabAdvanced.setBackgroundColor(getColor(R_common.color.body))
                     }
                     includeProfileBasicContainerHolder.root.visible
                     includeProfileAdvancedContainerHolder.root.gone
@@ -503,7 +487,7 @@ internal class ProfileFragment: SideEffectFragment<
                             imageViewProfilePicture.setImageDrawable(
                                 ContextCompat.getDrawable(
                                     binding.root.context,
-                                    R.drawable.ic_profile_avatar_circle
+                                    R_common.drawable.ic_profile_avatar_circle
                                 )
                             )
                         }
@@ -537,7 +521,7 @@ internal class ProfileFragment: SideEffectFragment<
                             constraintLayoutStorageLoadingContainer.gone
                             constraintLayoutStorageNumberContainer.visible
                             textViewProfileStorageNumber.text = viewState.used.trim()
-                            textViewProfileTotalStorageNumber.text = String.format(getString(R.string.manage_storage_total_storage), viewState.total)
+                            textViewProfileTotalStorageNumber.text = String.format(getString(R_common.string.manage_storage_total_storage), viewState.total)
 
                             setProgressStorageBar(viewState)
                         }
@@ -549,5 +533,15 @@ internal class ProfileFragment: SideEffectFragment<
 
     override suspend fun onSideEffectCollect(sideEffect: ProfileSideEffect) {
         sideEffect.execute(requireActivity())
+    }
+
+    private fun updateTimezoneAndDateTime() {
+        val timeZone = TimeZone.getDefault()
+        val timeZoneIdentifier = timeZone.id
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+        dateFormat.timeZone = timeZone
+        val currentDateTime = dateFormat.format(Date())
+
+        binding.includeProfileNamePictureHolder.textViewTimezoneAndDate.text = "$timeZoneIdentifier\n$currentDateTime"
     }
 }

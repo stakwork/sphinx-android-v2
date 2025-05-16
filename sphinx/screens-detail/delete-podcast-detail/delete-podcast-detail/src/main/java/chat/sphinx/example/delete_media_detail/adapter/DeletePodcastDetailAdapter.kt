@@ -15,6 +15,7 @@ import chat.sphinx.delete.media.detail.databinding.PodcastStorageListItemHolderB
 import chat.sphinx.example.delete_media_detail.model.PodcastDetailToDelete
 import chat.sphinx.example.delete_media_detail.ui.DeletePodcastDetailViewModel
 import chat.sphinx.example.delete_media_detail.viewstate.DeleteMediaDetailViewState
+import chat.sphinx.resources.R as R_common
 import io.matthewnelson.android_feature_viewmodel.util.OnStopSupervisor
 import io.matthewnelson.concept_views.viewstate.collect
 import kotlinx.coroutines.Job
@@ -141,7 +142,7 @@ internal class DeletePodcastDetailAdapter(
 
     private val imageLoaderOptions: ImageLoaderOptions by lazy {
         ImageLoaderOptions.Builder()
-            .placeholderResId(R.drawable.ic_podcast_placeholder)
+            .placeholderResId(R_common.drawable.ic_podcast_placeholder)
             .build()
     }
 

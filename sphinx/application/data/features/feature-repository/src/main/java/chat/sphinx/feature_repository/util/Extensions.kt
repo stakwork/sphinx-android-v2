@@ -6,54 +6,118 @@ import chat.sphinx.concept_network_query_chat.model.TribeDto
 import chat.sphinx.concept_network_query_chat.model.feed.FeedDto
 import chat.sphinx.concept_network_query_contact.model.ContactDto
 import chat.sphinx.concept_network_query_invite.model.InviteDto
-import chat.sphinx.concept_network_query_lightning.model.balance.BalanceDto
-import chat.sphinx.concept_network_query_message.model.MessageDto
-import chat.sphinx.concept_network_query_subscription.model.SubscriptionDto
 import chat.sphinx.conceptcoredb.SphinxDatabaseQueries
-import chat.sphinx.wrapper_chat.*
-import chat.sphinx.wrapper_common.*
+import chat.sphinx.example.wrapper_mqtt.MessageDto
+import chat.sphinx.wrapper_chat.Chat
+import chat.sphinx.wrapper_chat.ChatMuted
+import chat.sphinx.wrapper_chat.NotificationLevel
+import chat.sphinx.wrapper_chat.isConversation
+import chat.sphinx.wrapper_chat.isTribe
+import chat.sphinx.wrapper_chat.toChatAlias
+import chat.sphinx.wrapper_chat.toChatGroupKey
+import chat.sphinx.wrapper_chat.toChatHost
+import chat.sphinx.wrapper_chat.toChatMuted
+import chat.sphinx.wrapper_chat.toChatName
+import chat.sphinx.wrapper_chat.toChatPrivate
+import chat.sphinx.wrapper_chat.toChatStatus
+import chat.sphinx.wrapper_chat.toChatType
+import chat.sphinx.wrapper_chat.toChatUnlisted
+import chat.sphinx.wrapper_chat.toNotificationLevel
+import chat.sphinx.wrapper_chat.toSecondBrainUrl
+import chat.sphinx.wrapper_common.DateTime
+import chat.sphinx.wrapper_common.PhotoUrl
+import chat.sphinx.wrapper_common.Push
+import chat.sphinx.wrapper_common.Seen
 import chat.sphinx.wrapper_common.chat.ChatUUID
 import chat.sphinx.wrapper_common.contact.toBlocked
 import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_common.dashboard.ContactId
 import chat.sphinx.wrapper_common.dashboard.InviteId
-import chat.sphinx.wrapper_common.feed.*
+import chat.sphinx.wrapper_common.feed.FeedId
+import chat.sphinx.wrapper_common.feed.FeedUrl
+import chat.sphinx.wrapper_common.feed.Subscribed
+import chat.sphinx.wrapper_common.feed.toFeedType
+import chat.sphinx.wrapper_common.feed.toFeedUrl
 import chat.sphinx.wrapper_common.invite.InviteStatus
 import chat.sphinx.wrapper_common.invite.isPaymentPending
 import chat.sphinx.wrapper_common.invite.isProcessingPayment
 import chat.sphinx.wrapper_common.invite.toInviteStatus
-import chat.sphinx.wrapper_common.lightning.*
+import chat.sphinx.wrapper_common.lightning.LightningNodePubKey
+import chat.sphinx.wrapper_common.lightning.LightningPaymentHash
+import chat.sphinx.wrapper_common.lightning.Sat
+import chat.sphinx.wrapper_common.lightning.toLightningNodeAlias
+import chat.sphinx.wrapper_common.lightning.toLightningNodePubKey
+import chat.sphinx.wrapper_common.lightning.toLightningPaymentHash
+import chat.sphinx.wrapper_common.lightning.toLightningPaymentRequestOrNull
+import chat.sphinx.wrapper_common.lightning.toLightningRouteHint
+import chat.sphinx.wrapper_common.lightning.toSat
+import chat.sphinx.wrapper_common.lsat.Lsat
 import chat.sphinx.wrapper_common.message.MessageId
 import chat.sphinx.wrapper_common.message.toMessageUUID
-import chat.sphinx.wrapper_common.subscription.Cron
-import chat.sphinx.wrapper_common.subscription.EndNumber
-import chat.sphinx.wrapper_common.subscription.SubscriptionCount
+import chat.sphinx.wrapper_common.secondsToDateTime
 import chat.sphinx.wrapper_common.subscription.SubscriptionId
-import chat.sphinx.wrapper_contact.*
-import chat.sphinx.wrapper_feed.*
+import chat.sphinx.wrapper_common.time
+import chat.sphinx.wrapper_common.toDateTime
+import chat.sphinx.wrapper_common.toPhotoUrl
+import chat.sphinx.wrapper_common.toPush
+import chat.sphinx.wrapper_common.toSeen
+import chat.sphinx.wrapper_contact.Contact
+import chat.sphinx.wrapper_contact.isTrue
+import chat.sphinx.wrapper_contact.toContactAlias
+import chat.sphinx.wrapper_contact.toContactStatus
+import chat.sphinx.wrapper_contact.toDeviceId
+import chat.sphinx.wrapper_contact.toNotificationSound
+import chat.sphinx.wrapper_contact.toOwner
+import chat.sphinx.wrapper_contact.toPrivatePhoto
+import chat.sphinx.wrapper_feed.FeedDescription
+import chat.sphinx.wrapper_feed.FeedDestinationAddress
+import chat.sphinx.wrapper_feed.FeedDestinationSplit
+import chat.sphinx.wrapper_feed.FeedDestinationType
+import chat.sphinx.wrapper_feed.FeedItemsCount
+import chat.sphinx.wrapper_feed.FeedModelSuggested
+import chat.sphinx.wrapper_feed.FeedModelType
+import chat.sphinx.wrapper_feed.FeedTitle
+import chat.sphinx.wrapper_feed.toFeedAuthor
+import chat.sphinx.wrapper_feed.toFeedContentType
+import chat.sphinx.wrapper_feed.toFeedDescription
+import chat.sphinx.wrapper_feed.toFeedDestinationAddress
+import chat.sphinx.wrapper_feed.toFeedEnclosureLength
+import chat.sphinx.wrapper_feed.toFeedEnclosureType
+import chat.sphinx.wrapper_feed.toFeedGenerator
+import chat.sphinx.wrapper_feed.toFeedItemDuration
+import chat.sphinx.wrapper_feed.toFeedLanguage
 import chat.sphinx.wrapper_invite.Invite
 import chat.sphinx.wrapper_invite.InviteString
 import chat.sphinx.wrapper_lightning.LightningServiceProvider
 import chat.sphinx.wrapper_lightning.NodeBalance
-import chat.sphinx.wrapper_message.*
-import chat.sphinx.wrapper_message_media.*
+import chat.sphinx.wrapper_message.Message
+import chat.sphinx.wrapper_message.MessageStatus
+import chat.sphinx.wrapper_message.MessageType
+import chat.sphinx.wrapper_message.NewMessage
+import chat.sphinx.wrapper_message.isInvoicePayment
+import chat.sphinx.wrapper_message.toErrorMessage
+import chat.sphinx.wrapper_message.toFlagged
+import chat.sphinx.wrapper_message.toMessageContent
+import chat.sphinx.wrapper_message.toMessageContentDecrypted
+import chat.sphinx.wrapper_message.toMessageMUID
+import chat.sphinx.wrapper_message.toMessagePerson
+import chat.sphinx.wrapper_message.toMessageStatus
+import chat.sphinx.wrapper_message.toMessageType
+import chat.sphinx.wrapper_message.toRecipientAlias
+import chat.sphinx.wrapper_message.toReplyUUID
+import chat.sphinx.wrapper_message.toSenderAlias
+import chat.sphinx.wrapper_message.toTagMessage
+import chat.sphinx.wrapper_message.toThreadUUID
+import chat.sphinx.wrapper_message_media.FileName
+import chat.sphinx.wrapper_message_media.MediaToken
+import chat.sphinx.wrapper_message_media.getMUIDFromMediaToken
+import chat.sphinx.wrapper_message_media.toMediaKey
+import chat.sphinx.wrapper_message_media.toMediaKeyDecrypted
+import chat.sphinx.wrapper_message_media.toMediaToken
+import chat.sphinx.wrapper_message_media.toMediaType
 import chat.sphinx.wrapper_rsa.RsaPublicKey
 import com.squareup.moshi.Moshi
 import com.squareup.sqldelight.TransactionCallbacks
-
-@Suppress("NOTHING_TO_INLINE")
-inline fun BalanceDto.toNodeBalanceOrNull(): NodeBalance? =
-    try {
-        toNodeBalance()
-    } catch (e: IllegalArgumentException) {
-        null
-    }
-
-@Suppress("NOTHING_TO_INLINE")
-inline fun BalanceDto.toNodeBalance(): NodeBalance =
-    NodeBalance(
-        Sat(balance),
-    )
 
 @Suppress("NOTHING_TO_INLINE")
 inline fun String.toNodeBalance(): NodeBalance? {
@@ -197,11 +261,12 @@ inline fun TransactionCallbacks.updateNewChatTribeData(
 ) {
     // Needs to implement the rest of args
 
-    val pricePerMessage = 0L.toSat()
-    val escrowAmount = 0L.toSat()
+    val pricePerMessage = tribe.getPricePerMessageInSats().toSat()
+    val escrowAmount = tribe.getEscrowAmountInSats().toSat()
     val name = tribe.name.toChatName()
-    val photoUrl = null
-    val pinMessage = null
+    val photoUrl = tribe.img?.toPhotoUrl()
+    val pinMessage = tribe.pin?.toMessageUUID()
+    val secondBrainUrl = tribe.second_brain_url?.toSecondBrainUrl()
 
     queries.chatUpdateTribeData(
         pricePerMessage,
@@ -209,6 +274,7 @@ inline fun TransactionCallbacks.updateNewChatTribeData(
         name,
         photoUrl,
         pinMessage,
+        secondBrainUrl,
         chatId,
     )
 
@@ -230,6 +296,7 @@ inline fun TransactionCallbacks.updateChatTribeData(
     val name = tribe.name.toChatName()
     val photoUrl = tribe.img?.toPhotoUrl()
     val pinMessage = tribe.pin?.toMessageUUID()
+    val secondBrainUrl = tribe.second_brain_url?.toSecondBrainUrl()
 
     queries.chatUpdateTribeData(
         pricePerMessage,
@@ -237,6 +304,7 @@ inline fun TransactionCallbacks.updateChatTribeData(
         name,
         photoUrl,
         pinMessage,
+        secondBrainUrl,
         chatId,
     )
 
@@ -291,7 +359,7 @@ inline fun TransactionCallbacks.upsertNewChat(
         chatType,
         createdAt,
         pricePerMessage,
-        escrowAmount
+        escrowAmount,
     )
 
     if (
@@ -305,7 +373,8 @@ inline fun TransactionCallbacks.upsertNewChat(
             chatName,
             chatPhotoUrl,
             pinedMessage,
-            chatId
+            null,
+            chatId,
         )
     }
 
@@ -398,7 +467,8 @@ inline fun TransactionCallbacks.upsertChat(
             chatName,
             chatPhotoUrl,
             pinedMessage,
-            chatId
+            null,
+            chatId,
         )
     }
 
@@ -668,6 +738,7 @@ fun TransactionCallbacks.upsertNewMessage(
         message.person,
         message.threadUUID,
         message.errorMessage,
+        message.tagMessage,
         MessageId(message.id.value),
         message.uuid,
         chatId,
@@ -681,7 +752,8 @@ fun TransactionCallbacks.upsertNewMessage(
         message.messageContent,
         message.messageContentDecrypted,
         message.messageMedia?.mediaToken?.getMUIDFromMediaToken()?.value?.toMessageMUID(),
-        message.flagged.value.toFlagged()
+        message.flagged.value.toFlagged(),
+        message.remoteTimezoneIdentifier
     )
 
     if (message.type.isInvoicePayment()) {
@@ -701,7 +773,7 @@ fun TransactionCallbacks.upsertMessage(
 
     val chatId: ChatId = dto.chat_id?.let {
         ChatId(it)
-    } ?: dto.chat?.id?.let {
+    } ?: dto.chat?.let {
         ChatId(it)
     } ?: ChatId(ChatId.NULL_CHAT_ID.toLong())
 
@@ -735,6 +807,7 @@ fun TransactionCallbacks.upsertMessage(
         dto.person?.toMessagePerson(),
         dto.thread_uuid?.toThreadUUID(),
         dto.error_message?.toErrorMessage(),
+        dto.tag_message?.toTagMessage(),
         MessageId(dto.id),
         dto.uuid?.toMessageUUID(),
         chatId,
@@ -748,7 +821,8 @@ fun TransactionCallbacks.upsertMessage(
         dto.message_content?.toMessageContent(),
         dto.messageContentDecrypted?.toMessageContentDecrypted(),
         dto.media_token?.toMediaToken()?.getMUIDFromMediaToken()?.value?.toMessageMUID(),
-        false.toFlagged()
+        false.toFlagged(),
+        null
     )
 
     if (dto.type.toMessageType()?.isInvoicePayment() == true) {
@@ -800,23 +874,23 @@ inline fun TransactionCallbacks.deleteMessageById(
     queries.messageMediaDeleteById(messageId)
 }
 
-@Suppress("NOTHING_TO_INLINE")
-inline fun TransactionCallbacks.upsertSubscription(subscriptionDto: SubscriptionDto, queries: SphinxDatabaseQueries) {
-    queries.subscriptionUpsert(
-        id = SubscriptionId(subscriptionDto.id),
-        amount = Sat(subscriptionDto.amount),
-        contact_id = ContactId(subscriptionDto.contact_id),
-        chat_id = ChatId(subscriptionDto.chat_id),
-        count = SubscriptionCount(subscriptionDto.count.toLong()),
-        cron = Cron(subscriptionDto.cron),
-        end_date = subscriptionDto.end_date?.toDateTime(),
-        end_number = subscriptionDto.end_number?.let { EndNumber(it.toLong()) },
-        created_at = subscriptionDto.created_at.toDateTime(),
-        updated_at = subscriptionDto.updated_at.toDateTime(),
-        ended = subscriptionDto.endedActual,
-        paused = subscriptionDto.pausedActual,
-    )
-}
+//@Suppress("NOTHING_TO_INLINE")
+//inline fun TransactionCallbacks.upsertSubscription(subscriptionDto: SubscriptionDto, queries: SphinxDatabaseQueries) {
+//    queries.subscriptionUpsert(
+//        id = SubscriptionId(subscriptionDto.id),
+//        amount = Sat(subscriptionDto.amount),
+//        contact_id = ContactId(subscriptionDto.contact_id),
+//        chat_id = ChatId(subscriptionDto.chat_id),
+//        count = SubscriptionCount(subscriptionDto.count.toLong()),
+//        cron = Cron(subscriptionDto.cron),
+//        end_date = subscriptionDto.end_date?.toDateTime(),
+//        end_number = subscriptionDto.end_number?.let { EndNumber(it.toLong()) },
+//        created_at = subscriptionDto.created_at.toDateTime(),
+//        updated_at = subscriptionDto.updated_at.toDateTime(),
+//        ended = subscriptionDto.endedActual,
+//        paused = subscriptionDto.pausedActual,
+//    )
+//}
 
 @Suppress("NOTHING_TO_INLINE")
 inline fun TransactionCallbacks.deleteSubscriptionById(
@@ -1007,6 +1081,25 @@ inline fun TransactionCallbacks.updateSubscriptionStatus(
     queries.feedUpdateSubscribe(subscribed, feedId)
     queries.contentFeedStatusUpdateSubscriptionStatus(subscribed, feedId)
 }
+
+@Suppress("NOTHING_TO_INLINE")
+inline fun TransactionCallbacks.upsertLsat(
+    lsat: Lsat,
+    queries: SphinxDatabaseQueries
+) {
+    queries.lsatUpsert(
+        lsat.macaroon,
+        lsat.paymentRequest,
+        lsat.issuer,
+        lsat.metaData,
+        lsat.paths,
+        lsat.preimage,
+        lsat.status,
+        lsat.createdAt,
+        lsat.id
+    )
+}
+
 
 fun TransactionCallbacks.clearDatabase(
     queries: SphinxDatabaseQueries

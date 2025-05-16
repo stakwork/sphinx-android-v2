@@ -4,7 +4,7 @@ import app.cash.exhaustive.Exhaustive
 import chat.sphinx.concept_meme_server.MemeServerTokenHandler
 import chat.sphinx.concept_network_query_meme_server.NetworkQueryMemeServer
 import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
-import chat.sphinx.concept_repository_connect_manager.model.ConnectionManagerState
+import chat.sphinx.concept_repository_connect_manager.model.OwnerRegistrationState
 import chat.sphinx.kotlin_response.LoadResponse
 import chat.sphinx.kotlin_response.Response
 import chat.sphinx.kotlin_response.exception
@@ -201,7 +201,7 @@ class MemeServerTokenHandlerImpl(
             var id: AuthenticationId? = null
             var challenge: AuthenticationChallenge? = null
 
-            networkQueryMemeServer.askAuthentication(mediaHost).collect { loadResponse ->
+            networkQueryMemeServer.askMemeAuthentication(mediaHost).collect { loadResponse ->
                 @Exhaustive
                 when (loadResponse) {
                     is LoadResponse.Loading -> {}
@@ -211,7 +211,7 @@ class MemeServerTokenHandlerImpl(
 
                     is Response.Success -> {
                         id = loadResponse.value.id.toAuthenticationId()
-                        connectManagerRepository?.singChallenge(loadResponse.value.challenge)
+                        connectManagerRepository?.signChallenge(loadResponse.value.challenge)
                         challenge = loadResponse.value.challenge.toAuthenticationChallenge()
                     }
                 }
@@ -234,8 +234,8 @@ class MemeServerTokenHandlerImpl(
 //                    }
 
                     val sig: AuthenticationSig? = connectManagerRepository?.connectionManagerState
-                        ?.firstOrNull { it is ConnectionManagerState.SignedChallenge }
-                        ?.let { (it as ConnectionManagerState.SignedChallenge).authToken.toAuthenticationSig() }
+                        ?.firstOrNull { it is OwnerRegistrationState.SignedChallenge }
+                        ?.let { (it as OwnerRegistrationState.SignedChallenge).authToken.toAuthenticationSig() }
 
 
                     sig?.let { nnSig ->

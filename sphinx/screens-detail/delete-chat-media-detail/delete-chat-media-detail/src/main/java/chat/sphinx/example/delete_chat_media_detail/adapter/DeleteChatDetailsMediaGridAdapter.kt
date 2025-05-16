@@ -18,6 +18,7 @@ import chat.sphinx.example.delete_chat_media_detail.ui.DeleteChatMediaDetailView
 import chat.sphinx.example.delete_chat_media_detail.uitl.VideoThumbnailDeleteUtil
 import chat.sphinx.example.delete_chat_media_detail.viewstate.DeleteChatMediaDetailViewState
 import chat.sphinx.wrapper_message_media.MediaType
+import chat.sphinx.resources.R as R_common
 import io.matthewnelson.android_feature_screens.util.gone
 import io.matthewnelson.android_feature_screens.util.visible
 import io.matthewnelson.android_feature_viewmodel.util.OnStopSupervisor
@@ -100,7 +101,7 @@ internal class DeleteChatDetailsMediaGridAdapter(
 
     private val imageLoaderOptions: ImageLoaderOptions by lazy {
         ImageLoaderOptions.Builder()
-            .placeholderResId(R.drawable.ic_podcast_placeholder)
+            .placeholderResId(R_common.drawable.ic_podcast_placeholder)
             .build()
     }
 
@@ -253,7 +254,7 @@ internal class DeleteChatDetailsMediaGridAdapter(
             binding.imageViewPlaceHolder.setImageDrawable(
                 ContextCompat.getDrawable(
                     binding.root.context,
-                    R.drawable.ic_chat_delete_video
+                    R_common.drawable.ic_chat_delete_video
                 ))
         }
         private fun setUpImageFromFile(videoAttachment: File){

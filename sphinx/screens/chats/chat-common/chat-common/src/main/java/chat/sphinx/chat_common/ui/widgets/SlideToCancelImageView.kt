@@ -4,7 +4,6 @@ import android.content.Context
 import android.util.AttributeSet
 import android.view.GestureDetector
 import android.view.MotionEvent
-import android.view.View
 import androidx.appcompat.widget.AppCompatImageView
 
 class SlideToCancelImageView : AppCompatImageView {
@@ -20,7 +19,7 @@ class SlideToCancelImageView : AppCompatImageView {
 
     private val gestureDetector = GestureDetector(context, object: GestureDetector.SimpleOnGestureListener() {
         override fun onScroll(
-            e1: MotionEvent,
+            e1: MotionEvent?,
             e2: MotionEvent,
             distanceX: Float,
             distanceY: Float

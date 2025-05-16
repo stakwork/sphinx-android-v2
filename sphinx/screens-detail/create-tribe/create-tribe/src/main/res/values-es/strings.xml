@@ -13,7 +13,7 @@
     <string name="failed_to_update_tribe">No se ha podido actualizar la tribu</string>
     <string name="failed_to_load_tribe">No se ha podido cargar la tribu</string>
     <string name="failed_to_process_image">No se ha podido procesar la imagen</string>
-    <string name="list_on_tribes_sphinx_chat">¿Mostrar en tribes.sphinx.chat?</string>
+    <string name="list_on_tribes_sphinx_chat">¿Mostrar en tribes.v2.sphinx.chat?</string>
     <string name="name">Nombre *</string>
     <string name="image">Imagen</string>
     <string name="description">Descripción *</string>
@@ -23,6 +23,7 @@
     <string name="amount_to_stake_sats">Monto a retener</string>
     <string name="time_to_stake_hours">Tiempo de retención (horas)</string>
     <string name="app_url">Url de la Aplicación</string>
+    <string name="second_brain_url">Url de Second Brain</string>
     <string name="rss_feed_url">Url del Feed</string>
     <string name="feed_content_type">Tipo de contenido del Feed</string>
     <string name="approve_each_membership_request">¿Aprobar solicitudes de membresías?</string>

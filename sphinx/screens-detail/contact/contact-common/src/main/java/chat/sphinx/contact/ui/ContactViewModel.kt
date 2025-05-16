@@ -21,6 +21,7 @@ import chat.sphinx.scanner_view_model_coordinator.response.ScannerResponse
 import chat.sphinx.wrapper_common.dashboard.ContactId
 import chat.sphinx.wrapper_common.lightning.*
 import chat.sphinx.wrapper_contact.ContactAlias
+import chat.sphinx.resources.R as R_common
 import com.squareup.moshi.Moshi
 import io.matthewnelson.android_feature_viewmodel.SideEffectViewModel
 import io.matthewnelson.android_feature_viewmodel.submitSideEffect
@@ -109,12 +110,12 @@ abstract class ContactViewModel<ARGS: NavArgs>(
                 return@launch
             }
 
-            if (lightningNodePubKey.isNullOrEmpty()) {
+            if (lightningNodePubKey.isNullOrEmpty() || lightningNodePubKey.toLightningNodePubKey() == null) {
                 submitSideEffect(ContactSideEffect.Notify.InvalidLightningNodePublicKey)
                 return@launch
             }
 
-            if (!lightningRouteHint.isNullOrEmpty() && lightningRouteHint.toLightningRouteHint() == null) {
+            if (lightningRouteHint.isNullOrEmpty() || lightningRouteHint.toLightningRouteHint() == null) {
                 submitSideEffect(ContactSideEffect.Notify.InvalidRouteHint)
                 return@launch
             }
@@ -124,12 +125,6 @@ abstract class ContactViewModel<ARGS: NavArgs>(
                 LightningNodePubKey(lightningNodePubKey),
                 lightningRouteHint?.toLightningRouteHint(),
             )
-
-//            saveContact(
-//                ContactAlias(contactAlias),
-//                LightningNodePubKey(lightningNodePubKey),
-//                lightningRouteHint?.toLightningRouteHint()
-//            )
         }
     }
 
@@ -139,20 +134,11 @@ abstract class ContactViewModel<ARGS: NavArgs>(
         lightningRouteHint: LightningRouteHint?,
     )
 
-
-    /** Sphinx V1 (likely to be removed) **/
-
-    protected abstract fun saveContact(
-        contactAlias: ContactAlias,
-        lightningNodePubKey: LightningNodePubKey,
-        lightningRouteHint: LightningRouteHint?
-    )
-
     fun toQrCodeLightningNodePubKey(nodePubKey: String) {
         viewModelScope.launch(mainImmediate) {
             navigator.toQRCodeDetail(
                 nodePubKey,
-                app.getString(R.string.public_key),
+                app.getString(R_common.string.public_key),
                 ""
             )
         }

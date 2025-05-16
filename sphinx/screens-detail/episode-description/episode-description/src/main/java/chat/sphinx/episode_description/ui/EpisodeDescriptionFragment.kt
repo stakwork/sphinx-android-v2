@@ -23,6 +23,7 @@ import chat.sphinx.insetter_activity.addNavigationBarPadding
 import chat.sphinx.resources.getString
 import chat.sphinx.wrapper_common.feed.FeedType
 import chat.sphinx.wrapper_common.feed.isPodcast
+import chat.sphinx.resources.R as R_common
 import dagger.hilt.android.AndroidEntryPoint
 import io.matthewnelson.android_feature_screens.ui.sideeffect.SideEffectFragment
 import io.matthewnelson.android_feature_screens.util.*
@@ -117,10 +118,10 @@ internal class EpisodeDescriptionFragment: SideEffectFragment<
 
             if (feedItemDescription.descriptionExpanded) {
                 textViewDescriptionEpisode.maxLines = Int.MAX_VALUE
-                textViewShowMore.text = getString(R.string.episode_description_show_less)
+                textViewShowMore.text = getString(R_common.string.episode_description_show_less)
             } else {
                 textViewDescriptionEpisode.maxLines = 5
-                textViewShowMore.text = getString(R.string.episode_description_show_more)
+                textViewShowMore.text = getString(R_common.string.episode_description_show_more)
             }
 
             imageViewItemRowEpisodeType.setImageDrawable(
@@ -143,7 +144,7 @@ internal class EpisodeDescriptionFragment: SideEffectFragment<
 
             if (feedItemDescription.played) {
                 buttonCheckMarkPlayed.visible
-                textViewItemEpisodeTime.text = getString(R.string.episode_detail_played_holder)
+                textViewItemEpisodeTime.text = getString(R_common.string.episode_detail_played_holder)
             } else {
                 buttonCheckMarkPlayed.gone
             }
@@ -170,9 +171,9 @@ internal class EpisodeDescriptionFragment: SideEffectFragment<
             }
 
             val playButtonImage = if (feedItemDescription.playing) {
-                ContextCompat.getDrawable(binding.root.context, R.drawable.ic_pause_episode)
+                ContextCompat.getDrawable(binding.root.context, R_common.drawable.ic_pause_episode)
             } else {
-                ContextCompat.getDrawable(binding.root.context, R.drawable.ic_play_episode)
+                ContextCompat.getDrawable(binding.root.context, R_common.drawable.ic_play_episode)
             }
 
             buttonPlayEpisode.setImageDrawable(playButtonImage)
@@ -261,11 +262,11 @@ internal class EpisodeDescriptionFragment: SideEffectFragment<
             if (feedItemDescription.played) {
                 buttonCheckMarkPlayed.visible
                 buttonCheckMark.invisible
-                textViewCheckMark.text = getString(R.string.episode_detail_upplayed)
+                textViewCheckMark.text = getString(R_common.string.episode_detail_upplayed)
             } else {
                 buttonCheckMarkPlayed.invisible
                 buttonCheckMark.visible
-                textViewCheckMark.text = getString(R.string.episode_detail_played)
+                textViewCheckMark.text = getString(R_common.string.episode_detail_played)
             }
         }
     }
@@ -283,13 +284,13 @@ internal class EpisodeDescriptionFragment: SideEffectFragment<
                     imageDownloadedEpisodeArrow.visible
                     progressBarEpisodeDownload.gone
                     buttonStop.gone
-                    textViewDownload.text = getString(R.string.episode_detail_erase)
+                    textViewDownload.text = getString(R_common.string.episode_detail_erase)
                 } else {
                     buttonDownloadArrow.visible
                     imageDownloadedEpisodeArrow.gone
                     progressBarEpisodeDownload.gone
                     buttonStop.gone
-                    textViewDownload.text = getString(R.string.episode_detail_download)
+                    textViewDownload.text = getString(R_common.string.episode_detail_download)
                 }
             }
         }
@@ -311,7 +312,7 @@ internal class EpisodeDescriptionFragment: SideEffectFragment<
             buttonEpisodeShare.setOnClickListener {
                 viewModel.share(
                     binding.root.context,
-                    getString(R.string.episode_detail_share_link)
+                    getString(R_common.string.episode_detail_share_link)
                 )
             }
 
@@ -347,7 +348,7 @@ internal class EpisodeDescriptionFragment: SideEffectFragment<
                 layoutConstraintShareRow.setOnClickListener {
                     viewModel.share(
                         binding.root.context,
-                        getString(R.string.episode_detail_share_link)
+                        getString(R_common.string.episode_detail_share_link)
                     )
                 }
 
@@ -386,19 +387,19 @@ internal class EpisodeDescriptionFragment: SideEffectFragment<
 
     private fun getFeedItemDrawableType(feedType: FeedType?): Int {
         return when (feedType) {
-            is FeedType.Podcast -> R.drawable.ic_podcast_type
-            is FeedType.Video -> R.drawable.ic_youtube_type
-            is FeedType.Twitter -> R.drawable.ic_twitter_space_type
-            else -> R.drawable.ic_podcast_placeholder
+            is FeedType.Podcast -> R_common.drawable.ic_podcast_type
+            is FeedType.Video -> R_common.drawable.ic_youtube_type
+            is FeedType.Twitter -> R_common.drawable.ic_twitter_space_type
+            else -> R_common.drawable.ic_podcast_placeholder
         }
     }
 
     private fun getFeedItemPlaceholderDrawable(feedType: FeedType?): Int {
         return when (feedType) {
-            is FeedType.Podcast -> R.drawable.ic_podcast_placeholder
-            is FeedType.Video -> R.drawable.ic_video_placeholder
-            is FeedType.Newsletter -> R.drawable.ic_newsletter_placeholder
-            else -> R.drawable.ic_podcast_placeholder
+            is FeedType.Podcast -> R_common.drawable.ic_podcast_placeholder
+            is FeedType.Video -> R_common.drawable.ic_video_placeholder
+            is FeedType.Newsletter -> R_common.drawable.ic_newsletter_placeholder
+            else -> R_common.drawable.ic_podcast_placeholder
         }
     }
 

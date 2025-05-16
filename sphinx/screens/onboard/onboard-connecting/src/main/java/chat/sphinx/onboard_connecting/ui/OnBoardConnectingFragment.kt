@@ -17,6 +17,7 @@ import chat.sphinx.insetter_activity.addNavigationBarPadding
 import chat.sphinx.onboard_connecting.R
 import chat.sphinx.onboard_connecting.databinding.FragmentOnBoardConnectingBinding
 import chat.sphinx.resources.SphinxToastUtils
+import chat.sphinx.resources.R as R_common
 import dagger.hilt.android.AndroidEntryPoint
 import io.matthewnelson.android_feature_screens.navigation.CloseAppOnBackPress
 import io.matthewnelson.android_feature_screens.ui.motionlayout.MotionLayoutFragment
@@ -66,7 +67,7 @@ internal class OnBoardConnectingFragment: MotionLayoutFragment<
         lifecycleScope.launch {
             imageLoader.load(
                 binding.imageViewOnBoardConnecting,
-                R.drawable.connecting,
+                R_common.drawable.connecting,
             )
         }
     }

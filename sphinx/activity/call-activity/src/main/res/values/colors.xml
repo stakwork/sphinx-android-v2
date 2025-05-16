@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="disabled_icons_color">#FF6F6F</color>
+    <color name="badgeRed_2">#33FF5252</color>
+    <color name="call_icons_background">#1A909BAA</color>
+    <color name="toggle_icons">#221A1E</color>
+    <color name="color_recording_background">#FF423B</color>
+</resources>

@@ -226,6 +226,21 @@ class SendMessage private constructor(
         }
 
         @Synchronized
+        fun isSendingAttachment(): Boolean {
+            return attachmentInfo != null
+        }
+
+        @Synchronized
+        fun isReplying(): Boolean {
+            return replyUUID != null
+        }
+
+        @Synchronized
+        fun isThreadMsg(): Boolean {
+            return threadUUID != null
+        }
+
+        @Synchronized
         fun build(): Pair<SendMessage?, ValidationError?> {
             val isValid = isValid()
 

@@ -14,6 +14,7 @@ import chat.sphinx.kotlin_response.LoadResponse
 import chat.sphinx.kotlin_response.Response
 import chat.sphinx.wrapper_badge.Badge
 import chat.sphinx.wrapper_badge.BadgeTemplate
+import chat.sphinx.resources.R as R_common
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.matthewnelson.android_feature_navigation.util.navArgs
 import io.matthewnelson.android_feature_viewmodel.SideEffectViewModel
@@ -79,7 +80,7 @@ internal class CreateBadgeViewModel @Inject constructor(
 
     val imageLoaderDefaults by lazy {
         ImageLoaderOptions.Builder()
-            .placeholderResId(R.drawable.ic_tribe)
+            .placeholderResId(R_common.drawable.ic_tribe)
             .transformation(Transformation.CircleCrop)
             .build()
     }
@@ -107,23 +108,23 @@ internal class CreateBadgeViewModel @Inject constructor(
             updatedBadge.badgeId?.let { nnBadgeId ->
                 updatedBadge.chatId?.let { nnChatId ->
                     viewModelScope.launch(mainImmediate) {
-                        networkQueryPeople.changeBadgeState(
-                            BadgeStateDto(
-                                nnBadgeId,
-                                nnChatId
-                            ),
-                            updatedBadge.isActive
-                        ).collect { loadResponse ->
-                            @Exhaustive
-                            when (loadResponse) {
-                                is Response.Error -> {
-                                    updateViewState(CreateBadgeViewState.ToggleBadge(badge))
-                                    submitSideEffect(CreateBadgeSideEffect.Notify.FailedToChangeState)
-                                }
-                                is Response.Success -> {}
-                                is LoadResponse.Loading -> {}
-                            }
-                        }
+//                        networkQueryPeople.changeBadgeState(
+//                            BadgeStateDto(
+//                                nnBadgeId,
+//                                nnChatId
+//                            ),
+//                            updatedBadge.isActive
+//                        ).collect { loadResponse ->
+//                            @Exhaustive
+//                            when (loadResponse) {
+//                                is Response.Error -> {
+//                                    updateViewState(CreateBadgeViewState.ToggleBadge(badge))
+//                                    submitSideEffect(CreateBadgeSideEffect.Notify.FailedToChangeState)
+//                                }
+//                                is Response.Success -> {}
+//                                is LoadResponse.Loading -> {}
+//                            }
+//                        }
                     }
                     return
                 }
@@ -168,29 +169,29 @@ internal class CreateBadgeViewModel @Inject constructor(
 
                 updateViewState(CreateBadgeViewState.LoadingCreateBadge)
 
-                networkQueryPeople.createBadge(
-                    BadgeCreateDto(
-                        chat_id = it.badgeTemplate.chatId,
-                        name = it.badgeTemplate.name,
-                        reward_requirement = it.badgeTemplate.rewardRequirement,
-                        memo = description,
-                        icon = it.badgeTemplate.imageUrl,
-                        reward_type = it.badgeTemplate.rewardType,
-                        active = false,
-                        amount = amount
-                    )
-                ).collect { loadResponse ->
-                    when (loadResponse) {
-                        is Response.Error -> {
-                            submitSideEffect(CreateBadgeSideEffect.Notify.FailedToCreateBadge)
-                            updateViewState(it)
-                        }
-                        is Response.Success -> {
-                            navigator.popBackStack()
-                        }
-                        is LoadResponse.Loading -> {}
-                    }
-                }
+//                networkQueryPeople.createBadge(
+//                    BadgeCreateDto(
+//                        chat_id = it.badgeTemplate.chatId,
+//                        name = it.badgeTemplate.name,
+//                        reward_requirement = it.badgeTemplate.rewardRequirement,
+//                        memo = description,
+//                        icon = it.badgeTemplate.imageUrl,
+//                        reward_type = it.badgeTemplate.rewardType,
+//                        active = false,
+//                        amount = amount
+//                    )
+//                ).collect { loadResponse ->
+//                    when (loadResponse) {
+//                        is Response.Error -> {
+//                            submitSideEffect(CreateBadgeSideEffect.Notify.FailedToCreateBadge)
+//                            updateViewState(it)
+//                        }
+//                        is Response.Success -> {
+//                            navigator.popBackStack()
+//                        }
+//                        is LoadResponse.Loading -> {}
+//                    }
+//                }
             }
         }
     }

@@ -5,29 +5,24 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import chat.sphinx.camera_view_model_coordinator.request.CameraRequest
 import chat.sphinx.camera_view_model_coordinator.response.CameraResponse
-import chat.sphinx.chat_common.ui.ChatSideEffect
 import chat.sphinx.chat_common.ui.ChatViewModel
 import chat.sphinx.chat_common.ui.viewstate.InitialHolderViewState
 import chat.sphinx.chat_contact.navigation.ContactChatNavigator
 import chat.sphinx.concept_link_preview.LinkPreviewHandler
 import chat.sphinx.concept_meme_input_stream.MemeInputStreamHandler
 import chat.sphinx.concept_meme_server.MemeServerTokenHandler
-import chat.sphinx.concept_network_query_lightning.NetworkQueryLightning
-import chat.sphinx.concept_network_query_lightning.model.route.RouteSuccessProbabilityDto
-import chat.sphinx.concept_network_query_lightning.model.route.isRouteAvailable
 import chat.sphinx.concept_network_query_people.NetworkQueryPeople
 import chat.sphinx.concept_repository_actions.ActionsRepository
 import chat.sphinx.concept_repository_chat.ChatRepository
+import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
 import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.concept_repository_dashboard_android.RepositoryDashboardAndroid
 import chat.sphinx.concept_repository_feed.FeedRepository
+import chat.sphinx.concept_repository_lightning.LightningRepository
 import chat.sphinx.concept_repository_media.RepositoryMedia
 import chat.sphinx.concept_repository_message.MessageRepository
 import chat.sphinx.concept_repository_message.model.SendMessage
 import chat.sphinx.concept_view_model_coordinator.ViewModelCoordinator
-import chat.sphinx.kotlin_response.LoadResponse
-import chat.sphinx.kotlin_response.Response
-import chat.sphinx.kotlin_response.ResponseError
 import chat.sphinx.logger.SphinxLogger
 import chat.sphinx.resources.getRandomHexCode
 import chat.sphinx.wrapper_chat.Chat
@@ -39,21 +34,28 @@ import chat.sphinx.wrapper_common.message.MessageUUID
 import chat.sphinx.wrapper_common.util.getInitials
 import chat.sphinx.wrapper_contact.Contact
 import chat.sphinx.wrapper_contact.ContactAlias
+import chat.sphinx.wrapper_contact.ContactStatus
 import chat.sphinx.wrapper_contact.getColorKey
-import chat.sphinx.wrapper_contact.isEncrypted
+import chat.sphinx.wrapper_contact.isPending
 import chat.sphinx.wrapper_message.Message
 import chat.sphinx.wrapper_message.PodcastClip
 import chat.sphinx.wrapper_message.ThreadUUID
 import com.squareup.moshi.Moshi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.matthewnelson.android_feature_navigation.util.navArgs
-import io.matthewnelson.android_feature_viewmodel.submitSideEffect
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
 import io.matthewnelson.concept_media_cache.MediaCacheHandler
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.launch
-import javax.annotation.meta.Exhaustive
 import javax.inject.Inject
 
 internal inline val ChatContactFragmentArgs.chatId: ChatId?
@@ -78,17 +80,18 @@ internal class ChatContactViewModel @Inject constructor(
     contactRepository: ContactRepository,
     messageRepository: MessageRepository,
     actionsRepository: ActionsRepository,
+    lightningRepository: LightningRepository,
     repositoryDashboard: RepositoryDashboardAndroid<Any>,
-    networkQueryLightning: NetworkQueryLightning,
     networkQueryPeople: NetworkQueryPeople,
     mediaCacheHandler: MediaCacheHandler,
     savedStateHandle: SavedStateHandle,
     cameraViewModelCoordinator: ViewModelCoordinator<CameraRequest, CameraResponse>,
     linkPreviewHandler: LinkPreviewHandler,
     memeInputStreamHandler: MemeInputStreamHandler,
+    connectManagerRepository: ConnectManagerRepository,
     moshi: Moshi,
     LOG: SphinxLogger,
-): ChatViewModel<ChatContactFragmentArgs>(
+) : ChatViewModel<ChatContactFragmentArgs>(
     app,
     dispatchers,
     memeServerTokenHandler,
@@ -99,14 +102,15 @@ internal class ChatContactViewModel @Inject constructor(
     contactRepository,
     messageRepository,
     actionsRepository,
+    lightningRepository,
     repositoryDashboard,
-    networkQueryLightning,
     networkQueryPeople,
     mediaCacheHandler,
     savedStateHandle,
     cameraViewModelCoordinator,
     linkPreviewHandler,
     memeInputStreamHandler,
+    connectManagerRepository,
     moshi,
     LOG,
 ) {
@@ -145,11 +149,11 @@ internal class ChatContactViewModel @Inject constructor(
                         InitialHolderViewState.Url(photoUrl)
                     )
                 } ?: contact.alias?.let { alias ->
-
                     emit(
                         InitialHolderViewState.Initials(
                             alias.value.getInitials(),
-                            contact.getColorKey()
+                            contact.getColorKey(),
+                            contact.status.isPending()
                         )
                     )
                 } ?: emit(
@@ -190,7 +194,8 @@ internal class ChatContactViewModel @Inject constructor(
                         throw Exception()
                     }
                 }
-            } catch (e: Exception) {}
+            } catch (e: Exception) {
+            }
             delay(25L)
 
             return Triple(
@@ -204,21 +209,14 @@ internal class ChatContactViewModel @Inject constructor(
     override val threadSharedFlow: SharedFlow<List<Message>>?
         get() = null
 
-    override fun forceKeyExchange() {
-        viewModelScope.launch(io) {
-            contactSharedFlow.firstOrNull()?.let { nnContact ->
-                if (!nnContact.isEncrypted()) {
-                    contactRepository.forceKeyExchange(nnContact.id)
-                }
-            }
-        }
-    }
-
     override suspend fun shouldStreamSatsFor(podcastClip: PodcastClip, messageUUID: MessageUUID?) {
         TODO("Not yet implemented")
     }
 
-    override suspend fun getInitialHolderViewStateForReceivedMessage(message: Message, owner: Contact): InitialHolderViewState {
+    override suspend fun getInitialHolderViewStateForReceivedMessage(
+        message: Message,
+        owner: Contact
+    ): InitialHolderViewState {
         if (message.sender == owner.id) {
             owner.photoUrl?.let { photoUrl ->
                 return InitialHolderViewState.Url(photoUrl)
@@ -249,67 +247,14 @@ internal class ChatContactViewModel @Inject constructor(
                 initialHolder = it
                 throw Exception()
             }
-        } catch (e: Exception) {}
+        } catch (e: Exception) {
+        }
         delay(25L)
 
         return initialHolder ?: InitialHolderViewState.None
     }
 
-    override val checkRoute: Flow<LoadResponse<Boolean, ResponseError>> = flow {
-        emit(LoadResponse.Loading)
-
-        val networkFlow: Flow<LoadResponse<RouteSuccessProbabilityDto, ResponseError>>? = let {
-            emit(LoadResponse.Loading)
-
-            var contact: Contact? = contactSharedFlow.replayCache.firstOrNull()
-                ?: contactSharedFlow.firstOrNull()
-
-            if (contact == null) {
-                try {
-                    contactSharedFlow.collect {
-                        if (contact != null) {
-                            contact = it
-                            throw Exception()
-                        }
-                    }
-                } catch (e: Exception) {}
-                delay(25L)
-            }
-
-            contact?.let { nnContact ->
-                nnContact.nodePubKey?.let { pubKey ->
-
-                    nnContact.routeHint?.let { hint ->
-
-                        networkQueryLightning.checkRoute(pubKey, hint)
-
-                    } ?: networkQueryLightning.checkRoute(pubKey)
-
-                }
-            }
-        }
-
-        networkFlow?.let { flow ->
-            flow.collect { response ->
-                @Exhaustive
-                when (response) {
-                    LoadResponse.Loading -> {}
-                    is Response.Error -> {
-                        emit(response)
-                    }
-                    is Response.Success -> {
-                        emit(
-                            Response.Success(response.value.isRouteAvailable)
-                        )
-                    }
-                }
-            }
-        } ?: emit(Response.Error(
-            ResponseError("Contact and chatId were null, unable to check route")
-        ))
-    }
-
-    private suspend fun getContact() : Contact? {
+    private suspend fun getContact(): Contact? {
         var contact: Contact? = contactSharedFlow.replayCache.firstOrNull()
             ?: contactSharedFlow.firstOrNull()
 
@@ -321,7 +266,8 @@ internal class ChatContactViewModel @Inject constructor(
                         throw Exception()
                     }
                 }
-            } catch (e: Exception) {}
+            } catch (e: Exception) {
+            }
             delay(25L)
         }
 

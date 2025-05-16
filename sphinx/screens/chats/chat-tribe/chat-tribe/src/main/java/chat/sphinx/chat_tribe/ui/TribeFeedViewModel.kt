@@ -6,6 +6,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import app.cash.exhaustive.Exhaustive
 import chat.sphinx.chat_tribe.R
+import chat.sphinx.chat_common.R as R_chat_common
 import chat.sphinx.chat_tribe.model.TribeFeedData
 import chat.sphinx.chat_tribe.ui.viewstate.BoostAnimationViewState
 import chat.sphinx.chat_tribe.ui.viewstate.TribeFeedViewState
@@ -88,9 +89,9 @@ internal class TribeFeedViewModel @Inject constructor(
                                         val isMyTribe = chat.isTribeOwnedByAccount(owner.nodePubKey)
                                         val label = app.getString(
                                             if (isMyTribe) {
-                                                R.string.chat_tribe_earned
+                                                R_chat_common.string.chat_tribe_earned
                                             } else {
-                                                R.string.chat_tribe_contributed
+                                                R_chat_common.string.chat_tribe_contributed
                                             }
                                         )
 

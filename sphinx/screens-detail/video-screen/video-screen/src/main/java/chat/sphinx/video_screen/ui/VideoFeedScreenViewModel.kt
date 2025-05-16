@@ -5,6 +5,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import androidx.core.net.toUri
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewModelScope
@@ -17,6 +18,7 @@ import chat.sphinx.concept_repository_lightning.LightningRepository
 import chat.sphinx.concept_repository_media.RepositoryMedia
 import chat.sphinx.concept_repository_message.MessageRepository
 import chat.sphinx.video_screen.R
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.video_screen.navigation.VideoScreenNavigator
 import chat.sphinx.video_screen.ui.viewstate.BoostAnimationViewState
 import chat.sphinx.video_screen.ui.viewstate.SelectedVideoViewState
@@ -62,6 +64,12 @@ internal open class VideoFeedScreenViewModel(
     VideoFeedScreenViewState
     >(dispatchers, VideoFeedScreenViewState.Idle)
 {
+    companion object {
+        const val SERVER_SETTINGS_SHARED_PREFERENCES = "server_ip_settings"
+        const val ROUTER_URL= "router_url"
+        const val ROUTER_PUBKEY= "router_pubkey"
+    }
+
     private suspend fun getAccountBalance(): StateFlow<NodeBalance?> =
         lightningRepository.getAccountBalance()
 
@@ -77,6 +85,10 @@ internal open class VideoFeedScreenViewModel(
         SharingStarted.WhileSubscribed(2_000),
         replay = 1,
     )
+
+    private val serverSettingsSharedPreferences: SharedPreferences =
+        app.getSharedPreferences(SERVER_SETTINGS_SHARED_PREFERENCES, Context.MODE_PRIVATE)
+
 
     private var videoRecordConsumed: VideoRecordConsumed? = null
     private var videoStreamSatsTimer: VideoStreamSatsTimer? = null
@@ -301,14 +313,14 @@ internal open class VideoFeedScreenViewModel(
                             (amount.value > balance.balance.value) -> {
                                 submitSideEffect(
                                     VideoFeedScreenSideEffect.Notify(
-                                        app.getString(R.string.balance_too_low)
+                                        app.getString(R_common.string.balance_too_low)
                                     )
                                 )
                             }
                             (amount.value <= 0) -> {
                                 submitSideEffect(
                                     VideoFeedScreenSideEffect.Notify(
-                                        app.getString(R.string.boost_amount_too_low)
+                                        app.getString(R_common.string.boost_amount_too_low)
                                     )
                                 )
                             }
@@ -335,6 +347,9 @@ internal open class VideoFeedScreenViewModel(
 
                                 videoFeed.destinations.let { destinations ->
 
+                                    val routerUrl = serverSettingsSharedPreferences.getString(ROUTER_URL, null)
+                                    val routerPubKey = serverSettingsSharedPreferences.getString(ROUTER_PUBKEY, null)
+
                                     feedRepository.streamFeedPayments(
                                         chatId,
                                         videoFeed.id.value,
@@ -342,7 +357,9 @@ internal open class VideoFeedScreenViewModel(
                                         0,
                                         amount,
                                         FeedPlayerSpeed(1.0),
-                                        destinations
+                                        destinations,
+                                        routerUrl = routerUrl,
+                                        routerPubKey = routerPubKey
                                     )
                                 }
                             }
@@ -359,7 +376,7 @@ internal open class VideoFeedScreenViewModel(
                 video.id,
                 video.titleToShow,
                 video.thumbnailUrlToShow?.value ?: "",
-                R.drawable.ic_youtube_type,
+                R_common.drawable.ic_youtube_type,
                 "Youtube",
                 video.datePublished?.hhmmElseDate() ?: "",
                 video.duration?.value?.toInt().toString(),
@@ -386,7 +403,7 @@ internal open class VideoFeedScreenViewModel(
         context.startActivity(
             Intent.createChooser(
                 sharingIntent,
-                app.getString(R.string.episode_detail_share_link)
+                app.getString(R_common.string.episode_detail_share_link)
             )
         )
     }
@@ -398,7 +415,7 @@ internal open class VideoFeedScreenViewModel(
 
             viewModelScope.launch(mainImmediate) {
                 submitSideEffect(
-                    VideoFeedScreenSideEffect.Notify((app.getString(R.string.episode_detail_clipboard))
+                    VideoFeedScreenSideEffect.Notify((app.getString(R_common.string.episode_detail_clipboard))
                     )
                 )
             }
@@ -421,14 +438,20 @@ internal open class VideoFeedScreenViewModel(
         viewModelScope.launch(mainImmediate) {
             videoFeedSharedFlow.firstOrNull()?.let { feed ->
                 (selectedVideoStateContainer.value as? SelectedVideoViewState.VideoSelected)?.let { videoState ->
+
+                    val routerUrl = serverSettingsSharedPreferences.getString(ROUTER_URL, null)
+                    val routerPubKey = serverSettingsSharedPreferences.getString(ROUTER_PUBKEY, null)
+
                     feedRepository.streamFeedPayments(
                         chatId = ChatId(ChatId.NULL_CHAT_ID.toLong()),
                         feedId = videoState.feedId?.value ?: "",
                         feedItemId = videoState.id.value,
                         currentTime = 0,
-                        satsPerMinute = satsPerMinuteStateFlow.value,
+                        amount = satsPerMinuteStateFlow.value,
                         playerSpeed = null,
-                        destinations = feed.destinations
+                        destinations = feed.destinations,
+                        routerUrl = routerUrl,
+                        routerPubKey = routerPubKey
                     )
                 }
             }

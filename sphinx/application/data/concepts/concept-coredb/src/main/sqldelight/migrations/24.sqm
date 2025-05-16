@@ -1,0 +1,11 @@
+import chat.sphinx.wrapper_chat.TimezoneIdentifier;
+import chat.sphinx.wrapper_chat.TimezoneEnabled;
+import chat.sphinx.wrapper_chat.TimezoneUpdated;
+import chat.sphinx.wrapper_common.message.RemoteTimezoneIdentifier;
+
+ALTER TABLE chatDbo ADD COLUMN timezone_enabled INTEGER AS TimezoneEnabled DEFAULT 1;
+ALTER TABLE chatDbo ADD COLUMN timezone_identifier TEXT AS TimezoneIdentifier DEFAULT NULL;
+ALTER TABLE chatDbo ADD COLUMN remote_timezone_identifier TEXT AS RemoteTimezoneIdentifier DEFAULT NULL;
+ALTER TABLE chatDbo ADD COLUMN timezone_updated INTEGER AS TimezoneUpdated DEFAULT 1;
+
+ALTER TABLE messageDbo ADD COLUMN remote_timezone_identifier TEXT DEFAULT NULL;

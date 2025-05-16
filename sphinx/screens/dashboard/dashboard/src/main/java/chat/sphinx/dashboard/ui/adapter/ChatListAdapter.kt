@@ -4,6 +4,7 @@ import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.widget.ImageView
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.*
 import androidx.recyclerview.widget.DiffUtil
@@ -26,8 +27,11 @@ import chat.sphinx.wrapper_common.invite.*
 import chat.sphinx.wrapper_common.lightning.asFormattedString
 import chat.sphinx.wrapper_common.util.getInitials
 import chat.sphinx.wrapper_message.*
+import chat.sphinx.resources.R as R_common
 import io.matthewnelson.android_feature_screens.util.gone
 import io.matthewnelson.android_feature_screens.util.goneIfFalse
+import io.matthewnelson.android_feature_screens.util.goneIfTrue
+import io.matthewnelson.android_feature_screens.util.invisible
 import io.matthewnelson.android_feature_screens.util.invisibleIfFalse
 import io.matthewnelson.android_feature_screens.util.visible
 import io.matthewnelson.android_feature_viewmodel.util.OnStopSupervisor
@@ -198,7 +202,7 @@ internal class ChatListAdapter(
 
     private val imageLoaderOptions: ImageLoaderOptions by lazy {
         ImageLoaderOptions.Builder()
-            .placeholderResId(R.drawable.ic_profile_avatar_circle)
+            .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
             .build()
     }
 
@@ -269,49 +273,75 @@ internal class ChatListAdapter(
                 badgeJob?.cancel()
                 mentionsJob?.cancel()
 
+                val isPending = dashboardChat is DashboardChat.Inactive.Conversation
+
                 // Set Defaults
                 layoutConstraintChatHolderBorder.goneIfFalse(position != dashboardChats.lastIndex)
                 textViewDashboardChatHolderName.setTextColorExt(android.R.color.white)
-                textViewChatHolderMessage.setTextColorExt(R.color.placeholderText)
-                textViewChatHolderMessage.setTextFont(R.font.roboto_regular)
+                textViewChatHolderMessage.setTextColorExt(R_common.color.placeholderText)
+                textViewChatHolderMessage.setTextFont(R_common.font.roboto_regular)
                 textViewDashboardChatHolderBadgeCount.invisibleIfFalse(false)
 
                 // Image
                 dashboardChat.photoUrl.let { url ->
-
-                    includeDashboardChatHolderInitial.apply {
-                        imageViewChatPicture.goneIfFalse(url != null)
-                        textViewInitials.goneIfFalse(url == null)
-                    }
-
-                    if (url != null) {
-                        onStopSupervisor.scope.launch(viewModel.dispatchers.mainImmediate) {
-                            imageLoader.load(
-                                includeDashboardChatHolderInitial.imageViewChatPicture,
-                                url.value,
-                                imageLoaderOptions
-                            )
-                        }
-                    } else {
-                        includeDashboardChatHolderInitial.textViewInitials.text =
-                            dashboardChat.chatName?.getInitials() ?: ""
+                    if (isPending) {
+                        includeDashboardChatHolderInitial.root.invisible
 
                         onStopSupervisor.scope.launch(viewModel.mainImmediate) {
-                            includeDashboardChatHolderInitial.textViewInitials
-                                .setInitialsColor(
-                                    dashboardChat.getColorKey()?.let { colorKey ->
+                            initialsDashboardPendingChatHolder.apply {
+                                root.visible
+                                iconClock.gone
+                                textViewInitials.apply {
+                                    visible
+                                    text = dashboardChat.chatName?.getInitials() ?: ""
+                                    setBackgroundRandomColor(
+                                        R_common.drawable.chat_initials_circle,
                                         Color.parseColor(
-                                            userColorsHelper.getHexCodeForKey(
-                                                colorKey,
-                                                root.context.getRandomHexCode()
-                                            )
-                                        )
-                                    },
-                                    R.drawable.chat_initials_circle
+                                            dashboardChat.getColorKey()?.let { colorKey ->
+                                                userColorsHelper.getHexCodeForKey(
+                                                    colorKey,
+                                                    root.context.getRandomHexCode(),
+                                                )
+                                            }
+                                        ),
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        includeDashboardChatHolderInitial.apply {
+                            imageViewChatPicture.goneIfFalse(url != null)
+                            textViewInitials.goneIfFalse(url == null)
+                        }
+
+                        if (url != null) {
+                            onStopSupervisor.scope.launch(viewModel.dispatchers.mainImmediate) {
+                                imageLoader.load(
+                                    includeDashboardChatHolderInitial.imageViewChatPicture,
+                                    url.value,
+                                    imageLoaderOptions
                                 )
+                            }
+                        } else {
+                            includeDashboardChatHolderInitial.textViewInitials.text =
+                                dashboardChat.chatName?.getInitials() ?: ""
+
+                            onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+                                includeDashboardChatHolderInitial.textViewInitials
+                                    .setInitialsColor(
+                                        dashboardChat.getColorKey()?.let { colorKey ->
+                                            Color.parseColor(
+                                                userColorsHelper.getHexCodeForKey(
+                                                    colorKey,
+                                                    root.context.getRandomHexCode()
+                                                )
+                                            )
+                                        },
+                                        R_common.drawable.chat_initials_circle
+                                    )
+                            }
                         }
                     }
-
                 }
 
                 // Name
@@ -321,59 +351,79 @@ internal class ChatListAdapter(
                     dashboardChat.chatName
                 } else {
                     // Should never make it here, but just in case...
-                    textViewDashboardChatHolderName.setTextColorExt(R.color.primaryRed)
-                    textViewChatHolderCenteredName.setTextColorExt(R.color.primaryRed)
-                    root.context.getString(R.string.null_name_error)
+                    textViewDashboardChatHolderName.setTextColorExt(R_common.color.primaryRed)
+                    textViewChatHolderCenteredName.setTextColorExt(R_common.color.primaryRed)
+                    root.context.getString(R_common.string.null_name_error)
                 }
 
                 textViewDashboardChatHolderName.text = chatName
                 textViewChatHolderCenteredName.text = chatName
 
-
-//                val chatHasMessages = (dashboardChat as? DashboardChat.Active)?.message != null
-//                val activeChatOrInvite = ((dashboardChat is DashboardChat.Active && chatHasMessages) || dashboardChat is DashboardChat.Inactive.Invite)
-//                layoutConstraintDashboardChatHolderMessage.invisibleIfFalse(activeChatOrInvite)
-//                layoutConstraintDashboardChatNoMessageHolder.invisibleIfFalse(!activeChatOrInvite)
+                val chatHasMessages = (dashboardChat as? DashboardChat.Active)?.message != null
+                val activeChatOrInvite = ((dashboardChat is DashboardChat.Active && chatHasMessages)
+                        || dashboardChat is DashboardChat.Inactive.Invite
+                        || isPending)
+                layoutConstraintDashboardChatHolderMessage.invisibleIfFalse(activeChatOrInvite)
+                layoutConstraintDashboardChatNoMessageHolder.invisibleIfFalse(!activeChatOrInvite)
 
                 if (dashboardChat is DashboardChat.Active.Conversation) {
-                    imageViewChatHolderLock.text = getString(R.string.material_icon_name_lock)
-                    progressBarChatStatus.gone
-                    textViewChatStatus.gone
+                    imageViewChatHolderLock.visible
+                    imageViewChatHolderCenteredLock.visible
+                    imageViewChatHolderLock.text = getString(R_common.string.material_icon_name_lock)
+                    imageViewChatHolderCenteredLock.text = getString(R_common.string.material_icon_name_lock)
                 }
-                if (dashboardChat is DashboardChat.Inactive.Conversation) {
-                    imageViewChatHolderLock.text = getString(R.string.material_icon_name_lock_open)
-                    progressBarChatStatus.visible
-                    textViewChatStatus.visible
 
-                    textViewChatStatus.setTextColor(
-                        ContextCompat.getColor(
-                            binding.root.context,
-                            R.color.sphinxOrange
-                        )
-                    )
+                if (dashboardChat is DashboardChat.Inactive.Invite) {
+                    imageViewChatHolderLock.gone
+                    imageViewChatHolderCenteredLock.gone
+                }
+
+                if (dashboardChat is DashboardChat.Inactive.Conversation) {
+                    imageViewChatHolderLock.visible
+                    imageViewChatHolderCenteredLock.visible
+                    imageViewChatHolderLock.text = getString(R_common.string.material_icon_name_lock_open)
+                    imageViewChatHolderCenteredLock.text = getString(R_common.string.material_icon_name_lock_open)
                 }
                 if (dashboardChat is DashboardChat.Active.GroupOrTribe) {
-                    imageViewChatHolderLock.text = getString(R.string.material_icon_name_lock)
-                    progressBarChatStatus.gone
-                    textViewChatStatus.gone
+                    imageViewChatHolderLock.visible
+                    imageViewChatHolderCenteredLock.visible
+                    imageViewChatHolderLock.text = getString(R_common.string.material_icon_name_lock)
+                    imageViewChatHolderCenteredLock.text = getString(R_common.string.material_icon_name_lock)
                 }
 
                 // Time
                 textViewChatHolderTime.text = dashboardChat.getDisplayTime(today00)
 
                 // Message
-                val messageText = dashboardChat.getMessageText(root.context)
+
+                val messageText = if (isPending) getString(R_common.string.waiting_for_approval) else dashboardChat.getMessageText(root.context)
                 val hasUnseenMessages = dashboardChat.hasUnseenMessages()
 
-                if (messageText == root.context.getString(R.string.decryption_error)) {
-                    textViewChatHolderMessage.setTextColorExt(R.color.primaryRed)
+                if (messageText == root.context.getString(R_common.string.decryption_error)) {
+                    textViewChatHolderMessage.setTextColorExt(R_common.color.primaryRed)
                 } else {
-                    textViewChatHolderMessage.setTextColorExt(if (hasUnseenMessages) R.color.text else R.color.placeholderText)
+                    textViewChatHolderMessage.setTextColorExt(if (hasUnseenMessages) R_common.color.text else R_common.color.placeholderText)
                 }
 
-                textViewChatHolderMessage.setTextFont(if (hasUnseenMessages) R.font.roboto_bold else R.font.roboto_regular)
+                textViewChatHolderMessage.setTextFont(if (hasUnseenMessages) R_common.font.roboto_bold else R_common.font.roboto_regular)
 
                 textViewChatHolderMessage.text = messageText
+                textViewChatHolderMessage.goneIfTrue(messageText.isEmpty())
+
+                if (isPending) {
+                    startIconClock.visible
+                    val layoutParams = textViewChatHolderMessage.layoutParams as ConstraintLayout.LayoutParams
+                    layoutParams.startToEnd = R.id.start_icon_clock
+                    layoutParams.startToStart = ConstraintLayout.LayoutParams.UNSET
+                    layoutParams.startToStart = ConstraintLayout.LayoutParams.UNSET
+                    textViewChatHolderMessage.layoutParams = layoutParams
+                } else {
+                    val layoutParams = textViewChatHolderMessage.layoutParams as ConstraintLayout.LayoutParams
+                    layoutParams.startToEnd = R.id.text_view_chat_holder_message_icon
+                    layoutParams.startToStart = ConstraintLayout.LayoutParams.UNSET
+                    layoutParams.startToStart = ConstraintLayout.LayoutParams.UNSET
+                    textViewChatHolderMessage.layoutParams = layoutParams
+                }
 
                 handleInviteLayouts()
 
@@ -400,8 +450,8 @@ internal class ChatListAdapter(
 
                     if (nnDashboardChat is DashboardChat.Inactive.Invite) {
                         textViewChatHolderTime.gone
-                        textViewChatHolderMessage.setTextFont(R.font.roboto_bold)
-                        textViewChatHolderMessage.setTextColorExt(R.color.text)
+                        textViewChatHolderMessage.setTextFont(R_common.font.roboto_bold)
+                        textViewChatHolderMessage.setTextColorExt(R_common.color.text)
 
                         layoutConstraintDashboardChatHolderContact.gone
                         layoutConstraintDashboardChatHolderInvite.visible
@@ -438,9 +488,9 @@ internal class ChatListAdapter(
                                 alpha = if (chatIsMutedOrOnlyMentions) 0.2f else 1.0f
 
                                 backgroundTintList = binding.getColorStateList(if (chatIsMutedOrOnlyMentions) {
-                                        R.color.washedOutReceivedText
+                                        R_common.color.washedOutReceivedText
                                     } else {
-                                        R.color.primaryBlue
+                                        R_common.color.primaryBlue
                                     }
                                 )
                             }

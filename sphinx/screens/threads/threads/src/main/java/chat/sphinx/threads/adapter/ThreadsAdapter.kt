@@ -1,23 +1,20 @@
 package chat.sphinx.threads.adapter
 
 import android.graphics.Color
-import android.os.Build
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.widget.ImageView
-import androidx.annotation.RequiresApi
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import chat.sphinx.chat_common.ui.viewstate.messageholder.ReplyUserHolder
+import chat.sphinx.highlighting_tool.SphinxUrlSpan
 import chat.sphinx.chat_common.util.VideoThumbnailUtil
 import chat.sphinx.concept_image_loader.Disposable
 import chat.sphinx.concept_image_loader.ImageLoader
 import chat.sphinx.concept_image_loader.ImageLoaderOptions
-import chat.sphinx.concept_image_loader.OnImageLoadListener
 import chat.sphinx.concept_image_loader.Transformation
 import chat.sphinx.concept_user_colors_helper.UserColorsHelper
 import chat.sphinx.highlighting_tool.SphinxHighlightingTool
@@ -26,6 +23,7 @@ import chat.sphinx.resources.getRandomHexCode
 import chat.sphinx.resources.getString
 import chat.sphinx.resources.setBackgroundRandomColor
 import chat.sphinx.threads.R
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.threads.databinding.ThreadsListItemHolderBinding
 import chat.sphinx.threads.model.ThreadItem
 import chat.sphinx.threads.ui.ThreadsViewModel
@@ -35,7 +33,6 @@ import chat.sphinx.wrapper_common.util.getInitials
 import chat.sphinx.wrapper_view.Px
 import io.matthewnelson.android_feature_screens.util.gone
 import io.matthewnelson.android_feature_screens.util.goneIfFalse
-import io.matthewnelson.android_feature_screens.util.invisible
 import io.matthewnelson.android_feature_screens.util.visible
 import io.matthewnelson.android_feature_viewmodel.util.OnStopSupervisor
 import io.matthewnelson.concept_views.viewstate.collect
@@ -162,7 +159,7 @@ internal class ThreadsAdapter(
 
     private val imageLoaderOptions: ImageLoaderOptions by lazy {
         ImageLoaderOptions.Builder()
-            .placeholderResId(R.drawable.ic_profile_avatar_circle)
+            .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
             .transformation(Transformation.CircleCrop)
             .build()
     }
@@ -179,10 +176,18 @@ internal class ThreadsAdapter(
 
         private var item: ThreadItem? = null
 
+        private val onSphinxInteractionListener: SphinxUrlSpan.OnInteractionListener
+
         init {
             binding.root.setOnClickListener {
                 item?.let { threadItem ->
                     viewModel.navigateToThreadDetail(threadItem.uuid)
+                }
+            }
+
+            onSphinxInteractionListener = object: SphinxUrlSpan.OnInteractionListener(null) {
+                override fun onClick(url: String?) {
+//                    viewModel.handleContactTribeLinks(url)
                 }
             }
         }
@@ -205,9 +210,12 @@ internal class ThreadsAdapter(
                 textViewThreadMessageContent.text = threadItem.message
                 textViewThreadMessageContent.goneIfFalse(threadItem.message.isNotEmpty())
 
-                SphinxHighlightingTool.addHighlights(
+                SphinxHighlightingTool.addMarkdowns(
                     textViewThreadMessageContent,
                     threadItem.highlightedTexts,
+                    threadItem.boldTexts,
+                    threadItem.markdownLinkTexts,
+                    onSphinxInteractionListener,
                     textViewThreadMessageContent.resources,
                     textViewThreadMessageContent.context
                 )
@@ -216,12 +224,12 @@ internal class ThreadsAdapter(
                 layoutLayoutChatImageSmallInitialHolder.apply {
                     textViewInitialsName.visible
                     textViewInitialsName.text =
-                        (threadItem.aliasAndColorKey.first?.value ?: root.context.getString(R.string.unknown)).getInitials()
+                        (threadItem.aliasAndColorKey.first?.value ?: root.context.getString(R_common.string.unknown)).getInitials()
                     imageViewChatPicture.gone
 
                     onStopSupervisor.scope.launch(viewModel.mainImmediate) {
                         textViewInitialsName.setBackgroundRandomColor(
-                            R.drawable.chat_initials_circle,
+                            R_common.drawable.chat_initials_circle,
                             Color.parseColor(
                                 threadItem.aliasAndColorKey.second?.let {
                                     userColorsHelper.getHexCodeForKey(
@@ -306,16 +314,16 @@ internal class ThreadsAdapter(
                 binding.includeMessageTypeFileAttachment.apply {
                     if (threadItem.fileAttachment != null) {
                         root.visible
-                        includeMessageTypeFileAttachment.root.setBackgroundResource(R.drawable.background_thread_file_attachment)
+                        includeMessageTypeFileAttachment.root.setBackgroundResource(R_common.drawable.background_thread_file_attachment)
                         layoutConstraintAttachmentFileDownloadButtonGroup.gone
 
                         progressBarAttachmentFileDownload.gone
                         buttonAttachmentFileDownload.visible
 
                         textViewAttachmentFileIcon.text = if (threadItem.fileAttachment.isPdf) {
-                            getString(chat.sphinx.chat_common.R.string.material_icon_name_file_pdf)
+                            getString(R_common.string.material_icon_name_file_pdf)
                         } else {
-                            getString(chat.sphinx.chat_common.R.string.material_icon_name_file_attachment)
+                            getString(R_common.string.material_icon_name_file_attachment)
                         }
 
                         textViewAttachmentFileName.text =
@@ -344,7 +352,7 @@ internal class ThreadsAdapter(
                         textViewAttachmentPlayPauseButton.visible
                         textViewAttachmentAudioRemainingDuration.gone
 
-                        includeMessageTypeAudioAttachment.root.setBackgroundResource(R.drawable.background_thread_file_attachment)
+                        includeMessageTypeAudioAttachment.root.setBackgroundResource(R_common.drawable.background_thread_file_attachment)
                     }
                     else {
                         root.gone
@@ -374,7 +382,7 @@ internal class ThreadsAdapter(
                             circularBorder.visible
                             textViewInitialsName.visible
                             textViewInitialsName.text =
-                                (user.alias?.value ?: root.context.getString(R.string.unknown)).getInitials()
+                                (user.alias?.value ?: root.context.getString(R_common.string.unknown)).getInitials()
                             imageViewChatPicture.gone
 
                             imageViewDefaultAlpha.gone
@@ -382,7 +390,7 @@ internal class ThreadsAdapter(
 
                             onStopSupervisor.scope.launch(viewModel.mainImmediate) {
                                 textViewInitialsName.setBackgroundRandomColor(
-                                    R.drawable.chat_initials_circle,
+                                    R_common.drawable.chat_initials_circle,
                                     Color.parseColor(
                                         userColorsHelper.getHexCodeForKey(
                                             user.colorKey,

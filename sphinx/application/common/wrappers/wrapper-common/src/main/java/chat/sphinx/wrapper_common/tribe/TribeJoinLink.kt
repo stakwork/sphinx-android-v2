@@ -33,13 +33,12 @@ value class TribeJoinLink(val value: String) {
         get() = (getComponent(TRIBE_PUBKEY) ?: "").trim()
 
     fun getComponent(k: String): String? {
-        val components = value.replace("sphinx.chat://", "").split("&")
+        val components = value.substringAfter("?").split("&")
         for (component in components) {
             val subComponents = component.split("=")
-            val key: String? = if (subComponents.isNotEmpty()) subComponents.elementAtOrNull(0) else null
-            val value: String? = if (subComponents.size > 1) subComponents.elementAtOrNull(1) else null
-
-            if (key == k) return value
+            if (subComponents.size == 2 && subComponents[0] == k) {
+                return subComponents[1]
+            }
         }
         return null
     }

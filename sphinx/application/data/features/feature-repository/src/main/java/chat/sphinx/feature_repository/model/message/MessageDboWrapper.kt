@@ -13,7 +13,25 @@ import chat.sphinx.wrapper_common.lightning.Sat
 import chat.sphinx.wrapper_common.message.CallLinkMessage
 import chat.sphinx.wrapper_common.message.MessageId
 import chat.sphinx.wrapper_common.message.MessageUUID
-import chat.sphinx.wrapper_message.*
+import chat.sphinx.wrapper_message.ErrorMessage
+import chat.sphinx.wrapper_message.FeedBoost
+import chat.sphinx.wrapper_message.Flagged
+import chat.sphinx.wrapper_message.GiphyData
+import chat.sphinx.wrapper_message.Message
+import chat.sphinx.wrapper_message.MessageContent
+import chat.sphinx.wrapper_message.MessageContentDecrypted
+import chat.sphinx.wrapper_message.MessageMUID
+import chat.sphinx.wrapper_message.MessagePerson
+import chat.sphinx.wrapper_message.MessageStatus
+import chat.sphinx.wrapper_message.MessageType
+import chat.sphinx.wrapper_message.NewMessage
+import chat.sphinx.wrapper_message.PodcastClip
+import chat.sphinx.wrapper_message.RecipientAlias
+import chat.sphinx.wrapper_common.message.RemoteTimezoneIdentifier
+import chat.sphinx.wrapper_message.ReplyUUID
+import chat.sphinx.wrapper_message.SenderAlias
+import chat.sphinx.wrapper_message.TagMessage
+import chat.sphinx.wrapper_message.ThreadUUID
 import chat.sphinx.wrapper_message_media.MessageMedia
 
 class MessageDboWrapper(
@@ -67,6 +85,8 @@ class MessageDboWrapper(
         get() = messageDbo.thread_uuid
     override val errorMessage: ErrorMessage?
         get() = messageDbo.error_message
+    override val tagMessage: TagMessage?
+        get() = messageDbo.tag_message
 
     @Volatile
     @Suppress("PropertyName")
@@ -142,6 +162,12 @@ class MessageDboWrapper(
 
     @Volatile
     @Suppress("PropertyName")
+    var _remoteTimezoneIdentifier: RemoteTimezoneIdentifier? = null
+    override val remoteTimezoneIdentifier: RemoteTimezoneIdentifier?
+        get() = _remoteTimezoneIdentifier
+
+    @Volatile
+    @Suppress("PropertyName")
     var _isPinned: Boolean = false
     override val isPinned: Boolean
         get() = _isPinned
@@ -185,7 +211,8 @@ fun convertMessageDboToNewMessage(messageDbo: MessageDbo, messageMedia: MessageM
         reactions = null,
         purchaseItems = null,
         replyMessage = null,
-        thread = null
+        thread = null,
+        remoteTimezoneIdentifier = messageDbo.remote_timezone_identifier
     )
 }
 

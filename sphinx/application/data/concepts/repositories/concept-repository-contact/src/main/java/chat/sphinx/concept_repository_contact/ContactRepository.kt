@@ -11,6 +11,7 @@ import chat.sphinx.wrapper_common.lightning.LightningRouteHint
 import chat.sphinx.wrapper_common.lightning.Sat
 import chat.sphinx.wrapper_contact.*
 import chat.sphinx.wrapper_invite.Invite
+import chat.sphinx.wrapper_invite.InviteString
 import chat.sphinx.wrapper_io_utils.InputStreamProvider
 import chat.sphinx.wrapper_message_media.MediaType
 import io.matthewnelson.crypto_common.clazzes.Password
@@ -25,6 +26,7 @@ interface ContactRepository {
     /** Sphinx V2 (rename methods for clarity) **/
 
     val accountOwner: StateFlow<Contact?>
+    suspend fun getOwnerContact(): Contact?
     val getAllContacts: Flow<List<Contact>>
     fun getContactById(contactId: ContactId): Flow<Contact?>
     fun getContactByPubKey(pubKey: LightningNodePubKey): Flow<Contact?>
@@ -33,9 +35,8 @@ interface ContactRepository {
     // Need to review DB upsert when setting invites on upsertNewContact query
     fun getInviteByContactId(contactId: ContactId): Flow<Invite?>
     fun getInviteById(inviteId: InviteId): Flow<Invite?>
-    fun createNewInvite(nickname: String, welcomeMessage: String): Flow<LoadResponse<Any, ResponseError>>
+    fun getInviteByString(inviteString: InviteString): Flow<Invite?>
 
-    val networkRefreshContacts: Flow<LoadResponse<Boolean, ResponseError>>
     var updatedContactIds: MutableList<ContactId>
 
     suspend fun deleteContactById(contactId: ContactId): Response<Any, ResponseError>
@@ -43,10 +44,6 @@ interface ContactRepository {
     suspend fun updateOwnerNameAndKey(name: String, contactKey: Password): Response<Any, ResponseError>
     suspend fun updateOwner(alias: String?, privatePhoto: PrivatePhoto?, tipAmount: Sat?): Response<Any, ResponseError>
 
-
-    suspend fun forceKeyExchange(
-        contactId: ContactId,
-    )
 
     // TODO: add chatId to argument to update alias photo
     suspend fun updateProfilePic(
@@ -69,7 +66,7 @@ interface ContactRepository {
 
     suspend fun getNewContactIndex(): Flow<ContactId?>
 
-    fun saveNewContactRegistered(msgSender: String)
+    fun saveNewContactRegistered(msgSender: String, date: Long?)
 
     fun updateNewContactInvited(contact: NewContact)
 
@@ -81,24 +78,5 @@ interface ContactRepository {
         alias: ContactAlias?,
         routeHint: LightningRouteHint?
     ): Response<Any, ResponseError>
-
-    fun createContact(
-        contactAlias: ContactAlias,
-        lightningNodePubKey: LightningNodePubKey,
-        lightningRouteHint: LightningRouteHint?,
-        contactKey: ContactKey? = null,
-        photoUrl: PhotoUrl? = null
-    ): Flow<LoadResponse<Any, ResponseError>>
-
-    suspend fun connectToContact(
-        contactAlias: ContactAlias,
-        lightningNodePubKey: LightningNodePubKey,
-        lightningRouteHint: LightningRouteHint?,
-        contactKey: ContactKey,
-        message: String,
-        photoUrl: PhotoUrl?,
-        priceToMeet: Sat,
-    ): Response<ContactId?, ResponseError>
-
 
 }

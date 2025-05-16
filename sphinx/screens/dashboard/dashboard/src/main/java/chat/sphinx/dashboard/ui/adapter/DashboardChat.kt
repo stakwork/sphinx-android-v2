@@ -4,6 +4,7 @@ import android.content.Context
 import chat.sphinx.dashboard.R
 import chat.sphinx.dashboard.ui.adapter.DashboardChat.Active
 import chat.sphinx.dashboard.ui.adapter.DashboardChat.Inactive
+import chat.sphinx.highlighting_tool.replacingMarkdown
 import chat.sphinx.wrapper_chat.*
 import chat.sphinx.wrapper_common.*
 import chat.sphinx.wrapper_common.dashboard.ContactId
@@ -14,6 +15,7 @@ import chat.sphinx.wrapper_contact.Contact
 import chat.sphinx.wrapper_contact.getColorKey
 import chat.sphinx.wrapper_message.*
 import chat.sphinx.wrapper_message_media.MediaType
+import chat.sphinx.resources.R as R_common
 import kotlinx.coroutines.flow.Flow
 import chat.sphinx.wrapper_invite.Invite as InviteWrapper
 
@@ -149,15 +151,14 @@ sealed class DashboardChat {
                             getMessageSender(message, context, false)
                         )
                     } else {
-                        context.getString(R.string.last_message_description_welcome_member)
+                        context.getString(
+                            R.string.last_message_description_has_join_tribe,
+                            getMessageSender(message, context, false))
                     }
                 }
                 message.type.isGroupKick() -> {
                     if (message.sender.value == 0L) {
-                            context.getString(
-                            R.string.last_message_description_just_left_tribe,
-                            message.senderAlias?.value
-                        )
+                            context.getString(R.string.last_message_description_member_kicked)
                     } else {
                         context.getString(R.string.last_message_description_group_kick)
                     }
@@ -183,10 +184,10 @@ sealed class DashboardChat {
                     )
                 }
                 message.messageDecryptionError -> {
-                    context.getString(R.string.decryption_error)
+                    context.getString(R_common.string.decryption_error)
                 }
                 message.type.isMessage() -> {
-                    message.messageContentDecrypted?.value?.let { decrypted ->
+                    message.messageContentDecrypted?.value?.replacingMarkdown()?.let { decrypted ->
                         when {
                             message.giphyData != null -> {
                                 context.getString(
@@ -319,13 +320,15 @@ sealed class DashboardChat {
                 get() = chat.photoUrl ?: contact.photoUrl
 
             override fun getMessageSender(message: Message, context: Context, withColon: Boolean): String {
-                if (isMessageSenderSelf(message)) {
-                    return context.getString(R.string.last_message_description_you) + if (withColon) ": " else ""
-                }
+                return if (isMessageSenderSelf(message)) {
 
-                return contact.alias?.let { alias ->
-                    alias.value + if (withColon) ": " else ""
-                } ?: ""
+                    context.getString(R.string.last_message_description_you) + if (withColon) ": " else ""
+                } else {
+
+                    contact.alias?.let { alias ->
+                        alias.value + if (withColon) ": " else ""
+                    } ?: ""
+                }
             }
 
             override fun getColorKey(): String? {
@@ -348,10 +351,6 @@ sealed class DashboardChat {
                 get() = chat.photoUrl
 
             override fun getMessageSender(message: Message, context: Context, withColon: Boolean): String {
-                if (isMessageSenderSelf(message)) {
-                    return context.getString(R.string.last_message_description_you) + if (withColon) ": " else ""
-                }
-
                 return message.senderAlias?.let { alias ->
                     alias.value + if (withColon) ": " else ""
                 } ?: ""
@@ -433,79 +432,17 @@ sealed class DashboardChat {
                 get() = null
 
             fun getChatName(context: Context): String {
-                val contactAlias = contact.alias?.value ?: context.getString(R.string.unknown)
+                val contactAlias = contact.alias?.value ?: context.getString(R_common.string.unknown)
                 return context.getString(R.string.last_message_description_invite, contactAlias)
             }
 
             @ExperimentalStdlibApi
             override fun getMessageText(context: Context): String {
-
-                return when (invite?.status) {
-                    is InviteStatus.Pending -> {
-                        context.getString(
-                            R.string.last_message_description_looking_available_node,
-                            (contact.alias?.value ?: context.getString(R.string.unknown))
-                        )
-                    }
-                    is InviteStatus.Ready, InviteStatus.Delivered -> {
-                        context.getString(R.string.last_message_description_invite_ready)
-                    }
-                    is InviteStatus.InProgress -> {
-                        context.getString(
-                            R.string.last_message_description_invite_signing_on,
-                            getChatName(context)
-                        )
-                    }
-                    is InviteStatus.PaymentPending -> {
-                        context.getString(R.string.last_message_description_invite_tap_to_pay)
-                    }
-                    is InviteStatus.ProcessingPayment -> {
-                        context.getString(R.string.last_message_description_invite_payment_sent)
-                    }
-                    is InviteStatus.Complete -> {
-                        context.getString(R.string.last_message_description_invite_signup_complete)
-                    }
-                    is InviteStatus.Expired -> {
-                        context.getString(R.string.last_message_description_invite_expired)
-                    }
-
-                    null,
-                    is InviteStatus.Unknown -> {
-                        ""
-                    }
-                }
+                return context.getString(R.string.last_message_description_invite_ready)
             }
 
             fun getInviteIconAndColor(): Pair<Int, Int>? {
-
-                return when (invite?.status) {
-                    is InviteStatus.Pending -> {
-                        Pair(R.string.material_icon_name_invite_pending, R.color.sphinxOrange)
-                    }
-                    is InviteStatus.Ready, InviteStatus.Delivered -> {
-                        Pair(R.string.material_icon_name_invite_ready, R.color.primaryGreen)
-                    }
-                    is InviteStatus.InProgress -> {
-                        Pair(R.string.material_icon_name_invite_in_progress, R.color.primaryBlue)
-                    }
-                    is InviteStatus.PaymentPending -> {
-                        Pair(R.string.material_icon_name_invite_payment_pending, R.color.secondaryText)
-                    }
-                    is InviteStatus.ProcessingPayment -> {
-                        Pair(R.string.material_icon_name_invite_payment_sent, R.color.secondaryText)
-                    }
-                    is InviteStatus.Complete -> {
-                        Pair(R.string.material_icon_name_invite_complete, R.color.primaryGreen)
-                    }
-                    is InviteStatus.Expired -> {
-                        Pair(R.string.material_icon_name_invite_expired, R.color.primaryRed)
-                    }
-
-                    null,
-                    is InviteStatus.Unknown -> {
-                        null
-                    }
-                }
+                return Pair(R_common.string.material_icon_name_invite_ready, R_common.color.primaryGreen)
             }
 
             fun getInvitePrice(): Sat? {

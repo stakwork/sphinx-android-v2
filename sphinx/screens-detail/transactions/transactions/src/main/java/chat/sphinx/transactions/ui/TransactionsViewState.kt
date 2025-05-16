@@ -12,4 +12,9 @@ internal sealed class TransactionsViewState: ViewState<TransactionsViewState>() 
         val loading: Boolean,
         val firstPage: Boolean,
     ): TransactionsViewState()
+
+    object LastItem: TransactionsViewState() {
+        override val list: List<TransactionHolderViewState>
+            get() = emptyList()
+    }
 }

@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.fragment.app.FragmentActivity
 import chat.sphinx.create_description.R
 import chat.sphinx.resources.SphinxToastUtils
+import chat.sphinx.resources.R as R_common
 import io.matthewnelson.android_feature_toast_utils.show
 import io.matthewnelson.concept_views.sideeffect.SideEffect
 import kotlinx.coroutines.CoroutineScope
@@ -25,8 +26,8 @@ sealed class EpisodeDescriptionSideEffect: SideEffect<FragmentActivity>() {
         private val callback: suspend (Boolean) -> Unit
     ): EpisodeDescriptionSideEffect() {
         override suspend fun execute(value: FragmentActivity) {
-            val shareFromBeginning = value.getString(R.string.share_from_beginning)
-            val shareFromCurrentTime = value.getString(R.string.share_from_current_time)
+            val shareFromBeginning = value.getString(R_common.string.share_from_beginning)
+            val shareFromCurrentTime = value.getString(R_common.string.share_from_current_time)
 
             val options = arrayOf(shareFromBeginning, shareFromCurrentTime)
             AlertDialog.Builder(value)

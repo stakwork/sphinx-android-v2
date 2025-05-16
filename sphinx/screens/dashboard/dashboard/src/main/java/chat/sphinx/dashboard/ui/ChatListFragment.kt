@@ -83,8 +83,7 @@ internal class ChatListFragment : SideEffectFragment<
     private inner class BackPressHandler(context: Context): CloseAppOnBackPress(context) {
         override fun handleOnBackPressed() {
             if (
-                parentFragment is DashboardFragment &&
-                (parentFragment as DashboardFragment)?.closeDrawerIfOpen() == true
+                (parentFragment as? DashboardFragment)?.closeDrawerIfOpen() == true
             ) {
                 return
             } else {
@@ -234,7 +233,11 @@ internal class ChatListFragment : SideEffectFragment<
             }.collect { (chatViewState, isSingleContact) ->
                 when {
                     chatViewState.list.isEmpty() -> {
-                        binding.progressBarChatList.visible
+                        if (chatViewState.showProgressBar) {
+                            binding.progressBarChatList.visible
+                        } else {
+                            binding.progressBarChatList.gone
+                        }
 
                         if (isSingleContact == true) {
                             binding.progressBarChatList.gone

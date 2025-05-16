@@ -10,6 +10,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.constraintlayout.motion.widget.MotionLayout
 import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
@@ -31,8 +32,6 @@ import chat.sphinx.dashboard.ui.viewstates.*
 import chat.sphinx.insetter_activity.InsetterActivity
 import chat.sphinx.insetter_activity.addNavigationBarPadding
 import chat.sphinx.insetter_activity.addStatusBarPadding
-import chat.sphinx.kotlin_response.LoadResponse
-import chat.sphinx.kotlin_response.Response
 import chat.sphinx.menu_bottom_scanner.BottomScannerMenu
 import chat.sphinx.resources.databinding.LayoutPodcastPlayerFooterBinding
 import chat.sphinx.swipe_reveal_layout.SwipeRevealLayout
@@ -41,6 +40,7 @@ import chat.sphinx.wrapper_common.chat.PushNotificationLink
 import chat.sphinx.wrapper_common.lightning.*
 import chat.sphinx.wrapper_lightning.NodeBalance
 import chat.sphinx.wrapper_view.Px
+import chat.sphinx.resources.R as R_common
 import com.google.android.material.tabs.TabLayoutMediator
 import dagger.hilt.android.AndroidEntryPoint
 import io.matthewnelson.android_feature_screens.ui.motionlayout.MotionLayoutFragment
@@ -90,6 +90,7 @@ internal class DashboardFragment : MotionLayoutFragment<
     }
 
     var timeTrackerStart: Long = 0
+    private var isRestoreCancelled = false
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -120,6 +121,7 @@ internal class DashboardFragment : MotionLayoutFragment<
 
         handleDeepLinks()
         handlePushNotification()
+        processTimezoneChanges()
 
         activity?.intent = null
     }
@@ -131,21 +133,27 @@ internal class DashboardFragment : MotionLayoutFragment<
         }
     }
 
-    private fun handlePushNotification() {
-        val chatId = activity?.intent?.extras?.getString("chat_id")?.toLongOrNull() ?: activity?.intent?.extras?.getLong("chat_id")
-        chatId?.let { nnChatId ->
-            viewModel.handleDeepLink(
-                PushNotificationLink("sphinx.chat://?action=push&chatId=$nnChatId").value
-            )
-        }
+    private fun processTimezoneChanges() {
+        viewModel.processTimezoneChanges()
+    }
 
-        activity?.intent = null
+    private fun handlePushNotification() {
+        lifecycleScope.launch {
+            val pubKey = activity?.intent?.extras?.getString("child") ?: activity?.intent?.extras?.getString("child")
+            val chatId = pubKey?.let { viewModel.getPubKeyByEncryptedChild(it) }
+            chatId?.let { nnChatId ->
+                viewModel.handleDeepLink(
+                    PushNotificationLink("sphinx.chat://?action=push&chatId=${nnChatId.value}").value
+                )
+            }
+
+            activity?.intent = null
+        }
     }
 
     override fun onRefresh() {
         binding.swipeRefreshLayoutDataReload.isRefreshing = false
-//        viewModel.networkRefresh(true)
-        showProgressBar()
+        viewModel.networkRefresh(true)
     }
 
     private fun setupSignerManager(){
@@ -361,6 +369,8 @@ internal class DashboardFragment : MotionLayoutFragment<
     private fun setupRestorePopup() {
         binding.layoutDashboardRestore.layoutDashboardRestoreProgress.apply {
             buttonStopRestore.setOnClickListener {
+                binding.layoutDashboardRestore.root.gone
+                isRestoreCancelled = true
                 viewModel.cancelRestore()
             }
         }
@@ -458,9 +468,7 @@ internal class DashboardFragment : MotionLayoutFragment<
             }
 
             buttonConnect.setOnClickListener {
-                viewModel.connectToContact(
-                    editTextDashboardPeoplePopupMessage.text?.toString()
-                )
+                viewModel.connectToContact()
             }
         }
     }
@@ -543,7 +551,7 @@ internal class DashboardFragment : MotionLayoutFragment<
                             dashboardHeader.textViewDashboardHeaderNetwork.setTextColor(
                                 ContextCompat.getColor(
                                     binding.root.context,
-                                    R.color.primaryRed
+                                    R_common.color.primaryRed
                                 )
                             )
                         }
@@ -554,7 +562,7 @@ internal class DashboardFragment : MotionLayoutFragment<
                             dashboardHeader.textViewDashboardHeaderNetwork.setTextColor(
                                 ContextCompat.getColor(
                                     binding.root.context,
-                                    R.color.primaryGreen
+                                    R_common.color.primaryGreen
                                 )
                             )
                         }
@@ -603,20 +611,31 @@ internal class DashboardFragment : MotionLayoutFragment<
         onStopSupervisor.scope.launch(viewModel.mainImmediate) {
             viewModel.restoreProgressStateFlow.collect { response ->
                 binding.layoutDashboardRestore.apply {
-                    if (response != null) {
+                    if (response != null && response < 100 && !isRestoreCancelled) {
                         layoutDashboardRestoreProgress.apply {
-                            val progressString = "${response.progress}%"
+                            val progressString = "${response}%"
+                            val label = if (response <= 10) {
+                                R.string.dashboard_restore_progress_contacts
+                            } else {
+                                R.string.dashboard_restore_progress_messages
+                            }
 
-                            textViewRestoreProgress.text = getString(response.progressLabel, progressString)
-                            progressBarRestore.progress = response.progress
-                            buttonStopRestore.isEnabled = response.continueButtonEnabled
+                            textViewRestoreProgress.text = getString(label, progressString)
+                            progressBarRestore.progress = response
+                            buttonStopRestore.isEnabled = false
                             buttonStopRestore.backgroundTintList =
-                                if (response.continueButtonEnabled) ContextCompat.getColorStateList(root.context, R.color.primaryBlue)
-                                else ContextCompat.getColorStateList(root.context, R.color.secondaryTextInverted)
+                                if (false) ContextCompat.getColorStateList(root.context, R_common.color.primaryBlue)
+                                else ContextCompat.getColorStateList(root.context, R_common.color.secondaryTextInverted)
                         }
                         root.visible
                     } else {
+                        viewModel.fetchDeletedMessagesOnDb()
                         root.gone
+
+                        if (response != null) {
+                            ///Did finish restore
+                            viewModel.finishSettingUpPersonalInfo()
+                        }
                     }
                 }
             }
@@ -630,7 +649,7 @@ internal class DashboardFragment : MotionLayoutFragment<
                             binding.layoutDashboardNavDrawer.navDrawerImageViewUserProfilePicture,
                             url,
                             ImageLoaderOptions.Builder()
-                                .placeholderResId(R.drawable.ic_profile_avatar_circle)
+                                .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
                                 .build()
                         )
                     } ?: binding.layoutDashboardNavDrawer
@@ -638,7 +657,7 @@ internal class DashboardFragment : MotionLayoutFragment<
                         .setImageDrawable(
                             ContextCompat.getDrawable(
                                 binding.root.context,
-                                R.drawable.ic_profile_avatar_circle
+                                R_common.drawable.ic_profile_avatar_circle
                             )
                         )
                     binding.layoutDashboardNavDrawer.navDrawerTextViewProfileName.text =
@@ -671,11 +690,7 @@ internal class DashboardFragment : MotionLayoutFragment<
         onStopSupervisor.scope.launch(viewModel.mainImmediate) {
             binding.layoutDashboardHeader.let { dashboardHeader ->
                 dashboardHeader.progressBarDashboardHeaderNetwork.visible
-                dashboardHeader.textViewDashboardHeaderNetwork.visible
-
-                delay(2000)
-
-                dashboardHeader.progressBarDashboardHeaderNetwork.invisible
+                dashboardHeader.textViewDashboardHeaderNetwork.invisible
             }
         }
     }
@@ -705,14 +720,14 @@ internal class DashboardFragment : MotionLayoutFragment<
                         feedTab?.findViewById<TextView>(R.id.text_view_tab_title)?.setTextColor(
                             ContextCompat.getColor(
                                 binding.root.context,
-                                if (viewState.feedActive) R.color.text else R.color.secondaryText
+                                if (viewState.feedActive) R_common.color.text else R_common.color.secondaryText
                             )
                         )
 
                         friendsTab?.findViewById<TextView>(R.id.text_view_tab_title)?.setTextColor(
                             ContextCompat.getColor(
                                 binding.root.context,
-                                if (viewState.friendsActive) R.color.text else R.color.secondaryText
+                                if (viewState.friendsActive) R_common.color.text else R_common.color.secondaryText
                             )
                         )
 
@@ -723,7 +738,7 @@ internal class DashboardFragment : MotionLayoutFragment<
                         tribesTab?.findViewById<TextView>(R.id.text_view_tab_title)?.setTextColor(
                             ContextCompat.getColor(
                                 binding.root.context,
-                                if (viewState.tribesActive) R.color.text else R.color.secondaryText
+                                if (viewState.tribesActive) R_common.color.text else R_common.color.secondaryText
                             )
                         )
 
@@ -763,7 +778,7 @@ internal class DashboardFragment : MotionLayoutFragment<
                                     imageViewPodcastEpisode,
                                     imageUrl,
                                     ImageLoaderOptions.Builder()
-                                        .placeholderResId(R.drawable.ic_podcast_placeholder)
+                                        .placeholderResId(R_common.drawable.ic_podcast_placeholder)
                                         .build()
                                 )
                             }
@@ -887,9 +902,6 @@ internal class DashboardFragment : MotionLayoutFragment<
                             val alias = viewState.alias
                             textViewDashboardPeoplePopupName.text = alias
 
-                            editTextDashboardPeoplePopupMessage.hint = getString(R.string.dashboard_connect_initial_message_hint, alias)
-                            textViewDashboardPeoplePopupDescription.text = viewState.description
-
                             val priceToMeet = (viewState.priceToMeet).toSat()?.asFormattedString(appendUnit = true) ?: ""
                             textViewDashboardPeoplePopupPriceToMeet.text = getString(R.string.dashboard_connect_price_to_meet, priceToMeet)
 
@@ -900,7 +912,7 @@ internal class DashboardFragment : MotionLayoutFragment<
                                         imageViewProfilePicture,
                                         url,
                                         ImageLoaderOptions.Builder()
-                                            .placeholderResId(R.drawable.ic_profile_avatar_circle)
+                                            .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
                                             .transformation(Transformation.CircleCrop)
                                             .build()
                                     ).also {
@@ -913,7 +925,7 @@ internal class DashboardFragment : MotionLayoutFragment<
                             } ?: imageViewProfilePicture.setImageDrawable(
                                 ContextCompat.getDrawable(
                                     binding.root.context,
-                                    R.drawable.ic_profile_avatar_circle
+                                    R_common.drawable.ic_profile_avatar_circle
                                 )
                             )
 

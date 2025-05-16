@@ -12,9 +12,7 @@ import chat.sphinx.concept_repository_chat.ChatRepository
 import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.concept_service_media.MediaPlayerServiceController
 import chat.sphinx.concept_view_model_coordinator.ViewModelCoordinator
-import chat.sphinx.kotlin_response.Response
 import chat.sphinx.logger.SphinxLogger
-import chat.sphinx.logger.e
 import chat.sphinx.menu_bottom.ui.MenuBottomViewState
 import chat.sphinx.menu_bottom_profile_pic.PictureMenuHandler
 import chat.sphinx.menu_bottom_profile_pic.PictureMenuViewModel
@@ -24,12 +22,14 @@ import chat.sphinx.tribe.TribeMenuViewModel
 import chat.sphinx.tribe_detail.R
 import chat.sphinx.tribe_detail.navigation.TribeDetailNavigator
 import chat.sphinx.wrapper_chat.Chat
-import chat.sphinx.wrapper_chat.ChatAlias
 import chat.sphinx.wrapper_chat.isTribeOwnedByAccount
+import chat.sphinx.wrapper_chat.isTrue
 import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_contact.Contact
-import chat.sphinx.wrapper_feed.Feed.Companion.TRIBES_DEFAULT_SERVER_URL
-import chat.sphinx.wrapper_meme_server.PublicAttachmentInfo
+import chat.sphinx.wrapper_chat.toTimezoneEnabled
+import chat.sphinx.wrapper_chat.toTimezoneIdentifier
+import chat.sphinx.wrapper_chat.toTimezoneUpdated
+import chat.sphinx.resources.R as R_common
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.matthewnelson.android_feature_navigation.util.navArgs
 import io.matthewnelson.android_feature_viewmodel.SideEffectViewModel
@@ -39,7 +39,6 @@ import io.matthewnelson.concept_views.viewstate.ViewStateContainer
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import javax.annotation.meta.Exhaustive
 import javax.inject.Inject
 
 internal inline val TribeDetailFragmentArgs.chatId: ChatId
@@ -56,21 +55,26 @@ internal class TribeDetailViewModel @Inject constructor(
     private val mediaPlayerServiceController: MediaPlayerServiceController,
     val navigator: TribeDetailNavigator,
     val LOG: SphinxLogger,
-): SideEffectViewModel<
+) : SideEffectViewModel<
         Context,
         TribeDetailSideEffect,
         TribeDetailViewState>(dispatchers, TribeDetailViewState.Idle),
     TribeMenuViewModel,
-    PictureMenuViewModel
-{
+    PictureMenuViewModel {
     companion object {
         const val TAG = "TribeDetailViewModel"
-        private const val TRIBES_DEFAULT_SERVER_URL = "34.229.52.200:8801"
+        const val SERVER_SETTINGS_SHARED_PREFERENCES = "server_ip_settings"
+        const val TRIBE_SERVER_IP = "tribe_server_ip"
     }
 
     private val args: TribeDetailFragmentArgs by savedStateHandle.navArgs()
-
     val chatId = args.chatId
+
+    private val tribeDefaultServerUrl = app.getSharedPreferences(
+        SERVER_SETTINGS_SHARED_PREFERENCES,
+        Context.MODE_PRIVATE
+    ).getString(TRIBE_SERVER_IP, null)
+
 
     val updatingImageViewStateContainer: ViewStateContainer<UpdatingImageViewState> by lazy {
         ViewStateContainer(UpdatingImageViewState.Idle)
@@ -84,8 +88,9 @@ internal class TribeDetailViewModel @Inject constructor(
         replay = 1,
     )
 
-
-    private inner class TribeDetailViewStateContainer: ViewStateContainer<TribeDetailViewState>(TribeDetailViewState.Idle) {
+    private inner class TribeDetailViewStateContainer : ViewStateContainer<TribeDetailViewState>(
+        TribeDetailViewState.Idle
+    ) {
         override val viewStateFlow: StateFlow<TribeDetailViewState> by lazy {
             flow {
                 chatSharedFlow.collect { chat ->
@@ -125,7 +130,7 @@ internal class TribeDetailViewModel @Inject constructor(
                             throw Exception()
                         }
                     }
-                } catch (e: Exception) {}
+                } catch (e: Exception) { }
                 delay(25L)
 
                 resolvedOwner!!
@@ -151,7 +156,8 @@ internal class TribeDetailViewModel @Inject constructor(
                     throw Exception()
                 }
             }
-        } catch (e: Exception) {}
+        } catch (e: Exception) {
+        }
         delay(25L)
 
         return chat!!
@@ -159,7 +165,7 @@ internal class TribeDetailViewModel @Inject constructor(
 
     val imageLoaderDefaults by lazy {
         ImageLoaderOptions.Builder()
-            .placeholderResId(R.drawable.ic_profile_avatar_circle)
+            .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
             .transformation(Transformation.CircleCrop)
             .build()
     }
@@ -179,53 +185,55 @@ internal class TribeDetailViewModel @Inject constructor(
                     UpdatingImageViewState.UpdatingImage
                 )
 
-                viewModelScope.launch(mainImmediate) {
-                    try {
-                        val attachmentInfo = PublicAttachmentInfo(
-                            stream = streamProvider,
-                            mediaType = mediaType,
-                            fileName = fileName,
-                            contentLength = contentLength
-                        )
+                // TODO V2 implement updateChatProfileInfo
 
-                        val response = chatRepository.updateChatProfileInfo(
-                            chatId = ChatId(args.argChatId),
-                            alias = null,
-                            attachmentInfo,
-                        )
-
-                        @Exhaustive
-                        when (response) {
-                            is Response.Error -> {
-                                LOG.e(TAG, "Error update chat Profile Picture: ", response.cause.exception)
-
-                                updatingImageViewStateContainer.updateViewState(
-                                    UpdatingImageViewState.UpdatingImageFailed
-                                )
-
-                                submitSideEffect(TribeDetailSideEffect.FailedToUpdateProfilePic)
-                            }
-                            is Response.Success -> {
-                                updatingImageViewStateContainer.updateViewState(
-                                    UpdatingImageViewState.UpdatingImageSucceed
-                                )
-                            }
-                        }
-                    } catch (e: Exception) {
-                        updatingImageViewStateContainer.updateViewState(
-                            UpdatingImageViewState.UpdatingImageFailed
-                        )
-
-                        submitSideEffect(TribeDetailSideEffect.FailedToUpdateProfilePic)
-                    }
-
-                    try {
-                        file?.delete()
-                    } catch (e: Exception) {}
-                }
+//                viewModelScope.launch(mainImmediate) {
+//                    try {
+//                        val attachmentInfo = PublicAttachmentInfo(
+//                            stream = streamProvider,
+//                            mediaType = mediaType,
+//                            fileName = fileName,
+//                            contentLength = contentLength
+//                        )
+//                        val response = chatRepository.updateChatProfileInfo(
+//                            chatId = ChatId(args.argChatId),
+//                            alias = null,
+//                            attachmentInfo,
+//                        )
+//
+//                        @Exhaustive
+//                        when (response) {
+//                            is Response.Error -> {
+//                                LOG.e(TAG, "Error update chat Profile Picture: ", response.cause.exception)
+//
+//                                updatingImageViewStateContainer.updateViewState(
+//                                    UpdatingImageViewState.UpdatingImageFailed
+//                                )
+//
+//                                submitSideEffect(TribeDetailSideEffect.FailedToUpdateProfilePic)
+//                            }
+//                            is Response.Success -> {
+//                                updatingImageViewStateContainer.updateViewState(
+//                                    UpdatingImageViewState.UpdatingImageSucceed
+//                                )
+//                            }
+//                        }
+//                    } catch (e: Exception) {
+//                        updatingImageViewStateContainer.updateViewState(
+//                            UpdatingImageViewState.UpdatingImageFailed
+//                        )
+//
+//                        submitSideEffect(TribeDetailSideEffect.FailedToUpdateProfilePic)
+//                    }
+//
+//                    try {
+//                        file?.delete()
+//                    } catch (e: Exception) {}
+//                }
             }
         )
     }
+
     fun goToTribeBadgesScreen() {
         viewModelScope.launch(mainImmediate) {
             navigator.toTribeBadgesScreen(chatId)
@@ -233,18 +241,43 @@ internal class TribeDetailViewModel @Inject constructor(
     }
 
     fun updateProfileAlias(alias: String?) {
-        viewModelScope.launch(mainImmediate) {
-            val response = chatRepository.updateChatProfileInfo(
-                ChatId(args.argChatId),
-                alias?.let { ChatAlias(it) }
-            )
+//        viewModelScope.launch(mainImmediate) {
+//            val response = chatRepository.updateChatProfileInfo(
+//                ChatId(args.argChatId),
+//                alias?.let { ChatAlias(it) }
+//            )
+//
+//            when (response) {
+//                is Response.Success -> {}
+//                is Response.Error -> {
+//                    submitSideEffect(TribeDetailSideEffect.FailedToUpdateProfileAlias)
+//                }
+//            }
+//        }
+        // TODO V2 implement change alias
+    }
 
-            when (response) {
-                is Response.Success -> {}
-                is Response.Error -> {
-                    submitSideEffect(TribeDetailSideEffect.FailedToUpdateProfileAlias)
-                }
-            }
+    fun updateTimezoneEnabledStatus(isTimezoneEnabled: Boolean) {
+        viewModelScope.launch(mainImmediate) {
+            chatRepository.updateTimezoneEnabledStatus(
+                isTimezoneEnabled = isTimezoneEnabled.toTimezoneEnabled(), chatId = chatId
+            )
+        }
+    }
+
+    fun updateTimezoneIdentifier(timezoneIdentifier: String) {
+        viewModelScope.launch(mainImmediate) {
+            chatRepository.updateTimezoneIdentifier(
+                timezoneIdentifier = timezoneIdentifier.toTimezoneIdentifier(), chatId = chatId
+            )
+        }
+    }
+
+    fun updateTimezoneUpdated(timezoneUpdated: Boolean) {
+        viewModelScope.launch(mainImmediate) {
+            chatRepository.updateTimezoneUpdated(
+                timezoneUpdated = timezoneUpdated.toTimezoneUpdated(), chatId = chatId
+            )
         }
     }
 
@@ -272,8 +305,9 @@ internal class TribeDetailViewModel @Inject constructor(
     override fun shareTribe() {
         viewModelScope.launch(mainImmediate) {
             val chat = getChat()
-            if (chat.isTribeOwnedByAccount(getOwner().nodePubKey)) {
-                val shareTribeURL = "sphinx.chat://?action=tribeV2&pubkey=${chat.uuid.value}&host=${TRIBES_DEFAULT_SERVER_URL}"
+            if (chat.isTribeOwnedByAccount(getOwner().nodePubKey) || !chat.privateTribe.isTrue()) {
+                val shareTribeURL =
+                    "sphinx.chat://?action=tribeV2&pubkey=${chat.uuid.value}&host=${tribeDefaultServerUrl}"
                 navigator.toShareTribeScreen(shareTribeURL, app.getString(R.string.qr_code_title))
             }
         }

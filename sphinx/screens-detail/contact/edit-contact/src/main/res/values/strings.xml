@@ -2,4 +2,5 @@
 <resources>
     <string name="edit_contact_header_name">EDIT CONTACT</string>
     <string name="save_contact_button">SAVE</string>
+
 </resources>

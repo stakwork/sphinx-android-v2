@@ -56,9 +56,9 @@ internal class SplashNavigatorImpl @Inject constructor(
         )
     }
 
-    override suspend fun toOnBoardReadyScreen(onBoardStep4: OnBoardStep.Step4_Ready) {
+    override suspend fun toOnBoardReadyScreen() {
         navigationDriver.submitNavigationRequest(
-            ToOnBoardReadyScreen(popUpToId = R.id.main_primary_nav_graph, onBoardStep = onBoardStep4)
+            ToOnBoardReadyScreen(popUpToId = R.id.main_primary_nav_graph)
         )
     }
 }

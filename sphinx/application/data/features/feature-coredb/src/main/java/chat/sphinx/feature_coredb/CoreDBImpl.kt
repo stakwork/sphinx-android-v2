@@ -2,35 +2,131 @@ package chat.sphinx.feature_coredb
 
 import chat.sphinx.concept_coredb.CoreDB
 import chat.sphinx.concept_coredb.SphinxDatabase
-import chat.sphinx.conceptcoredb.*
+import chat.sphinx.conceptcoredb.ActionTrackDbo
+import chat.sphinx.conceptcoredb.ChatDbo
+import chat.sphinx.conceptcoredb.ContactDbo
+import chat.sphinx.conceptcoredb.ContentEpisodeStatusDbo
+import chat.sphinx.conceptcoredb.ContentFeedStatusDbo
+import chat.sphinx.conceptcoredb.DashboardDbo
+import chat.sphinx.conceptcoredb.FeedDbo
+import chat.sphinx.conceptcoredb.FeedDestinationDbo
+import chat.sphinx.conceptcoredb.FeedItemDbo
+import chat.sphinx.conceptcoredb.FeedModelDbo
+import chat.sphinx.conceptcoredb.InviteDbo
+import chat.sphinx.conceptcoredb.LsatDbo
+import chat.sphinx.conceptcoredb.MessageDbo
+import chat.sphinx.conceptcoredb.MessageMediaDbo
+import chat.sphinx.conceptcoredb.ServerDbo
+import chat.sphinx.conceptcoredb.SphinxDatabaseQueries
+import chat.sphinx.conceptcoredb.SubscriptionDbo
 import chat.sphinx.feature_coredb.adapters.action_track.ActionTrackIdAdapter
 import chat.sphinx.feature_coredb.adapters.action_track.ActionTrackMetaDataAdapter
 import chat.sphinx.feature_coredb.adapters.action_track.ActionTrackTypeAdapter
 import chat.sphinx.feature_coredb.adapters.action_track.ActionTrackUploadedAdapter
-import chat.sphinx.feature_coredb.adapters.chat.*
-import chat.sphinx.feature_coredb.adapters.common.*
-import chat.sphinx.feature_coredb.adapters.contact.*
-import chat.sphinx.feature_coredb.adapters.feed.*
+import chat.sphinx.feature_coredb.adapters.chat.ChatAliasAdapter
+import chat.sphinx.feature_coredb.adapters.chat.ChatGroupKeyAdapter
+import chat.sphinx.feature_coredb.adapters.chat.ChatHostAdapter
+import chat.sphinx.feature_coredb.adapters.chat.ChatMetaDataAdapter
+import chat.sphinx.feature_coredb.adapters.chat.ChatMutedAdapter
+import chat.sphinx.feature_coredb.adapters.chat.ChatNameAdapter
+import chat.sphinx.feature_coredb.adapters.chat.ChatPrivateAdapter
+import chat.sphinx.feature_coredb.adapters.chat.ChatStatusAdapter
+import chat.sphinx.feature_coredb.adapters.chat.ChatTypeAdapter
+import chat.sphinx.feature_coredb.adapters.chat.ChatUUIDAdapter
+import chat.sphinx.feature_coredb.adapters.chat.ChatUnlistedAdapter
+import chat.sphinx.feature_coredb.adapters.chat.NotifyAdapter
+import chat.sphinx.feature_coredb.adapters.chat.RemoteTimezoneIdentifierAdapter
+import chat.sphinx.feature_coredb.adapters.chat.SecondBrainUrlAdapter
+import chat.sphinx.feature_coredb.adapters.chat.TimezoneEnabledAdapter
+import chat.sphinx.feature_coredb.adapters.chat.TimezoneIdentifierAdapter
+import chat.sphinx.feature_coredb.adapters.chat.TimezoneUpdatedAdapter
+import chat.sphinx.feature_coredb.adapters.common.ChatIdAdapter
+import chat.sphinx.feature_coredb.adapters.common.ContactIdAdapter
+import chat.sphinx.feature_coredb.adapters.common.ContactIdsAdapter
+import chat.sphinx.feature_coredb.adapters.common.DashboardIdAdapter
+import chat.sphinx.feature_coredb.adapters.common.DateTimeAdapter
+import chat.sphinx.feature_coredb.adapters.common.FileAdapter
+import chat.sphinx.feature_coredb.adapters.common.InviteIdAdapter
+import chat.sphinx.feature_coredb.adapters.common.InviteStatusAdapter
+import chat.sphinx.feature_coredb.adapters.common.LightningNodePubKeyAdapter
+import chat.sphinx.feature_coredb.adapters.common.LightningPaymentHashAdapter
+import chat.sphinx.feature_coredb.adapters.common.LightningPaymentRequestAdapter
+import chat.sphinx.feature_coredb.adapters.common.MessageIdAdapter
+import chat.sphinx.feature_coredb.adapters.common.PhotoUrlAdapter
+import chat.sphinx.feature_coredb.adapters.common.PinMessageAdapter
+import chat.sphinx.feature_coredb.adapters.common.SatAdapter
+import chat.sphinx.feature_coredb.adapters.common.SeenAdapter
+import chat.sphinx.feature_coredb.adapters.common.SubscriptionIdAdapter
+import chat.sphinx.feature_coredb.adapters.contact.BlockedAdapter
+import chat.sphinx.feature_coredb.adapters.contact.ContactAliasAdapter
+import chat.sphinx.feature_coredb.adapters.contact.ContactOwnerAdapter
+import chat.sphinx.feature_coredb.adapters.contact.ContactPublicKeyAdapter
+import chat.sphinx.feature_coredb.adapters.contact.ContactStatusAdapter
+import chat.sphinx.feature_coredb.adapters.contact.DeviceIdAdapter
+import chat.sphinx.feature_coredb.adapters.contact.LightningNodeAliasAdapter
+import chat.sphinx.feature_coredb.adapters.contact.LightningRouteHintAdapter
+import chat.sphinx.feature_coredb.adapters.contact.NotificationSoundAdapter
+import chat.sphinx.feature_coredb.adapters.contact.PrivatePhotoAdapter
+import chat.sphinx.feature_coredb.adapters.feed.FeedAuthorAdapter
+import chat.sphinx.feature_coredb.adapters.feed.FeedChapterDataAdapter
+import chat.sphinx.feature_coredb.adapters.feed.FeedContentTypeAdapter
+import chat.sphinx.feature_coredb.adapters.feed.FeedDescriptionAdapter
+import chat.sphinx.feature_coredb.adapters.feed.FeedDestinationAddressAdapter
+import chat.sphinx.feature_coredb.adapters.feed.FeedDestinationSplitAdapter
+import chat.sphinx.feature_coredb.adapters.feed.FeedDestinationTypeAdapter
+import chat.sphinx.feature_coredb.adapters.feed.FeedEnclosureLengthAdapter
+import chat.sphinx.feature_coredb.adapters.feed.FeedEnclosureTypeAdapter
+import chat.sphinx.feature_coredb.adapters.feed.FeedGeneratorAdapter
+import chat.sphinx.feature_coredb.adapters.feed.FeedIdAdapter
+import chat.sphinx.feature_coredb.adapters.feed.FeedItemDurationAdapter
+import chat.sphinx.feature_coredb.adapters.feed.FeedItemsCountAdapter
+import chat.sphinx.feature_coredb.adapters.feed.FeedLanguageAdapter
+import chat.sphinx.feature_coredb.adapters.feed.FeedModelSuggestedAdapter
+import chat.sphinx.feature_coredb.adapters.feed.FeedModelTypeAdapter
+import chat.sphinx.feature_coredb.adapters.feed.FeedReferenceIdAdapter
+import chat.sphinx.feature_coredb.adapters.feed.FeedTitleAdapter
+import chat.sphinx.feature_coredb.adapters.feed.FeedTypeAdapter
+import chat.sphinx.feature_coredb.adapters.feed.FeedUrlAdapter
+import chat.sphinx.feature_coredb.adapters.feed.PlayerSpeedAdapter
+import chat.sphinx.feature_coredb.adapters.feed.SubscribedAdapter
 import chat.sphinx.feature_coredb.adapters.invite.InviteCodeAdapter
 import chat.sphinx.feature_coredb.adapters.invite.InviteStringAdapter
-import chat.sphinx.feature_coredb.adapters.media.*
+import chat.sphinx.feature_coredb.adapters.lsp.LsatIdentifierAdapter
+import chat.sphinx.feature_coredb.adapters.lsp.LsatIssuerAdapter
+import chat.sphinx.feature_coredb.adapters.lsp.LsatMetaDataAdapter
+import chat.sphinx.feature_coredb.adapters.lsp.LsatPathsAdapter
+import chat.sphinx.feature_coredb.adapters.lsp.LsatPreImageAdapter
+import chat.sphinx.feature_coredb.adapters.lsp.LsatStatusAdapter
+import chat.sphinx.feature_coredb.adapters.lsp.MacaroonAdapter
 import chat.sphinx.feature_coredb.adapters.media.FileNameAdapter
 import chat.sphinx.feature_coredb.adapters.media.MediaKeyAdapter
 import chat.sphinx.feature_coredb.adapters.media.MediaKeyDecryptedAdapter
 import chat.sphinx.feature_coredb.adapters.media.MediaTokenAdapter
 import chat.sphinx.feature_coredb.adapters.media.MediaTypeAdapter
-import chat.sphinx.feature_coredb.adapters.message.*
+import chat.sphinx.feature_coredb.adapters.message.ErrorMessageAdapter
+import chat.sphinx.feature_coredb.adapters.message.FlaggedAdapter
+import chat.sphinx.feature_coredb.adapters.message.MessageContentAdapter
+import chat.sphinx.feature_coredb.adapters.message.MessageContentDecryptedAdapter
+import chat.sphinx.feature_coredb.adapters.message.MessageMUIDAdapter
+import chat.sphinx.feature_coredb.adapters.message.MessageStatusAdapter
+import chat.sphinx.feature_coredb.adapters.message.MessageTypeAdapter
+import chat.sphinx.feature_coredb.adapters.message.MessageUUIDAdapter
+import chat.sphinx.feature_coredb.adapters.message.PersonAdapter
+import chat.sphinx.feature_coredb.adapters.message.PushAdapter
+import chat.sphinx.feature_coredb.adapters.message.RecipientAliasAdapter
+import chat.sphinx.feature_coredb.adapters.message.ReplyUUIDAdapter
+import chat.sphinx.feature_coredb.adapters.message.SenderAliasAdapter
+import chat.sphinx.feature_coredb.adapters.message.TagMessageAdapter
+import chat.sphinx.feature_coredb.adapters.message.ThreadUUIDAdapter
 import chat.sphinx.feature_coredb.adapters.server.IpAdapter
 import chat.sphinx.feature_coredb.adapters.subscription.CronAdapter
 import chat.sphinx.feature_coredb.adapters.subscription.EndNumberAdapter
 import chat.sphinx.feature_coredb.adapters.subscription.SubscriptionCountAdapter
-import chat.sphinx.wrapper_action_track.ActionTrackMetaData
 import com.squareup.moshi.Moshi
 import com.squareup.sqldelight.db.SqlDriver
 import io.matthewnelson.concept_encryption_key.EncryptionKey
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.collect
 
 abstract class CoreDBImpl(private val moshi: Moshi): CoreDB() {
 
@@ -91,6 +187,11 @@ abstract class CoreDBImpl(private val moshi: Moshi): CoreDB() {
                     content_seen_atAdapter = DateTimeAdapter.getInstance(),
                     notifyAdapter = NotifyAdapter(),
                     pin_messageAdapter = PinMessageAdapter.getInstance(),
+                    second_brain_urlAdapter = SecondBrainUrlAdapter(),
+                    timezone_enabledAdapter = TimezoneEnabledAdapter(),
+                    timezone_updatedAdapter = TimezoneUpdatedAdapter(),
+                    remote_timezone_identifierAdapter = RemoteTimezoneIdentifierAdapter(),
+                    timezone_identifierAdapter = TimezoneIdentifierAdapter()
                 ),
                 contactDboAdapter = ContactDbo.Adapter(
                     idAdapter = ContactIdAdapter.getInstance(),
@@ -158,7 +259,9 @@ abstract class CoreDBImpl(private val moshi: Moshi): CoreDB() {
                     pushAdapter = PushAdapter(),
                     personAdapter = PersonAdapter(),
                     thread_uuidAdapter = ThreadUUIDAdapter(),
-                    error_messageAdapter = ErrorMessageAdapter()
+                    error_messageAdapter = ErrorMessageAdapter(),
+                    tag_messageAdapter = TagMessageAdapter(),
+                    remote_timezone_identifierAdapter = RemoteTimezoneIdentifierAdapter()
                 ),
                 messageMediaDboAdapter = MessageMediaDbo.Adapter(
                     idAdapter = MessageIdAdapter.getInstance(),
@@ -220,6 +323,8 @@ abstract class CoreDBImpl(private val moshi: Moshi): CoreDB() {
                     feed_idAdapter = FeedIdAdapter(),
                     durationAdapter = FeedItemDurationAdapter(),
                     local_fileAdapter = FileAdapter.getInstance(),
+                    reference_idAdapter = FeedReferenceIdAdapter(),
+                    chapters_dataAdapter = FeedChapterDataAdapter(),
                 ),
                 feedModelDboAdapter = FeedModelDbo.Adapter(
                     idAdapter = FeedIdAdapter(),
@@ -256,6 +361,17 @@ abstract class CoreDBImpl(private val moshi: Moshi): CoreDB() {
                 serverDboAdapter = ServerDbo.Adapter(
                     ipAdapter = IpAdapter(),
                     pub_keyAdapter = LightningNodePubKeyAdapter.getInstance()
+                ),
+                lsatDboAdapter = LsatDbo.Adapter(
+                    idAdapter = LsatIdentifierAdapter(),
+                    macaroonAdapter = MacaroonAdapter(),
+                    payment_requestAdapter = LightningPaymentRequestAdapter.getInstance(),
+                    issuerAdapter = LsatIssuerAdapter(),
+                    meta_dataAdapter = LsatMetaDataAdapter(),
+                    pathsAdapter = LsatPathsAdapter(),
+                    preimageAdapter = LsatPreImageAdapter(),
+                    statusAdapter = LsatStatusAdapter(),
+                    created_atAdapter = DateTimeAdapter.getInstance()
                 )
             ).sphinxDatabaseQueries
         }

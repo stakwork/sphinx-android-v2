@@ -8,13 +8,10 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import chat.sphinx.concept_image_loader.Disposable
-import chat.sphinx.concept_user_colors_helper.UserColorsHelper
-import chat.sphinx.delete.chat.media.detail.R
 import chat.sphinx.delete.chat.media.detail.databinding.ChatDeleteFileListItemHolderBinding
 import chat.sphinx.example.delete_chat_media_detail.model.ChatFile
 import chat.sphinx.example.delete_chat_media_detail.ui.DeleteChatMediaDetailViewModel
 import chat.sphinx.example.delete_chat_media_detail.viewstate.DeleteChatMediaDetailViewState
-import chat.sphinx.resources.getString
 import io.matthewnelson.android_feature_screens.util.gone
 import io.matthewnelson.android_feature_screens.util.visible
 import io.matthewnelson.android_feature_viewmodel.util.OnStopSupervisor
@@ -22,6 +19,8 @@ import io.matthewnelson.concept_views.viewstate.collect
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import chat.sphinx.resources.R as R_common
+import chat.sphinx.detail_resources.R as R_detail_resources
 
 internal class DeleteChatDetailFilesAdapter(
     private val lifecycleOwner: LifecycleOwner,
@@ -182,19 +181,19 @@ internal class DeleteChatDetailFilesAdapter(
                 if (chatItem.isSelected) {
                     imageViewCheckMark.visible
                     includeLayoutFileExtension.root.gone
-                    viewStorageSeparatorDividerOne.setBackgroundColor(ContextCompat.getColor(root.context, R.color.blueDivider))
-                    root.setBackgroundResource(R.drawable.background_dark_blue_selected_screen)
+                    viewStorageSeparatorDividerOne.setBackgroundColor(ContextCompat.getColor(root.context, R_common.color.blueDivider))
+                    root.setBackgroundResource(R_detail_resources.drawable.background_dark_blue_selected_screen)
 
                 } else
                 {
                     imageViewCheckMark.gone
                     includeLayoutFileExtension.root.visible
-                    viewStorageSeparatorDividerOne.setBackgroundColor(ContextCompat.getColor(root.context, R.color.darkDivider))
-                    root.setBackgroundResource(R.drawable.background_detail_screen)
+                    viewStorageSeparatorDividerOne.setBackgroundColor(ContextCompat.getColor(root.context, R_common.color.darkDivider))
+                    root.setBackgroundResource(R_common.drawable.background_detail_screen)
                 }
                 includeLayoutFileExtension.root.backgroundTintList = when (chatItem.ext) {
-                    PDF -> ContextCompat.getColorStateList(root.context, R.color.pdfRed)
-                    else -> ContextCompat.getColorStateList(root.context, R.color.primaryBlue)
+                    PDF -> ContextCompat.getColorStateList(root.context, R_common.color.pdfRed)
+                    else -> ContextCompat.getColorStateList(root.context, R_common.color.primaryBlue)
                 }
             }
         }

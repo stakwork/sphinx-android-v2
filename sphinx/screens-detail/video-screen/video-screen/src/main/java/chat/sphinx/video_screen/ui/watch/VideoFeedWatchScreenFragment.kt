@@ -33,6 +33,7 @@ import chat.sphinx.insetter_activity.InsetterActivity
 import chat.sphinx.insetter_activity.addNavigationBarPadding
 import chat.sphinx.resources.inputMethodManager
 import chat.sphinx.video_screen.R
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.video_screen.adapter.VideoFeedItemsAdapter
 import chat.sphinx.video_screen.adapter.VideoFeedItemsFooterAdapter
 import chat.sphinx.video_screen.databinding.FragmentVideoWatchScreenBinding
@@ -76,7 +77,7 @@ internal class VideoFeedWatchScreenFragment : SideEffectFragment<
 
     private val imageLoaderOptions: ImageLoaderOptions by lazy {
         ImageLoaderOptions.Builder()
-            .placeholderResId(R.drawable.ic_video_placeholder)
+            .placeholderResId(R_common.drawable.ic_video_placeholder)
             .build()
     }
 
@@ -389,7 +390,7 @@ internal class VideoFeedWatchScreenFragment : SideEffectFragment<
                         imageViewProfilePicture,
                         photoUrl.value,
                         ImageLoaderOptions.Builder()
-                            .placeholderResId(R.drawable.ic_video_placeholder)
+                            .placeholderResId(R_common.drawable.ic_video_placeholder)
                             .transformation(Transformation.CircleCrop)
                             .build()
                     )
@@ -451,9 +452,9 @@ internal class VideoFeedWatchScreenFragment : SideEffectFragment<
                             textViewSubscribeButton.goneIfFalse(notLinkedToChat)
 
                             textViewSubscribeButton.text = if (viewState.subscribed.isTrue()) {
-                                getString(R.string.unsubscribe)
+                                getString(R_common.string.unsubscribe)
                             } else {
-                                getString(R.string.subscribe)
+                                getString(R_common.string.subscribe)
                             }
 
                             includeLayoutCustomBoost.apply customBoost@{
@@ -635,7 +636,7 @@ internal class VideoFeedWatchScreenFragment : SideEffectFragment<
     private fun feedItemDetailsCommonInfoBinding(viewState: VideoFeedItemDetailsViewState.Open) {
         binding.includeLayoutFeedItem.includeLayoutFeedItemDetails.apply {
             textViewMainEpisodeTitle.text = viewState.feedItemDetail?.header
-            imageViewItemRowEpisodeType.setImageDrawable(ContextCompat.getDrawable(root.context, viewState.feedItemDetail?.episodeTypeImage ?: R.drawable.ic_podcast_type))
+            imageViewItemRowEpisodeType.setImageDrawable(ContextCompat.getDrawable(root.context, viewState.feedItemDetail?.episodeTypeImage ?: R_common.drawable.ic_podcast_type))
             textViewEpisodeType.text = viewState.feedItemDetail?.episodeTypeText
             textViewEpisodeDate.text = viewState.feedItemDetail?.episodeDate
             textViewEpisodeDuration.text = viewState.feedItemDetail?.episodeDuration
@@ -647,7 +648,7 @@ internal class VideoFeedWatchScreenFragment : SideEffectFragment<
                         imageViewEpisodeDetailImage,
                         it,
                         ImageLoaderOptions.Builder()
-                            .placeholderResId(R.drawable.ic_podcast_placeholder)
+                            .placeholderResId(R_common.drawable.ic_podcast_placeholder)
                             .build()
                     )
                 }

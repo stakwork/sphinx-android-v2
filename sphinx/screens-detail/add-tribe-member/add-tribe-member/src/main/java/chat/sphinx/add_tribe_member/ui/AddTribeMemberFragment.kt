@@ -21,6 +21,7 @@ import chat.sphinx.insetter_activity.addNavigationBarPadding
 import chat.sphinx.menu_bottom.ui.MenuBottomViewState
 import chat.sphinx.menu_bottom_profile_pic.BottomMenuPicture
 import chat.sphinx.screen_detail_fragment.SideEffectDetailFragment
+import chat.sphinx.resources.R as R_common
 import dagger.hilt.android.AndroidEntryPoint
 import io.matthewnelson.android_feature_screens.util.gone
 import io.matthewnelson.android_feature_screens.util.visible
@@ -157,10 +158,10 @@ internal class AddTribeMemberFragment: SideEffectDetailFragment<
             binding.imageViewMemberPicture.setImageDrawable(
                 ContextCompat.getDrawable(
                     binding.root.context,
-                    R.drawable.ic_media_library
+                    R_common.drawable.ic_media_library
                 ))
 
-            val padding = resources.getDimensionPixelSize(R.dimen.default_medium_layout_margin)
+            val padding = resources.getDimensionPixelSize(R_common.dimen.default_medium_layout_margin)
             binding.imageViewMemberPicture.setPadding(padding, padding, padding, padding)
             return
         }
@@ -170,7 +171,7 @@ internal class AddTribeMemberFragment: SideEffectDetailFragment<
                 binding.imageViewMemberPicture,
                 url,
                 ImageLoaderOptions.Builder()
-                    .placeholderResId(R.drawable.ic_media_library)
+                    .placeholderResId(R_common.drawable.ic_media_library)
                     .transformation(Transformation.CircleCrop)
                     .build(),
                 object: OnImageLoadListener {

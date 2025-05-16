@@ -4,7 +4,6 @@ import android.util.Log
 import androidx.lifecycle.viewModelScope
 import app.cash.exhaustive.Exhaustive
 import chat.sphinx.concept_background_login.BackgroundLoginHandler
-import chat.sphinx.concept_relay.RelayDataHandler
 import chat.sphinx.concept_repository_actions.ActionsRepository
 import chat.sphinx.concept_repository_lightning.LightningRepository
 import chat.sphinx.onboard_common.OnBoardStepHandler
@@ -49,32 +48,17 @@ internal class SplashViewModel @Inject constructor(
         }
 
         viewModelScope.launch(mainImmediate) {
-            val onBoardStep: OnBoardStep? = onBoardStepHandler.retrieveOnBoardStep()
-
             backgroundLoginHandler.attemptBackgroundLogin(
                 updateLastLoginTimeOnSuccess = true
             )?.let {
 
-                @Exhaustive
-                when (onBoardStep) {
-                    is OnBoardStep.Step1_WelcomeMessage -> {
-                        navigator.toOnBoardMessageScreen(onBoardStep)
-                    }
-                    is OnBoardStep.Step2_Name -> {
-                        navigator.toOnBoardNameScreen(onBoardStep)
-                    }
-                    is OnBoardStep.Step3_Picture -> {
-                        navigator.toOnBoardPictureScreen(onBoardStep)
-                    }
-                    is OnBoardStep.Step4_Ready -> {
-                        navigator.toOnBoardReadyScreen(onBoardStep)
-                    }
-                    null -> {
-                        navigator.toDashboardScreen(
-                            // No need as it was already updated
-                            updateBackgroundLoginTime = false
-                        )
-                    }
+                if (onBoardStepHandler.isAccountSetup()) {
+                    navigator.toDashboardScreen(
+                        // No need as it was already updated
+                        updateBackgroundLoginTime = false
+                    )
+                } else {
+                    navigator.toOnBoardWelcomeScreen()
                 }
 
             } ?: let {
@@ -92,26 +76,13 @@ internal class SplashViewModel @Inject constructor(
                             }
                             is AuthenticationResponse.Success.Authenticated -> {
 
-                                @Exhaustive
-                                when (onBoardStep) {
-                                    is OnBoardStep.Step1_WelcomeMessage -> {
-                                        navigator.toOnBoardMessageScreen(onBoardStep)
-                                    }
-                                    is OnBoardStep.Step2_Name -> {
-                                        navigator.toOnBoardNameScreen(onBoardStep)
-                                    }
-                                    is OnBoardStep.Step3_Picture -> {
-                                        navigator.toOnBoardPictureScreen(onBoardStep)
-                                    }
-                                    is OnBoardStep.Step4_Ready -> {
-                                        navigator.toOnBoardReadyScreen(onBoardStep)
-                                    }
-                                    null -> {
-                                        navigator.toDashboardScreen(updateBackgroundLoginTime = true)
-
-                                        Log.d("TimeTracker", "Dashboard screen was call in ${System.currentTimeMillis() - timeTrackerStart} milliseconds")
-                                        actionsRepository.setAppLog("- Dashboard screen was call in ${System.currentTimeMillis() - timeTrackerStart} milliseconds")
-                                    }
+                                if (onBoardStepHandler.isAccountSetup()) {
+                                    navigator.toDashboardScreen(
+                                        // No need as it was already updated
+                                        updateBackgroundLoginTime = false
+                                    )
+                                } else {
+                                    navigator.toOnBoardWelcomeScreen()
                                 }
                             }
                             is AuthenticationResponse.Success.Key -> {
@@ -121,27 +92,7 @@ internal class SplashViewModel @Inject constructor(
                     }
 
                 } else {
-
-                    @Exhaustive
-                    when (onBoardStep) {
-                        is OnBoardStep.Step1_WelcomeMessage -> {
-                            navigator.toOnBoardMessageScreen(onBoardStep)
-                        }
-                        is OnBoardStep.Step2_Name -> {
-                            navigator.toOnBoardNameScreen(onBoardStep)
-                        }
-                        is OnBoardStep.Step3_Picture -> {
-                            navigator.toOnBoardPictureScreen(onBoardStep)
-                        }
-                        is OnBoardStep.Step4_Ready -> {
-                            navigator.toOnBoardReadyScreen(onBoardStep)
-                        }
-                        null -> {
-                            delay(1000L) // need a slight delay for window to fully hand over to splash
-                            navigator.toOnBoardWelcomeScreen()
-                        }
-                    }
-
+                    navigator.toOnBoardWelcomeScreen()
                 }
             }
         }

@@ -5,6 +5,6 @@ import io.matthewnelson.concept_views.viewstate.ViewState
 sealed class MessageMentionsViewState: ViewState<MessageMentionsViewState>() {
 
     class MessageMentions(
-        val mentions: List<String>,
+        val mentions: List<Triple<String, String, String>>,
     ): MessageMentionsViewState()
 }

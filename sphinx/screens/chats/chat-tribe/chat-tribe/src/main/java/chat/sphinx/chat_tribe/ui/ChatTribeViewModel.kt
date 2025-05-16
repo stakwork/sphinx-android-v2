@@ -1,6 +1,7 @@
 package chat.sphinx.chat_tribe.ui
 
 import android.app.Application
+import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import chat.sphinx.camera_view_model_coordinator.request.CameraRequest
@@ -10,28 +11,30 @@ import chat.sphinx.chat_common.ui.ChatViewModel
 import chat.sphinx.chat_common.ui.viewstate.InitialHolderViewState
 import chat.sphinx.chat_common.ui.viewstate.menu.MoreMenuOptionsViewState
 import chat.sphinx.chat_tribe.R
+import chat.sphinx.chat_common.R as R_chat_common
+import chat.sphinx.resources.R as R_common
+import chat.sphinx.tribe_detail.R as R_tribe_detail
 import chat.sphinx.chat_tribe.model.TribeFeedData
 import chat.sphinx.chat_tribe.navigation.TribeChatNavigator
 import chat.sphinx.chat_tribe.ui.viewstate.*
 import chat.sphinx.concept_link_preview.LinkPreviewHandler
 import chat.sphinx.concept_meme_input_stream.MemeInputStreamHandler
 import chat.sphinx.concept_meme_server.MemeServerTokenHandler
-import chat.sphinx.concept_network_query_lightning.NetworkQueryLightning
-import chat.sphinx.concept_network_query_lightning.model.route.isRouteAvailable
 import chat.sphinx.concept_network_query_people.NetworkQueryPeople
 import chat.sphinx.concept_network_query_people.model.ChatLeaderboardDto
 import chat.sphinx.concept_repository_actions.ActionsRepository
 import chat.sphinx.concept_repository_chat.ChatRepository
+import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
 import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.concept_repository_dashboard_android.RepositoryDashboardAndroid
 import chat.sphinx.concept_repository_feed.FeedRepository
+import chat.sphinx.concept_repository_lightning.LightningRepository
 import chat.sphinx.concept_repository_media.RepositoryMedia
 import chat.sphinx.concept_repository_message.MessageRepository
 import chat.sphinx.concept_repository_message.model.SendMessage
 import chat.sphinx.concept_view_model_coordinator.ViewModelCoordinator
 import chat.sphinx.kotlin_response.LoadResponse
 import chat.sphinx.kotlin_response.Response
-import chat.sphinx.kotlin_response.ResponseError
 import chat.sphinx.kotlin_response.message
 import chat.sphinx.logger.SphinxLogger
 import chat.sphinx.menu_bottom.ui.MenuBottomViewState
@@ -39,8 +42,12 @@ import chat.sphinx.wrapper_chat.*
 import chat.sphinx.wrapper_common.PhotoUrl
 import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_common.dashboard.ContactId
+import chat.sphinx.wrapper_common.feed.FeedType
+import chat.sphinx.wrapper_common.feed.toFeedType
+import chat.sphinx.wrapper_common.feed.toFeedUrl
 import chat.sphinx.wrapper_common.lightning.Sat
 import chat.sphinx.wrapper_common.message.MessageUUID
+import chat.sphinx.wrapper_common.message.toMessageUUID
 import chat.sphinx.wrapper_common.util.getInitials
 import chat.sphinx.wrapper_contact.Contact
 import chat.sphinx.wrapper_feed.FeedPlayerSpeed
@@ -57,7 +64,6 @@ import io.matthewnelson.concept_views.viewstate.value
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import javax.annotation.meta.Exhaustive
 import javax.inject.Inject
 
 internal inline val ChatTribeFragmentArgs.chatId: ChatId
@@ -75,14 +81,15 @@ class ChatTribeViewModel @Inject constructor(
     contactRepository: ContactRepository,
     messageRepository: MessageRepository,
     actionsRepository: ActionsRepository,
+    lightningRepository: LightningRepository,
     repositoryDashboard: RepositoryDashboardAndroid<Any>,
-    networkQueryLightning: NetworkQueryLightning,
     networkQueryPeople: NetworkQueryPeople,
     mediaCacheHandler: MediaCacheHandler,
     savedStateHandle: SavedStateHandle,
     cameraViewModelCoordinator: ViewModelCoordinator<CameraRequest, CameraResponse>,
     linkPreviewHandler: LinkPreviewHandler,
     memeInputStreamHandler: MemeInputStreamHandler,
+    connectManagerRepository: ConnectManagerRepository,
     moshi: Moshi,
     LOG: SphinxLogger,
 ): ChatViewModel<ChatTribeFragmentArgs>(
@@ -96,19 +103,38 @@ class ChatTribeViewModel @Inject constructor(
     contactRepository,
     messageRepository,
     actionsRepository,
+    lightningRepository,
     repositoryDashboard,
-    networkQueryLightning,
     networkQueryPeople,
     mediaCacheHandler,
     savedStateHandle,
     cameraViewModelCoordinator,
     linkPreviewHandler,
     memeInputStreamHandler,
+    connectManagerRepository,
     moshi,
     LOG,
 ) {
+    companion object {
+        private const val TRIBE_SERVER_IP = "tribe_server_ip"
+        const val SERVER_SETTINGS_SHARED_PREFERENCES = "server_ip_settings"
+        const val ENVIRONMENT_TYPE = "environment_type"
+        const val ROUTER_URL= "router_url"
+        const val ROUTER_PUBKEY= "router_pubkey"
+    }
+
     override val args: ChatTribeFragmentArgs by savedStateHandle.navArgs()
     override val chatId: ChatId = args.chatId
+
+    private val serverSettingsSharedPreferences = app.getSharedPreferences(
+        SERVER_SETTINGS_SHARED_PREFERENCES,
+        Context.MODE_PRIVATE
+    )
+
+
+    private val tribeDefaultServerUrl = serverSettingsSharedPreferences.getString(TRIBE_SERVER_IP, null)
+    private val isProductionEnvironment = serverSettingsSharedPreferences.getBoolean(ENVIRONMENT_TYPE, true)
+
     override val contactId: ContactId?
         get() = null
 
@@ -214,7 +240,7 @@ class ChatTribeViewModel @Inject constructor(
             )
 
     internal val moreOptionsMenuStateFlow: MutableStateFlow<MoreMenuOptionsViewState> by lazy {
-        MutableStateFlow(MoreMenuOptionsViewState.OwnTribe)
+        MutableStateFlow(MoreMenuOptionsViewState.ShareTribeLinkAvailable)
     }
 
     override suspend fun getChatInfo(): Triple<ChatName?, PhotoUrl?, String>? {
@@ -223,6 +249,10 @@ class ChatTribeViewModel @Inject constructor(
 
     override suspend fun shouldStreamSatsFor(podcastClip: PodcastClip, messageUUID: MessageUUID?) {
         getPodcast()?.let { podcast ->
+
+            val routerUrl = serverSettingsSharedPreferences.getString(ROUTER_URL, null)
+            val routerPubKey = serverSettingsSharedPreferences.getString(ROUTER_PUBKEY, null)
+
             feedRepository.streamFeedPayments(
                 chatId,
                 podcastClip.feedID.value,
@@ -231,12 +261,12 @@ class ChatTribeViewModel @Inject constructor(
                 getChat()?.metaData?.satsPerMinute ?: Sat(podcast.satsPerMinute),
                 FeedPlayerSpeed(1.0),
                 podcast.getFeedDestinations(podcastClip.pubkey),
-                messageUUID
+                messageUUID,
+                routerUrl = routerUrl,
+                routerPubKey = routerPubKey
             )
         }
     }
-
-    override fun forceKeyExchange() {}
 
     override suspend fun getInitialHolderViewStateForReceivedMessage(
         message: Message,
@@ -247,23 +277,6 @@ class ChatTribeViewModel @Inject constructor(
         } ?: message.senderAlias?.let { alias ->
             InitialHolderViewState.Initials(alias.value.getInitials(), message.getColorKey())
         } ?: InitialHolderViewState.None
-    }
-
-    override val checkRoute: Flow<LoadResponse<Boolean, ResponseError>> = flow {
-        networkQueryLightning.checkRoute(chatId).collect { response ->
-            @Exhaustive
-            when (response) {
-                is LoadResponse.Loading -> {
-                    emit(response)
-                }
-                is Response.Error -> {
-                    emit(response)
-                }
-                is Response.Success -> {
-                    emit(Response.Success(response.value.isRouteAvailable))
-                }
-            }
-        }
     }
 
     override fun readMessages() {
@@ -291,29 +304,29 @@ class ChatTribeViewModel @Inject constructor(
         viewModelScope.launch(mainImmediate) {
             chatRepository.getChatById(chatId).firstOrNull()?.let { chat ->
                 moreOptionsMenuStateFlow.value =
-                    if (chat.isTribeOwnedByAccount(getOwner().nodePubKey)) {
-                        MoreMenuOptionsViewState.OwnTribe
+                    if (chat.isTribeOwnedByAccount(getOwner().nodePubKey) || !chat.privateTribe.isTrue()) {
+                        MoreMenuOptionsViewState.ShareTribeLinkAvailable
                     } else {
-                        MoreMenuOptionsViewState.NotOwnTribe
+                        MoreMenuOptionsViewState.ShareTribeLinkDisable
                     }
 
-                chatRepository.updateTribeInfo(chat)?.let { tribeData ->
+                chatRepository.updateTribeInfo(chat, isProductionEnvironment)?.let { tribeData ->
 
                     if (!args.argThreadUUID.isNullOrEmpty()) {
                         _feedDataStateFlow.value = TribeFeedData.Result.NoFeed
                     }
                     else {
                         _feedDataStateFlow.value = TribeFeedData.Result.FeedData(
-                            tribeData.host,
-                            tribeData.feedUrl,
-                            tribeData.chatUUID,
-                            tribeData.feedType,
-                            tribeData.appUrl,
-                            tribeData.badges
+                            chat.host ?: return@let,
+                            tribeData.feed_url?.toFeedUrl(),
+                            chat.uuid,
+                            tribeData.feed_type?.toFeedType() ?: FeedType.Podcast,
+                            tribeData.app_url?.toAppUrl(),
+                            arrayOf() // needs to be fill
                         )
                     }
 
-                    updatePinnedMessageState(tribeData.pin, chat.id)
+                    updatePinnedMessageState(tribeData.pin?.toMessageUUID(), chat.id)
 
                 } ?: run {
                     _feedDataStateFlow.value = TribeFeedData.Result.NoFeed
@@ -335,21 +348,13 @@ class ChatTribeViewModel @Inject constructor(
     ) {
         viewModelScope.launch(mainImmediate) {
             val errorMessage = if (type.isMemberApprove()) {
-                app.getString(R.string.failed_to_approve_member)
+                app.getString(R_common.string.failed_to_approve_member)
             } else {
-                app.getString(R.string.failed_to_reject_member)
+                app.getString(R_common.string.failed_to_reject_member)
             }
 
             if (type.isMemberApprove() || type.isMemberReject()) {
                 messageRepository.processMemberRequest(chatId, messageUuid, null, type, senderAlias)
-//                when () {
-//                    is LoadResponse.Loading -> {}
-//                    is Response.Success -> {}
-//
-//                    is Response.Error -> {
-//                        submitSideEffect(ChatSideEffect.Notify(errorMessage))
-//                    }
-//                }
             }
         }.join()
     }
@@ -373,12 +378,12 @@ class ChatTribeViewModel @Inject constructor(
 
         viewModelScope.launch(mainImmediate) {
 
-            val response = chatRepository.pinMessage(chatId, message)
+            val response = chatRepository.pinMessage(chatId, message, isProductionEnvironment)
 
             if (response is Response.Success) {
-                showPinMessagePopup(app.getString(R.string.message_pinned))
+                showPinMessagePopup(app.getString(R_chat_common.string.message_pinned))
             } else {
-                submitSideEffect(ChatSideEffect.Notify(app.getString(R.string.pin_message_error)))
+                submitSideEffect(ChatSideEffect.Notify(app.getString(R_chat_common.string.pin_message_error)))
             }
         }
     }
@@ -392,12 +397,12 @@ class ChatTribeViewModel @Inject constructor(
                     PinMessageBottomViewState.Closed
                 )
 
-                val response = chatRepository.unPinMessage(chatId, nnMessage)
+                val response = chatRepository.unPinMessage(chatId, nnMessage, isProductionEnvironment)
 
                 if (response is Response.Success) {
-                    showPinMessagePopup(app.getString(R.string.message_unpinned))
+                    showPinMessagePopup(app.getString(R_chat_common.string.message_unpinned))
                 } else {
-                    submitSideEffect(ChatSideEffect.Notify(app.getString(R.string.pin_message_error)))
+                    submitSideEffect(ChatSideEffect.Notify(app.getString(R_chat_common.string.pin_message_error)))
                 }
             }
         }
@@ -558,8 +563,8 @@ class ChatTribeViewModel @Inject constructor(
     fun navigateToTribeShareScreen() {
         viewModelScope.launch(mainImmediate) {
             val chat = getChat()
-            val shareTribeURL = "sphinx.chat://?action=tribe&uuid=${chat.uuid.value}&host=${chat.host?.value}"
-            (chatNavigator as TribeChatNavigator).toShareTribeScreen(shareTribeURL, app.getString(R.string.qr_code_title))
+            val shareTribeURL = "sphinx.chat://?action=tribeV2&pubkey=${chat.uuid.value}&host=${tribeDefaultServerUrl}"
+            (chatNavigator as TribeChatNavigator).toShareTribeScreen(shareTribeURL, app.getString(R_tribe_detail.string.qr_code_title))
         }
 
         moreOptionsMenuHandler.updateViewState(MenuBottomViewState.Closed)

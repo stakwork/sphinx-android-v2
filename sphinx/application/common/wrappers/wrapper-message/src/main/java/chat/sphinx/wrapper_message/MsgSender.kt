@@ -8,6 +8,7 @@ import java.lang.IllegalArgumentException
 @JsonClass(generateAdapter = true)
 data class MsgSender(
     val pubkey: String,
+    val route_hint: String?,
     val alias: String?,
     val photo_url: String?,
     val person: String?,
@@ -29,6 +30,9 @@ data class MsgSender(
 
         @Throws(JsonDataException::class, IllegalArgumentException::class)
         fun String.toMsgSender(moshi: Moshi): MsgSender {
+            if (this.isEmpty()) {
+                throw IllegalArgumentException("Empty JSON for MsgSender")
+            }
             val adapter = moshi.adapter(MsgSender::class.java)
             return adapter.fromJson(this) ?: throw IllegalArgumentException("Invalid JSON for MsgSender")
         }

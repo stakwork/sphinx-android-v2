@@ -10,6 +10,7 @@ import android.widget.ListView
 import androidx.appcompat.content.res.AppCompatResources
 import chat.sphinx.concept_repository_chat.model.CreateTribe
 import chat.sphinx.create_tribe.R
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.resources.SphinxToastUtils
 import io.matthewnelson.android_feature_toast_utils.show
 import io.matthewnelson.concept_views.sideeffect.SideEffect
@@ -67,7 +68,7 @@ internal sealed class  CreateTribeSideEffect: SideEffect<Context>()  {
 
     object InvalidUrl: CreateTribeSideEffect() {
         override suspend fun execute(value: Context) {
-            SphinxToastUtils(true).show(value, R.string.invalid_url)
+            SphinxToastUtils(true).show(value, R_common.string.invalid_url)
         }
     }
 
@@ -78,14 +79,14 @@ internal sealed class  CreateTribeSideEffect: SideEffect<Context>()  {
         override suspend fun execute(value: Context) {
             val adapter = createTribeBuilder.adapter(value)
 
-            val builder = AlertDialog.Builder(value, R.style.AlertDialogTheme)
+            val builder = AlertDialog.Builder(value, R_common.style.AlertDialogTheme)
             builder.setAdapter(adapter, null)
             builder.setOnDismissListener {
                 callback()
             }
 
             val dialog = builder.create()
-            dialog.listView.background = AppCompatResources.getDrawable(value, R.color.body)
+            dialog.listView.background = AppCompatResources.getDrawable(value, R_common.color.body)
             dialog.listView.setOnItemClickListener { _, view, which, _ ->
                 val tag = createTribeBuilder.tags[which]
                 tag.isSelected = !tag.isSelected

@@ -8,7 +8,9 @@ import chat.sphinx.menu_bottom_tribe.R
 import chat.sphinx.resources.getString
 import chat.sphinx.wrapper_chat.Chat
 import chat.sphinx.wrapper_chat.isTribeOwnedByAccount
+import chat.sphinx.wrapper_chat.isTrue
 import chat.sphinx.wrapper_contact.Contact
+import chat.sphinx.resources.R as R_common
 import io.matthewnelson.android_feature_viewmodel.util.OnStopSupervisor
 
 class BottomMenuTribe(
@@ -27,42 +29,45 @@ class BottomMenuTribe(
         lifecycleOwner: LifecycleOwner
     ) {
         val menuBottomOptions = ArrayList<MenuBottomOption>()
+        val isTribeOwnedByAccount = chat.isTribeOwnedByAccount(accountOwner.nodePubKey)
 
-        if (chat.isTribeOwnedByAccount(accountOwner.nodePubKey)) {
+        if (isTribeOwnedByAccount || !chat.privateTribe.isTrue()) {
             menuBottomOptions.add(
                 MenuBottomOption(
                     text = R.string.bottom_menu_tribe_option_share_tribe,
-                    textColor = R.color.primaryBlueFontColor,
+                    textColor = R_common.color.primaryBlueFontColor,
                     onClick = {
                         tribeMenuViewModel.shareTribe()
                     }
                 )
             )
+        }
+        if (isTribeOwnedByAccount) {
 
             menuBottomOptions.add(
                 MenuBottomOption(
                     text = R.string.bottom_menu_tribe_option_edit_tribe,
-                    textColor = R.color.primaryBlueFontColor,
+                    textColor = R_common.color.primaryBlueFontColor,
                     onClick = {
                         tribeMenuViewModel.editTribe()
                     }
                 )
             )
 
-            menuBottomOptions.add(
-                MenuBottomOption(
-                    text = R.string.bottom_menu_tribe_option_add_member,
-                    textColor = R.color.primaryBlueFontColor,
-                    onClick = {
-                        tribeMenuViewModel.addTribeMember()
-                    }
-                )
-            )
+//            menuBottomOptions.add(
+//                MenuBottomOption(
+//                    text = R.string.bottom_menu_tribe_option_add_member,
+//                    textColor = R_common.color.primaryBlueFontColor,
+//                    onClick = {
+//                        tribeMenuViewModel.addTribeMember()
+//                    }
+//                )
+//            )
 
             menuBottomOptions.add(
                 MenuBottomOption(
                     text = R.string.bottom_menu_tribe_option_delete_tribe,
-                    textColor = R.color.primaryRed,
+                    textColor = R_common.color.primaryRed,
                     onClick = {
                         tribeMenuViewModel.deleteTribe()
                     }
@@ -72,7 +77,7 @@ class BottomMenuTribe(
             menuBottomOptions.add(
                 MenuBottomOption(
                     text = R.string.bottom_menu_tribe_option_exit_tribe,
-                    textColor = R.color.primaryRed,
+                    textColor = R_common.color.primaryRed,
                     onClick = {
                         tribeMenuViewModel.exitTribe()
                     }

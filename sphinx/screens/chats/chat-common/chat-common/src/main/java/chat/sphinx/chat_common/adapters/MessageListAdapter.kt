@@ -15,6 +15,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import chat.sphinx.chat_common.R
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.chat_common.databinding.*
 import chat.sphinx.chat_common.model.NodeDescriptor
 import chat.sphinx.chat_common.model.TribeLink
@@ -28,6 +29,8 @@ import chat.sphinx.chat_common.util.*
 import chat.sphinx.concept_image_loader.*
 import chat.sphinx.concept_user_colors_helper.UserColorsHelper
 import chat.sphinx.highlighting_tool.SphinxHighlightingTool
+import chat.sphinx.highlighting_tool.SphinxLinkify
+import chat.sphinx.highlighting_tool.SphinxUrlSpan
 import chat.sphinx.resources.getRandomHexCode
 import chat.sphinx.resources.getString
 import chat.sphinx.resources.setBackgroundRandomColor
@@ -41,7 +44,6 @@ import chat.sphinx.wrapper_message.Message
 import chat.sphinx.wrapper_message.MessageType
 import chat.sphinx.wrapper_message.SenderAlias
 import chat.sphinx.wrapper_view.Px
-import com.giphy.sdk.analytics.GiphyPingbacks.context
 import io.matthewnelson.android_feature_screens.util.gone
 import io.matthewnelson.android_feature_screens.util.goneIfFalse
 import io.matthewnelson.android_feature_screens.util.visible
@@ -698,6 +700,8 @@ internal class MessageListAdapter<ARGS : NavArgs>(
         private var threadHeaderViewState: MessageHolderViewState.ThreadHeader? = null
 
         private var audioAttachmentJob: Job? = null
+
+        private val onSphinxInteractionListener: SphinxUrlSpan.OnInteractionListener
         override fun onStart(owner: LifecycleOwner) {
             super.onStart(owner)
 
@@ -750,7 +754,13 @@ internal class MessageListAdapter<ARGS : NavArgs>(
                     seekBarAttachmentAudio.setOnTouchListener { _, _ -> true }
                 }
 
-                includeMessageTypeFileAttachment.root.setBackgroundResource(R.drawable.background_thread_file_attachment)
+                includeMessageTypeFileAttachment.root.setBackgroundResource(R_common.drawable.background_thread_file_attachment)
+            }
+
+            onSphinxInteractionListener = object: SphinxUrlSpan.OnInteractionListener(null) {
+                override fun onClick(url: String?) {
+                    viewModel.handleContactTribeLinks(url)
+                }
             }
         }
 
@@ -787,9 +797,12 @@ internal class MessageListAdapter<ARGS : NavArgs>(
                 textViewThreadMessageContent.text = threadHeader.bubbleMessage?.text ?: ""
                 textViewThreadMessageContent.goneIfFalse(threadHeader.bubbleMessage?.text?.isNotEmpty() == true)
 
-                SphinxHighlightingTool.addHighlights(
+                SphinxHighlightingTool.addMarkdowns(
                     textViewThreadMessageContent,
                     threadHeader.bubbleMessage?.highlightedTexts ?: emptyList(),
+                    threadHeader.bubbleMessage?.boldTexts ?: emptyList(),
+                    threadHeader.bubbleMessage?.markdownLinkTexts ?: emptyList(),
+                    onSphinxInteractionListener,
                     textViewThreadMessageContent.resources,
                     textViewThreadMessageContent.context
                 )
@@ -803,11 +816,11 @@ internal class MessageListAdapter<ARGS : NavArgs>(
                         if (threadHeader.isExpanded) {
                             textViewThreadMessageContent.maxLines = Int.MAX_VALUE
                             textViewShowMore.text =
-                                getString(R.string.episode_description_show_less)
+                                getString(R_common.string.episode_description_show_less)
                         } else {
                             textViewThreadMessageContent.maxLines = 12
                             textViewShowMore.text =
-                                getString(R.string.episode_description_show_more)
+                                getString(R_common.string.episode_description_show_more)
                         }
                     }
                 })
@@ -823,7 +836,7 @@ internal class MessageListAdapter<ARGS : NavArgs>(
                                 text = (senderInfo?.second?.value ?: "")?.getInitials()
 
                                 setBackgroundRandomColor(
-                                    R.drawable.chat_initials_circle,
+                                    R_common.drawable.chat_initials_circle,
                                     Color.parseColor(
                                         userColorsHelper.getHexCodeForKey(
                                             it,
@@ -889,9 +902,9 @@ internal class MessageListAdapter<ARGS : NavArgs>(
 
                                 textViewAttachmentFileIcon.text =
                                     if (fileAttachment.isPdf) {
-                                        getString(chat.sphinx.chat_common.R.string.material_icon_name_file_pdf)
+                                        getString(R_common.string.material_icon_name_file_pdf)
                                     } else {
-                                        getString(chat.sphinx.chat_common.R.string.material_icon_name_file_attachment)
+                                        getString(R_common.string.material_icon_name_file_attachment)
                                     }
 
                                 textViewAttachmentFileName.text =
@@ -918,7 +931,7 @@ internal class MessageListAdapter<ARGS : NavArgs>(
                             (threadHeader.bubbleAudioAttachment as? LayoutState.Bubble.ContainerSecond.AudioAttachment.FileAvailable)?.let { audioAttachment ->
                                 binding.constraintMediaThreadContainer.visible
                                 root.visible
-                                includeMessageTypeAudioAttachment.root.setBackgroundResource(R.drawable.background_thread_file_attachment)
+                                includeMessageTypeAudioAttachment.root.setBackgroundResource(R_common.drawable.background_thread_file_attachment)
 
                                 onStopSupervisor.scope.launch(viewModel.io) {
                                     viewModel.audioPlayerController.getAudioState(audioAttachment)?.value?.let { state ->
@@ -952,7 +965,7 @@ internal class MessageListAdapter<ARGS : NavArgs>(
                                 layoutContactInitialHolder.imageViewChatPicture,
                                 photoUrl.value,
                                 ImageLoaderOptions.Builder()
-                                    .placeholderResId(R.drawable.ic_profile_avatar_circle)
+                                    .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
                                     .transformation(Transformation.CircleCrop)
                                     .build()
                             )

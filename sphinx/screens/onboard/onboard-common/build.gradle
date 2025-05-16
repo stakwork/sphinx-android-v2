@@ -8,6 +8,7 @@ dependencies {
     // KotlinAndroid
     implementation project(":kotlin:concepts:concept-coroutines")
     implementation project(":kotlin:concepts:authentication:concept-authentication")
+    api project(path: ':sphinx:application:data:concepts:repositories:concept-repository-contact')
     implementation project(":kotlin:encoders:base64")
 
     // Sphinx

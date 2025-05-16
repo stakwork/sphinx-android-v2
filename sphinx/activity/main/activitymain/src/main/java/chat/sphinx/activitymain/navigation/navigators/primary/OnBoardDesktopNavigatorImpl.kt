@@ -13,9 +13,9 @@ internal class OnBoardDesktopNavigatorImpl @Inject constructor(
     navigationDriver: PrimaryNavigationDriver
 ): OnBoardDesktopNavigator(navigationDriver) {
 
-    override suspend fun toOnBoardReadyScreen(onBoardStep4: OnBoardStep.Step4_Ready) {
+    override suspend fun toOnBoardReadyScreen() {
         navigationDriver.submitNavigationRequest(
-            ToOnBoardReadyScreen(popUpToId = R.id.main_primary_nav_graph, onBoardStep4)
+            ToOnBoardReadyScreen(popUpToId = R.id.main_primary_nav_graph)
         )
     }
 

@@ -5,6 +5,7 @@ import android.content.Context
 import chat.sphinx.resources.SphinxToastUtils
 import chat.sphinx.tribe_detail.R
 import chat.sphinx.wrapper_chat.Chat
+import chat.sphinx.resources.R as R_common
 import io.matthewnelson.android_feature_toast_utils.show
 import io.matthewnelson.concept_views.sideeffect.SideEffect
 
@@ -36,7 +37,7 @@ internal sealed class  TribeDetailSideEffect: SideEffect<Context>()  {
 
     object AliasAllowedCharacters: TribeDetailSideEffect() {
         override suspend fun execute(value: Context) {
-            SphinxToastUtils(false).show(value, R.string.alias_allowed_characters)
+            SphinxToastUtils(false).show(value, R_common.string.alias_allowed_characters)
         }
     }
 
@@ -46,7 +47,7 @@ internal sealed class  TribeDetailSideEffect: SideEffect<Context>()  {
     ): TribeDetailSideEffect() {
 
         override suspend fun execute(value: Context) {
-            val builder = AlertDialog.Builder(value, R.style.AlertDialogTheme)
+            val builder = AlertDialog.Builder(value, R_common.style.AlertDialogTheme)
             builder.setTitle(value.getString(R.string.alert_confirm_delete_tribe_heading, chat.name?.value ?: ""))
             builder.setMessage(value.getString(R.string.alert_confirm_delete_tribe_message))
             builder.setNegativeButton(android.R.string.cancel) { _,_ -> }
@@ -63,7 +64,7 @@ internal sealed class  TribeDetailSideEffect: SideEffect<Context>()  {
     ): TribeDetailSideEffect() {
 
         override suspend fun execute(value: Context) {
-            val builder = AlertDialog.Builder(value, R.style.AlertDialogTheme)
+            val builder = AlertDialog.Builder(value, R_common.style.AlertDialogTheme)
             builder.setTitle(value.getString(R.string.alert_confirm_exit_tribe_heading, chat.name?.value ?: ""))
             builder.setMessage(value.getString(R.string.alert_confirm_exit_tribe_message))
             builder.setNegativeButton(android.R.string.cancel) { _,_ -> }

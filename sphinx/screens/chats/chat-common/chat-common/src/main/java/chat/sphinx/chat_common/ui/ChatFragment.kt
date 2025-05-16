@@ -9,6 +9,8 @@ import android.graphics.pdf.PdfRenderer
 import android.os.Bundle
 import android.os.ParcelFileDescriptor
 import android.text.Editable
+import android.text.InputFilter
+import android.text.Spanned
 import android.text.TextWatcher
 import android.util.Log
 import android.view.View
@@ -34,6 +36,7 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.viewbinding.ViewBinding
 import app.cash.exhaustive.Exhaustive
 import chat.sphinx.chat_common.R
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.chat_common.adapters.MessageListAdapter
 import chat.sphinx.chat_common.adapters.MessageListFooterAdapter
 import chat.sphinx.chat_common.databinding.*
@@ -64,6 +67,7 @@ import chat.sphinx.concept_network_client_crypto.CryptoScheme
 import chat.sphinx.concept_repository_message.model.AttachmentInfo
 import chat.sphinx.concept_repository_message.model.SendMessage
 import chat.sphinx.concept_user_colors_helper.UserColorsHelper
+import chat.sphinx.highlighting_tool.replacingMarkdown
 import chat.sphinx.insetter_activity.InsetterActivity
 import chat.sphinx.insetter_activity.addKeyboardPadding
 import chat.sphinx.insetter_activity.addNavigationBarPadding
@@ -76,6 +80,9 @@ import chat.sphinx.menu_bottom.model.MenuBottomOption
 import chat.sphinx.menu_bottom.ui.BottomMenu
 import chat.sphinx.menu_bottom.ui.MenuBottomViewState
 import chat.sphinx.resources.*
+import chat.sphinx.wrapper_chat.getColorKey
+import chat.sphinx.wrapper_chat.isConversation
+import chat.sphinx.wrapper_chat.isPending
 import chat.sphinx.wrapper_common.FileSize
 import chat.sphinx.wrapper_common.asFormattedString
 import chat.sphinx.wrapper_common.chat.PushNotificationLink
@@ -84,6 +91,7 @@ import chat.sphinx.wrapper_common.lightning.toSat
 import chat.sphinx.wrapper_common.message.MessageId
 import chat.sphinx.wrapper_common.util.getHHMMSSString
 import chat.sphinx.wrapper_common.util.getHHMMString
+import chat.sphinx.wrapper_common.util.getInitials
 import chat.sphinx.wrapper_meme_server.headerKey
 import chat.sphinx.wrapper_meme_server.headerValue
 import chat.sphinx.wrapper_message.*
@@ -92,6 +100,7 @@ import chat.sphinx.wrapper_view.Dp
 import io.matthewnelson.android_feature_screens.util.gone
 import io.matthewnelson.android_feature_screens.util.goneIfFalse
 import io.matthewnelson.android_feature_screens.util.goneIfTrue
+import io.matthewnelson.android_feature_screens.util.invisible
 import io.matthewnelson.android_feature_screens.util.visible
 import io.matthewnelson.android_feature_viewmodel.submitSideEffect
 import io.matthewnelson.android_feature_viewmodel.updateViewState
@@ -99,6 +108,8 @@ import io.matthewnelson.concept_views.viewstate.collect
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 
 abstract class ChatFragment<
@@ -133,6 +144,7 @@ abstract class ChatFragment<
     protected abstract val threadOriginalMessageBinding: LayoutThreadOriginalMessageBinding?
     protected abstract val scrollDownButtonBinding: LayoutScrollDownButtonBinding
     protected abstract val shimmerBinding: LayoutShimmerContainerBinding
+    protected abstract val inactiveContactPlaceHolder: LayoutChatInactiveContactPlaceholderBinding
 
     protected abstract val menuEnablePayments: Boolean
 
@@ -220,10 +232,10 @@ abstract class ChatFragment<
     }
 
     private fun handlePushNotification() {
-        val chatId = activity?.intent?.extras?.getString("chat_id")?.toLongOrNull() ?: activity?.intent?.extras?.getLong("chat_id")
-
+        lifecycleScope.launch(viewModel.mainImmediate) {
+        val pubKey = activity?.intent?.extras?.getString("child") ?: activity?.intent?.extras?.getString("child")
+        val chatId = pubKey?.let { viewModel.getPubKeyByEncryptedChild(it) }
         chatId?.let { _ ->
-            lifecycleScope.launch(viewModel.mainImmediate) {
                 viewModel.chatNavigator.popBackStack()
             }
         }
@@ -359,6 +371,48 @@ abstract class ChatFragment<
         footerBinding.apply {
             insetterActivity.addNavigationBarPadding(root)
 
+            editTextChatFooter.filters = arrayOf<InputFilter>(object : InputFilter {
+                override fun filter(
+                    source: CharSequence,
+                    start: Int,
+                    end: Int,
+                    dest: Spanned,
+                    dstart: Int,
+                    dend: Int
+                ): CharSequence {
+                    val currentText = dest.toString()
+                    val proposedText = currentText.substring(0, dstart) + source.subSequence(start, end) + currentText.substring(dend)
+
+                    val contentBytes = 18
+                    val offsetBytes = 360
+                    val attachmentBytes = 389
+                    val replyBytes = 84
+                    val threadBytes = 84
+
+                    var bytes = proposedText.toByteArray().size + contentBytes + offsetBytes
+
+                    if (sendMessageBuilder.isSendingAttachment()) {
+                        bytes += attachmentBytes
+                    }
+
+                    if (sendMessageBuilder.isReplying()) {
+                        bytes += replyBytes
+                    }
+
+                    if (sendMessageBuilder.isThreadMsg()) {
+                        bytes += threadBytes
+                    }
+                    
+                    return if (bytes > 869) {
+                        // If the proposed text exceeds the limit, return an empty string to prevent the change
+                        ""
+                    } else {
+                        // If the proposed text does not exceed the limit, allow the change
+                        source.subSequence(start, end)
+                    }
+                }
+            })
+
             textViewChatFooterSend.setOnClickListener {
                 lifecycleScope.launch(viewModel.mainImmediate) {
 
@@ -484,8 +538,8 @@ abstract class ChatFragment<
             editTextChatFooter.addTextChangedListener { editable ->
                 //Do not toggle microphone and send icon if on attachment mode
                 if (viewModel.getFooterViewStateFlow().value !is FooterViewState.Attachment) {
-                    textViewChatFooterSend.goneIfTrue(editable.isNullOrEmpty() && !viewModel.isThreadChat())
-                    imageViewChatFooterMicrophone.goneIfFalse(editable.isNullOrEmpty() && !viewModel.isThreadChat())
+                    textViewChatFooterSend.goneIfTrue(editable?.trim().isNullOrEmpty())
+                    imageViewChatFooterMicrophone.goneIfFalse(editable?.trim().isNullOrEmpty())
                 }
             }
         }
@@ -508,7 +562,7 @@ abstract class ChatFragment<
                 viewModel.replyToMessage(null)
             }
 
-            root.setBackgroundColor(getColor(R.color.headerBG))
+            root.setBackgroundColor(getColor(R_common.color.headerBG))
         }
     }
 
@@ -519,7 +573,7 @@ abstract class ChatFragment<
                 setOf(
                     MenuBottomOption(
                         text = R.string.bottom_menu_more_option_call,
-                        textColor = R.color.primaryBlueFontColor,
+                        textColor = R_common.color.primaryBlueFontColor,
                         onClick = {
                             viewModel.moreOptionsMenuHandler.updateViewState(
                                 MenuBottomViewState.Closed
@@ -531,7 +585,7 @@ abstract class ChatFragment<
                     ),
                     MenuBottomOption(
                         text = R.string.bottom_menu_more_option_search,
-                        textColor = R.color.primaryBlueFontColor,
+                        textColor = R_common.color.primaryBlueFontColor,
                         onClick = {
                             lifecycleScope.launch(viewModel.mainImmediate) {
                                 viewModel.searchMessages(null)
@@ -540,7 +594,7 @@ abstract class ChatFragment<
                     ),
                     MenuBottomOption(
                         text = R.string.option_delete_user,
-                        textColor = R.color.primaryRed,
+                        textColor = R_common.color.primaryRed,
                         onClick = {
                             lifecycleScope.launch(viewModel.mainImmediate) {
                                 viewModel.confirmDeleteContact()
@@ -549,7 +603,7 @@ abstract class ChatFragment<
                     ),
                     MenuBottomOption(
                         text = R.string.option_block_user,
-                        textColor = R.color.primaryRed,
+                        textColor = R_common.color.primaryRed,
                         onClick = {
                             lifecycleScope.launch(viewModel.mainImmediate) {
                                viewModel.confirmToggleBlockContactState()
@@ -567,14 +621,14 @@ abstract class ChatFragment<
                 setOf(
                     MenuBottomOption(
                         text = R.string.bottom_menu_call_option_audio,
-                        textColor = R.color.primaryBlueFontColor,
+                        textColor = R_common.color.primaryBlueFontColor,
                         onClick = {
                             viewModel.sendCallInvite(true)
                         }
                     ),
                     MenuBottomOption(
                         text = R.string.bottom_menu_call_option_video_or_audio,
-                        textColor = R.color.primaryBlueFontColor,
+                        textColor = R_common.color.primaryBlueFontColor,
                         onClick = {
                             viewModel.sendCallInvite(false)
                         }
@@ -816,7 +870,7 @@ abstract class ChatFragment<
                                     viewModel.resendMessage(message)
                                 }
                                 is MenuItemState.Flag -> {
-                                    viewModel.flagMessage(message)
+//                                    viewModel.flagMessage(message)
                                 }
                                 is MenuItemState.PinMessage -> {
                                     viewModel.pinMessage(message)
@@ -955,6 +1009,12 @@ abstract class ChatFragment<
     private val fullScreenViewStateJobs: MutableList<Job> = ArrayList(1)
     private val fullScreenViewStateDisposables: MutableList<Disposable> = ArrayList(1)
 
+    private val imageLoaderOptions: ImageLoaderOptions by lazy {
+        ImageLoaderOptions.Builder()
+            .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
+            .build()
+    }
+
     override fun subscribeToViewStateFlow() {
         super.subscribeToViewStateFlow()
 
@@ -1017,7 +1077,7 @@ abstract class ChatFragment<
 
                             viewReplyBarLeading.setBackgroundColor(
                                 root.context.getColor(
-                                    R.color.washedOutReceivedText
+                                    R_common.color.washedOutReceivedText
                                 )
                             )
                         }
@@ -1039,10 +1099,10 @@ abstract class ChatFragment<
                                 textViewReplyTextOverlay.gone
 
                                 if (message.isAudioMessage) {
-                                    textViewReplyMessageLabel.text = getString(R.string.media_type_label_audio)
+                                    textViewReplyMessageLabel.text = getString(R_common.string.media_type_label_audio)
                                     textViewReplyMessageLabel.visible
 
-                                    textViewReplyTextOverlay.text = getString(R.string.material_icon_name_volume_up)
+                                    textViewReplyTextOverlay.text = getString(R_common.string.material_icon_name_volume_up)
                                     textViewReplyTextOverlay.visible
                                 } else {
                                     message.retrieveTextToShow()?.let { messageText ->
@@ -1131,8 +1191,7 @@ abstract class ChatFragment<
                     is ChatHeaderViewState.Idle -> {}
                     is ChatHeaderViewState.Initialized -> {
                         headerBinding.apply {
-
-                            textViewChatHeaderName.text = viewState.chatHeaderName
+                            textViewChatHeaderName.text = viewState.chatHeaderName.replacingMarkdown()
                             textViewChatHeaderLock.goneIfFalse(viewState.showLock)
 
                             Log.d("TimeTracker", "Chat contact/tribe name was displayed in ${System.currentTimeMillis() - timeTrackerStart} milliseconds")
@@ -1143,12 +1202,12 @@ abstract class ChatFragment<
                                     if (muted) {
                                         imageLoader.load(
                                             headerBinding.imageViewChatHeaderMuted,
-                                            R.drawable.ic_baseline_notifications_off_24
+                                            R_common.drawable.ic_baseline_notifications_off_24
                                         )
                                     } else {
                                         imageLoader.load(
                                             headerBinding.imageViewChatHeaderMuted,
-                                            R.drawable.ic_baseline_notifications_24
+                                            R_common.drawable.ic_baseline_notifications_24
                                         )
                                     }
                                 } ?: gone
@@ -1157,15 +1216,68 @@ abstract class ChatFragment<
                             textViewChatHeaderConnectivity.apply {
                                 viewState.isChatAvailable.let { available ->
                                     if (available) {
-                                        setTextColorExt(R.color.primaryGreen)
-                                        textViewChatHeaderLock.text = getString(R.string.material_icon_name_lock)
+                                        setTextColorExt(R_common.color.primaryGreen)
+                                        textViewChatHeaderLock.text = getString(R_common.string.material_icon_name_lock)
+                                        recyclerView.visible
+                                        inactiveContactPlaceHolder.root.gone
                                     } else {
-                                        setTextColorExt(R.color.sphinxOrange)
-                                        textViewChatHeaderLock.text = getString(R.string.material_icon_name_lock_open)
+                                        setTextColorExt(R_common.color.sphinxOrange)
+                                        textViewChatHeaderLock.text = getString(R_common.string.material_icon_name_lock_open)
+
+                                        // Inactive conversation placeholder
+                                        recyclerView.gone
+
+                                        inactiveContactPlaceHolder.apply {
+                                            root.visible
+                                            initialsHolderPlaceholder.textViewInitials.apply {
+                                                visible
+                                                text = viewState.chatHeaderName.getInitials()
+                                                setBackgroundRandomColor(
+                                                    R_common.drawable.chat_initials_circle,
+                                                    Color.parseColor(
+                                                        userColorsHelper.getHexCodeForKey(
+                                                            viewState.colorKey,
+                                                            root.context.getRandomHexCode(),
+                                                        )
+                                                    ),
+                                                )
+                                            }
+                                            textViewPlaceholderName.text = viewState.chatHeaderName
+                                            textViewPlaceholderInvited.text = root.context.getString(
+                                                R.string.chat_placeholder_invited,
+                                                viewState.createdAt ?: "-"
+                                            )
+                                        }
+
+                                    }
+                                }
+                            }
+
+                            textViewChatHeaderClockIcon.apply {
+                                viewModel.clockIconState.collect { showClockIcon ->
+                                    if (showClockIcon) {
+                                        this.visible
+                                    } else {
+                                        this.gone
                                     }
                                 }
                             }
                         }
+                    }
+                }
+            }
+        }
+
+        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+            viewModel.remoteTimezoneStateFlow.collect { viewState ->
+                headerBinding.apply {
+                    viewState?.let {
+                        textViewChatHeaderCurrentTimezone.also { timezoneTextView ->
+                            timezoneTextView.visible
+                            timezoneTextView.text = it
+                        }
+                    } ?: run {
+                        textViewChatHeaderCurrentTimezone.gone
                     }
                 }
             }
@@ -1195,19 +1307,42 @@ abstract class ChatFragment<
                     @Exhaustive
                     when (viewState) {
                         is InitialHolderViewState.Initials -> {
-                            imageViewChatPicture.gone
-                            textViewInitials.apply {
-                                visible
-                                text = viewState.initials
-                                setBackgroundRandomColor(
-                                    R.drawable.chat_initials_circle,
-                                    Color.parseColor(
-                                        userColorsHelper.getHexCodeForKey(
-                                            viewState.colorKey,
-                                            root.context.getRandomHexCode(),
+                            if (viewState.isPending) {
+                                root.invisible
+                                headerBinding.layoutPendingContactInitialHolder.apply {
+                                    root.visible
+                                    iconClock.gone
+                                    textViewInitials.apply {
+                                        visible
+                                        text = viewState.initials
+                                        setBackgroundRandomColor(
+                                            R_common.drawable.chat_initials_circle,
+                                            Color.parseColor(
+                                                userColorsHelper.getHexCodeForKey(
+                                                    viewState.colorKey,
+                                                    root.context.getRandomHexCode(),
+                                                )
+                                            ),
                                         )
-                                    ),
-                                )
+                                    }
+                                }
+                            } else {
+                                headerBinding.layoutPendingContactInitialHolder.root.gone
+                                root.visible
+                                imageViewChatPicture.gone
+                                textViewInitials.apply {
+                                    visible
+                                    text = viewState.initials
+                                    setBackgroundRandomColor(
+                                        R_common.drawable.chat_initials_circle,
+                                        Color.parseColor(
+                                            userColorsHelper.getHexCodeForKey(
+                                                viewState.colorKey,
+                                                root.context.getRandomHexCode(),
+                                            )
+                                        ),
+                                    )
+                                }
                             }
 
                         }
@@ -1217,7 +1352,7 @@ abstract class ChatFragment<
                             lifecycleScope.launch(viewModel.mainImmediate) {
                                 val disposable = imageLoader.load(
                                     imageViewChatPicture,
-                                    R.drawable.ic_profile_avatar_circle,
+                                    R_common.drawable.ic_profile_avatar_circle,
                                 )
                                 headerInitialHolderViewStateDisposables.add(disposable)
                             }.let { job ->
@@ -1238,6 +1373,67 @@ abstract class ChatFragment<
                                 headerInitialHolderViewStateJobs.add(job)
                             }
                         }
+                    }
+                }
+            }
+        }
+
+        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+            viewModel.messageHolderViewStateFlow.collect { messages ->
+                val chat = viewModel.getChat()
+
+                if (messages.isEmpty() && chat.type.isConversation() && !chat.status.isPending()) {
+                    val url = chat.photoUrl
+
+                    recyclerView.gone
+                    inactiveContactPlaceHolder.apply {
+                        root.visible
+                        initialsHolderPlaceholder.root.invisible
+
+                        textViewPlaceholderName.text = chat.name?.value
+                        textViewPlaceholderInvited.invisible
+                        textViewPlaceholderHint.text = getString(R.string.chat_placeholder_secure)
+
+                        includeEmptyChatHolderInitial.apply {
+                            root.visible
+                            imageViewChatPicture.goneIfFalse(url != null)
+                            textViewInitials.goneIfFalse(url == null)
+                        }
+
+                        if (url != null) {
+                            onStopSupervisor.scope.launch(viewModel.dispatchers.mainImmediate) {
+                                imageLoader.load(
+                                    includeEmptyChatHolderInitial.imageViewChatPicture,
+                                    url.value,
+                                    imageLoaderOptions
+                                )
+                            }
+                        } else {
+                            includeEmptyChatHolderInitial.textViewInitials.text =
+                                chat.name?.value?.getInitials() ?: ""
+
+                            onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+                                includeEmptyChatHolderInitial.textViewInitials
+                                    .setInitialsColor(
+                                        chat.getColorKey()?.let { colorKey ->
+                                            Color.parseColor(
+                                                userColorsHelper.getHexCodeForKey(
+                                                    colorKey,
+                                                    root.context.getRandomHexCode()
+                                                )
+                                            )
+                                        },
+                                        R_common.drawable.chat_initials_circle
+                                    )
+                            }
+                        }
+                    }
+                } else {
+                    recyclerView.visible
+                    if (chat.type.isConversation() && chat.status.isPending()) {
+                       inactiveContactPlaceHolder.root.visible
+                    } else {
+                        inactiveContactPlaceHolder.root.gone
                     }
                 }
             }
@@ -1477,7 +1673,7 @@ abstract class ChatFragment<
                                     includePaidTextMessageSendPreview.root.gone
 
                                     textViewAttachmentSendHeaderName.text = getString(R.string.attachment_send_header_pdf)
-                                    textViewAttachmentFileIconPreview.text = getString(R.string.material_icon_name_file_pdf)
+                                    textViewAttachmentFileIconPreview.text = getString(R_common.string.material_icon_name_file_pdf)
 
                                     viewState.file?.let { nnFile ->
                                         val fileDescriptor = ParcelFileDescriptor.open(nnFile,
@@ -1539,7 +1735,7 @@ abstract class ChatFragment<
                                     includePaidTextMessageSendPreview.root.gone
 
                                     textViewAttachmentSendHeaderName.text = getString(R.string.attachment_send_header_file)
-                                    textViewAttachmentFileIconPreview.text = getString(R.string.material_icon_name_file_attachment)
+                                    textViewAttachmentFileIconPreview.text = getString(R_common.string.material_icon_name_file_attachment)
 
                                     viewState.file?.let { nnFile ->
                                         textViewAttachmentFileNamePreview.text = viewState.fileName?.value ?: nnFile.name
@@ -1756,8 +1952,8 @@ abstract class ChatFragment<
 
                             textViewChatSearchResultsFound.text = getString(R.string.results_found, viewState.messages.size)
 
-                            val enabledColor = ContextCompat.getColor(binding.root.context, R.color.text)
-                            val disabledColor = ContextCompat.getColor(binding.root.context, R.color.secondaryText)
+                            val enabledColor = ContextCompat.getColor(binding.root.context, R_common.color.text)
+                            val disabledColor = ContextCompat.getColor(binding.root.context, R_common.color.secondaryText)
 
                             val nextButtonEnable = viewState.index < viewState.messages.size - 1
                             textViewChatSearchNext.isEnabled = nextButtonEnable
@@ -1827,7 +2023,7 @@ abstract class ChatFragment<
     ) {
         if (messages.size > index) {
             (recyclerView.adapter as ConcatAdapter).adapters.firstOrNull()?.let { messagesListAdapter ->
-                messages[index]?.let { message ->
+                messages[index].let { message ->
                     (messagesListAdapter as MessageListAdapter<*>).highlightAndScrollToSearchResult(
                         message,
                         if (messages.size > prevIndex && prevIndex >= 0) messages[prevIndex] else null,

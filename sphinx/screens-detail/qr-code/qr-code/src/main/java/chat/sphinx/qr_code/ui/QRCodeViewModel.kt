@@ -7,9 +7,7 @@ import android.graphics.Color
 import android.provider.MediaStore
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
-import chat.sphinx.concept_socket_io.SocketIOManager
-import chat.sphinx.concept_socket_io.SphinxSocketIOMessage
-import chat.sphinx.concept_socket_io.SphinxSocketIOMessageListener
+import chat.sphinx.concept_repository_dashboard_android.RepositoryDashboardAndroid
 import chat.sphinx.qr_code.R
 import chat.sphinx.qr_code.navigation.QRCodeNavigator
 import chat.sphinx.share_qr_code.ShareQRCodeMenuHandler
@@ -35,8 +33,8 @@ import javax.inject.Inject
 internal class QRCodeViewModel @Inject constructor(
     private val app: Application,
     val navigator: QRCodeNavigator,
-    private val socketIOManager: SocketIOManager,
     private val mediaCacheHandler: MediaCacheHandler,
+    private val repositoryDashboard: RepositoryDashboardAndroid<Any>,
     dispatchers: CoroutineDispatchers,
     handle: SavedStateHandle,
 ): SideEffectViewModel<
@@ -55,7 +53,6 @@ internal class QRCodeViewModel @Inject constructor(
                 )
             },
         ),
-    SphinxSocketIOMessageListener,
     ShareQRCodeMenuViewModel
 {
 
@@ -65,13 +62,12 @@ internal class QRCodeViewModel @Inject constructor(
 
     companion object {
         private const val BITMAP_XY = 512
+        const val INVITE_REGEX = "sphinx.chat://?action=i&"
     }
 
     private val args: QRCodeFragmentArgs by handle.navArgs()
 
     init {
-        socketIOManager.addListener(this)
-
         viewModelScope.launch(default) {
             val writer = QRCodeWriter()
             val qrText = if (args.qrText.isValidBech32()) {
@@ -121,28 +117,25 @@ internal class QRCodeViewModel @Inject constructor(
         }
     }
 
-    @Suppress("BlockingMethodInNonBlockingContext")
-    override suspend fun onSocketIOMessageReceived(msg: SphinxSocketIOMessage) {
-        if (msg is SphinxSocketIOMessage.Type.InvoicePayment) {
-            if (args.qrText == msg.dto.invoice) {
-                updateViewState(
-                    QRCodeViewState(
-                        currentViewState.showBackButton,
-                        currentViewState.viewTitle,
-                        currentViewState.qrText,
-                        currentViewState.qrBitmap,
-                        currentViewState.description,
-                        true
-                    )
-                )
-            }
+    fun isInviteQRCode(): Boolean {
+        return args.qrText.trim().startsWith(INVITE_REGEX)
+    }
+
+    fun deleteInvite() {
+        viewModelScope.launch(mainImmediate) {
+            submitSideEffect(
+                NotifySideEffect.AlertConfirmDeleteInvite {
+                    viewModelScope.launch {
+                        repositoryDashboard.deleteInviteAndContact(args.qrText)
+                        navigator.popBackStack()
+                    }
+                }
+            )
         }
     }
 
     override fun onCleared() {
         super.onCleared()
-
-        socketIOManager.removeListener(this)
     }
 
     override fun shareCodeThroughTextIntent(): Intent {

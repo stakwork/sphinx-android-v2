@@ -16,6 +16,7 @@ import chat.sphinx.wrapper_feed.FeedItem
 import chat.sphinx.wrapper_common.feed.FeedType
 import chat.sphinx.wrapper_common.feed.isTrue
 import chat.sphinx.wrapper_common.time
+import chat.sphinx.resources.R as R_common
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.matthewnelson.android_feature_viewmodel.SideEffectViewModel
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
@@ -80,7 +81,7 @@ class FeedReadViewModel @Inject constructor(
         viewModelScope.launch(mainImmediate) {
             dashboardNavigator.toWebViewDetail(
                 item?.feed?.chat?.id ?: item?.feed?.chatId,
-                app.getString(R.string.newsletter_article),
+                app.getString(R_common.string.newsletter_article),
                 item.enclosureUrl,
                 item.feedId,
                 item.id

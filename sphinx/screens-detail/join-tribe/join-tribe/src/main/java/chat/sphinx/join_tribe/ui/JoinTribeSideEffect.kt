@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.annotation.StringRes
 import chat.sphinx.join_tribe.R
 import chat.sphinx.resources.SphinxToastUtils
+import chat.sphinx.resources.R as R_common
 import io.matthewnelson.android_feature_toast_utils.show
 import io.matthewnelson.concept_views.sideeffect.SideEffect
 
@@ -49,7 +50,7 @@ internal sealed class JoinTribeSideEffect: SideEffect<Context>() {
 
         object AliasAllowedCharacters: Notify() {
             override val stringRes: Int
-                get() = R.string.alias_allowed_characters
+                get() = R_common.string.alias_allowed_characters
         }
     }
 }

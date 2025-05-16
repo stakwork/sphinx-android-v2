@@ -1,6 +1,6 @@
 package chat.sphinx.transactions.ui.viewstate
 
-import chat.sphinx.concept_network_query_message.model.TransactionDto
+import chat.sphinx.example.wrapper_mqtt.TransactionDto
 import chat.sphinx.wrapper_message.Message
 
 
@@ -25,7 +25,8 @@ internal sealed class TransactionHolderViewState(
     class Incoming(
         transaction: TransactionDto,
         invoice: Message?,
-        messageSenderName: String?
+        messageSenderName: String?,
+        val isBounty: Boolean
     ) : TransactionHolderViewState(
         transaction,
         invoice,

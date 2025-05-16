@@ -6,7 +6,6 @@ import android.widget.ImageView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.Transformations
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
@@ -19,6 +18,7 @@ import chat.sphinx.dashboard.databinding.LayoutFeedReadNowRowHolderBinding
 import chat.sphinx.dashboard.ui.feed.read.FeedReadViewModel
 import chat.sphinx.wrapper_common.hhmmElseDate
 import chat.sphinx.wrapper_feed.FeedItem
+import chat.sphinx.resources.R as R_common
 import io.matthewnelson.android_feature_screens.util.goneIfFalse
 import io.matthewnelson.android_feature_screens.util.visible
 import io.matthewnelson.android_feature_viewmodel.util.OnStopSupervisor
@@ -153,13 +153,13 @@ class FeedReadNowAdapter(
 
     private val imageLoaderOptions: ImageLoaderOptions by lazy {
         ImageLoaderOptions.Builder()
-            .placeholderResId(R.drawable.ic_podcast_placeholder)
+            .placeholderResId(R_common.drawable.ic_podcast_placeholder)
             .build()
     }
 
     private val thumbnailLoaderOptions: ImageLoaderOptions by lazy {
         ImageLoaderOptions.Builder()
-            .placeholderResId(R.drawable.ic_podcast_placeholder)
+            .placeholderResId(R_common.drawable.ic_podcast_placeholder)
             .transformation(Transformation.CircleCrop)
             .build()
     }
@@ -220,7 +220,7 @@ class FeedReadNowAdapter(
                     }
                 } ?: run {
                     imageViewItemImage.setImageDrawable(
-                        ContextCompat.getDrawable(root.context, R.drawable.ic_newsletter_placeholder)
+                        ContextCompat.getDrawable(root.context, R_common.drawable.ic_newsletter_placeholder)
                     )
                 }
 

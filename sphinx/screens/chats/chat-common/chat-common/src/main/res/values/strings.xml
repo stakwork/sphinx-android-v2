@@ -36,7 +36,7 @@
     <!--  Message type invoices  -->
     <string name="request_expired">REQUEST EXPIRED</string>
     <string name="request_expiration">EXPIRES AT: %s</string>
-    <string name="invoice_paid_on">Invoice paid on %s</string>
+    <string name="invoice_paid_on">Invoice of %s sats paid on %s</string>
     <string name="alert_confirm_pay_chat_invoice_title">Confirm Paying Invoice</string>
     <string name="alert_confirm_pay_chat_invoice_message">Are you sure you want to pay for this invoice?</string>
 
@@ -94,8 +94,8 @@
     <string name="tribe_leave_announcement">%1$s just left the tribe</string>
     <string name="group_leave_announcement">%1$s just left the group</string>
     <string name="tribe_deleted_announcement">The admin has deleted\nthis tribe</string>
-    <string name="group_kick_announcement_member_side">The admin has removed you from this group</string>
-    <string name="tribe_kick_announcement_member_side">The admin has removed you from this tribe</string>
+    <string name="group_kick_announcement_member_side">The admin has removed you\nfrom this group</string>
+    <string name="tribe_kick_announcement_member_side">The admin has removed you\nfrom this tribe</string>
     <string name="tribe_welcome_announcement_member_side">Welcome! You are now a member</string>
     <string name="tribe_deleted_announcement_button_delete">Delete Tribe</string>
 
@@ -202,5 +202,16 @@
     <string name="pin_message_error">Something went wrong. Please try again later</string>
 
     <string name="cancel_search">CANCEL</string>
+
+    <string name="app_name" translatable="false">livekit-android</string>
+    <string name="connect" translatable="false">Connect</string>
+    <string name="token" translatable="false">Token</string>
+    <string name="e2ee_key_str" translatable="false">E2EE Key</string>
+    <string name="e2ee_enabled_str" translatable="false">Enable E2EE</string>
+    <string name="url" translatable="false">URL</string>
+    <string name="save_values" translatable="false">Save Values</string>
+    <string name="reset_values" translatable="false">Reset Values</string>
+    <string name="chat_placeholder_invited">Invited on %s</string>
+    <string name="chat_placeholder_secure">Messages and calls are secured\nwith end to end encryption</string>
 
 </resources>

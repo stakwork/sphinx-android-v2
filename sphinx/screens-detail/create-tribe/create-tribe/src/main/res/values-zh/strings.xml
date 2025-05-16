@@ -13,7 +13,7 @@
     <string name="failed_to_update_tribe">編輯 tribe 失敗</string>
     <string name="failed_to_load_tribe">載入 tribe 失敗</string>
     <string name="failed_to_process_image">團片上傳失敗</string>
-    <string name="list_on_tribes_sphinx_chat">開放 tribes.sphinx.chat 發布嗎?</string>
+    <string name="list_on_tribes_sphinx_chat">開放 tribes.v2.sphinx.chat 發布嗎?</string>
     <string name="name">名稱 *</string>
     <string name="image">圖片</string>
     <string name="description">說明 *</string>
@@ -23,6 +23,7 @@
     <string name="amount_to_stake_sats">訂金</string>
     <string name="time_to_stake_hours">訂金時期 (小時)</string>
     <string name="app_url">應用網址</string>
+    <string name="second_brain_url">第二個大腦網址</string>
     <string name="rss_feed_url">內容源網址</string>
     <string name="feed_content_type">內容源內容類型</string>
     <string name="approve_each_membership_request">需要許可每位會員邀請嗎?</string>

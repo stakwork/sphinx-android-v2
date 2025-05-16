@@ -3,6 +3,7 @@ package chat.sphinx.chat_common.ui
 import android.app.Application
 import android.content.ContentValues
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
@@ -16,6 +17,7 @@ import android.provider.OpenableColumns
 import android.util.Log
 import android.webkit.MimeTypeMap
 import androidx.annotation.CallSuper
+import androidx.annotation.RequiresApi
 import androidx.core.view.inputmethod.InputConnectionCompat
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.SavedStateHandle
@@ -26,6 +28,7 @@ import chat.sphinx.camera_view_model_coordinator.request.CameraRequest
 import chat.sphinx.camera_view_model_coordinator.response.CameraResponse
 import chat.sphinx.chat_common.BuildConfig
 import chat.sphinx.chat_common.R
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.chat_common.model.*
 import chat.sphinx.chat_common.navigation.ChatNavigator
 import chat.sphinx.chat_common.ui.viewstate.InitialHolderViewState
@@ -45,26 +48,30 @@ import chat.sphinx.chat_common.ui.viewstate.thread.ThreadHeaderViewState
 import chat.sphinx.chat_common.util.AudioPlayerController
 import chat.sphinx.chat_common.util.AudioPlayerControllerImpl
 import chat.sphinx.chat_common.util.AudioRecorderController
-import chat.sphinx.chat_common.util.SphinxLinkify
+import chat.sphinx.highlighting_tool.SphinxLinkify
 import chat.sphinx.highlighting_tool.highlightedTexts
-import chat.sphinx.highlighting_tool.replacingHighlightedDelimiters
 import chat.sphinx.concept_image_loader.ImageLoaderOptions
 import chat.sphinx.concept_link_preview.LinkPreviewHandler
 import chat.sphinx.concept_link_preview.model.TribePreviewName
 import chat.sphinx.concept_link_preview.model.toPreviewImageUrlOrNull
 import chat.sphinx.concept_meme_input_stream.MemeInputStreamHandler
 import chat.sphinx.concept_meme_server.MemeServerTokenHandler
-import chat.sphinx.concept_network_query_lightning.NetworkQueryLightning
 import chat.sphinx.concept_network_query_people.NetworkQueryPeople
 import chat.sphinx.concept_repository_actions.ActionsRepository
 import chat.sphinx.concept_repository_chat.ChatRepository
+import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
 import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.concept_repository_dashboard_android.RepositoryDashboardAndroid
 import chat.sphinx.concept_repository_feed.FeedRepository
+import chat.sphinx.concept_repository_lightning.LightningRepository
 import chat.sphinx.concept_repository_media.RepositoryMedia
 import chat.sphinx.concept_repository_message.MessageRepository
 import chat.sphinx.concept_repository_message.model.SendMessage
 import chat.sphinx.concept_view_model_coordinator.ViewModelCoordinator
+import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
+import chat.sphinx.highlighting_tool.boldTexts
+import chat.sphinx.highlighting_tool.markDownLinkTexts
+import chat.sphinx.highlighting_tool.replacingMarkdown
 import chat.sphinx.kotlin_response.*
 import chat.sphinx.logger.SphinxLogger
 import chat.sphinx.logger.e
@@ -81,13 +88,17 @@ import chat.sphinx.wrapper_common.lightning.*
 import chat.sphinx.wrapper_common.message.*
 import chat.sphinx.wrapper_common.tribe.TribeJoinLink
 import chat.sphinx.wrapper_common.tribe.toTribeJoinLink
+import chat.sphinx.wrapper_common.util.toFormattedDate
 import chat.sphinx.wrapper_contact.*
 import chat.sphinx.wrapper_feed.Feed
 import chat.sphinx.wrapper_feed.isNewsletter
 import chat.sphinx.wrapper_feed.isPodcast
 import chat.sphinx.wrapper_feed.isVideo
+import chat.sphinx.wrapper_lightning.NodeBalance
 import chat.sphinx.wrapper_message.*
 import chat.sphinx.wrapper_message_media.*
+import com.example.call_activity.CallActivity
+import com.example.call_activity.StressTest
 import com.giphy.sdk.core.models.Media
 import com.giphy.sdk.ui.GPHContentType
 import com.giphy.sdk.ui.GPHSettings
@@ -128,17 +139,18 @@ abstract class ChatViewModel<ARGS : NavArgs>(
     protected val contactRepository: ContactRepository,
     protected val messageRepository: MessageRepository,
     protected val actionsRepository: ActionsRepository,
+    protected val lightningRepository: LightningRepository,
     protected val repositoryDashboard: RepositoryDashboardAndroid<Any>,
-    protected val networkQueryLightning: NetworkQueryLightning,
     protected val networkQueryPeople: NetworkQueryPeople,
     val mediaCacheHandler: MediaCacheHandler,
     protected val savedStateHandle: SavedStateHandle,
     protected val cameraCoordinator: ViewModelCoordinator<CameraRequest, CameraResponse>,
     protected val linkPreviewHandler: LinkPreviewHandler,
     private val memeInputStreamHandler: MemeInputStreamHandler,
+    private val connectManagerRepository: ConnectManagerRepository,
     val moshi: Moshi,
     protected val LOG: SphinxLogger,
-) : MotionLayoutViewModel<
+    ) : MotionLayoutViewModel<
         Nothing,
         ChatSideEffectFragment,
         ChatSideEffect,
@@ -147,6 +159,8 @@ abstract class ChatViewModel<ARGS : NavArgs>(
     companion object {
         const val TAG = "ChatViewModel"
         const val CONFIG_PLACE_HOLDER = "PLACE_HOLDER"
+        const val SERVER_SETTINGS_SHARED_PREFERENCES = "server_ip_settings"
+        const val ENVIRONMENT_TYPE = "environment_type"
     }
 
     protected abstract val args: ARGS
@@ -155,7 +169,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
     val imageLoaderDefaults by lazy {
         ImageLoaderOptions.Builder()
-            .placeholderResId(R.drawable.ic_profile_avatar_circle)
+            .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
             .build()
     }
 
@@ -187,6 +201,13 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         ChatHeaderViewStateContainer()
     }
 
+    private val _remoteTimezoneStateFlow: MutableStateFlow<String?> by lazy {
+        MutableStateFlow(null)
+    }
+
+    val remoteTimezoneStateFlow: StateFlow<String?>
+        get() = _remoteTimezoneStateFlow.asStateFlow()
+
     val threadHeaderViewState: ViewStateContainer<ThreadHeaderViewState> by lazy {
         ViewStateContainer(
             if (isThreadChat()) {
@@ -204,6 +225,9 @@ abstract class ChatViewModel<ARGS : NavArgs>(
     private val latestThreadMessagesFlow: MutableStateFlow<List<Message>?> = MutableStateFlow(null)
     private val scrollDownButtonCount: MutableStateFlow<Long?> = MutableStateFlow(null)
 
+    private suspend fun getAccountBalance(): StateFlow<NodeBalance?> =
+        lightningRepository.getAccountBalance()
+
     protected abstract val chatSharedFlow: SharedFlow<Chat?>
 
     protected abstract val threadSharedFlow: SharedFlow<List<Message>>?
@@ -220,6 +244,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         private var contactCollectionJob: Job? = null
         private var chatCollectionJob: Job? = null
 
+        @RequiresApi(Build.VERSION_CODES.N)
         override val viewStateFlow: StateFlow<ChatHeaderViewState> = flow {
 
             contactId?.let { nnContactId ->
@@ -232,12 +257,15 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
                     contactRepository.getContactById(nnContactId).collect { contact ->
                         val currentState = _viewStateFlow.value
+
                         if (contact != null && currentState is ChatHeaderViewState.Initialized) {
                             _viewStateFlow.value = ChatHeaderViewState.Initialized(
                                 chatHeaderName = contact.alias?.value ?: "",
                                 showLock = currentState.showLock || contact.isEncrypted(),
                                 isMuted = currentState.isMuted,
                                 isChatAvailable = getChat().status.isApproved(),
+                                createdAt = contact.createdAt.time.toFormattedDate(),
+                                colorKey = contact.getColorKey()
                             )
                         }
                     }
@@ -247,12 +275,21 @@ abstract class ChatViewModel<ARGS : NavArgs>(
             chatCollectionJob = viewModelScope.launch {
                 chatSharedFlow.collect { chat ->
 
+                    val timezoneString: String? = chat?.remoteTimezoneIdentifier?.value?.let {
+                        DateTime.getLocalTimeFor(it, null)
+                    }
+
+                    _remoteTimezoneStateFlow.value = timezoneString
+
                     _viewStateFlow.value = ChatHeaderViewState.Initialized(
                         chatHeaderName = chat?.name?.value ?: getChatInfo()?.first?.value ?: "",
                         showLock = chat != null,
                         isMuted = chat?.notify?.isMuteChat() == true,
-                        isChatAvailable = chat?.status?.isApproved() ?: false
+                        isChatAvailable = chat?.status?.isApproved() ?: false,
+                        createdAt = chat?.createdAt?.time?.toFormattedDate(),
+                        colorKey = chat?.getColorKey() ?: ""
                     )
+
                     chat?.let { nnChat ->
                         if (nnChat.isPrivateTribe()) {
                             handleDisabledFooterState(nnChat)
@@ -433,6 +470,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         val chatName = chatInfo?.first
         val chatPhotoUrl = chatInfo?.second
         val chatColorKey = chatInfo?.third ?: app.getRandomHexCode()
+        val memberTimezones: MutableMap<String, String> = mutableMapOf()
 
         val owner = getOwner()
 
@@ -452,11 +490,20 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
             val messagesList = filterAndSortMessagesIfNecessary(chat, messages)
 
+            if (chat.type.isTribe()) {
+                messages.forEach { message ->
+                    val alias = message.senderAlias?.value
+                    val tz = message.remoteTimezoneIdentifier?.value
+                    if (!alias.isNullOrEmpty() && !tz.isNullOrEmpty()) {
+                        memberTimezones[alias] = tz
+                    }
+                }
+            }
+
             for ((index, message) in messagesList.withIndex()) {
 
                 val previousMessage: Message? = if (index > 0) messagesList[index - 1] else null
-                val nextMessage: Message? =
-                    if (index < messagesList.size - 1) messagesList[index + 1] else null
+                val nextMessage: Message? = if (index < messagesList.size - 1) messagesList[index + 1] else null
 
                 val groupingDateAndBubbleBackground = getBubbleBackgroundForMessage(
                     message,
@@ -544,8 +591,8 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                     unseenSeparatorAdded = true
                 }
                 // Consider last reply or message and last reply of previous message if exists
-                val actualMessage = message.thread?.last() ?: message
-                val actualPreviousMessage = previousMessage?.thread?.last() ?: previousMessage
+                val actualMessage = message.thread?.first() ?: message
+                val actualPreviousMessage = previousMessage?.thread?.first() ?: previousMessage
 
                 if (actualPreviousMessage == null || actualMessage.date.isDifferentDayThan(actualPreviousMessage.date)) {
                     newList.add(
@@ -629,92 +676,94 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                                 message.thread?.last()?.let { lastReplyMessage ->
                                     repositoryMedia.downloadMediaIfApplicable(lastReplyMessage, sent)
                                 }
-                            }
+                            },
+                            memberTimezoneIdentifier = if (message.senderAlias != null) memberTimezones[message.senderAlias!!.value] else null
                         )
                     )
                 } else {
-                        newList.add(
-                            MessageHolderViewState.Received(
-                                message,
-                                chat,
-                                tribeAdmin,
-                                background = when {
-                                    isDeleted -> {
-                                        BubbleBackground.Gone(setSpacingEqual = false)
+                    newList.add(
+                        MessageHolderViewState.Received(
+                            message,
+                            chat,
+                            tribeAdmin,
+                            background = when {
+                                isDeleted -> {
+                                    BubbleBackground.Gone(setSpacingEqual = false)
+                                }
+
+                                message.isFlagged -> {
+                                    BubbleBackground.Gone(setSpacingEqual = false)
+                                }
+
+                                message.type.isInvoicePayment() -> {
+                                    BubbleBackground.Gone(setSpacingEqual = false)
+                                }
+
+                                message.type.isGroupAction() -> {
+                                    BubbleBackground.Gone(setSpacingEqual = true)
+                                }
+
+                                else -> {
+                                    groupingDateAndBubbleBackground.second
+                                }
+                            },
+                            invoiceLinesHolderViewState = invoiceLinesHolderViewState,
+                            initialHolder = when {
+                                isDeleted || message.type.isGroupAction() -> {
+                                    InitialHolderViewState.None
+                                }
+
+                                else -> {
+                                    getInitialHolderViewStateForReceivedMessage(message, owner)
+                                }
+                            },
+                            highlightedText = null,
+                            messageSenderInfo = { messageCallback ->
+                                when {
+                                    messageCallback.sender == chat.contactIds.firstOrNull() -> {
+                                        val accountOwner = contactRepository.accountOwner.value
+
+                                        Triple(
+                                            accountOwner?.photoUrl,
+                                            accountOwner?.alias,
+                                            accountOwner?.getColorKey() ?: ""
+                                        )
                                     }
 
-                                    message.isFlagged -> {
-                                        BubbleBackground.Gone(setSpacingEqual = false)
-                                    }
-
-                                    message.type.isInvoicePayment() -> {
-                                        BubbleBackground.Gone(setSpacingEqual = false)
-                                    }
-
-                                    message.type.isGroupAction() -> {
-                                        BubbleBackground.Gone(setSpacingEqual = true)
+                                    chat.type.isConversation() -> {
+                                        Triple(
+                                            chatPhotoUrl,
+                                            chatName?.value?.toContactAlias(),
+                                            chatColorKey
+                                        )
                                     }
 
                                     else -> {
-                                        groupingDateAndBubbleBackground.second
-                                    }
-                                },
-                                invoiceLinesHolderViewState = invoiceLinesHolderViewState,
-                                initialHolder = when {
-                                    isDeleted || message.type.isGroupAction() -> {
-                                        InitialHolderViewState.None
-                                    }
-
-                                    else -> {
-                                        getInitialHolderViewStateForReceivedMessage(message, owner)
-                                    }
-                                },
-                                highlightedText = null,
-                                messageSenderInfo = { messageCallback ->
-                                    when {
-                                        messageCallback.sender == chat.contactIds.firstOrNull() -> {
-                                            val accountOwner = contactRepository.accountOwner.value
-
-                                            Triple(
-                                                accountOwner?.photoUrl,
-                                                accountOwner?.alias,
-                                                accountOwner?.getColorKey() ?: ""
-                                            )
-                                        }
-
-                                        chat.type.isConversation() -> {
-                                            Triple(
-                                                chatPhotoUrl,
-                                                chatName?.value?.toContactAlias(),
-                                                chatColorKey
-                                            )
-                                        }
-
-                                        else -> {
-                                            Triple(
-                                                messageCallback.senderPic,
-                                                messageCallback.senderAlias?.value?.toContactAlias(),
-                                                messageCallback.getColorKey()
-                                            )
-                                        }
-                                    }
-                                },
-                                accountOwner = { owner },
-                                urlLinkPreviewsEnabled = areUrlLinkPreviewsEnabled(),
-                                previewProvider = { link -> handleLinkPreview(link) },
-                                paidTextMessageContentProvider = { messageCallback ->
-                                    handlePaidTextMessageContent(messageCallback)
-                                },
-                                onBindDownloadMedia = {
-                                    repositoryMedia.downloadMediaIfApplicable(message, sent)
-                                },
-                                onBindThreadDownloadMedia = {
-                                    message.thread?.last()?.let { lastReplyMessage ->
-                                        repositoryMedia.downloadMediaIfApplicable(lastReplyMessage, sent)
+                                        Triple(
+                                            messageCallback.senderPic,
+                                            messageCallback.senderAlias?.value?.toContactAlias(),
+                                            messageCallback.getColorKey()
+                                        )
                                     }
                                 }
-                            )
+                            },
+                            accountOwner = { owner },
+                            urlLinkPreviewsEnabled = areUrlLinkPreviewsEnabled(),
+                            previewProvider = { link -> handleLinkPreview(link) },
+                            paidTextMessageContentProvider = { messageCallback ->
+                                handlePaidTextMessageContent(messageCallback)
+                            },
+                            onBindDownloadMedia = {
+                                repositoryMedia.downloadMediaIfApplicable(message, sent)
+                            },
+                            onBindThreadDownloadMedia = {
+                                message.thread?.last()?.let { lastReplyMessage ->
+                                    repositoryMedia.downloadMediaIfApplicable(lastReplyMessage, sent)
+                                }
+                            },
+                            memberTimezoneIdentifier = if (message.senderAlias != null) memberTimezones[message.senderAlias!!.value] else null
                         )
+                    )
                 }
 
                 if (message.isPaidInvoice) {
@@ -724,6 +773,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                         openReceivedPaidInvoicesCount += 1
                     }
                 }
+
             }
         }
 
@@ -762,7 +812,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
         // Sort messages list by the last thread message date if applicable
 
-        return filteredMessages.sortedBy { it.thread?.last()?.date?.value ?: it.date.value }
+        return filteredMessages.sortedBy { it.thread?.first()?.date?.value ?: it.date.value }
     }
 
     internal val messageHolderViewStateFlow: MutableStateFlow<List<MessageHolderViewState>> by lazy {
@@ -844,8 +894,13 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
                             } else {
 
+                                val isProductionEnvironment = app.getSharedPreferences(
+                                    SERVER_SETTINGS_SHARED_PREFERENCES,
+                                    Context.MODE_PRIVATE
+                                ).getBoolean(ENVIRONMENT_TYPE, true)
+
                                 val tribePreview =
-                                    linkPreviewHandler.retrieveTribeLinkPreview(link.tribeJoinLink)
+                                    linkPreviewHandler.retrieveTribeLinkPreview(link.tribeJoinLink, isProductionEnvironment)
 
                                 if (tribePreview != null) {
                                     preview =
@@ -931,8 +986,10 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
                             text?.let { nnText ->
                                 messageLayoutState = LayoutState.Bubble.ContainerThird.Message(
-                                    text = nnText.replacingHighlightedDelimiters(),
+                                    text = nnText.replacingMarkdown(),
                                     highlightedTexts = nnText.highlightedTexts(),
+                                    boldTexts = nnText.boldTexts(),
+                                    markdownLinkTexts = nnText.markDownLinkTexts(),
                                     decryptionError = false,
                                     isThread = false
                                 )
@@ -966,7 +1023,6 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         val setupViewStateContainerJob = viewModelScope.launch(mainImmediate) {
             viewStateContainer.viewStateFlow.firstOrNull()
         }
-        forceKeyExchange()
 
         viewModelScope.launch(mainImmediate) {
             delay(500)
@@ -985,9 +1041,59 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                 }
             }
         }
+
+        collectConnectManagerErrorState()
     }
 
-    protected abstract fun forceKeyExchange()
+    private fun collectConnectManagerErrorState(){
+        viewModelScope.launch(mainImmediate) {
+            connectManagerRepository.connectManagerErrorState.collect { connectManagerError ->
+                when (connectManagerError) {
+                    is ConnectManagerError.SendMessageError -> {
+                        submitSideEffect(ChatSideEffect.NotifyError(
+                            app.getString(R_common.string.connect_manager_send_message_error))
+                        )
+                    }
+                    is ConnectManagerError.PayContactInvoiceError -> {
+                        submitSideEffect(ChatSideEffect.NotifyError(
+                            app.getString(R_common.string.connect_manager_pay_contact_invoice_error))
+                        )
+                    }
+                    is ConnectManagerError.PayInvoiceError -> {
+                        submitSideEffect(ChatSideEffect.NotifyError(
+                            app.getString(R_common.string.connect_manager_pay_invoice_error))
+                        )
+                    }
+                    is ConnectManagerError.PaymentHashError -> {
+                        submitSideEffect(ChatSideEffect.NotifyError(
+                            app.getString(R_common.string.connect_manager_payment_hash_error))
+                        )
+                    }
+                    is ConnectManagerError.ReadMessageError -> {
+                        submitSideEffect(ChatSideEffect.NotifyError(
+                            app.getString(R_common.string.connect_manager_read_message_error))
+                        )
+                    }
+                    is ConnectManagerError.SignBytesError -> {
+                        submitSideEffect(ChatSideEffect.NotifyError(
+                            app.getString(R_common.string.connect_manager_sign_bytes_error))
+                        )
+                    }
+                    is ConnectManagerError.MediaTokenError -> {
+                        submitSideEffect(ChatSideEffect.NotifyError(
+                            app.getString(R_common.string.connect_manager_media_token_error))
+                        )
+                    }
+                    is ConnectManagerError.SetMuteError -> {
+                        submitSideEffect(ChatSideEffect.NotifyError(
+                            app.getString(R_common.string.connect_manager_set_mute_error))
+                        )
+                    }
+                    else -> {}
+                }
+            }
+        }
+    }
 
     var messagesLoadJob: Job? = null
     fun screenInit() {
@@ -1001,6 +1107,8 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
         var isScrollDownButtonSetup = false
         messagesLoadJob = viewModelScope.launch(mainImmediate) {
+            connectManagerRepository.getTagsByChatId(getChat().id)
+
             if (isThreadChat()) {
                 messageRepository.getAllMessagesToShowByChatId(getChat().id, 0, getThreadUUID()).distinctUntilChanged().collect { messages ->
                     delay(200)
@@ -1035,11 +1143,26 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                         setupScrollDownButtonCount()
                         isScrollDownButtonSetup = true
                     }
+
+                    val lastMessage = messages.lastOrNull()
+                    val showClockIcon = lastMessage?.let {
+                        it.status == MessageStatus.Pending &&
+                                System.currentTimeMillis() - it.date.time > 30_000
+                    } == true
+
+                    updateClockIconState(showClockIcon)
                 }
             }
         }
         collectThread()
         collectUnseenMessagesNumber()
+    }
+
+    private val _clockIconState = MutableStateFlow(false)
+    val clockIconState: StateFlow<Boolean> = _clockIconState
+
+    private fun updateClockIconState(showClockIcon: Boolean) {
+        _clockIconState.value = showClockIcon
     }
 
         private fun setupScrollDownButtonCount() {
@@ -1054,8 +1177,6 @@ abstract class ChatViewModel<ARGS : NavArgs>(
             )
         }
     }
-
-    abstract val checkRoute: Flow<LoadResponse<Boolean, ResponseError>>
 
     abstract fun readMessages()
 
@@ -1224,6 +1345,10 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                 }
             }
         }
+    }
+
+    suspend fun getPubKeyByEncryptedChild(child: String): ChatId? {
+        return connectManagerRepository.getChatIdByEncryptedChild(child).firstOrNull()
     }
 
     abstract fun navigateToNotificationLevel()
@@ -1590,18 +1715,18 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         }
     }
 
-    fun flagMessage(message: Message) {
-        val sideEffect = ChatSideEffect.AlertConfirmFlagMessage {
-            viewModelScope.launch(mainImmediate) {
-                val chat = getChat()
-                messageRepository.flagMessage(message, chat)
-            }
-        }
-
-        viewModelScope.launch(mainImmediate) {
-            submitSideEffect(sideEffect)
-        }
-    }
+//    fun flagMessage(message: Message) {
+//        val sideEffect = ChatSideEffect.AlertConfirmFlagMessage {
+//            viewModelScope.launch(mainImmediate) {
+//                val chat = getChat()
+//                messageRepository.flagMessage(message, chat)
+//            }
+//        }
+//
+//        viewModelScope.launch(mainImmediate) {
+//            submitSideEffect(sideEffect)
+//        }
+//    }
 
     @JvmSynthetic
     internal fun chatMenuOptionCamera() {
@@ -1917,20 +2042,12 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         ) ?: SphinxCallLink.DEFAULT_CALL_SERVER_URL
 
         viewModelScope.launch(mainImmediate) {
-            val chat = chatSharedFlow.firstOrNull()
-
-            val messageText = if (chat?.isConversation() == true) {
-                SphinxCallLink.newCallLinkMessage(meetingServerUrl, audioOnly, moshi)
-            } else {
-                SphinxCallLink.newCallLink(meetingServerUrl, audioOnly)
-            }
-
-            val isCall = (chat?.isConversation() == true)
+            val messageText = SphinxCallLink.newCallLinkMessage(meetingServerUrl, audioOnly, moshi)
 
             messageText?.let { newCallLink ->
                 val messageBuilder = SendMessage.Builder()
                 messageBuilder.setText(newCallLink)
-                messageBuilder.setIsCall(isCall)
+                messageBuilder.setIsCall(true)
                 sendMessage(messageBuilder)
             }
         }
@@ -1953,31 +2070,74 @@ abstract class ChatViewModel<ARGS : NavArgs>(
     }
 
     private fun joinCall(link: SphinxCallLink, audioOnly: Boolean) {
-        link.callServerUrl?.let { nnCallUrl ->
-
+        if (link.isLiveKitLink) {
             viewModelScope.launch(mainImmediate) {
-
                 val owner = getOwner()
 
-                val userInfo = JitsiMeetUserInfo()
-                userInfo.displayName = owner.alias?.value ?: ""
+                networkQueryPeople.getLiveKitToken(
+                    room = link.callRoom,
+                    alias = owner.alias?.value ?: "Unknown",
+                    profilePictureUrl = owner.photoUrl?.value
+                ).collect { loadResponse ->
+                    when(loadResponse) {
+                        is LoadResponse.Loading -> {}
+                        is Response.Error -> {}
+                        is Response.Success -> {
+                            val appContext: Context = app.applicationContext
 
-                owner.avatarUrl?.let { nnAvatarUrl ->
-                    userInfo.avatar = nnAvatarUrl
+                            val intent = Intent(appContext, CallActivity::class.java).apply {
+                                putExtra(
+                                    CallActivity.KEY_ARGS,
+                                    CallActivity.BundleArgs(
+                                        url = loadResponse.value.serverUrl,
+                                        token = loadResponse.value.participantToken,
+                                        e2eeOn = false,
+                                        e2eeKey = "",
+                                        stressTest = StressTest.None,
+                                        videoEnabled = !audioOnly,
+                                        roomName = loadResponse.value.roomName
+                                    ),
+                                )
+                            }
+                            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+
+                            appContext.startActivity(intent)
+                        }
+                    }
                 }
-
-                val options = JitsiMeetConferenceOptions.Builder()
-                    .setServerURL(nnCallUrl)
-                    .setRoom(link.callRoom)
-                    .setAudioMuted(false)
-                    .setVideoMuted(false)
-                    .setFeatureFlag("welcomepage.enabled", false)
-                    .setAudioOnly(audioOnly)
-                    .setUserInfo(userInfo)
-                    .build()
-
-                JitsiMeetActivity.launch(app, options)
             }
+        } else if (link.isJitsiLink) {
+            link.callServerUrl?.let { nnCallUrl ->
+
+                viewModelScope.launch(mainImmediate) {
+
+                    val owner = getOwner()
+
+                    val userInfo = JitsiMeetUserInfo()
+                    userInfo.displayName = owner.alias?.value ?: ""
+
+                    owner.avatarUrl?.let { nnAvatarUrl ->
+                        userInfo.avatar = nnAvatarUrl
+                    }
+
+                    val options = JitsiMeetConferenceOptions.Builder()
+                        .setServerURL(nnCallUrl)
+                        .setRoom(link.callRoom)
+                        .setAudioMuted(false)
+                        .setVideoMuted(false)
+                        .setFeatureFlag("welcomepage.enabled", false)
+                        .setAudioOnly(audioOnly)
+                        .setUserInfo(userInfo)
+                        .build()
+
+                    JitsiMeetActivity.launch(app, options)
+                }
+            }
+        } else {
+            val url = link.value
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            app.applicationContext.startActivity(intent)
         }
     }
 
@@ -2291,7 +2451,17 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
         val sideEffect = ChatSideEffect.AlertConfirmPayAttachment {
             payAttachmentJob = viewModelScope.launch(mainImmediate) {
-                messageRepository.payAttachment(message)
+                getAccountBalance().firstOrNull()?.let { balance ->
+                    val price = message.messageMedia?.mediaToken?.getPriceFromMediaToken()?.value
+
+                    if (price == null || price > balance.balance.value) {
+                        submitSideEffect(
+                            ChatSideEffect.Notify(app.getString(R_common.string.balance_too_low))
+                        )
+                    } else {
+                        messageRepository.payAttachment(message)
+                    }
+                }
             }
         }
 
@@ -2308,23 +2478,15 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
         val sideEffect = ChatSideEffect.AlertConfirmPayInvoice {
             payInvoiceJob = viewModelScope.launch(mainImmediate) {
-
-                messageRepository.payNewPaymentRequest(message)
-
-//                @Exhaustive
-//                when (val response = messageRepository.payPaymentRequest(message)) {
-//                    is Response.Error -> {
-//                        submitSideEffect(ChatSideEffect.Notify(
-//                            String.format(
-//                                app.getString(R.string.error_payment_message),
-//                                response.exception?.message ?: response.cause.message
-//                            )
-//                        ))
-//                    }
-//                    is Response.Success -> {
-//                        delay(100L)
-//                    }
-//                }
+                getAccountBalance().firstOrNull()?.let { balance ->
+                    if (message.amount.value > balance.balance.value) {
+                        submitSideEffect(
+                            ChatSideEffect.Notify(app.getString(R_common.string.balance_too_low))
+                        )
+                    } else {
+                        connectManagerRepository.payContactPaymentRequest(message.paymentRequest)
+                    }
+                }
             }
         }
 
@@ -2337,13 +2499,68 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         val lastWord = s?.split(" ")?.last()?.toString() ?: ""
 
         if (lastWord.startsWith("@") && lastWord.length > 1) {
-            val matchingMessages = messageHolderViewStateFlow.value.filter { messageHolder ->
-                messageHolder.message?.senderAlias?.value?.let { member ->
-                    (member.startsWith(lastWord.replace("@", ""), true))
-                } ?: false
+            val matchingMessages: MutableList<MessageHolderViewState> = mutableListOf();
+
+            messageHolderViewStateFlow.value.forEach loop@{ messageHolder ->
+                if (messageHolder is MessageHolderViewState.Sent) {
+                    return@loop
+                }
+                messageHolder.message?.date?.let { nnDate ->
+                    if (nnDate.before(DateTime.getThreeMonthsAgo())) {
+                        return@loop
+                    }
+                }
+                messageHolder.message?.senderAlias?.value?.let { alias ->
+                    if (alias.startsWith(lastWord.replace("@", ""), true)) {
+                        messageHolder.message.senderPic?.value?.let { picture ->
+                            if (messageHolder.message.type.isGroupLeave()) {
+                                val index = matchingMessages.indexOfFirst {
+                                    it.message?.senderPic?.value == picture || it.message?.senderAlias?.value == alias
+                                }
+                                if (index != -1) {
+                                    matchingMessages.removeAt(index)
+                                }
+                            }
+
+                            val index = matchingMessages.indexOfFirst {
+                                it.message?.senderAlias?.value == alias
+                            }
+
+                            if (index != -1) {
+                                matchingMessages[index] = messageHolder
+                            } else if (!matchingMessages.any { it.message?.senderPic?.value == picture || it.message?.senderAlias?.value == alias }) {
+                                matchingMessages.add(messageHolder)
+                            }
+                        } ?: run {
+                            if (messageHolder.message.type.isGroupLeave()) {
+                                val index = matchingMessages.indexOfFirst {
+                                    it.message?.senderAlias?.value == alias
+                                }
+                                if (index != -1) {
+                                    matchingMessages.removeAt(index)
+                                }
+                            }
+                            val index = matchingMessages.indexOfFirst {
+                                it.message?.senderAlias?.value == alias
+                            }
+
+                            if (index != -1) {
+                                matchingMessages[index] = messageHolder
+                            } else {
+                                matchingMessages.add(messageHolder)
+                            }
+                        }
+                    }
+                }
             }
 
-            val matchingAliases = matchingMessages.map { it.message?.senderAlias?.value ?: "" }.distinct()
+            val matchingAliases = matchingMessages.map {
+                Triple(
+                    it.message?.senderAlias?.value ?: "",
+                    it.message?.senderPic?.value ?: "",
+                    it.message?.getColorKey() ?: ""
+                )
+            }
 
             messageMentionsViewStateContainer.updateViewState(
                 MessageMentionsViewState.MessageMentions(matchingAliases)

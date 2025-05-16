@@ -11,20 +11,18 @@ import chat.sphinx.chat_group.navigation.GroupChatNavigator
 import chat.sphinx.concept_link_preview.LinkPreviewHandler
 import chat.sphinx.concept_meme_input_stream.MemeInputStreamHandler
 import chat.sphinx.concept_meme_server.MemeServerTokenHandler
-import chat.sphinx.concept_network_query_lightning.NetworkQueryLightning
 import chat.sphinx.concept_network_query_people.NetworkQueryPeople
 import chat.sphinx.concept_repository_actions.ActionsRepository
 import chat.sphinx.concept_repository_chat.ChatRepository
+import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
 import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.concept_repository_dashboard_android.RepositoryDashboardAndroid
 import chat.sphinx.concept_repository_feed.FeedRepository
+import chat.sphinx.concept_repository_lightning.LightningRepository
 import chat.sphinx.concept_repository_media.RepositoryMedia
 import chat.sphinx.concept_repository_message.MessageRepository
 import chat.sphinx.concept_repository_message.model.SendMessage
 import chat.sphinx.concept_view_model_coordinator.ViewModelCoordinator
-import chat.sphinx.kotlin_response.LoadResponse
-import chat.sphinx.kotlin_response.Response
-import chat.sphinx.kotlin_response.ResponseError
 import chat.sphinx.logger.SphinxLogger
 import chat.sphinx.wrapper_chat.Chat
 import chat.sphinx.wrapper_chat.ChatName
@@ -63,14 +61,15 @@ class ChatGroupViewModel @Inject constructor(
     contactRepository: ContactRepository,
     messageRepository: MessageRepository,
     actionsRepository: ActionsRepository,
+    lightningRepository: LightningRepository,
     repositoryDashboard: RepositoryDashboardAndroid<Any>,
-    networkQueryLightning: NetworkQueryLightning,
     networkQueryPeople: NetworkQueryPeople,
     mediaCacheHandler: MediaCacheHandler,
     savedStateHandle: SavedStateHandle,
     cameraViewModelCoordinator: ViewModelCoordinator<CameraRequest, CameraResponse>,
     linkPreviewHandler: LinkPreviewHandler,
     memeInputStreamHandler: MemeInputStreamHandler,
+    connectManagerRepository: ConnectManagerRepository,
     moshi: Moshi,
     LOG: SphinxLogger,
 ): ChatViewModel<ChatGroupFragmentArgs>(
@@ -84,14 +83,15 @@ class ChatGroupViewModel @Inject constructor(
     contactRepository,
     messageRepository,
     actionsRepository,
+    lightningRepository,
     repositoryDashboard,
-    networkQueryLightning,
     networkQueryPeople,
     mediaCacheHandler,
     savedStateHandle,
     cameraViewModelCoordinator,
     linkPreviewHandler,
     memeInputStreamHandler,
+    connectManagerRepository,
     moshi,
     LOG,
 ) {
@@ -138,8 +138,6 @@ class ChatGroupViewModel @Inject constructor(
     override val threadSharedFlow: SharedFlow<List<Message>>?
         get() = null
 
-    override fun forceKeyExchange() { }
-
     override suspend fun shouldStreamSatsFor(podcastClip: PodcastClip, messageUUID: MessageUUID?) {
         TODO("Not yet implemented")
     }
@@ -153,10 +151,6 @@ class ChatGroupViewModel @Inject constructor(
         } ?: message.senderAlias?.let { alias ->
             InitialHolderViewState.Initials(alias.value.getInitials(), message.getColorKey())
         } ?: InitialHolderViewState.None
-    }
-
-    override val checkRoute: Flow<LoadResponse<Boolean, ResponseError>> = flow {
-        emit(Response.Success(true))
     }
 
     override fun readMessages() {

@@ -17,6 +17,7 @@ import chat.sphinx.dashboard.databinding.LayoutFeedSquaredRowHolderBinding
 import chat.sphinx.dashboard.ui.feed.FeedDownloadedViewModel
 import chat.sphinx.wrapper_common.timeAgo
 import chat.sphinx.wrapper_feed.FeedItem
+import chat.sphinx.resources.R as R_common
 import io.matthewnelson.android_feature_screens.util.goneIfFalse
 import io.matthewnelson.android_feature_viewmodel.util.OnStopSupervisor
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
@@ -151,7 +152,7 @@ class FeedDownloadedAdapter(
 
     private val imageLoaderOptions: ImageLoaderOptions by lazy {
         ImageLoaderOptions.Builder()
-            .placeholderResId(R.drawable.ic_podcast_placeholder)
+            .placeholderResId(R_common.drawable.ic_podcast_placeholder)
             .build()
     }
 
@@ -199,7 +200,7 @@ class FeedDownloadedAdapter(
                     }
                 } ?: run {
                     imageViewItemImage.setImageDrawable(
-                        ContextCompat.getDrawable(root.context, R.drawable.ic_podcast_placeholder)
+                        ContextCompat.getDrawable(root.context, R_common.drawable.ic_podcast_placeholder)
                     )
                 }
 

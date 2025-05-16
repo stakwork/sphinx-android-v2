@@ -4,20 +4,14 @@ import android.content.Context
 import chat.sphinx.concept_crypto_rsa.RSA
 import chat.sphinx.concept_meme_input_stream.MemeInputStreamHandler
 import chat.sphinx.concept_meme_server.MemeServerTokenHandler
-import chat.sphinx.concept_network_query_action_track.NetworkQueryActionTrack
 import chat.sphinx.concept_network_query_chat.NetworkQueryChat
 import chat.sphinx.concept_network_query_contact.NetworkQueryContact
 import chat.sphinx.concept_network_query_discover_tribes.NetworkQueryDiscoverTribes
 import chat.sphinx.concept_network_query_invite.NetworkQueryInvite
-import chat.sphinx.concept_network_query_lightning.NetworkQueryLightning
 import chat.sphinx.concept_network_query_meme_server.NetworkQueryMemeServer
-import chat.sphinx.concept_network_query_message.NetworkQueryMessage
 import chat.sphinx.concept_network_query_feed_search.NetworkQueryFeedSearch
 import chat.sphinx.concept_network_query_feed_status.NetworkQueryFeedStatus
 import chat.sphinx.concept_network_query_people.NetworkQueryPeople
-import chat.sphinx.concept_network_query_redeem_badge_token.NetworkQueryRedeemBadgeToken
-import chat.sphinx.concept_network_query_relay_keys.NetworkQueryRelayKeys
-import chat.sphinx.concept_network_query_subscription.NetworkQuerySubscription
 import chat.sphinx.concept_network_query_verify_external.NetworkQueryAuthorizeExternal
 import chat.sphinx.concept_relay.RelayDataHandler
 import chat.sphinx.concept_repository_actions.ActionsRepository
@@ -30,7 +24,6 @@ import chat.sphinx.concept_repository_lightning.LightningRepository
 import chat.sphinx.concept_repository_media.RepositoryMedia
 import chat.sphinx.concept_repository_message.MessageRepository
 import chat.sphinx.concept_repository_subscription.SubscriptionRepository
-import chat.sphinx.concept_socket_io.SocketIOManager
 import chat.sphinx.concept_wallet.WalletDataHandler
 import chat.sphinx.database.SphinxCoreDBImpl
 import chat.sphinx.example.concept_connect_manager.ConnectManager
@@ -55,6 +48,7 @@ import io.matthewnelson.concept_coroutines.CoroutineDispatchers
 import io.matthewnelson.concept_media_cache.MediaCacheHandler
 import io.matthewnelson.feature_authentication_core.AuthenticationCoreManager
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import javax.inject.Singleton
 
@@ -140,24 +134,17 @@ object RepositoryModule {
         memeInputStreamHandler: MemeInputStreamHandler,
         memeServerTokenHandler: MemeServerTokenHandler,
         networkQueryMemeServer: NetworkQueryMemeServer,
-        networkQueryActionTrack: NetworkQueryActionTrack,
         networkQueryDiscoverTribes: NetworkQueryDiscoverTribes,
         networkQueryChat: NetworkQueryChat,
         networkQueryContact: NetworkQueryContact,
-        networkQueryLightning: NetworkQueryLightning,
-        networkQueryMessage: NetworkQueryMessage,
         networkQueryInvite: NetworkQueryInvite,
         networkQueryAuthorizeExternal: NetworkQueryAuthorizeExternal,
         networkQueryPeople: NetworkQueryPeople,
-        networkQueryRedeemBadgeToken: NetworkQueryRedeemBadgeToken,
-        networkQuerySubscription: NetworkQuerySubscription,
         networkQueryFeedSearch: NetworkQueryFeedSearch,
-        networkQueryRelayKeys: NetworkQueryRelayKeys,
         networkQueryFeedStatus: NetworkQueryFeedStatus,
         connectManager: ConnectManager,
         walletDataHandler: WalletDataHandler,
         rsa: RSA,
-        socketIOManager: SocketIOManager,
         sphinxNotificationManager: SphinxNotificationManager,
         sphinxLogger: SphinxLogger,
     ): SphinxRepositoryAndroid =
@@ -173,25 +160,18 @@ object RepositoryModule {
             mediaCacheHandler,
             memeInputStreamHandler,
             memeServerTokenHandler,
-            networkQueryActionTrack,
             networkQueryDiscoverTribes,
             networkQueryMemeServer,
             networkQueryChat,
             networkQueryContact,
-            networkQueryLightning,
-            networkQueryMessage,
             networkQueryInvite,
             networkQueryAuthorizeExternal,
             networkQueryPeople,
-            networkQueryRedeemBadgeToken,
-            networkQuerySubscription,
             networkQueryFeedSearch,
-            networkQueryRelayKeys,
             networkQueryFeedStatus,
             connectManager,
             walletDataHandler,
             rsa,
-            socketIOManager,
             sphinxNotificationManager,
             sphinxLogger,
         )

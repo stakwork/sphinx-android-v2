@@ -37,6 +37,8 @@ dependencies {
     implementation project(path: ':android:features:android-feature-screens')
 
     // Sphinx
+    api project(path: ':sphinx:activity:call-activity')
+
     api project(path: ':sphinx:application:data:concepts:repositories:concept-repository-contact')
     api project(path: ':sphinx:application:data:concepts:repositories:concept-repository-chat')
     api project(path: ':sphinx:application:data:concepts:repositories:concept-repository-feed')
@@ -49,7 +51,7 @@ dependencies {
     implementation project(path: ':sphinx:activity:insetter-activity')
     implementation project(path: ':sphinx:application:common:resources')
     implementation project(path: ':sphinx:application:common:swipe-reveal-layout')
-
+    implementation project(path: ':sphinx:application:common:highlighting-tool')
 
     implementation project(path: ':sphinx:application:data:concepts:repositories:concept-repository-actions')
     implementation project(path: ':sphinx:application:data:concepts:repositories:concept-repository-chat')
@@ -58,13 +60,9 @@ dependencies {
     implementation project(path: ':sphinx:application:data:concepts:concept-wallet')
     implementation project(path: ':sphinx:application:data:concepts:repositories:concept-repository-dashboard-android')
     implementation project(path: ':sphinx:activity:concepts:concept-user-colors-helper')
-    implementation project(path: ':sphinx:application:network:concepts:queries:concept-network-query-lightning')
-    implementation project(path: ':sphinx:application:network:concepts:queries:concept-network-query-version')
     implementation project(path: ':sphinx:application:network:concepts:queries:concept-network-query-authorize-external')
     implementation project(path: ':sphinx:application:network:concepts:queries:concept-network-query-people')
-    implementation project(path: ':sphinx:application:network:concepts:queries:concept-network-query-redeem-badge-token')
     implementation project(path: ':sphinx:application:network:concepts:queries:concept-network-query-crypter')
-    implementation project(path: ':sphinx:application:network:concepts:concept-socket-io')
     implementation project(path: ':sphinx:screens-detail:scanner:scanner-view-model-coordinator')
     implementation project(path: ':sphinx:screens-detail:tribes-discover:tribes-discover-view-model-coordinator')
     implementation project(path: ':sphinx:service:concepts:concept-service-notification')
@@ -72,7 +70,8 @@ dependencies {
     implementation project(path: ':sphinx:activity:concepts:concept-signer-manager')
     implementation project(path: ':sphinx:application:data:concepts:repositories:concept-repository-lightning')
     implementation project(path: ':sphinx:application:data:concepts:repositories:concept-repository-connect-manager')
-
+    implementation project(path: ':sphinx:application:network:concepts:queries:concept-network-query-contact')
+    implementation project(path: ':sphinx:application:data:concepts:repositories:concept-repository-message')
 
     api project(path: ':sphinx:service:concepts:concept-service-media-player')
 

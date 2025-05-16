@@ -18,35 +18,36 @@ import chat.sphinx.menu_bottom_phone_signer_method.PhoneSignerMethodMenuHandler
 import chat.sphinx.menu_bottom_phone_signer_method.PhoneSignerMethodMenuViewModel
 import chat.sphinx.menu_bottom_signer.SignerMenuHandler
 import chat.sphinx.menu_bottom_signer.SignerMenuViewModel
-import chat.sphinx.onboard_connect.navigation.OnBoardConnectNavigator
-import chat.sphinx.scanner_view_model_coordinator.request.ScannerRequest
-import chat.sphinx.scanner_view_model_coordinator.response.ScannerResponse
-import chat.sphinx.wrapper_invite.toValidInviteStringOrNull
-import dagger.hilt.android.lifecycle.HiltViewModel
-import io.matthewnelson.android_feature_navigation.util.navArgs
-import io.matthewnelson.android_feature_viewmodel.SideEffectViewModel
-import io.matthewnelson.android_feature_viewmodel.submitSideEffect
-import io.matthewnelson.android_feature_viewmodel.updateViewState
-import io.matthewnelson.concept_coroutines.CoroutineDispatchers
-import io.matthewnelson.concept_views.viewstate.ViewStateContainer
 import chat.sphinx.onboard_common.model.RedemptionCode
 import chat.sphinx.onboard_connect.R
+import chat.sphinx.onboard_connect.navigation.OnBoardConnectNavigator
 import chat.sphinx.onboard_connect.viewstate.MnemonicDialogViewState
 import chat.sphinx.onboard_connect.viewstate.MnemonicWordsViewState
 import chat.sphinx.onboard_connect.viewstate.OnBoardConnectSubmitButtonViewState
 import chat.sphinx.onboard_connect.viewstate.OnBoardConnectViewState
 import chat.sphinx.resources.MnemonicLanguagesUtils
+import chat.sphinx.scanner_view_model_coordinator.request.ScannerRequest
+import chat.sphinx.scanner_view_model_coordinator.response.ScannerResponse
+import chat.sphinx.wrapper_invite.toValidInviteStringOrNull
 import com.squareup.moshi.Moshi
+import dagger.hilt.android.lifecycle.HiltViewModel
+import io.matthewnelson.android_feature_navigation.util.navArgs
+import io.matthewnelson.android_feature_viewmodel.SideEffectViewModel
 import io.matthewnelson.android_feature_viewmodel.currentViewState
+import io.matthewnelson.android_feature_viewmodel.submitSideEffect
+import io.matthewnelson.android_feature_viewmodel.updateViewState
 import io.matthewnelson.concept_authentication.coordinator.AuthenticationCoordinator
 import io.matthewnelson.concept_authentication.coordinator.AuthenticationRequest
 import io.matthewnelson.concept_authentication.coordinator.AuthenticationResponse
+import io.matthewnelson.concept_coroutines.CoroutineDispatchers
+import io.matthewnelson.concept_views.viewstate.ViewStateContainer
 import io.matthewnelson.concept_views.viewstate.value
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import javax.annotation.meta.Exhaustive
 import javax.inject.Inject
+import chat.sphinx.resources.R as R_common
 
 
 internal inline val OnBoardConnectFragmentArgs.newUser: Boolean
@@ -80,7 +81,8 @@ internal class OnBoardConnectViewModel @Inject constructor(
 
     companion object {
         const val BITCOIN_NETWORK_REG_TEST = "regtest"
-        const val BITCOIN_NETWORK_MAIN_NET = "mainnet"
+        const val BITCOIN_NETWORK_MAIN_NET = "bitcoin"
+        const val BITCOIN = "bitcoin"
     }
 
     val submitButtonViewStateContainer: ViewStateContainer<OnBoardConnectSubmitButtonViewState> by lazy {
@@ -220,8 +222,24 @@ internal class OnBoardConnectViewModel @Inject constructor(
                 }
 
                 if (redemptionCode is RedemptionCode.MnemonicRestoration) {
+                    // set mnemonic words
                     connectManagerRepository.setMnemonicWords(redemptionCode.mnemonic)
+
+                    // set network type
+                    connectManagerRepository.setNetworkType(false)
                     presentLoginModal()
+
+//                    submitSideEffect(OnBoardConnectSideEffect.CheckBitcoinNetwork(
+//                        regTestCallback = {
+//                            connectManagerRepository.setNetworkType(true)
+//                        }, mainNetCallback = {
+//                            connectManagerRepository.setNetworkType(false)
+//                        }, callback = {
+//                            viewModelScope.launch(mainImmediate) {
+//                                presentLoginModal()
+//                            }
+//                        })
+//                    )
                 }
             }
         } else {
@@ -303,8 +321,8 @@ internal class OnBoardConnectViewModel @Inject constructor(
     ) {
         viewModelScope.launch(mainImmediate) {
             submitSideEffect(OnBoardConnectSideEffect.SigningDeviceInfo(
-                app.getString(R.string.network_name_title),
-                app.getString(R.string.network_name_message)
+                app.getString(R_common.string.network_name_title),
+                app.getString(R_common.string.network_name_message)
             ) { networkName ->
                 if (networkName == null) {
                     viewModelScope.launch(mainImmediate) {
@@ -321,9 +339,9 @@ internal class OnBoardConnectViewModel @Inject constructor(
     override fun signingDevicePassword(networkName: String, callback: (String) -> Unit) {
         viewModelScope.launch(mainImmediate) {
             submitSideEffect(OnBoardConnectSideEffect.SigningDeviceInfo(
-                app.getString(R.string.network_password_title),
+                app.getString(R_common.string.network_password_title),
                 app.getString(
-                    R.string.network_password_message,
+                    R_common.string.network_password_message,
                     networkName ?: "-"
                 ),
                 inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
@@ -343,8 +361,8 @@ internal class OnBoardConnectViewModel @Inject constructor(
     override fun signingDeviceLightningNodeUrl(callback: (String) -> Unit) {
         viewModelScope.launch(mainImmediate) {
             submitSideEffect(OnBoardConnectSideEffect.SigningDeviceInfo(
-                app.getString(R.string.lightning_node_url_title),
-                app.getString(R.string.lightning_node_url_message),
+                app.getString(R_common.string.lightning_node_url_title),
+                app.getString(R_common.string.lightning_node_url_message),
             ) { lightningNodeUrl ->
                 viewModelScope.launch(mainImmediate) {
                     if (lightningNodeUrl == null) {
@@ -422,7 +440,7 @@ internal class OnBoardConnectViewModel @Inject constructor(
             if (words.size != 12 && words.size != 24) {
                 submitSideEffect(
                     OnBoardConnectSideEffect.Notify(
-                        app.getString(R.string.mnemonic_incorrect_length)
+                        app.getString(R_common.string.mnemonic_incorrect_length)
                     )
                 )
             }
@@ -436,7 +454,7 @@ internal class OnBoardConnectViewModel @Inject constructor(
             } else {
                 submitSideEffect(
                     OnBoardConnectSideEffect.Notify(
-                        app.getString(R.string.mnemonic_invalid_word)
+                        app.getString(R_common.string.mnemonic_invalid_word)
                     )
                 )
             }

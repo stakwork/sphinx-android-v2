@@ -13,13 +13,16 @@ import chat.sphinx.wrapper_chat.ChatStatus;
 import chat.sphinx.wrapper_chat.ChatType;
 import chat.sphinx.wrapper_chat.ChatUnlisted;
 import chat.sphinx.wrapper_chat.NotificationLevel;
+import chat.sphinx.wrapper_chat.SecondBrainUrl;
+import chat.sphinx.wrapper_chat.TimezoneEnabled;
+import chat.sphinx.wrapper_chat.TimezoneIdentifier;
+import chat.sphinx.wrapper_chat.TimezoneUpdated;
 import chat.sphinx.wrapper_common.DateTime;
 import chat.sphinx.wrapper_common.PhotoUrl;
 import chat.sphinx.wrapper_common.Push;
 import chat.sphinx.wrapper_common.Seen;
 import chat.sphinx.wrapper_common.chat.ChatUUID;
 import chat.sphinx.wrapper_common.contact.Blocked;
-import chat.sphinx.wrapper_common.contact.ContactIndex;
 import chat.sphinx.wrapper_common.dashboard.ChatId;
 import chat.sphinx.wrapper_common.dashboard.ContactId;
 import chat.sphinx.wrapper_common.dashboard.DashboardItemId;
@@ -36,9 +39,16 @@ import chat.sphinx.wrapper_common.lightning.LightningPaymentRequest;
 import chat.sphinx.wrapper_common.lightning.LightningRouteHint;
 import chat.sphinx.wrapper_common.lightning.Sat;
 import chat.sphinx.wrapper_common.lightning.ServerIp;
-import chat.sphinx.wrapper_common.lightning.ShortChannelId;
+import chat.sphinx.wrapper_common.lsat.LsatIdentifier;
+import chat.sphinx.wrapper_common.lsat.LsatIssuer;
+import chat.sphinx.wrapper_common.lsat.LsatMetaData;
+import chat.sphinx.wrapper_common.lsat.LsatPaths;
+import chat.sphinx.wrapper_common.lsat.LsatPreImage;
+import chat.sphinx.wrapper_common.lsat.LsatStatus;
+import chat.sphinx.wrapper_common.lsat.Macaroon;
 import chat.sphinx.wrapper_common.message.MessageId;
 import chat.sphinx.wrapper_common.message.MessageUUID;
+import chat.sphinx.wrapper_common.message.RemoteTimezoneIdentifier;
 import chat.sphinx.wrapper_common.subscription.Cron;
 import chat.sphinx.wrapper_common.subscription.EndNumber;
 import chat.sphinx.wrapper_common.subscription.SubscriptionCount;
@@ -50,6 +60,9 @@ import chat.sphinx.wrapper_contact.NotificationSound;
 import chat.sphinx.wrapper_contact.Owner;
 import chat.sphinx.wrapper_contact.PrivatePhoto;
 import chat.sphinx.wrapper_feed.FeedAuthor;
+import chat.sphinx.wrapper_feed.FeedChapterData;
+import chat.sphinx.wrapper_feed.FeedChaptersData;
+import chat.sphinx.wrapper_feed.FeedChaptersDataKt;
 import chat.sphinx.wrapper_feed.FeedContentType;
 import chat.sphinx.wrapper_feed.FeedDescription;
 import chat.sphinx.wrapper_feed.FeedDestinationAddress;
@@ -64,6 +77,7 @@ import chat.sphinx.wrapper_feed.FeedLanguage;
 import chat.sphinx.wrapper_feed.FeedModelSuggested;
 import chat.sphinx.wrapper_feed.FeedModelType;
 import chat.sphinx.wrapper_feed.FeedPlayerSpeed;
+import chat.sphinx.wrapper_feed.FeedReferenceId;
 import chat.sphinx.wrapper_feed.FeedTitle;
 import chat.sphinx.wrapper_invite.InviteCode;
 import chat.sphinx.wrapper_invite.InviteString;
@@ -78,6 +92,7 @@ import chat.sphinx.wrapper_message.MessageType;
 import chat.sphinx.wrapper_message.RecipientAlias;
 import chat.sphinx.wrapper_message.ReplyUUID;
 import chat.sphinx.wrapper_message.SenderAlias;
+import chat.sphinx.wrapper_message.TagMessage;
 import chat.sphinx.wrapper_message.ThreadUUID;
 import chat.sphinx.wrapper_message_media.FileName;
 import chat.sphinx.wrapper_message_media.MediaKey;
@@ -152,7 +167,12 @@ CREATE TABLE chatDbo(
     latest_message_id           INTEGER         AS MessageId DEFAULT NULL,
     content_seen_at             INTEGER         AS DateTime,
     notify                      INTEGER         AS NotificationLevel,
-    pin_message                 TEXT            AS MessageUUID DEFAULT NULL
+    pin_message                 TEXT            AS MessageUUID DEFAULT NULL,
+    second_brain_url            TEXT            AS SecondBrainUrl DEFAULT NULL,
+    timezone_enabled            INTEGER         AS TimezoneEnabled DEFAULT 1,
+    timezone_identifier         TEXT            AS TimezoneIdentifier DEFAULT NULL,
+    remote_timezone_identifier  TEXT            AS RemoteTimezoneIdentifier DEFAULT NULL,
+    timezone_updated            INTEGER         AS TimezoneUpdated DEFAULT 1
 );
 
 chatUpdateNameAndStatus:
@@ -180,6 +200,36 @@ chatUpdateContentSeenAt:
 UPDATE chatDbo
 SET content_seen_at = :content_seen_at
 WHERE id = ?;
+
+chatUpdateTimezoneEnabled:
+UPDATE chatDbo
+SET timezone_enabled = :timezone_enabled
+WHERE id = ?;
+
+chatUpdateTimezoneIdentifier:
+UPDATE chatDbo
+SET timezone_identifier = :timezone_identifier
+WHERE id = ?;
+
+chatUpdateRemoteTimezoneIdentifier:
+UPDATE chatDbo
+SET remote_timezone_identifier = :remote_timezone_identifier
+WHERE id = ?;
+
+chatUpdateRemoteTimezoneIdentifierIfNull:
+UPDATE chatDbo
+SET remote_timezone_identifier = :remote_timezone_identifier
+WHERE id = ? AND remote_timezone_identifier IS NULL;
+
+chatUpdateTimezoneUpdated:
+UPDATE chatDbo
+SET timezone_updated = :timezone_updated
+WHERE id = ?;
+
+chatUpdateTimezoneUpdatedOnSystemChanged:
+UPDATE chatDbo
+SET timezone_updated = 1
+WHERE timezone_identifier IS NULL AND timezone_enabled = 1;
 
 chatGetAll:
 SELECT *
@@ -229,6 +279,11 @@ chatGetLastTribeId:
 SELECT MIN(id) FROM chatDbo
 WHERE type = 2
 AND id > 10000;
+
+chatGetSecondBrainTribes:
+SELECT *
+FROM chatDbo
+WHERE second_brain_url != '';
 
 chatUpsert {
     UPDATE chatDbo
@@ -339,7 +394,8 @@ SET price_per_message = :price_per_message,
     escrow_amount = :escrow_amount,
     name = :name,
     photo_url = :photo_url,
-    pin_message = :pin_message
+    pin_message = :pin_message,
+    second_brain_url = :second_brain_url
 WHERE id = ?;
 
 chatUpdateSeenByLastMessage:
@@ -507,6 +563,11 @@ UPDATE contactDbo
 SET photo_url = :photo_url
 WHERE id = ?;
 
+contactUpdateAlias:
+UPDATE contactDbo
+SET alias = :alias
+WHERE id = ?;
+
 contactUpdateDetails:
 UPDATE contactDbo
 SET alias = :alias,
@@ -519,7 +580,8 @@ UPDATE contactDbo
 SET alias = :alias,
     photo_url = :photo_url,
     node_pub_key = :node_pub_key,
-    status = :status
+    status = :status,
+    route_hint = :route_hint
 WHERE id = ?;
 
 contactUpdateBlocked:
@@ -534,7 +596,8 @@ WHERE id = ?;
 contactUpdateOwnerInfo:
 UPDATE contactDbo
 SET alias = :alias,
-    photo_url = : photo_url
+    private_photo = :private_photo,
+    tip_amount = :tip_amount
 WHERE owner = 1;
 
 contactUpdateOwnerDeviceId:
@@ -565,6 +628,12 @@ inviteGetById:
 SELECT *
 FROM inviteDbo
 WHERE id = ?;
+
+inviteGetByInviteString:
+SELECT *
+FROM inviteDbo
+WHERE invite_string = ?
+LIMIT 1;
 
 inviteGetByContactId:
 SELECT *
@@ -749,7 +818,9 @@ CREATE TABLE messageDbo(
     push                        INTEGER         AS Push DEFAULT 0,
     person                      TEXT            AS MessagePerson,
     thread_uuid                 TEXT            AS ThreadUUID,
-    error_message               TEXT            AS ErrorMessage
+    error_message               TEXT            AS ErrorMessage,
+    tag_message                 TEXT            AS TagMessage,
+    remote_timezone_identifier  TEXT            AS RemoteTimezoneIdentifier DEFAULT NULL
 );
 
 messageGetAllReactionsByUUID:
@@ -783,6 +854,13 @@ WHERE chat_id = :chat_id
 AND type IN (7, 8, 9)
 AND (muid IN :muids OR original_muid IN :muids);
 
+messageGetAllRequestResponseItemsByReplyUUID:
+SELECT *
+FROM messageDbo
+WHERE chat_id = :chat_id
+AND type IN (20, 21)
+AND reply_uuid IN :reply_uuids;
+
 messageGetAllByUUID:
 SELECT *
 FROM messageDbo
@@ -809,6 +887,12 @@ AND type = 19
 ORDER BY id ASC
 LIMIT 1;
 
+messageGetAllPayments:
+SELECT *
+FROM messageDbo
+WHERE type = 3
+ORDER BY id ASC;
+
 messageGetByUUID:
 SELECT *
 FROM messageDbo
@@ -832,6 +916,10 @@ LIMIT 1;
 messageGetMaxId:
 SELECT MAX(id) FROM messageDbo;
 
+messageGetLastMessage:
+SELECT * FROM messageDbo
+WHERE id = (SELECT MAX(id) FROM messageDbo);
+
 messageGetMaxIdByChatId:
 SELECT *
 FROM messageDbo
@@ -840,6 +928,18 @@ WHERE id = (
     FROM messageDbo
     WHERE chat_id = ?
 );
+
+messageGetSentConfirmedMessages:
+SELECT *
+FROM messageDbo
+WHERE sender == 0
+ AND status == 1
+ AND chat_id = :chat_id;
+
+messageGetDeletedMessages:
+SELECT *
+FROM messageDbo
+WHERE type == 17;
 
 messageGetIdByUUID:
 SELECT id
@@ -854,6 +954,12 @@ WHERE id = (
     FROM messageDbo
     WHERE chat_id < 9999 AND sender = 0
 );
+
+messageGetOkKeysByChatId:
+SELECT id
+FROM messageDbo
+WHERE chat_id = :chat_id
+  AND type IN (2, 3, 5, 6, 10, 11, 29);
 
 messageGetAllToShowByChatIdWithLimit:
 SELECT *
@@ -938,6 +1044,11 @@ SELECT *
 FROM messageDbo
 WHERE id IN ?;
 
+messageGetByPaymentHashes:
+SELECT *
+FROM messageDbo
+WHERE payment_hash IN :payment_hashes;
+
 messagesSearchByTerm:
 SELECT *
 FROM messageDbo
@@ -961,6 +1072,21 @@ UPDATE messageDbo
 SET status = :status
 WHERE id = ?;
 
+messageUpdateStatusAndPaymentHashByTag:
+UPDATE messageDbo
+SET status = :status,
+    payment_hash = :payment_hash,
+    error_message = :error_message
+WHERE tag_message = ?
+AND ((type != 2) || (type = 2 AND status = 0));
+
+messageUpdateStatusByTag:
+UPDATE messageDbo
+SET status = :status,
+    error_message = :error_message
+WHERE tag_message = ?
+AND ((type != 2) || (type = 2 AND status = 0));
+
 messageUpdateType:
 UPDATE messageDbo
 SET type = :type
@@ -970,6 +1096,11 @@ messageUpdateStatusByUUID:
 UPDATE messageDbo
 SET status = :status
 WHERE uuid = ?;
+
+messageUpdateMessagesStatusByUUIDS:
+UPDATE messageDbo
+SET status = :status
+WHERE uuid IN ?;
 
 messageUpdateInvoiceAsPaidByPaymentHash:
 UPDATE messageDbo
@@ -981,9 +1112,11 @@ UPDATE messageDbo
 SET flagged = :flagged
 WHERE id = ?;
 
-messageUpdateUUID:
+messageUpdateTagAndUUID:
 UPDATE messageDbo
-SET uuid = :uuid
+SET tag_message = :tag_message,
+    uuid = :uuid,
+    status = 1
 WHERE id = ?;
 
 messageUpdateUUIDByUUID:
@@ -996,6 +1129,12 @@ UPDATE messageDbo
 SET seen = 1
 WHERE chat_id = ?
 AND id <= ?;
+
+messageUpdateRemoteTimezoneIdentifier:
+UPDATE messageDbo
+SET remote_timezone_identifier = :remote_timezone_identifier
+WHERE chat_id = ?
+AND id = ?;
 
 messageUpsert {
     UPDATE messageDbo
@@ -1011,7 +1150,8 @@ messageUpsert {
         push = :push,
         person = :person,
         thread_uuid = :thread_uuid,
-        error_message = :error_message
+        error_message = :error_message,
+        tag_message = :tag_message
     WHERE id = :id;
 
     INSERT OR IGNORE INTO messageDbo(
@@ -1041,7 +1181,9 @@ messageUpsert {
         push,
         person,
         thread_uuid,
-        error_message
+        error_message,
+        tag_message,
+        remote_timezone_identifier
     )
     VALUES (
         :id,
@@ -1070,7 +1212,9 @@ messageUpsert {
         :push,
         :person,
         :thread_uuid,
-        :error_message
+        :error_message,
+        :tag_message,
+        :remote_timezone_identifier
     );
 }
 
@@ -1490,7 +1634,9 @@ CREATE TABLE feedItemDbo(
     link                        TEXT               AS FeedUrl,
     feed_id                     TEXT               AS FeedId NOT NULL,
     duration                    INTEGER            AS FeedItemDuration,
-    local_file                  TEXT               AS File
+    local_file                  TEXT               AS File,
+    reference_id                TEXT               AS FeedReferenceId,
+    chapters_data               TEXT               AS FeedChaptersData
 );
 
 feedItemUpsert {
@@ -1605,6 +1751,16 @@ feedItemDeleteAllDownloadedByFeedId:
 UPDATE feedItemDbo
 SET local_file = NULL
 WHERE feed_id = ?;
+
+feedItemUpdateReferenceId:
+UPDATE feedItemDbo
+SET reference_id = :reference_id
+WHERE id = :id;
+
+feedItemUpdateChaptersData:
+UPDATE feedItemDbo
+SET chapters_data = :chapters_data
+WHERE id = :id;
 
 feedItemDeleteAll:
 DELETE FROM feedItemDbo;
@@ -1897,3 +2053,86 @@ contentEpisodeStatusDeleteByFeedId:
 DELETE
 FROM contentEpisodeStatusDbo
 WHERE feed_id = ?;
+
+CREATE TABLE lsatDbo (
+    id                TEXT          AS LsatIdentifier NOT NULL PRIMARY KEY,
+    macaroon          TEXT          AS Macaroon NOT NULL,
+    payment_request   TEXT          AS LightningPaymentRequest,
+    issuer            TEXT          AS LsatIssuer,
+    meta_data         TEXT          AS LsatMetaData,
+    paths             TEXT          AS LsatPaths,
+    preimage          TEXT          AS LsatPreImage,
+    status            INTEGER       AS LsatStatus NOT NULL,
+    created_at        INTEGER       AS DateTime NOT NULL
+);
+
+lsatGetLastActiveByIssuer:
+SELECT *
+FROM lsatDbo
+WHERE issuer = ?
+AND status = 1
+ORDER BY created_at DESC
+LIMIT 1;
+
+lsatGetLastActive:
+SELECT *
+FROM lsatDbo
+WHERE status = 1
+ORDER BY created_at DESC
+LIMIT 1;
+
+lsatGetById:
+SELECT *
+FROM lsatDbo
+WHERE id = ?;
+
+lsatUpdateStatus:
+UPDATE lsatDbo
+SET status = :status
+WHERE id = ?;
+
+lsatUpdateMetaData:
+UPDATE lsatDbo
+SET meta_data = :meta_data
+WHERE id = ?;
+
+lsatGetAllActive:
+SELECT *
+FROM lsatDbo
+WHERE status = 1;
+
+lsatUpsert {
+    UPDATE lsatDbo
+    SET macaroon = :macaroon,
+        payment_request = :payment_request,
+        issuer = :issuer,
+        meta_data = :meta_data,
+        paths = :paths,
+        preimage = :preimage,
+        status = :status,
+        created_at = :created_at
+    WHERE id = :id;
+
+    INSERT OR IGNORE INTO lsatDbo (
+        id,
+        macaroon,
+        payment_request,
+        issuer,
+        meta_data,
+        paths,
+        preimage,
+        status,
+        created_at
+    )
+    VALUES (
+        :id,
+        :macaroon,
+        :payment_request,
+        :issuer,
+        :meta_data,
+        :paths,
+        :preimage,
+        :status,
+        :created_at
+    );
+}

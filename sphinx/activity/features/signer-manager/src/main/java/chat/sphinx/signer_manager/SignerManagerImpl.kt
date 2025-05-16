@@ -708,7 +708,7 @@ class SignerManagerImpl(
                         }
 
                         is Response.Success -> {
-                            checkAdminCallback.checkAdminSucceeded()
+//                            checkAdminCallback.checkAdminSucceeded()
                         }
                     }
                 }

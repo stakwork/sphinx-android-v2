@@ -1,0 +1,22 @@
+import chat.sphinx.wrapper_common.DateTime;
+import chat.sphinx.wrapper_common.lightning.LightningPaymentRequest;
+import chat.sphinx.wrapper_common.lsat.LsatIdentifier;
+import chat.sphinx.wrapper_common.lsat.LsatIssuer;
+import chat.sphinx.wrapper_common.lsat.LsatMetaData;
+import chat.sphinx.wrapper_common.lsat.LsatPaths;
+import chat.sphinx.wrapper_common.lsat.LsatPreImage;
+import chat.sphinx.wrapper_common.lsat.LsatStatus;
+import chat.sphinx.wrapper_common.lsat.Macaroon;
+
+
+CREATE TABLE lsatDbo (
+    id                TEXT          AS LsatIdentifier NOT NULL PRIMARY KEY,
+    macaroon          TEXT          AS Macaroon NOT NULL,
+    payment_request   TEXT          AS LightningPaymentRequest,
+    issuer            TEXT          AS LsatIssuer,
+    meta_data         TEXT          AS LsatMetaData,
+    paths             TEXT          AS LsatPaths,
+    preimage          TEXT          AS LsatPreImage,
+    status            INTEGER       AS LsatStatus NOT NULL,
+    created_at        INTEGER       AS DateTime NOT NULL
+);

@@ -10,7 +10,7 @@ abstract class OnBoardDesktopNavigator(
     navigationDriver: BaseNavigationDriver<NavController>
 ): Navigator<NavController>(navigationDriver) {
 
-    abstract suspend fun toOnBoardReadyScreen(onBoardStep4: OnBoardStep.Step4_Ready)
+    abstract suspend fun toOnBoardReadyScreen()
 
     suspend fun popBackStack() {
         navigationDriver.submitNavigationRequest(PopBackStack())

@@ -14,6 +14,7 @@ abstract class NetworkQueryDiscoverTribes {
         page: Int,
         itemsPerPage: Int,
         searchTerm: String?,
-        tags: String?
+        tags: String?,
+        tribeServer: String?
     ): Flow<LoadResponse<List<NewTribeDto>, ResponseError>>
 }

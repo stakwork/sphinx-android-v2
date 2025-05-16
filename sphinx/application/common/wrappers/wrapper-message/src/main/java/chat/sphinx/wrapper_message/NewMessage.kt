@@ -11,6 +11,7 @@ import chat.sphinx.wrapper_common.lightning.Sat
 import chat.sphinx.wrapper_common.message.CallLinkMessage
 import chat.sphinx.wrapper_common.message.MessageId
 import chat.sphinx.wrapper_common.message.MessageUUID
+import chat.sphinx.wrapper_common.message.RemoteTimezoneIdentifier
 import chat.sphinx.wrapper_message_media.MessageMedia
 
 class NewMessage(
@@ -38,6 +39,7 @@ class NewMessage(
     override val person: MessagePerson? = null,
     override val threadUUID: ThreadUUID? = null,
     override val errorMessage: ErrorMessage? = null,
+    override val tagMessage: TagMessage? = null,
     override val isPinned: Boolean = false,
 
     override val messageContentDecrypted: MessageContentDecrypted? = null,
@@ -51,7 +53,8 @@ class NewMessage(
     override val reactions: List<Message>? = null,
     override val purchaseItems: List<Message>? = null,
     override val replyMessage: Message? = null,
-    override val thread: List<Message>? = null
+    override val thread: List<Message>? = null,
+    override val remoteTimezoneIdentifier: RemoteTimezoneIdentifier? = null,
 ) : Message() {
 
     override fun equals(other: Any?): Boolean {
@@ -81,12 +84,12 @@ class NewMessage(
                 "senderAlias=$senderAlias, senderPic=$senderPic, originalMUID=$originalMUID, " +
                 "replyUUID=$replyUUID, flagged=$flagged, recipientAlias=$recipientAlias, " +
                 "recipientPic=$recipientPic, person=$person, threadUUID=$threadUUID, " +
-                "errorMessage=$errorMessage, isPinned=$isPinned, " +
+                "errorMessage=$errorMessage, tagMessage=$tagMessage, isPinned=$isPinned, " +
                 "messageContentDecrypted=$messageContentDecrypted, " +
                 "messageDecryptionError=$messageDecryptionError, " +
                 "messageDecryptionException=$messageDecryptionException, " +
                 "messageMedia=$messageMedia, feedBoost=$feedBoost, callLinkMessage=$callLinkMessage, " +
                 "podcastClip=$podcastClip, giphyData=$giphyData, reactions=$reactions, " +
-                "purchaseItems=$purchaseItems, replyMessage=$replyMessage, thread=$thread)"
+                "purchaseItems=$purchaseItems, replyMessage=$replyMessage, thread=$thread, remoteTimezoneIdentifier=$remoteTimezoneIdentifier)"
     }
 }

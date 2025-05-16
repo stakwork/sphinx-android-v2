@@ -6,17 +6,20 @@ import androidx.lifecycle.viewModelScope
 import app.cash.exhaustive.Exhaustive
 import chat.sphinx.concept_network_query_invite.NetworkQueryInvite
 import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
-import chat.sphinx.concept_repository_contact.ContactRepository
+import chat.sphinx.concept_repository_lightning.LightningRepository
 import chat.sphinx.invite_friend.navigation.InviteFriendNavigator
 import chat.sphinx.kotlin_response.LoadResponse
 import chat.sphinx.kotlin_response.Response
 import chat.sphinx.wrapper_common.lightning.toSat
+import chat.sphinx.wrapper_lightning.NodeBalance
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.matthewnelson.android_feature_viewmodel.SideEffectViewModel
 import io.matthewnelson.android_feature_viewmodel.submitSideEffect
 import io.matthewnelson.android_feature_viewmodel.updateViewState
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -24,7 +27,7 @@ import javax.inject.Inject
 internal class InviteFriendViewModel @Inject constructor(
     val navigator: InviteFriendNavigator,
     private val networkQueryInvite: NetworkQueryInvite,
-    private val contactRepository: ContactRepository,
+    private val lightningRepository: LightningRepository,
     private val connectManagerRepository: ConnectManagerRepository,
     private val app: Application,
     dispatchers: CoroutineDispatchers,
@@ -34,6 +37,26 @@ internal class InviteFriendViewModel @Inject constructor(
         InviteFriendViewState
         >(dispatchers, InviteFriendViewState.Idle)
 {
+    companion object {
+        const val SERVER_SETTINGS_SHARED_PREFERENCES = "server_ip_settings"
+        const val TRIBE_SERVER_IP = "tribe_server_ip"
+        const val NETWORK_MIXER_IP = "network_mixer_ip"
+        const val DEFAULT_TRIBE_KEY = "default_tribe"
+    }
+    private suspend fun getAccountBalance(): StateFlow<NodeBalance?> =
+        lightningRepository.getAccountBalance()
+
+    private val serverSettingsSharedPreferences =
+        app.getSharedPreferences(SERVER_SETTINGS_SHARED_PREFERENCES, Context.MODE_PRIVATE)
+
+    private val tribeServerIp: String? = serverSettingsSharedPreferences
+        .getString(TRIBE_SERVER_IP, null)
+
+    private val defaultTribe = serverSettingsSharedPreferences
+        .getString(DEFAULT_TRIBE_KEY, null)
+
+    private val mixerIp = serverSettingsSharedPreferences
+        .getString(NETWORK_MIXER_IP, null)
 
     init {
         viewModelScope.launch(mainImmediate) {
@@ -45,6 +68,7 @@ internal class InviteFriendViewModel @Inject constructor(
                     is Response.Error -> {}
 
                     is Response.Success -> {
+
                         loadResponse.value.response?.price?.let { price ->
                             price.toLong().toSat()?.let { sats ->
                                 updateViewState(InviteFriendViewState.InviteFriendLowestPrice(sats))
@@ -67,44 +91,30 @@ internal class InviteFriendViewModel @Inject constructor(
         }
 
         createInviteJob = viewModelScope.launch(mainImmediate) {
+            val balance = getAccountBalance().firstOrNull()?.balance?.value
+            val serverDefaultTribe = if (defaultTribe?.isEmpty() == true) null else defaultTribe
 
-            if (sats != null && sats > 0L && !nickname.isNullOrEmpty()) {
-                connectManagerRepository.createInvite(nickname, welcomeMessage ?: "", sats, null)
-                updateViewState(InviteFriendViewState.InviteCreationSucceed)
-            } else {
-                submitSideEffect(InviteFriendSideEffect.EmptySats)
-                updateViewState(InviteFriendViewState.InviteCreationFailed)
+            when {
+                nickname.isNullOrEmpty() -> {
+                    submitSideEffect(InviteFriendSideEffect.EmptyNickname)
+                    updateViewState(InviteFriendViewState.InviteCreationFailed)
+                }
+                balance != null && sats != null && sats != 0L && sats <= balance -> {
+                    connectManagerRepository.createInvite(
+                        nickname,
+                        welcomeMessage ?: "",
+                        sats,
+                        serverDefaultTribe,
+                        tribeServerIp,
+                        mixerIp
+                    )
+                    updateViewState(InviteFriendViewState.InviteCreationSucceed)
+                }
+                else -> {
+                    submitSideEffect(InviteFriendSideEffect.EmptySats)
+                    updateViewState(InviteFriendViewState.InviteCreationFailed)
+                }
             }
-
-//            if (nickname == null || nickname.isEmpty()) {
-//                submitSideEffect(InviteFriendSideEffect.EmptyNickname)
-//                updateViewState(InviteFriendViewState.InviteCreationFailed)
-//                return@launch
-//            }
-//
-//            val message = if (welcomeMessage?.trim()?.isNotEmpty() == true) {
-//                welcomeMessage
-//            } else {
-//                app.getString(R.string.invite_friend_message_hint)
-//            }
-//
-//            contactRepository.createNewInvite(nickname, message).collect { loadResponse ->
-//                @Exhaustive
-//                when (loadResponse) {
-//                    is LoadResponse.Loading -> {
-//                        updateViewState(InviteFriendViewState.InviteCreationLoading)
-//                    }
-//
-//                    is Response.Error -> {
-//                        submitSideEffect(InviteFriendSideEffect.InviteFailed)
-//                        updateViewState(InviteFriendViewState.InviteCreationFailed)
-//                    }
-//
-//                    is Response.Success -> {
-//                        updateViewState(InviteFriendViewState.InviteCreationSucceed)
-//                    }
-//                }
-//            }
         }
     }
 }

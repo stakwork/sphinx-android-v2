@@ -180,6 +180,7 @@ value class DateTime(val value: Date) {
         private const val FORMAT_MMM_DD_YYYY = "MMM dd, yyyy"
 
         private const val SIX_DAYS_IN_MILLISECONDS = 518_400_000L
+        private const val THREE_MONTHS_IN_MILLISECONDS = 7_776_000_000L
 
         @Volatile
         private var formatRelay: SimpleDateFormat? = null
@@ -191,6 +192,75 @@ value class DateTime(val value: Date) {
                         formatRelay = it
                     }
             }
+
+        fun getTimezoneAbbreviationFrom(identifier: String?): String {
+            val timezone = when {
+                identifier.isNullOrBlank() -> {
+                    TimeZone.getDefault()
+                }
+                identifier == "Use Computer Settings" -> {
+                    TimeZone.getTimeZone(TimeZone.getDefault().id)
+                }
+                else -> {
+                    TimeZone.getTimeZone(identifier)
+                }
+            }
+            return getGmtOffset(timezone)
+        }
+
+        @Suppress("DefaultLocale")
+        fun getGmtOffset(timeZone: TimeZone): String {
+            val offsetMillis = timeZone.rawOffset
+            val hours = offsetMillis / 3_600_000  // convert ms to hours
+            val minutes = (offsetMillis % 3_600_000) / 60_000  // remaining minutes
+
+            return if (minutes == 0) {
+                String.format("GMT%+d", hours)
+            } else {
+                String.format("GMT%+d:%02d", hours, minutes)
+            }
+        }
+
+        fun buildZoneIdMap(): Map<String, String> {
+            val map = mutableMapOf<String, String>()
+            for (id in getValidTimeZoneIds()) {
+                val tz = TimeZone.getTimeZone(id)
+                val shortId = tz.getDisplayName(false, TimeZone.SHORT, Locale.US)
+                val dstId = tz.getDisplayName(true, TimeZone.SHORT, Locale.US)
+                map[shortId.uppercase()] = id
+                map[dstId.uppercase()] = id
+            }
+            return map
+        }
+
+        fun getValidTimeZoneIds(): List<String> {
+            return TimeZone.getAvailableIDs().filter { id ->
+                val tz = TimeZone.getTimeZone(id)
+                tz.id != "GMT" || id == "GMT" // Ensure it's not an invalid alias
+            }
+        }
+
+        fun getLocalTimeFor(identifier: String, datetime: DateTime?): String {
+            val zoneIdMap = buildZoneIdMap()
+            val resolvedId = zoneIdMap[identifier.uppercase()] ?: identifier
+            val timeZone = TimeZone.getTimeZone(resolvedId)
+
+            val dateFormat = SimpleDateFormat("hh:mm a 'GMT'Z", Locale.getDefault())
+            dateFormat.timeZone = timeZone
+
+            val date = datetime?.let { Date(it.time) } ?: Date()
+            val formatted = dateFormat.format(date)
+
+            return formatted.replace(Regex("GMT([+-])0?(\\d{1,2})00")) { matchResult ->
+                val sign = matchResult.groupValues[1]
+                val hour = matchResult.groupValues[2]
+                if (hour == "0") "GMT" else "GMT$sign$hour"
+            }
+        }
+
+        fun getSystemTimezoneAbbreviation(): String {
+            return TimeZone.getDefault().getDisplayName(false, TimeZone.SHORT)
+        }
 
         /**
          * Returns a string value using [FORMAT_RELAY]
@@ -230,6 +300,9 @@ value class DateTime(val value: Date) {
          * */
         fun getSixDaysAgo(): DateTime =
             DateTime(Date(System.currentTimeMillis() - SIX_DAYS_IN_MILLISECONDS))
+
+        fun getThreeMonthsAgo(): DateTime =
+            DateTime(Date(System.currentTimeMillis() - THREE_MONTHS_IN_MILLISECONDS))
 
         @Volatile
         private var formateeemmddhmma: SimpleDateFormat? = null

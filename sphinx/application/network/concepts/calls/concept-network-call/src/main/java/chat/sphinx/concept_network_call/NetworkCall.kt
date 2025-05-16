@@ -59,6 +59,29 @@ abstract class NetworkCall {
     ): Flow<LoadResponse<List<T>, ResponseError>>
 
     /**
+     * GET raw JSON response
+     *
+     * @param [url] the url
+     * @param [headers] any headers that need to be added to the request
+     * */
+    abstract fun getRawJson(
+        url: String,
+        headers: Map<String, String>? = null,
+        useExtendedNetworkCallClient: Boolean = false
+    ): Flow<LoadResponse<String, ResponseError>>
+
+    /**
+     * GET
+     *
+     * @param [url] the url
+     * @param [headers] any headers that need to be added to the request
+     * */
+    abstract suspend fun getWithoutJson(
+        url: String,
+        headers: Map<String, String>? = null,
+    ): Flow<LoadResponse<String, ResponseError>>
+
+    /**
      * PUT
      *
      * @param [responseJsonClass] the class to serialize the response json into
@@ -94,6 +117,7 @@ abstract class NetworkCall {
         requestBody: RequestBody,
         mediaType: String? = "application/json",
         headers: Map<String, String>? = null,
+        accept400AsSuccess: Boolean = false
     ): Flow<LoadResponse<T, ResponseError>>
 
     abstract fun <T: Any, RequestBody: Any> postList(
@@ -128,7 +152,8 @@ abstract class NetworkCall {
     abstract suspend fun <T: Any> call(
         responseJsonClass: Class<T>,
         request: Request,
-        useExtendedNetworkCallClient: Boolean = false
+        useExtendedNetworkCallClient: Boolean = false,
+        accept400AsSuccess: Boolean = false
     ): T
 
     @Throws(NullPointerException::class, IOException::class)

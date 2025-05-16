@@ -13,7 +13,7 @@
     <string name="failed_to_update_tribe">Failed to update tribe</string>
     <string name="failed_to_load_tribe">Failed to load tribe</string>
     <string name="failed_to_process_image">Failed to process image</string>
-    <string name="list_on_tribes_sphinx_chat">List on tribes.sphinx.chat?</string>
+    <string name="list_on_tribes_sphinx_chat">List on tribes.v2.sphinx.chat?</string>
     <string name="name">Name *</string>
     <string name="image">Image</string>
     <string name="description">Description *</string>
@@ -23,6 +23,7 @@
     <string name="amount_to_stake_sats">Amount to Stake</string>
     <string name="time_to_stake_hours">Time to Stake (hours)</string>
     <string name="app_url">App Url</string>
+    <string name="second_brain_url">Second Brain Url</string>
     <string name="rss_feed_url">Feed URL</string>
     <string name="feed_content_type">Feed Content Type</string>
     <string name="approve_each_membership_request">Approve each membership request?</string>

@@ -5,6 +5,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Bundle
 import android.view.ContextThemeWrapper
+import android.view.Gravity
 import android.view.KeyEvent
 import android.view.MenuItem
 import android.view.View
@@ -44,6 +45,7 @@ import chat.sphinx.wrapper_common.lightning.toSat
 import chat.sphinx.wrapper_common.util.getHHMMSSString
 import chat.sphinx.wrapper_podcast.Podcast
 import chat.sphinx.wrapper_podcast.PodcastEpisode
+import chat.sphinx.resources.R as R_common
 import dagger.hilt.android.AndroidEntryPoint
 import io.matthewnelson.android_feature_screens.ui.sideeffect.SideEffectFragment
 import io.matthewnelson.android_feature_screens.util.gone
@@ -82,12 +84,14 @@ internal class PodcastPlayerFragment : SideEffectFragment<
     protected lateinit var connectivityHelper: ConnectivityHelper
 
     private val args: PodcastPlayerFragmentArgs by navArgs()
+    private var isSkipAdEnabled: Boolean = false
 
     override fun onDestroyView() {
         super.onDestroyView()
 
         viewModel.trackPodcastConsumed()
         viewModel.forceFeedReload()
+        lastChaptersEpisodeId = null
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -403,27 +407,49 @@ internal class PodcastPlayerFragment : SideEffectFragment<
             }
         }
     }
+    private var lastChaptersEpisodeId: String? = null
 
     @SuppressLint("ClickableViewAccessibility")
     private suspend fun showPodcastInfo(podcast: Podcast) {
         binding.apply {
 
+
             val notLinkedToChat = podcast.chatId.value == ChatId.NULL_CHAT_ID.toLong()
             textViewSubscribeButton.goneIfFalse(notLinkedToChat)
 
             textViewSubscribeButton.text = if (podcast.subscribed.isTrue()) {
-                getString(R.string.unsubscribe)
+                getString(R_common.string.unsubscribe)
             } else {
-                getString(R.string.subscribe)
+                getString(R_common.string.subscribe)
             }
 
             var currentEpisode: PodcastEpisode? = podcast.getCurrentEpisode()
-            currentEpisode = if (connectivityHelper.isNetworkConnected() || currentEpisode?.downloaded == true) {
-                currentEpisode
+            currentEpisode =
+                if (connectivityHelper.isNetworkConnected() || currentEpisode?.downloaded == true) {
+                    currentEpisode
+                } else {
+                    podcast.getLastDownloadedEpisode()
+                }
+
+            val hasChapters = currentEpisode?.chapters?.nodes?.isNotEmpty() == true
+
+            if (hasChapters) {
+                binding.includeLayoutPodcastEpisodesList.buttonSkipAdd.visible
+                updateSkipAdButtonUI()
+
+                binding.includeLayoutPodcastEpisodesList.buttonSkipAdd.setOnClickListener {
+                    isSkipAdEnabled = !isSkipAdEnabled
+                    updateSkipAdButtonUI()
+                }
             } else {
-                podcast.getLastDownloadedEpisode()
+                binding.includeLayoutPodcastEpisodesList.buttonSkipAdd.gone
             }
 
+            val episodeId = currentEpisode?.id?.value
+            if (episodeId != null && lastChaptersEpisodeId != episodeId) {
+                addChapterMarkers(podcast)
+                lastChaptersEpisodeId = episodeId
+            }
             textViewEpisodeTitleLabel.text = currentEpisode?.title?.value ?: ""
 
             podcast.imageToShow?.value?.let { podcastImage ->
@@ -431,7 +457,7 @@ internal class PodcastPlayerFragment : SideEffectFragment<
                     imageViewPodcastImage,
                     podcastImage,
                     ImageLoaderOptions.Builder()
-                        .placeholderResId(R.drawable.ic_podcast_placeholder)
+                        .placeholderResId(R_common.drawable.ic_podcast_placeholder)
                         .build()
                 )
             }
@@ -477,8 +503,131 @@ internal class PodcastPlayerFragment : SideEffectFragment<
 
             if (!draggingTimeSlider && currentEpisode != null) setTimeLabelsAndProgressBar(podcast)
 
+            if (isSkipAdEnabled && hasChapters) {
+                checkAndSkipAds(podcast)
+            }
+
             toggleLoadingWheel(false)
             addPodcastOnClickListeners(podcast)
+        }
+    }
+
+    private fun addChapterMarkers(podcast: Podcast) {
+        val slider = binding.includeLayoutEpisodeSliderControl.seekBarCurrentEpisodeProgress
+        val overlay = binding.includeLayoutEpisodeSliderControl.frameLayoutSeekbarOverlay
+        overlay.removeAllViews()
+
+        val duration = podcast.getCurrentEpisodeDuration(viewModel::retrieveEpisodeDuration)
+
+        val chapters = podcast.getCurrentEpisode()?.chapters?.nodes?.mapNotNull { it.properties }
+            ?.filter { !it.timestamp.isNullOrBlank() }
+
+        if (chapters.isNullOrEmpty() || duration <= 0) return
+
+        slider.post {
+            val sliderWidth = slider.width
+            val leftPadding = slider.paddingLeft
+            val rightPadding = slider.paddingRight
+            val trackWidth = sliderWidth - leftPadding - rightPadding
+
+            val density = resources.displayMetrics.density
+            val markerSizeDp = 12
+            val markerSizePx = (markerSizeDp * density).toInt()
+            val halfMarker = markerSizePx / 2
+
+            chapters.forEach { chapter ->
+                val timeMs = viewModel.parseTimestampToMillis(chapter.timestamp ?: "00:00:00")
+                val positionRatio = timeMs.toFloat() / duration.toFloat()
+
+                val markerX = leftPadding + (trackWidth * positionRatio).toInt()
+                val clampedMarkerX = markerX.coerceIn(leftPadding + halfMarker, sliderWidth - rightPadding - halfMarker)
+
+                val isAd = chapter.isAdBoolean
+
+                val marker = View(requireContext()).apply {
+                    layoutParams = FrameLayout.LayoutParams(markerSizePx, markerSizePx).apply {
+                        gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                        marginStart = clampedMarkerX - halfMarker
+                    }
+                    background = ContextCompat.getDrawable(
+                        requireContext(),
+                        if (isAd) R_common.drawable.podcast_player_seek_bar_ad else R_common.drawable.podcast_player_seek_bar_thumb
+                    )
+                    isClickable = true
+                    setOnClickListener {
+                        viewModel.seekTo(timeMs)
+                    }
+                    translationZ = 5f
+                }
+
+                overlay.addView(marker)
+            }
+        }
+    }
+
+    private var adSkipToastShown = false
+
+    private fun checkAndSkipAds(podcast: Podcast) {
+        val currentEpisode = podcast.getCurrentEpisode() ?: return
+
+        val chaptersProperties = currentEpisode.chapters?.nodes
+            ?.mapNotNull { it.properties }
+            ?.filter { !it.timestamp.isNullOrBlank() }
+            ?.sortedBy { viewModel.parseTimestampToMillis(it.timestamp) }
+            ?: return
+
+        val currentTime = podcast.timeMilliSeconds
+        val episodeDuration = podcast.getCurrentEpisodeDuration(viewModel::retrieveEpisodeDuration)
+
+        for (i in chaptersProperties.indices) {
+            val chapterStart = viewModel.parseTimestampToMillis(chaptersProperties[i].timestamp)
+            val chapterEnd = if (i + 1 < chaptersProperties.size) {
+                viewModel.parseTimestampToMillis(chaptersProperties[i + 1].timestamp)
+            } else {
+                episodeDuration
+            }
+
+            if (!chaptersProperties[i].isAdBoolean && i + 1 < chaptersProperties.size) {
+                val nextChapter = chaptersProperties[i + 1]
+                val nextStart = viewModel.parseTimestampToMillis(nextChapter.timestamp)
+                val timeUntilNext = nextStart - currentTime
+
+                if (nextChapter.isAdBoolean && timeUntilNext in 2500..3500 && !adSkipToastShown) {
+                    adSkipToastShown = true
+                    viewModel.showSkipAdToast()
+                }
+            }
+
+            if (chaptersProperties[i].isAdBoolean && currentTime in chapterStart until chapterEnd) {
+                var targetIndex = i + 1
+                while (targetIndex < chaptersProperties.size && chaptersProperties[targetIndex].isAdBoolean) {
+                    targetIndex++
+                }
+
+                val skipToTime = if (targetIndex < chaptersProperties.size) {
+                    viewModel.parseTimestampToMillis(chaptersProperties[targetIndex].timestamp)
+                } else {
+                    episodeDuration
+                }
+
+                adSkipToastShown = false
+                viewModel.seekTo(skipToTime)
+                break
+            }
+        }
+    }
+
+    private fun updateSkipAdButtonUI() {
+        binding.includeLayoutPodcastEpisodesList.buttonSkipAdd.apply {
+            if (isSkipAdEnabled) {
+                setTextColor(ContextCompat.getColor(requireContext(), android.R.color.white))
+                backgroundTintList = ContextCompat.getColorStateList(requireContext(), chat.sphinx.resources.R.color.primaryGreen)
+                text = getString(R.string.podcast_skip_ad_enabled)
+            } else {
+                setTextColor(ContextCompat.getColor(requireContext(), chat.sphinx.resources.R.color.secondaryText))
+                backgroundTintList = ContextCompat.getColorStateList(requireContext(), android.R.color.secondary_text_dark)
+                text = getString(R.string.podcast_skip_ad_disabled)
+            }
         }
     }
 
@@ -500,7 +649,7 @@ internal class PodcastPlayerFragment : SideEffectFragment<
                         imageViewProfilePicture,
                         photoUrl.value,
                         ImageLoaderOptions.Builder()
-                            .placeholderResId(R.drawable.ic_podcast_placeholder)
+                            .placeholderResId(R_common.drawable.ic_podcast_placeholder)
                             .transformation(Transformation.CircleCrop)
                             .build()
                     )
@@ -527,13 +676,14 @@ internal class PodcastPlayerFragment : SideEffectFragment<
             includeLayoutEpisodePlaybackControls.apply {
                 textViewPlayPauseButton.background =
                     ContextCompat.getDrawable(root.context,
-                        if (playing) R.drawable.ic_podcast_pause_circle else R.drawable.ic_podcast_play_circle
+                        if (playing) R_common.drawable.ic_podcast_pause_circle else R_common.drawable.ic_podcast_play_circle
                     )
             }
         }
     }
 
     private suspend fun loadingEpisode(episode: PodcastEpisode) {
+        lastChaptersEpisodeId = null
         binding.apply {
             textViewEpisodeTitleLabel.text = episode.title.value
 
@@ -542,7 +692,7 @@ internal class PodcastPlayerFragment : SideEffectFragment<
                     imageViewPodcastImage,
                     podcastImage,
                     ImageLoaderOptions.Builder()
-                        .placeholderResId(R.drawable.ic_podcast_placeholder)
+                        .placeholderResId(R_common.drawable.ic_podcast_placeholder)
                         .build()
                 )
             }
@@ -604,33 +754,33 @@ internal class PodcastPlayerFragment : SideEffectFragment<
 
     private fun showSpeedPopup() {
         binding.includeLayoutEpisodePlaybackControls.apply {
-            val wrapper: Context = ContextThemeWrapper(context, R.style.speedMenu)
+            val wrapper: Context = ContextThemeWrapper(context, R_common.style.speedMenu)
             val popup = PopupMenu(wrapper, textViewPlaybackSpeedButton)
-            popup.inflate(R.menu.speed_menu)
+            popup.inflate(R_common.menu.speed_menu)
 
             popup.setOnMenuItemClickListener { item: MenuItem? ->
                 when (item!!.itemId) {
-                    R.id.speed0_5 -> {
+                    R_common.id.speed0_5 -> {
                         textViewPlaybackSpeedButton.text = "0.5x"
                         viewModel.adjustSpeed(0.5)
                     }
-                    R.id.speed0_8 -> {
+                    R_common.id.speed0_8 -> {
                         textViewPlaybackSpeedButton.text = "0.8x"
                         viewModel.adjustSpeed(0.8)
                     }
-                    R.id.speed1 -> {
+                    R_common.id.speed1 -> {
                         textViewPlaybackSpeedButton.text = "1x"
                         viewModel.adjustSpeed(1.0)
                     }
-                    R.id.speed1_2 -> {
+                    R_common.id.speed1_2 -> {
                         textViewPlaybackSpeedButton.text = "1.2x"
                         viewModel.adjustSpeed(1.2)
                     }
-                    R.id.speed1_5 -> {
+                    R_common.id.speed1_5 -> {
                         textViewPlaybackSpeedButton.text = "1.5x"
                         viewModel.adjustSpeed(1.5)
                     }
-                    R.id.speed2_1 -> {
+                    R_common.id.speed2_1 -> {
                         textViewPlaybackSpeedButton.text = "2.1x"
                         viewModel.adjustSpeed(2.1)
                     }
@@ -687,7 +837,7 @@ internal class PodcastPlayerFragment : SideEffectFragment<
     private fun feedItemDetailsCommonInfoBinding(viewState: FeedItemDetailsViewState.Open) {
         binding.includeLayoutFeedItem.includeLayoutFeedItemDetails.apply {
             textViewMainEpisodeTitle.text = viewState.feedItemDetail?.header
-            imageViewItemRowEpisodeType.setImageDrawable(ContextCompat.getDrawable(root.context, viewState.feedItemDetail?.episodeTypeImage ?: R.drawable.ic_podcast_type))
+            imageViewItemRowEpisodeType.setImageDrawable(ContextCompat.getDrawable(root.context, viewState.feedItemDetail?.episodeTypeImage ?: R_common.drawable.ic_podcast_type))
             textViewEpisodeType.text = viewState.feedItemDetail?.episodeTypeText
             textViewEpisodeDate.text = viewState.feedItemDetail?.episodeDate
             textViewEpisodeDuration.text = viewState.feedItemDetail?.episodeDuration
@@ -699,7 +849,7 @@ internal class PodcastPlayerFragment : SideEffectFragment<
                         imageViewEpisodeDetailImage,
                         it,
                         ImageLoaderOptions.Builder()
-                            .placeholderResId(R.drawable.ic_podcast_placeholder)
+                            .placeholderResId(R_common.drawable.ic_podcast_placeholder)
                             .build()
                     )
                 }
@@ -720,14 +870,14 @@ internal class PodcastPlayerFragment : SideEffectFragment<
                     imageDownloadedEpisodeArrow.visible
                     progressBarEpisodeDownload.gone
                     buttonStop.gone
-                    textViewDownload.text = getString(R.string.episode_detail_erase)
+                    textViewDownload.text = getString(R_common.string.episode_detail_erase)
                 }
                 else {
                     buttonDownloadArrow.visible
                     imageDownloadedEpisodeArrow.gone
                     progressBarEpisodeDownload.gone
                     buttonStop.gone
-                    textViewDownload.text = getString(R.string.episode_detail_download)
+                    textViewDownload.text = getString(R_common.string.episode_detail_download)
                 }
             }
         }
@@ -738,11 +888,11 @@ internal class PodcastPlayerFragment : SideEffectFragment<
             if (viewState.feedItemDetail?.played == true) {
                 buttonCheckMarkPlayed.visible
                 buttonCheckMark.invisible
-                textViewCheckMark.text = getString(R.string.episode_detail_upplayed)
+                textViewCheckMark.text = getString(R_common.string.episode_detail_upplayed)
             } else {
                 buttonCheckMarkPlayed.invisible
                 buttonCheckMark.visible
-                textViewCheckMark.text = getString(R.string.episode_detail_played)
+                textViewCheckMark.text = getString(R_common.string.episode_detail_played)
             }
         }
     }

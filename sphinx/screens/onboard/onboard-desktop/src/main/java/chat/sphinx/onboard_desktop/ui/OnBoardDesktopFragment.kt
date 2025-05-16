@@ -11,7 +11,6 @@ import chat.sphinx.insetter_activity.addStatusBarPadding
 import chat.sphinx.onboard_common.model.OnBoardInviterData
 import chat.sphinx.onboard_desktop.R
 import chat.sphinx.onboard_desktop.databinding.FragmentOnBoardDesktopBinding
-import chat.sphinx.onboard_desktop.navigation.inviterData
 import chat.sphinx.resources.SphinxToastUtils
 import dagger.hilt.android.AndroidEntryPoint
 import io.matthewnelson.android_feature_screens.navigation.CloseAppOnBackPress
@@ -29,8 +28,6 @@ internal class OnBoardDesktopFragment: BaseFragment<
     override val viewModel: OnBoardDesktopViewModel by viewModels()
     override val binding: FragmentOnBoardDesktopBinding by viewBinding(FragmentOnBoardDesktopBinding::bind)
 
-    private val inviterData: OnBoardInviterData by lazy(LazyThreadSafetyMode.NONE) { args.inviterData }
-
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -46,7 +43,7 @@ internal class OnBoardDesktopFragment: BaseFragment<
             }
 
             buttonDesktopSkip.setOnClickListener {
-                viewModel.nextScreen(inviterData)
+                viewModel.nextScreen()
             }
         }
     }

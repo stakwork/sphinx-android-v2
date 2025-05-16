@@ -86,7 +86,7 @@
     <dimen name="dashboard_save_profile_popup_progress_bar_zy">32dp</dimen>
 
     <dimen name="dashboard_connect_popup_width">260dp</dimen>
-    <dimen name="dashboard_connect_popup_height">420dp</dimen>
+    <dimen name="dashboard_connect_popup_height">300dp</dimen>
     <dimen name="dashboard_connect_popup_profile_pic_xy">100dp</dimen>
     <dimen name="dashboard_connect_popup_profile_pic_margin_top">30dp</dimen>
     <dimen name="dashboard_connect_popup_name_text_size">17sp</dimen>

@@ -4,6 +4,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.annotation.ColorInt
 import chat.sphinx.chat_common.R
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.chat_common.databinding.LayoutMessageStatusHeaderBinding
 import chat.sphinx.concept_image_loader.Disposable
 import chat.sphinx.concept_image_loader.ImageLoader
@@ -45,6 +46,7 @@ sealed class InitialHolderViewState {
     data class Initials(
         val initials: String,
         val colorKey: String,
+        val isPending: Boolean = false
     ): InitialHolderViewState() {
         override suspend fun setInitialHolder(
             textViewInitials: TextView,
@@ -60,7 +62,7 @@ sealed class InitialHolderViewState {
 
             textViewInitials.setInitialsColor(
                 color,
-                R.drawable.chat_initials_circle
+                R_common.drawable.chat_initials_circle
             )
             return null
         }
@@ -81,7 +83,7 @@ sealed class InitialHolderViewState {
                 imageViewPicture,
                 photoUrl.value,
                 ImageLoaderOptions.Builder()
-                    .placeholderResId(R.drawable.ic_profile_avatar_circle)
+                    .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
                     .transformation(Transformation.CircleCrop)
                     .build()
             )

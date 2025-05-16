@@ -16,6 +16,7 @@ import chat.sphinx.dashboard.R
 import chat.sphinx.dashboard.databinding.LayoutFeedRecommendationRowHolderBinding
 import chat.sphinx.dashboard.ui.feed.FeedRecommendationsViewModel
 import chat.sphinx.wrapper_podcast.FeedRecommendation
+import chat.sphinx.resources.R as R_common
 import io.matthewnelson.android_feature_viewmodel.util.OnStopSupervisor
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
 import kotlinx.coroutines.Job
@@ -139,19 +140,19 @@ class FeedRecommendationsAdapter(
 
     private val imagePodcastLoaderOptions: ImageLoaderOptions by lazy {
         ImageLoaderOptions.Builder()
-            .placeholderResId(R.drawable.ic_podcast_placeholder)
+            .placeholderResId(R_common.drawable.ic_podcast_placeholder)
             .build()
     }
 
     private val imageVideoLoaderOptions: ImageLoaderOptions by lazy {
         ImageLoaderOptions.Builder()
-            .placeholderResId(R.drawable.ic_video_placeholder)
+            .placeholderResId(R_common.drawable.ic_video_placeholder)
             .build()
     }
 
     private val imageNewsletterLoaderOptions: ImageLoaderOptions by lazy {
         ImageLoaderOptions.Builder()
-            .placeholderResId(R.drawable.ic_newsletter_placeholder)
+            .placeholderResId(R_common.drawable.ic_newsletter_placeholder)
             .build()
     }
 
@@ -234,23 +235,23 @@ class FeedRecommendationsAdapter(
 
 inline fun FeedRecommendation.getPlaceHolderImageRes(): Int {
     if (isMusicClip) {
-        return R.drawable.ic_podcast_placeholder
+        return R_common.drawable.ic_podcast_placeholder
     }
     if (isYouTubeVideo) {
-        return R.drawable.ic_video_placeholder
+        return R_common.drawable.ic_video_placeholder
     }
-    return R.drawable.ic_podcast_placeholder
+    return R_common.drawable.ic_podcast_placeholder
 }
 
 inline fun FeedRecommendation.getIconType(): Int {
     if (isTwitterSpace) {
-        return R.drawable.ic_twitter_space_type
+        return R_common.drawable.ic_twitter_space_type
     }
     if (isPodcast) {
-        return R.drawable.ic_podcast_type
+        return R_common.drawable.ic_podcast_type
     }
     if (isYouTubeVideo) {
-        return R.drawable.ic_youtube_type
+        return R_common.drawable.ic_youtube_type
     }
-    return R.drawable.ic_podcast_type
+    return R_common.drawable.ic_podcast_type
 }

@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.constraintlayout.motion.widget.MotionLayout
@@ -26,6 +27,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import dev.chrisbanes.insetter.applyInsetter
 import io.matthewnelson.android_feature_navigation.requests.PopBackStack
 import io.matthewnelson.android_feature_viewmodel.updateViewState
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import chat.sphinx.resources.R as R_common
 
@@ -71,6 +73,9 @@ class MainActivity: MotionLayoutNavigationActivity<
         private var statusBarInsets: InsetPadding? = null
         private var navigationBarInsets: InsetPadding? = null
         private var keyboardInsets: InsetPadding? = null
+
+        var isAppCompletelyClosed: Boolean = true
+        var isAppInForeground: Boolean = false
 
         var isActive = false
     }
@@ -124,8 +129,12 @@ class MainActivity: MotionLayoutNavigationActivity<
         askNotificationPermission()
         addWindowInsetChangeListener()
 
-        intent.extras?.getString("chat_id")?.toLongOrNull()?.let { chatId ->
-            handlePushNotification(chatId)
+        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+        intent.extras?.getString("child")?.let { chatId ->
+            viewModel.connectManagerRepository.getChatIdByEncryptedChild(chatId).firstOrNull()?.let {
+                handlePushNotification(it.value)
+            }
+        }
         }
     }
 
@@ -172,8 +181,16 @@ class MainActivity: MotionLayoutNavigationActivity<
 
     override fun onResume() {
         super.onResume()
-
+        viewModel.connectManagerRepository.attemptReconnectOnResume()
         isActive = true
+
+        isAppInForeground = true
+        isAppCompletelyClosed = false
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        isAppCompletelyClosed = !isAppInForeground
     }
 
     override fun onStop() {
@@ -317,6 +334,8 @@ class MainActivity: MotionLayoutNavigationActivity<
         viewModel.getDeleteExcessFileIfApplicable()
 
         isActive = false
+        isAppInForeground = false
+
     }
 
     override var isKeyboardVisible: Boolean = false

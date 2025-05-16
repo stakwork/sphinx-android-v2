@@ -8,6 +8,7 @@ import chat.sphinx.concept_repository_message.MessageRepository
 import chat.sphinx.concept_repository_message.model.SendPayment
 import chat.sphinx.kotlin_response.Response
 import chat.sphinx.payment_template.R
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.payment_template.navigation.PaymentTemplateNavigator
 import chat.sphinx.payment_template.ui.viewstate.PaymentTemplateViewState
 import chat.sphinx.payment_template.ui.viewstate.SelectedTemplateViewState
@@ -137,7 +138,7 @@ internal class PaymentTemplateViewModel @Inject constructor(
                 is Response.Error -> {
                     submitSideEffect(
                         PaymentTemplateSideEffect.Notify(
-                            String.format(app.getString(R.string.error_payment_message), response.cause.message))
+                            String.format(app.getString(R_common.string.error_payment_message), response.cause.message))
                     )
                     viewStateContainer.updateViewState(PaymentTemplateViewState.PaymentFailed)
                 }

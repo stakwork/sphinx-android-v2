@@ -14,6 +14,7 @@ import chat.sphinx.concept_image_loader.ImageLoader
 import chat.sphinx.concept_image_loader.ImageLoaderOptions
 import chat.sphinx.resources.getString
 import chat.sphinx.tribe_badge.R
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.tribe_badge.databinding.LayoutBadgesListItemHolderBinding
 import chat.sphinx.tribe_badge.databinding.LayoutManageBadgesLabelItemHolderBinding
 import chat.sphinx.tribe_badge.model.TribeBadgeHolder
@@ -202,7 +203,7 @@ internal class TribeBadgesListAdapter(
 
     private val imageLoaderOptions: ImageLoaderOptions by lazy {
         ImageLoaderOptions.Builder()
-            .placeholderResId(R.drawable.ic_tribe)
+            .placeholderResId(R_common.drawable.ic_tribe)
             .build()
     }
 
@@ -230,12 +231,12 @@ internal class TribeBadgesListAdapter(
                     }
                 } ?: run {
                     imageViewBadgeImage.setImageDrawable(
-                        ContextCompat.getDrawable(root.context, R.drawable.ic_tribe)
+                        ContextCompat.getDrawable(root.context, R_common.drawable.ic_tribe)
                     )
                 }
 
                 val badgesAmount = (tribeBadgeHolder?.badge?.amountCreated?.minus(tribeBadgeHolder.badge.amountIssued ?: 0)).toString()
-                val badgesLeft = String.format(getString(R.string.badges_left), tribeBadgeHolder?.badge?.amountCreated)
+                val badgesLeft = String.format(getString(R_common.string.badges_left), tribeBadgeHolder?.badge?.amountCreated)
 
                 textViewBadgeTitle.text = tribeBadgeHolder?.badge?.name ?: ""
                 textViewBadgeDescription.text = tribeBadgeHolder?.badge?.description ?: ""
@@ -245,16 +246,16 @@ internal class TribeBadgesListAdapter(
 
 
                 if (tribeBadgeHolder?.badge?.isActive == true) {
-                    layoutButtonTemplate.textViewButtonSmall.text = getString(R.string.badges_active)
+                    layoutButtonTemplate.textViewButtonSmall.text = getString(R_common.string.badges_active)
                     layoutButtonTemplate.layoutConstraintButtonSmall.background =
-                        ContextCompat.getDrawable(root.context, R.drawable.background_button_open_white)
-                    layoutButtonTemplate.textViewButtonSmall.setTextColor(ContextCompat.getColor(root.context, R.color.headerBG))
+                        ContextCompat.getDrawable(root.context, R_common.drawable.background_button_open_white)
+                    layoutButtonTemplate.textViewButtonSmall.setTextColor(ContextCompat.getColor(root.context, R_common.color.headerBG))
                 }
                 else {
-                    layoutButtonTemplate.textViewButtonSmall.text = getString(R.string.badges_inactive)
+                    layoutButtonTemplate.textViewButtonSmall.text = getString(R_common.string.badges_inactive)
                     layoutButtonTemplate.layoutConstraintButtonSmall.background =
-                        ContextCompat.getDrawable(root.context, R.drawable.background_button_open)
-                    layoutButtonTemplate.textViewButtonSmall.setTextColor(ContextCompat.getColor(root.context, R.color.secondaryText))
+                        ContextCompat.getDrawable(root.context, R_common.drawable.background_button_open)
+                    layoutButtonTemplate.textViewButtonSmall.setTextColor(ContextCompat.getColor(root.context, R_common.color.secondaryText))
                 }
 
                 binding.root.setOnClickListener {
@@ -306,18 +307,18 @@ internal class TribeBadgesListAdapter(
                     }
                 } ?: run {
                     imageViewBadgeImage.setImageDrawable(
-                        ContextCompat.getDrawable(root.context, R.drawable.ic_tribe)
+                        ContextCompat.getDrawable(root.context, R_common.drawable.ic_tribe)
                     )
                 }
-                val labelDescription = getString(R.string.badges_template_description)
-                val earnOrSpendRes = if (tribeBadgeHolder?.badgeTemplate?.rewardType == 1) R.string.badges_earn else R.string.badges_spend
+                val labelDescription = getString(R_common.string.badges_template_description)
+                val earnOrSpendRes = if (tribeBadgeHolder?.badgeTemplate?.rewardType == 1) R_common.string.badges_earn else R_common.string.badges_spend
                 val earnOrSpend = getString(earnOrSpendRes)
                 val templateDescription = String.format(labelDescription, earnOrSpend, tribeBadgeHolder?.badgeTemplate?.rewardRequirement)
 
                 textViewBadgeTitle.text = tribeBadgeHolder?.badgeTemplate?.name ?: ""
                 textViewBadgeDescription.text = templateDescription
-                layoutButtonTemplate.textViewButtonSmall.text = getString(R.string.badges_template)
-                layoutButtonTemplate.layoutConstraintButtonSmall.background = ContextCompat.getDrawable(root.context, R.drawable.background_button_join)
+                layoutButtonTemplate.textViewButtonSmall.text = getString(R_common.string.badges_template)
+                layoutButtonTemplate.layoutConstraintButtonSmall.background = ContextCompat.getDrawable(root.context, R_common.drawable.background_button_join)
                 layoutButtonTemplate.textViewButtonSmall.textSize = 10F
                 textViewBadgesRowCount.invisible
                 textViewBadgesLeft.invisible

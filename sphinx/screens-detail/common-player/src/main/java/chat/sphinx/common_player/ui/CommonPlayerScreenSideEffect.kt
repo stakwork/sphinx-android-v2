@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.annotation.StringRes
 import androidx.fragment.app.FragmentActivity
 import chat.sphinx.common_player.R
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.resources.SphinxToastUtils
 import io.matthewnelson.android_feature_toast_utils.show
 import io.matthewnelson.concept_views.sideeffect.SideEffect
@@ -40,12 +41,12 @@ import io.matthewnelson.concept_views.sideeffect.SideEffect
 
         object BalanceTooLow : Notify() {
             override val stringRes: Int
-                get() = R.string.balance_too_low
+                get() = R_common.string.balance_too_low
         }
 
         object BoostAmountTooLow : Notify() {
             override val stringRes: Int
-                get() = R.string.boost_amount_too_low
+                get() = R_common.string.boost_amount_too_low
         }
 
         class CopyClipboardLink(override val stringRes: Int

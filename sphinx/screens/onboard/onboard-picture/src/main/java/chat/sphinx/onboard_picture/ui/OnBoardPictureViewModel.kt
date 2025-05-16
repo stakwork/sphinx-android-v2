@@ -49,24 +49,6 @@ internal class OnBoardPictureViewModel @Inject constructor(
         } else {
             initViewModel = true
         }
-
-        refreshJob = if (refreshContacts) {
-            viewModelScope.launch(mainImmediate) {
-                contactRepository.networkRefreshContacts.collect { response ->
-                    @Exhaustive
-                    when (response) {
-                        is LoadResponse.Loading -> {
-                        }
-                        is Response.Error -> {
-                        }
-                        is Response.Success -> {
-                        }
-                    }
-                }
-            }
-        } else {
-            null
-        }
     }
 
     private var nextScreenJob: Job? = null
@@ -76,13 +58,7 @@ internal class OnBoardPictureViewModel @Inject constructor(
         }
 
         nextScreenJob = viewModelScope.launch {
-            val step4 = onBoardStepHandler.persistOnBoardStep4Data(inviterData)
-
-            if (step4 != null) {
-                navigator.toOnBoardDesktopScreen(step4)
-            } else {
-                // TODO: Handle Persistence Error
-            }
+            navigator.toOnBoardDesktopScreen()
         }
     }
 

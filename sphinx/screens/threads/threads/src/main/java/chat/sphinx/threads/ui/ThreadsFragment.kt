@@ -18,6 +18,7 @@ import chat.sphinx.concept_user_colors_helper.UserColorsHelper
 import chat.sphinx.insetter_activity.InsetterActivity
 import chat.sphinx.insetter_activity.addStatusBarPadding
 import chat.sphinx.threads.R
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.threads.adapter.ThreadsAdapter
 import chat.sphinx.threads.adapter.ThreadsFooterAdapter
 import chat.sphinx.threads.databinding.FragmentThreadsBinding
@@ -90,7 +91,7 @@ internal class ThreadsFragment: SideEffectFragment<
         binding.apply {
             includeLayoutDetailScreenAlternativeHeader.apply {
                 constraintLayoutDeleteElementContainerTrash.gone
-                textViewHeader.text = getString(R.string.threads_header)
+                textViewHeader.text = getString(R_common.string.threads_header)
                 textViewDetailScreenClose.setOnClickListener {
                     popBackStack()
                 }

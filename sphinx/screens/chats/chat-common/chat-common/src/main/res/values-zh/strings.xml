@@ -34,7 +34,7 @@
 
     <string name="request_expired">請求已過期</string>
     <string name="request_expiration">過期時間：%s</string>
-    <string name="invoice_paid_on">發票付款時間 %s</string>
+    <string name="invoice_paid_on">%s 的發票於 %s 支付</string>
     <string name="alert_confirm_pay_chat_invoice_title">確認是否付款</string>
     <string name="alert_confirm_pay_chat_invoice_message">確認支付該發票？</string>
 
@@ -181,6 +181,9 @@
     <string name="message_pinned">已置頂訊息</string>
     <string name="message_unpinned">已取消置頂訊息</string>
     <string name="pin_message_error">出錯，請稍後再試</string>
+
+    <string name="chat_placeholder_invited">Invited on %s</string>
+    <string name="chat_placeholder_secure">Messages and calls are secured\nwith end to end encryption</string>
 
     <string name="cancel_search">取消</string>
 

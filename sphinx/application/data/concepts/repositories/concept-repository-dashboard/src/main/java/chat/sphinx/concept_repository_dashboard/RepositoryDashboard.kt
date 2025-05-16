@@ -43,7 +43,7 @@ interface RepositoryDashboard {
     fun getInviteById(inviteId: InviteId): Flow<Invite?>
 
     suspend fun payForInvite(invite: Invite)
-    suspend fun deleteInvite(invite: Invite): Response<Any, ResponseError>
+    suspend fun deleteInviteAndContact(inviteString: String)
 
     fun getAllFeedsOfType(feedType: FeedType): Flow<List<Feed>>
     fun getAllSubscribedFeedsOfType(feedType: FeedType): Flow<List<Feed>>
@@ -52,13 +52,6 @@ interface RepositoryDashboard {
     fun getAllSubscribedFeeds(): Flow<List<Feed>>
 
     fun getRecommendedFeeds(): Flow<List<FeedRecommendation>>
-
-    suspend fun authorizeExternal(
-        relayUrl: String,
-        host: String,
-        challenge: String
-    ): Response<Boolean, ResponseError>
-
     suspend fun authorizeStakwork(
         host: String,
         id: String,
@@ -78,21 +71,9 @@ interface RepositoryDashboard {
         body: String
     ): Response<Boolean, ResponseError>
 
-    suspend fun redeemBadgeToken(
-        body: String
-    ): Response<Boolean, ResponseError>
-
     val networkRefreshBalance: MutableStateFlow<Long?>
-    val networkRefreshContacts: Flow<LoadResponse<Boolean, ResponseError>>
-    val networkRefreshLatestContacts: Flow<LoadResponse<RestoreProgress, ResponseError>>
-    val networkRefreshFeedContent: Flow<LoadResponse<RestoreProgress, ResponseError>>
-    val networkRefreshMessages: Flow<LoadResponse<RestoreProgress, ResponseError>>
 
     suspend fun didCancelRestore()
-
-    fun getAndSaveTransportKey(forceGet: Boolean = false)
-    fun saveTransportKey()
-    fun getOrCreateHMacKey(forceGet: Boolean = false)
 
     suspend fun clearDatabase()
 }

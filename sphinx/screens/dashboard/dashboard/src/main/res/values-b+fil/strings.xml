@@ -62,6 +62,7 @@
     <string name="last_message_description_has_join_tribe">%s sumali sa tribe</string>
     <string name="last_message_description_just_left_tribe">%s umalis sa tribe</string>
     <string name="last_message_description_wants_to_join">%s gustong sumali sa tribe</string>
+    <string name="last_message_description_member_kicked">You have removed a member from this tribe</string>
     <string name="last_message_description_declined_request_from">Tinanggihan mo ang kahilingan mula sa %s</string>
     <string name="last_message_description_approved_request_from">Tinanggap mo ang kahilingan mula sa %s</string>
     <string name="last_message_description_admin_declined_request">Tinanggihan ng admin ang iyong kahilingan</string>
@@ -81,6 +82,7 @@
     <string name="dashboard_authorize_popup_title">Gusto mo bang mag-authorize gamit ang:</string>
     <string name="dashboard_authorize_button">I-AUTHORIZE</string>
     <string name="dashboard_authorize_generic_error">May mali sa pag-authorize ng external source, pakisubukan muli mamaya</string>
+    <string name="dashboard_authorize_success">Matagumpay kang naka-log in</string>
 
     <string name="dashboard_redeem_sats_popup_title">I-redeem ang %s sats mula sa:</string>
     <string name="dashboard_redeem_sats_button">Kumpirmahin</string>
@@ -91,8 +93,9 @@
     <string name="dashboard_connect_initial_message_hint">Inisyal na mensahe kay %s</string>
     <string name="dashboard_connect_retrieve_person_data_error">Nabigo na i-retrieve ang impormasyon ng tao</string>
     <string name="dashboard_connect_message_empty">Hindi pwedeng walang laman ang mensahe</string>
-
     <string name="dashboard_connect_generic_error">May mali habang kumokonekta sa user, pakisubukan muli mamaya</string>
+    <string name="dashboard_connect_existing_contact">Naka konekta ka na sa taong ito</string>
+    <string name="dashboard_connect_invalid_public_key">Di-wastong Public Key</string>
 
     <string name="dashboard_network_disconnected_node_toast">Na-disconnect na node</string>
     <string name="dashboard_network_connected_node_toast">Kunektadong node</string>
@@ -163,4 +166,6 @@
 
     <string name="time_left">%s natitira</string>
     <string name="dashboard_invite_code_screen">INVITE CODE</string>
+
+    <string name="dashboard_enter_personal_info">Ilagay ang iyong palayaw at isang opsyonal na larawan sa profile\nupang tapusin ang pag-set up ng iyong Profile</string>
 </resources>

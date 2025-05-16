@@ -24,7 +24,9 @@ internal class FeedItemDboPodcastEpisodePresenterMapper(
             enclosureType =  value.enclosure_type,
             podcastId = value.feed_id,
             localFile = value.local_file,
-            date = value.date_published
+            date = value.date_published,
+            referenceId = value.reference_id,
+            chaptersData = value.chapters_data
         )
     }
 
@@ -40,7 +42,9 @@ internal class FeedItemDboPodcastEpisodePresenterMapper(
             enclosureType =  value.enclosure_type,
             podcastId = value.feed_id,
             localFile = value.local_file,
-            date = value.date_published
+            date = value.date_published,
+            referenceId = value.reference_id,
+            chaptersData = value.chapters_data
         )
     }
 
@@ -61,7 +65,9 @@ internal class FeedItemDboPodcastEpisodePresenterMapper(
             thumbnail_url = null,
             link = value.link,
             feed_id = value.podcastId,
-            local_file = value.localFile
+            local_file = value.localFile,
+            reference_id = null,
+            chapters_data = null
         )
     }
 }

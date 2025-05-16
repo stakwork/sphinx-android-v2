@@ -5,17 +5,15 @@ import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
-import androidx.navigation.fragment.navArgs
 import by.kirich1409.viewbindingdelegate.viewBinding
 import chat.sphinx.insetter_activity.InsetterActivity
 import chat.sphinx.insetter_activity.addNavigationBarPadding
 import chat.sphinx.insetter_activity.addStatusBarPadding
 import chat.sphinx.kotlin_response.LoadResponse
 import chat.sphinx.kotlin_response.Response
-import chat.sphinx.onboard_common.model.OnBoardInviterData
 import chat.sphinx.onboard_ready.R
+import chat.sphinx.onboard_resources.R as R_onboard_resources
 import chat.sphinx.onboard_ready.databinding.FragmentOnBoardReadyBinding
-import chat.sphinx.onboard_ready.navigation.inviterData
 import chat.sphinx.resources.SphinxToastUtils
 import dagger.hilt.android.AndroidEntryPoint
 import io.matthewnelson.android_feature_screens.navigation.CloseAppOnBackPress
@@ -37,8 +35,6 @@ internal class OnBoardReadyFragment: SideEffectFragment<
         FragmentOnBoardReadyBinding
         >(R.layout.fragment_on_board_ready)
 {
-    private val args: OnBoardReadyFragmentArgs by navArgs()
-    private val inviterData: OnBoardInviterData by lazy(LazyThreadSafetyMode.NONE) { args.inviterData }
 
     override val viewModel: OnBoardReadyViewModel by viewModels()
     override val binding: FragmentOnBoardReadyBinding by viewBinding(FragmentOnBoardReadyBinding::bind)
@@ -52,40 +48,20 @@ internal class OnBoardReadyFragment: SideEffectFragment<
             .enableDoubleTapToClose(viewLifecycleOwner, SphinxToastUtils())
             .addCallback(viewLifecycleOwner, requireActivity())
 
-        binding.balanceTextView.text = getString(R.string.sphinx_ready_loading_balance)
+        binding.balanceTextView.text = getString(R_onboard_resources.string.sphinx_ready_loading_balance)
 
         lifecycleScope.launch(viewModel.mainImmediate) {
-            viewModel.getBalances().collect { loadResponse ->
-                @Exhaustive
-                when (loadResponse) {
-                    LoadResponse.Loading -> {}
-                    is Response.Error -> {
-                        viewModel.updateViewState(OnBoardReadyViewState.Error)
-                        viewModel.submitSideEffect(OnBoardReadySideEffect.CreateInviterFailed)
-                    }
-                    is Response.Success -> {
-                        val balance = loadResponse.value
-                        binding.balanceTextView.text = getString(R.string.sphinx_ready_balance_label, balance.localBalance.value, balance.remoteBalance.value)
-                    }
+            viewModel.getBalances().collect { nodeBalance ->
+                val balance = nodeBalance?.balance?.value
+
+                if (balance != null) {
+                    binding.balanceTextView.text = String.format(getString(R_onboard_resources.string.sphinx_ready_balance_label), balance)
                 }
             }
         }
 
         binding.buttonContinue.setOnClickListener {
-            viewModel.updateViewState(OnBoardReadyViewState.Saving)
-
-            val nickname = inviterData.nickname
-            val pubkey = inviterData.pubkey
-            val routeHint = inviterData.routeHint
-            val inviteString = inviterData.pin
-
-            if (nickname != null && pubkey != null) {
-                viewModel.saveInviterAndFinish(nickname, pubkey.value, routeHint, inviteString)
-            } else if (inviteString != null){
-                viewModel.finishInvite(inviteString)
-            } else {
-                viewModel.finishSignup()
-            }
+            viewModel.finishSignup()
         }
     }
 

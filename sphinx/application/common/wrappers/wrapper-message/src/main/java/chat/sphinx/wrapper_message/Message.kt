@@ -8,9 +8,21 @@ import chat.sphinx.wrapper_common.dashboard.ContactId
 import chat.sphinx.wrapper_common.lightning.LightningPaymentHash
 import chat.sphinx.wrapper_common.lightning.LightningPaymentRequest
 import chat.sphinx.wrapper_common.lightning.Sat
-import chat.sphinx.wrapper_common.message.*
+import chat.sphinx.wrapper_common.message.CallLinkMessage
+import chat.sphinx.wrapper_common.message.MessageId
+import chat.sphinx.wrapper_common.message.MessageUUID
+import chat.sphinx.wrapper_common.message.RemoteTimezoneIdentifier
+import chat.sphinx.wrapper_common.message.SphinxCallLink
+import chat.sphinx.wrapper_common.message.isValidSphinxCallLink
+import chat.sphinx.wrapper_common.message.toSphinxCallLink
 import chat.sphinx.wrapper_common.time
-import chat.sphinx.wrapper_message_media.*
+import chat.sphinx.wrapper_message_media.MessageMedia
+import chat.sphinx.wrapper_message_media.isAudio
+import chat.sphinx.wrapper_message_media.isImage
+import chat.sphinx.wrapper_message_media.isPdf
+import chat.sphinx.wrapper_message_media.isSphinxText
+import chat.sphinx.wrapper_message_media.isUnknown
+import chat.sphinx.wrapper_message_media.isVideo
 import chat.sphinx.wrapper_message_media.token.MediaUrl
 
 @Suppress("NOTHING_TO_INLINE")
@@ -29,9 +41,6 @@ inline fun Message.retrieveTextToShow(): String? =
         if (isSphinxCallLink) {
             return null
         }
-        if (type.isBotRes()) {
-            return null
-        }
         if (type.isInvoice()) {
             return null
         }
@@ -43,7 +52,7 @@ inline fun Message.retrieveTextToShow(): String? =
 @Suppress("NOTHING_TO_INLINE")
 inline fun Message.retrieveInvoiceTextToShow(): String? =
     messageContentDecrypted?.let { decrypted ->
-        if (type.isInvoice() && !isExpiredInvoice) {
+        if (type.isInvoice() && !isExpiredInvoice()) {
             return decrypted.value
         }
         return null
@@ -244,7 +253,7 @@ inline fun Message.hasSameSenderThanMessage(message: Message): Boolean {
 inline fun Message.shouldAvoidGrouping(): Boolean {
     return status.isPending() || status.isFailed() || status.isDeleted() ||
             type.isInvoice() || type.isInvoicePayment() || type.isGroupAction() ||
-            flagged.isTrue()
+            flagged.isTrue() || remoteTimezoneIdentifier != null
 }
 
 //Message Actions
@@ -267,6 +276,10 @@ inline fun Message.isUnPinAllowed(chatPinnedMessage: MessageUUID?): Boolean {
     }
     return false
 }
+
+@Suppress("NOTHING_TO_INLINE")
+inline fun Message.isPaymentConfirmed(): Boolean =
+    (this.type.isDirectPayment() || this.type.isInvoicePayment()) && this.status is MessageStatus.Confirmed
 
 inline val Message.isBoostAllowed: Boolean
     get() = status.isReceived() &&
@@ -328,14 +341,32 @@ inline val Message.isDirectPayment: Boolean
 inline val Message.isPodcastClip: Boolean
     get() = podcastClip != null
 
-inline val Message.isExpiredInvoice: Boolean
-    get() = type.isInvoice() && !status.isConfirmed() && expirationDate != null && expirationDate!!.time < System.currentTimeMillis()
+//inline val Message.isExpiredInvoice: Boolean
+//    get() = type.isInvoice() && expirationDate != null && expirationDate!!.time < System.currentTimeMillis()
 
 inline val Message.isPaidInvoice: Boolean
     get() = type.isInvoice() && status.isConfirmed()
 
 inline val Message.isFlagged: Boolean
     get() = flagged.isTrue()
+
+fun Message.isExpiredInvoice(): Boolean {
+    val currentTimeMillis = System.currentTimeMillis()
+    val isInvoice = type.isInvoice()
+    val hasExpirationDate = expirationDate != null
+
+    if (hasExpirationDate) {
+        val expirationTimeMillis = expirationDate!!.time
+        // Ensure both timestamps are in milliseconds for accurate comparison
+        val currentTimeInSeconds = currentTimeMillis / 1000
+
+        val isExpired = expirationTimeMillis < currentTimeInSeconds
+        val result = isInvoice && isExpired
+        return result
+    } else {
+        return false
+    }
+}
 
 abstract class Message {
     abstract val id: MessageId
@@ -362,7 +393,9 @@ abstract class Message {
     abstract val person: MessagePerson?
     abstract val threadUUID: ThreadUUID?
     abstract val errorMessage: ErrorMessage?
+    abstract val tagMessage: TagMessage?
     abstract val isPinned: Boolean
+
 
     abstract val messageContentDecrypted: MessageContentDecrypted?
     abstract val messageDecryptionError: Boolean
@@ -376,6 +409,7 @@ abstract class Message {
     abstract val purchaseItems: List<Message>?
     abstract val replyMessage: Message?
     abstract val thread: List<Message>?
+    abstract val remoteTimezoneIdentifier: RemoteTimezoneIdentifier?
 
     override fun equals(other: Any?): Boolean {
         return  other                               is Message                      &&
@@ -489,8 +523,9 @@ abstract class Message {
                 "giphyData=$giphyData,reactions=$reactions,purchaseItems=$purchaseItems,"       +
                 "replyMessage=$replyMessage),recipientAlias=$recipientAlias,"                   +
                 "recipientPic=$recipientPic,person=$person,threadUUID=$threadUUID,"             +
-                "errorMessage=$errorMessage,"                                                    +
-                "callLink=$callLinkMessage,"                                                     +
+                "errorMessage=$errorMessage,"                                                   +
+                "tagMessage=${tagMessage}Message,"                                              +
+                "callLink=$callLinkMessage,"                                                    +
                 "isPinned=$isPinned"
     }
 }

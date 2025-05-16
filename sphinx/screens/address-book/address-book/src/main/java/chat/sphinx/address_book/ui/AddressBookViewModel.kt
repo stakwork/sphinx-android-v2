@@ -6,8 +6,10 @@ import androidx.lifecycle.viewModelScope
 import chat.sphinx.address_book.R
 import chat.sphinx.address_book.navigation.AddressBookNavigator
 import chat.sphinx.concept_repository_contact.ContactRepository
+import chat.sphinx.concept_repository_dashboard_android.RepositoryDashboardAndroid
 import chat.sphinx.wrapper_contact.Contact
 import chat.sphinx.wrapper_contact.isBlocked
+import chat.sphinx.wrapper_contact.isInviteContact
 import chat.sphinx.wrapper_contact.isTrue
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.matthewnelson.android_feature_viewmodel.SideEffectViewModel
@@ -25,7 +27,8 @@ internal class AddressBookViewModel @Inject constructor(
     private val app: Application,
     var addressBookNavigator: AddressBookNavigator,
     private val contactRepository: ContactRepository,
-): SideEffectViewModel<
+    private val repositoryDashboard: RepositoryDashboardAndroid<Any>
+    ): SideEffectViewModel<
         FragmentActivity,
         AddressBookSideEffect,
         AddressBookViewState,
@@ -50,7 +53,11 @@ internal class AddressBookViewModel @Inject constructor(
         submitSideEffect(
             AddressBookSideEffect.AlertConfirmDeleteContact {
                 viewModelScope.launch(mainImmediate) {
-                    contactRepository.deleteContactById(contact.id)
+                    if (contact.isInviteContact()) {
+                        deleteInviteWithContact(contact)
+                    } else {
+                        contactRepository.deleteContactById(contact.id)
+                    }
                 }
                 contactDeletedCallback()
             }
@@ -86,6 +93,16 @@ internal class AddressBookViewModel @Inject constructor(
             submitSideEffect(AddressBookSideEffect.Notify(
                 app.getString(R.string.swipe_left_to_delete))
             )
+        }
+    }
+
+    private fun deleteInviteWithContact(contact: Contact) {
+        viewModelScope.launch(mainImmediate) {
+            val invite = contact.inviteId?.let { repositoryDashboard.getInviteById(it).firstOrNull() }
+
+            if (invite != null) {
+                repositoryDashboard.deleteInviteAndContact(invite.inviteString.value)
+            }
         }
     }
 

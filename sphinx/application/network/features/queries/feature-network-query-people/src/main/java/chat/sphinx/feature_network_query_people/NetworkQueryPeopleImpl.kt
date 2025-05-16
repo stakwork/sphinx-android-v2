@@ -3,21 +3,12 @@ package chat.sphinx.feature_network_query_people
 import chat.sphinx.concept_network_query_people.NetworkQueryPeople
 import chat.sphinx.concept_network_query_people.model.*
 import chat.sphinx.concept_network_relay_call.NetworkRelayCall
-import chat.sphinx.feature_network_query_people.model.BadgeResponse
-import chat.sphinx.feature_network_query_people.model.GetBadgeTemplatesRelayResponse
-import chat.sphinx.feature_network_query_people.model.GetExistingBadgesRelayResponse
-import chat.sphinx.feature_network_query_people.model.SaveProfileResponse
 import chat.sphinx.kotlin_response.LoadResponse
 import chat.sphinx.kotlin_response.ResponseError
 import chat.sphinx.wrapper_common.chat.ChatUUID
-import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_message.MessagePerson
 import chat.sphinx.wrapper_message.host
 import chat.sphinx.wrapper_message.uuid
-import chat.sphinx.wrapper_relay.AuthorizationToken
-import chat.sphinx.wrapper_relay.RequestSignature
-import chat.sphinx.wrapper_relay.RelayUrl
-import chat.sphinx.wrapper_relay.TransportToken
 import kotlinx.coroutines.flow.Flow
 
 class NetworkQueryPeopleImpl(
@@ -25,7 +16,7 @@ class NetworkQueryPeopleImpl(
 ): NetworkQueryPeople() {
 
     companion object {
-        private const val TRIBES_DEFAULT_SERVER_URL = "https://tribes.sphinx.chat"
+        private const val TRIBES_DEFAULT_SERVER_URL = "https://people.sphinx.chat"
         private const val LIQUID_DEFAULT_SERVER_URL = "https://liquid.sphinx.chat"
 
         private const val ENDPOINT_SAVE_KEY = "https://%s/save/%s"
@@ -39,6 +30,7 @@ class NetworkQueryPeopleImpl(
         private const val ENDPOINT_TRIBE_DEACTIVATE_BADGE = "/remove_badge"
         private const val ENDPOINT_TRIBE_CREATE_BADGE = "/create_badge"
         private const val ENDPOINT_KNOWN_BADGES = "$LIQUID_DEFAULT_SERVER_URL/asset/filter"
+        private const val ENDPOINT_CALL_TOKEN = "https://chat.sphinx.chat/api/connection-details?roomName=%s&participantName=%s"
     }
 
     override fun getTribeMemberProfile(
@@ -64,32 +56,6 @@ class NetworkQueryPeopleImpl(
                 key
             ),
             responseJsonClass = GetExternalRequestDto::class.java,
-        )
-
-
-    override fun savePeopleProfile(
-        profile: PeopleProfileDto,
-        relayData: Triple<Pair<AuthorizationToken, TransportToken?>, RequestSignature?, RelayUrl>?
-    ): Flow<LoadResponse<Any, ResponseError>> =
-        networkRelayCall.relayPost(
-            relayEndpoint = ENDPOINT_PROFILE,
-            requestBody = profile,
-            requestBodyJsonClass = PeopleProfileDto::class.java,
-            responseJsonClass = SaveProfileResponse::class.java,
-            relayData = relayData
-        )
-
-    override fun deletePeopleProfile(
-        deletePeopleProfileDto: DeletePeopleProfileDto,
-        relayData: Triple<Pair<AuthorizationToken, TransportToken?>, RequestSignature?, RelayUrl>?
-    ): Flow<LoadResponse<Any, ResponseError>> =
-        networkRelayCall.relayDelete(
-            relayEndpoint = ENDPOINT_PROFILE,
-            requestBody = deletePeopleProfileDto,
-            requestBodyJsonClass = DeletePeopleProfileDto::class.java,
-            responseJsonClass = SaveProfileResponse::class.java,
-            relayData = relayData,
-            additionalHeaders = mapOf("Content-Type" to "application/json;charset=utf-8")
         )
 
     override fun getLeaderboard(
@@ -118,48 +84,22 @@ class NetworkQueryPeopleImpl(
             responseJsonClass = BadgeDto::class.java,
         )
 
-    override fun getBadgeTemplates(
-        relayData: Triple<Pair<AuthorizationToken, TransportToken?>, RequestSignature?, RelayUrl>?
-    ): Flow<LoadResponse<List<BadgeTemplateDto>, ResponseError>> =
-        networkRelayCall.relayGetList(
-            responseJsonClass = GetBadgeTemplatesRelayResponse::class.java,
-            relayEndpoint = ENDPOINT_TRIBE_BADGES_TEMPLATES,
-            useExtendedNetworkCallClient = true
+    override fun getLiveKitToken(
+        room: String,
+        alias: String,
+        profilePictureUrl: String?
+    ): Flow<LoadResponse<CallTokenDto, ResponseError>> {
+        profilePictureUrl?.let {
+            return networkRelayCall.get(
+                url = String.format(ENDPOINT_CALL_TOKEN, room, alias) + "&metadata={\"profilePictureUrl\":\"${it}\"}",
+                responseJsonClass = CallTokenDto::class.java,
+            )
+        }
+        return networkRelayCall.get(
+            url = String.format(ENDPOINT_CALL_TOKEN, room, alias),
+            responseJsonClass = CallTokenDto::class.java,
         )
 
-    override fun getUserExistingBadges(
-        chatId: ChatId,
-        relayData: Triple<Pair<AuthorizationToken, TransportToken?>, RequestSignature?, RelayUrl>?
-    ): Flow<LoadResponse<List<BadgeDto>, ResponseError>> =
-        networkRelayCall.relayGetList(
-            responseJsonClass = GetExistingBadgesRelayResponse::class.java,
-            relayEndpoint = String.format(ENDPOINT_TRIBE_EXISTING_BADGES, chatId.value),
-            useExtendedNetworkCallClient = true
-        )
-
-    override fun changeBadgeState(
-        badge: BadgeStateDto,
-        state: Boolean,
-        relayData: Triple<Pair<AuthorizationToken, TransportToken?>, RequestSignature?, RelayUrl>?
-    ): Flow<LoadResponse<Any, ResponseError>> =
-        networkRelayCall.relayPost(
-            relayEndpoint = if (state) ENDPOINT_TRIBE_ACTIVE_BADGE else ENDPOINT_TRIBE_DEACTIVATE_BADGE,
-            requestBody = badge,
-            requestBodyJsonClass = BadgeStateDto::class.java,
-            responseJsonClass = BadgeResponse::class.java,
-            relayData = relayData
-        )
-
-    override fun createBadge(
-        badge: BadgeCreateDto,
-        relayData: Triple<Pair<AuthorizationToken, TransportToken?>, RequestSignature?, RelayUrl>?
-    ): Flow<LoadResponse<Any, ResponseError>> =
-        networkRelayCall.relayPost(
-            relayEndpoint = ENDPOINT_TRIBE_CREATE_BADGE,
-            requestBody = badge,
-            requestBodyJsonClass = BadgeCreateDto::class.java,
-            responseJsonClass = BadgeResponse::class.java,
-            relayData = relayData
-        )
+    }
 
 }

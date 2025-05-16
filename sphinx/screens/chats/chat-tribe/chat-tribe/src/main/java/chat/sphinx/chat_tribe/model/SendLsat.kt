@@ -5,12 +5,18 @@ import com.squareup.moshi.Moshi
 
 @JsonClass(generateAdapter = true)
 data class SendLsat(
-    val password: String,
-    val budget: String,
     val type: String,
     val application: String,
-    val lsat: String?,
-    val success: Boolean
+    val password: String,
+    val macaroon: String?,
+    val paymentRequest: String?,
+    val preimage: String?,
+    val identifier: String?,
+    val paths: String?,
+    val status: String?,
+    val success: Int,
+    val budget: Long?,
+    val lsat: String?
 )
 
 
@@ -19,11 +25,17 @@ fun SendLsat.toJson(moshi: Moshi): String =
     moshi.adapter(SendLsat::class.java)
         .toJson(
             SendLsat(
-                password,
-                budget,
                 type,
                 application,
-                lsat,
-                success
+                password,
+                macaroon,
+                paymentRequest,
+                preimage,
+                identifier,
+                paths,
+                status,
+                success,
+                budget,
+                lsat
             )
         )

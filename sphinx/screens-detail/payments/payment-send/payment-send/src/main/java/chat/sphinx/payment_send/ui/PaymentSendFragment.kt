@@ -17,6 +17,7 @@ import chat.sphinx.payment_common.ui.PaymentFragment
 import chat.sphinx.payment_common.ui.PaymentSideEffect
 import chat.sphinx.payment_common.ui.viewstate.send.PaymentSendViewState
 import chat.sphinx.payment_send.R
+import chat.sphinx.payment_common.R as R_payment_common
 import chat.sphinx.payment_send.databinding.FragmentPaymentSendBinding
 import chat.sphinx.resources.databinding.LayoutAmountPadBinding
 import dagger.hilt.android.AndroidEntryPoint
@@ -88,7 +89,7 @@ internal class PaymentSendFragment: PaymentFragment<
             is PaymentSendViewState.ChatPayment -> {
                 binding.includeConstraintFromContact.root.visible
                 binding.includeConstraintMessage.root.visible
-                binding.includeConstraintConfirmButton.buttonConfirm.text = getString(R.string.confirm_button)
+                binding.includeConstraintConfirmButton.buttonConfirm.text = getString(R_payment_common.string.confirm_button)
 
                 setupDestination(contact = viewState.contact)
             }
@@ -96,7 +97,7 @@ internal class PaymentSendFragment: PaymentFragment<
             is PaymentSendViewState.TribePayment -> {
                 binding.includeConstraintFromContact.root.visible
                 binding.includeConstraintMessage.root.visible
-                binding.includeConstraintConfirmButton.buttonConfirm.text = getString(R.string.confirm_button)
+                binding.includeConstraintConfirmButton.buttonConfirm.text = getString(R_payment_common.string.confirm_button)
 
                 setupDestination(
                     memberAlias = viewState.memberAlias,
@@ -108,7 +109,7 @@ internal class PaymentSendFragment: PaymentFragment<
             is PaymentSendViewState.KeySendPayment -> {
                 binding.includeConstraintFromContact.root.invisible
                 binding.includeConstraintMessage.root.invisible
-                binding.includeConstraintConfirmButton.buttonConfirm.text = getString(R.string.continue_button)
+                binding.includeConstraintConfirmButton.buttonConfirm.text = getString(R_payment_common.string.continue_button)
             }
 
             is PaymentSendViewState.ProcessingPayment -> {

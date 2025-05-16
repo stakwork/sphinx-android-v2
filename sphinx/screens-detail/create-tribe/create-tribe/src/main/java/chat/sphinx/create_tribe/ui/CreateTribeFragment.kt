@@ -24,6 +24,7 @@ import chat.sphinx.menu_bottom.ui.MenuBottomViewState
 import chat.sphinx.menu_bottom_profile_pic.BottomMenuPicture
 import chat.sphinx.screen_detail_fragment.SideEffectDetailFragment
 import chat.sphinx.wrapper_common.feed.FeedType
+import chat.sphinx.resources.R as R_common
 import dagger.hilt.android.AndroidEntryPoint
 import io.matthewnelson.android_feature_screens.util.gone
 import io.matthewnelson.android_feature_screens.util.goneIfFalse
@@ -192,6 +193,9 @@ internal class CreateTribeFragment: SideEffectDetailFragment<
             editTextTribeAppUrl.addTextChangedListener {
                 viewModel.createTribeBuilder.setAppUrl(it.toString())
             }
+            editTextTribeSecondBrainUrl.addTextChangedListener {
+                viewModel.createTribeBuilder.setSecondBrainUrl(it.toString())
+            }
             editTextTribeFeedUrl.addTextChangedListener {
                 viewModel.createTribeBuilder.setFeedUrl(it.toString())
 
@@ -206,7 +210,7 @@ internal class CreateTribeFragment: SideEffectDetailFragment<
                 viewModel.createTribeBuilder.setUnlisted(!isChecked)
             }
             switchTribeApproveMembershipOnSphinx.setOnCheckedChangeListener { _, isChecked ->
-                viewModel.createTribeBuilder.setPrivate(!isChecked)
+                viewModel.createTribeBuilder.setPrivate(isChecked)
             }
 
             buttonCreateTribe.setOnClickListener {
@@ -261,7 +265,7 @@ internal class CreateTribeFragment: SideEffectDetailFragment<
             binding.imageViewTribePicture.setImageDrawable(
                 ContextCompat.getDrawable(
                 binding.root.context,
-                R.drawable.ic_tribe
+                    R_common.drawable.ic_tribe
             ))
             return
         }
@@ -271,7 +275,7 @@ internal class CreateTribeFragment: SideEffectDetailFragment<
                 binding.imageViewTribePicture,
                 url,
                 ImageLoaderOptions.Builder()
-                    .placeholderResId(R.drawable.ic_tribe)
+                    .placeholderResId(R_common.drawable.ic_tribe)
                     .transformation(Transformation.CircleCrop)
                     .build()
             )
@@ -339,6 +343,7 @@ internal class CreateTribeFragment: SideEffectDetailFragment<
 
                 binding.editTextTribeAppUrl.setText(viewState.appUrl ?: "")
                 binding.editTextTribeFeedUrl.setText(viewState.feedUrl ?: "")
+                binding.editTextTribeSecondBrainUrl.setText(viewState.secondBrainUrl ?: "")
 
                 viewState.feedTypeDescriptionRes?.let { feedTypeDescriptionResource ->
                     binding.textViewTribeFeedContentTypeValue.text = getString(
@@ -347,6 +352,7 @@ internal class CreateTribeFragment: SideEffectDetailFragment<
                 }
 
                 binding.switchTribeListingOnSphinx.isChecked = viewState.unlisted == false
+                binding.switchTribeApproveMembershipOnSphinx.isChecked = viewState.private == true
             }
         }
     }

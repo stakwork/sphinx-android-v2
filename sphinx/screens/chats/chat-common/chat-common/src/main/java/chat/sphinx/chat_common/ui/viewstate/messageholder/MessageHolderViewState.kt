@@ -6,9 +6,11 @@ import android.os.ParcelFileDescriptor.MODE_READ_ONLY
 import chat.sphinx.chat_common.model.MessageLinkPreview
 import chat.sphinx.chat_common.ui.viewstate.InitialHolderViewState
 import chat.sphinx.chat_common.ui.viewstate.selected.MenuItemState
-import chat.sphinx.chat_common.util.SphinxLinkify
+import chat.sphinx.highlighting_tool.SphinxLinkify
+import chat.sphinx.highlighting_tool.boldTexts
 import chat.sphinx.highlighting_tool.highlightedTexts
-import chat.sphinx.highlighting_tool.replacingHighlightedDelimiters
+import chat.sphinx.highlighting_tool.markDownLinkTexts
+import chat.sphinx.highlighting_tool.replacingMarkdown
 import chat.sphinx.wrapper_chat.Chat
 import chat.sphinx.wrapper_chat.isConversation
 import chat.sphinx.wrapper_chat.isTribe
@@ -55,7 +57,7 @@ internal val MessageHolderViewState.showSentBubbleArrow: Boolean
 
 internal sealed class MessageHolderViewState(
     val message: Message?,
-    chat: Chat,
+    val chat: Chat,
     private val tribeAdmin: Contact?,
     val messageHolderType: MessageHolderType,
     private val separatorDate: DateTime?,
@@ -70,6 +72,7 @@ internal sealed class MessageHolderViewState(
     private val paidTextAttachmentContentProvider: suspend (message: Message) -> LayoutState.Bubble.ContainerThird.Message?,
     private val onBindDownloadMedia: () -> Unit,
     private val onBindThreadDownloadMedia: () -> Unit,
+    private val memberTimezoneIdentifier: String?,
 ) {
 
     val isPinned: Boolean by lazy(LazyThreadSafetyMode.NONE) {
@@ -106,19 +109,34 @@ internal sealed class MessageHolderViewState(
             null
         } else {
             val isFirstBubble = (background is BubbleBackground.First)
-            val isInvoicePayment = (message.type.isInvoicePayment() && message.status.isConfirmed())
+            val isInvoicePayment = message.type.isInvoicePayment()
 
             if (isFirstBubble || isInvoicePayment) {
+
+                val messageTimestamp = message.date.time
+
+                val timezoneString: String? = if (chat.isTribe()) {
+                    if (!((message.remoteTimezoneIdentifier?.value ?: memberTimezoneIdentifier).isNullOrEmpty())) {
+                        (message.remoteTimezoneIdentifier?.value ?: memberTimezoneIdentifier)?.let {
+                            DateTime.getLocalTimeFor(it, message.date)
+                        }
+                    } else null
+                } else null
+
                 LayoutState.MessageStatusHeader(
                     if (chat.type.isConversation()) null else message.senderAlias?.value,
                     if (initialHolder is InitialHolderViewState.Initials) initialHolder.colorKey else message.getColorKey(),
                     this is Sent,
                     this is Sent && message.id.isProvisionalMessage && message.status.isPending(),
-                    this is Sent && (message.status.isReceived() || message.status.isConfirmed()),
+                    (this is Sent && (message.status.isReceived() || message.status.isConfirmed())) || (this !is Sent && message.type.isInvoice()),
+                    message.isPaymentConfirmed(),
                     this is Sent && message.status.isFailed(),
                     message.messageContentDecrypted != null || message.messageMedia?.mediaKeyDecrypted != null,
                     message.date.messageTimeFormat(),
-                    message.errorMessage?.value?.trim()
+                    message.errorMessage?.value?.trim(),
+                    messageTimestamp = messageTimestamp,
+                    showClockIcon = false,
+                    remoteTimezoneIdentifier = timezoneString
                 )
             } else {
                 null
@@ -134,9 +152,9 @@ internal sealed class MessageHolderViewState(
                 LayoutState.InvoiceExpirationHeader(
                     showExpirationReceivedHeader = !message.isPaidInvoice && this is Received,
                     showExpirationSentHeader = !message.isPaidInvoice && this is Sent,
-                    showExpiredLabel = message.isExpiredInvoice,
-                    showExpiresAtLabel = !message.isExpiredInvoice && !message.isPaidInvoice,
-                    expirationTimestamp = message.expirationDate?.invoiceExpirationTimeFormat(),
+                    showExpiredLabel = message.isExpiredInvoice(),
+                    showExpiresAtLabel = !message.isExpiredInvoice() && !message.isPaidInvoice,
+                    expirationTimestamp = message.expirationDate?.value?.let { it.time * 1000}?.toDateTime()?.invoiceExpirationTimeFormat(),
                 )
             } else {
                 null
@@ -168,7 +186,8 @@ internal sealed class MessageHolderViewState(
             if (message.type.isInvoicePayment()) {
                 LayoutState.InvoicePayment(
                     showSent = this is Sent,
-                    paymentDateString = message.date.invoicePaymentDateFormat()
+                    paymentDateString = message.date.invoicePaymentDateFormat(),
+                    amountString = message.amount.value.toString()
                 )
             } else {
                 null
@@ -203,15 +222,17 @@ internal sealed class MessageHolderViewState(
             null
         } else {
             if (message.type.isInvoice()) {
+                val isConfirmed = true
+
                 LayoutState.Bubble.ContainerSecond.Invoice(
-                    showSent = this is Sent,
+                    showSent = (this is Sent && !message.status.isConfirmed()) || (this !is Sent && message.status.isConfirmed()),
                     amount = message.amount,
                     text = message.retrieveInvoiceTextToShow() ?: "",
                     showPaidInvoiceBottomLine = message.isPaidInvoice,
-                    hideBubbleArrows = !message.isExpiredInvoice && !message.isPaidInvoice,
-                    showPayButton = !message.isExpiredInvoice && !message.isPaidInvoice && this is Received,
-                    showDashedBorder = !message.isExpiredInvoice && !message.isPaidInvoice,
-                    showExpiredLayout = message.isExpiredInvoice
+                    hideBubbleArrows = !message.isExpiredInvoice() && !message.isPaidInvoice,
+                    showPayButton = !message.isExpiredInvoice() && !message.isPaidInvoice && this is Received,
+                    showDashedBorder = !message.isExpiredInvoice() && !message.isPaidInvoice,
+                    showExpiredLayout = message.isExpiredInvoice() && !message.isPaidInvoice,
                 )
             } else {
                 null
@@ -228,8 +249,10 @@ internal sealed class MessageHolderViewState(
             message.retrieveTextToShow()?.let { text ->
                 if (text.isNotEmpty()) {
                     LayoutState.Bubble.ContainerThird.Message(
-                        text = text.replacingHighlightedDelimiters(),
+                        text = text.replacingMarkdown(),
                         highlightedTexts = text.highlightedTexts(),
+                        boldTexts = text.boldTexts(),
+                        markdownLinkTexts = text.markDownLinkTexts(),
                         decryptionError = false,
                         isThread = isThread
                     )
@@ -241,6 +264,8 @@ internal sealed class MessageHolderViewState(
                     LayoutState.Bubble.ContainerThird.Message(
                         text = null,
                         highlightedTexts = emptyList(),
+                        boldTexts = emptyList(),
+                        markdownLinkTexts = emptyList(),
                         decryptionError = true,
                         isThread = isThread
                     )
@@ -377,7 +402,9 @@ internal sealed class MessageHolderViewState(
             if (message.type.isBotRes()) {
                 message.retrieveBotResponseHtmlString()?.let { html ->
                     LayoutState.Bubble.ContainerSecond.BotResponse(
-                        html
+                        html,
+                        html.boldTexts(),
+                        html.markDownLinkTexts()
                     )
                 }
             } else {
@@ -837,6 +864,7 @@ internal sealed class MessageHolderViewState(
         paidTextMessageContentProvider: suspend (message: Message) -> LayoutState.Bubble.ContainerThird.Message?,
         onBindDownloadMedia: () -> Unit,
         onBindThreadDownloadMedia: () -> Unit,
+        memberTimezoneIdentifier: String?,
     ) : MessageHolderViewState(
         message,
         chat,
@@ -853,7 +881,8 @@ internal sealed class MessageHolderViewState(
         previewProvider,
         paidTextMessageContentProvider,
         onBindDownloadMedia,
-        onBindThreadDownloadMedia
+        onBindThreadDownloadMedia,
+        memberTimezoneIdentifier
     )
 
     class Received(
@@ -871,6 +900,7 @@ internal sealed class MessageHolderViewState(
         paidTextMessageContentProvider: suspend (message: Message) -> LayoutState.Bubble.ContainerThird.Message?,
         onBindDownloadMedia: () -> Unit,
         onBindThreadDownloadMedia: () -> Unit,
+        memberTimezoneIdentifier: String?,
     ) : MessageHolderViewState(
         message,
         chat,
@@ -888,6 +918,7 @@ internal sealed class MessageHolderViewState(
         paidTextMessageContentProvider,
         onBindDownloadMedia,
         onBindThreadDownloadMedia,
+        memberTimezoneIdentifier
     )
 
     class Separator(
@@ -915,13 +946,14 @@ internal sealed class MessageHolderViewState(
         previewProvider = { null },
         paidTextAttachmentContentProvider = { null },
         onBindDownloadMedia = {},
-        onBindThreadDownloadMedia = {}
+        onBindThreadDownloadMedia = {},
+        memberTimezoneIdentifier = null
     )
 
     class ThreadHeader(
         message: Message?,
         messageHolderType: MessageHolderType,
-        val chat: Chat,
+        chat: Chat,
         val tribeAdmin: Contact?,
         initialHolder: InitialHolderViewState,
         val messageSenderInfo: (Message) -> Triple<PhotoUrl?, ContactAlias?, String>?,
@@ -944,7 +976,8 @@ internal sealed class MessageHolderViewState(
         { null },
         { null },
         {},
-        {}
+        {},
+        null
     ) {
         fun copy(isExpanded: Boolean = this.isExpanded): ThreadHeader {
             return ThreadHeader(

@@ -155,10 +155,6 @@ internal class ChatListViewModel @Inject constructor(
                                     .firstOrNull() ?: continue
 
                                 if (contact.status is ContactStatus.Pending) {
-                                    newList.add(
-                                        DashboardChat.Inactive.Conversation(contact)
-                                    )
-
                                     if (contact.isInviteContact()) {
                                         var contactInvite: Invite? = null
 
@@ -172,6 +168,10 @@ internal class ChatListViewModel @Inject constructor(
                                                 DashboardChat.Inactive.Invite(contact, contactInvite)
                                             )
                                         }
+                                    } else {
+                                        newList.add(
+                                            DashboardChat.Inactive.Conversation(contact)
+                                        )
                                     }
                                 }
 
@@ -192,7 +192,7 @@ internal class ChatListViewModel @Inject constructor(
                                     DashboardChat.Active.GroupOrTribe(
                                         chat,
                                         message,
-                                        accountOwnerStateFlow.value,
+                                        accountOwnerStateFlow.value ?: getOwner(),
                                         repositoryDashboard.getUnseenMessagesByChatId(chat.id),
                                         repositoryDashboard.getUnseenMentionsByChatId(chat.id)
                                     )
@@ -200,48 +200,10 @@ internal class ChatListViewModel @Inject constructor(
                             }
                         }
                     }
-
-//                    if (contactsCollectionInitialized) {
-//                        withContext(default) {
-//                            for (contact in _contactsStateFlow.value) {
-//
-//                                if (!contactsAdded.contains(contact.id)) {
-//                                    if (contact.isInviteContact()) {
-//                                        var contactInvite: Invite? = null
-//
-//                                        contact.inviteId?.let { inviteId ->
-//                                            contactInvite = withContext(io) {
-//                                                repositoryDashboard.getInviteById(inviteId).firstOrNull()
-//                                            }
-//                                        }
-//                                        if (contactInvite != null) {
-//                                            newList.add(
-//                                                DashboardChat.Inactive.Invite(contact, contactInvite)
-//                                            )
-//                                            continue
-//                                        }
-//                                    }
-//                                    newList.add(
-//                                        DashboardChat.Inactive.Conversation(contact)
-//                                    )
-//                                }
-//                            }
-//                        }
-//                    }
                     chatViewStateContainer.updateDashboardChats(newList)
                 }
             }
         }
-
-        if (args.isChatListTypeConversation) {
-            viewModelScope.launch(mainImmediate) {
-                delay(50L)
-                repositoryDashboard.getAllInvites.distinctUntilChanged().collect {
-                    updateChatListContacts(_contactsStateFlow.value)
-                }
-            }
-        }
-
 
         viewModelScope.launch(mainImmediate) {
             val owner = getOwner()
@@ -443,7 +405,7 @@ internal class ChatListViewModel @Inject constructor(
         submitSideEffect(
             ChatListSideEffect.AlertConfirmDeleteInvite() {
                 viewModelScope.launch(mainImmediate) {
-                    repositoryDashboard.deleteInvite(invite)
+                    repositoryDashboard.deleteInviteAndContact(invite.inviteString.value)
                 }
             }
         )

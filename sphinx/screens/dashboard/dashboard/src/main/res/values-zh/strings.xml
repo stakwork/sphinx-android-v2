@@ -61,6 +61,7 @@
 
     <string name="last_message_description_has_join_tribe">%s 已加入部落</string>
     <string name="last_message_description_just_left_tribe">%s 已離開部落</string>
+    <string name="last_message_description_member_kicked">You have removed a member from this tribe</string>
     <string name="last_message_description_wants_to_join">%s 想加入部落</string>
     <string name="last_message_description_declined_request_from">你已拒絕來自 %s 的請求</string>
     <string name="last_message_description_approved_request_from">你已同意來自 %s 的請求</string>
@@ -81,6 +82,7 @@
     <string name="dashboard_authorize_popup_title">是否授權: </string>
     <string name="dashboard_authorize_button">授權</string>
     <string name="dashboard_authorize_generic_error">授權外部來源時出錯，請稍後再試</string>
+    <string name="dashboard_authorize_success">您已登入成功</string>
 
     <string name="dashboard_redeem_sats_popup_title">從以下來源領取 %s sats:</string>
     <string name="dashboard_redeem_sats_button">確認</string>
@@ -93,6 +95,8 @@
     <string name="dashboard_connect_retrieve_person_data_error">無法獲取個人資料</string>
     <string name="dashboard_connect_message_empty">訊息不可以是空的</string>
     <string name="dashboard_connect_generic_error">連接使用者時出錯，請稍後再試</string>
+    <string name="dashboard_connect_existing_contact">您已經與此人連接</string>
+    <string name="dashboard_connect_invalid_public_key">公鑰無效</string>
 
     <string name="dashboard_network_disconnected_node_toast">節點已斷開</string>
     <string name="dashboard_network_connected_node_toast">已連接到節點</string>
@@ -161,4 +165,6 @@
 
     <string name="time_left">剩餘 %s</string>
     <string name="dashboard_invite_code_screen">INVITE CODE</string>
+
+    <string name="dashboard_enter_personal_info">輸入您的暱稱和可選的個人資料圖片\n完成您的個人資料設置</string>
 </resources>

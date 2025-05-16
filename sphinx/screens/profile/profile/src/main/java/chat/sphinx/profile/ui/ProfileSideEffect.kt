@@ -9,9 +9,9 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import android.widget.FrameLayout
 import chat.sphinx.profile.R
-import chat.sphinx.resources.R as R_common
 import chat.sphinx.resources.SphinxToastUtils
 import chat.sphinx.wrapper_relay.RelayUrl
+import chat.sphinx.resources.R as R_common
 import io.matthewnelson.android_feature_toast_utils.show
 import io.matthewnelson.concept_views.sideeffect.SideEffect
 import java.util.*
@@ -20,7 +20,7 @@ internal sealed class ProfileSideEffect: SideEffect<Context>() {
 
     class CopyBackupToClipboard(private val keys: String): ProfileSideEffect() {
         override suspend fun execute(value: Context) {
-            val builder = AlertDialog.Builder(value, R.style.AlertDialogTheme)
+            val builder = AlertDialog.Builder(value, R_common.style.AlertDialogTheme)
             builder.setTitle(value.getString(R.string.profile_export_keys_title_alert))
             builder.setMessage(value.getString(R.string.profile_keys_copied_clipboard))
             builder.setPositiveButton(android.R.string.ok) { _, _ ->
@@ -73,13 +73,13 @@ internal sealed class ProfileSideEffect: SideEffect<Context>() {
     ): ProfileSideEffect() {
 
         override suspend fun execute(value: Context) {
-            val builder = AlertDialog.Builder(value, R.style.AlertDialogTheme)
+            val builder = AlertDialog.Builder(value, R_common.style.AlertDialogTheme)
             builder.setTitle(relayUrl.value)
-            builder.setMessage(value.getString(R.string.relay_url_http_message))
-            builder.setPositiveButton(R.string.relay_url_http_positive_change_to_https) { _, _ ->
+            builder.setMessage(value.getString(R_common.string.relay_url_http_message))
+            builder.setPositiveButton(R_common.string.relay_url_http_positive_change_to_https) { _, _ ->
                 callback.invoke(RelayUrl(relayUrl.value.replaceFirst("http://", "https://")))
             }
-            builder.setNegativeButton(R.string.relay_url_http_negative_keep_http) { _, _ ->
+            builder.setNegativeButton(R_common.string.relay_url_http_negative_keep_http) { _, _ ->
                 callback.invoke(relayUrl)
             }
             builder.setOnCancelListener {
@@ -142,12 +142,12 @@ internal sealed class ProfileSideEffect: SideEffect<Context>() {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
             )
-            params.leftMargin = value.resources.getDimensionPixelSize(R.dimen.default_layout_margin)
-            params.rightMargin = value.resources.getDimensionPixelSize(R.dimen.default_layout_margin)
+            params.leftMargin = value.resources.getDimensionPixelSize(R_common.dimen.default_layout_margin)
+            params.rightMargin = value.resources.getDimensionPixelSize(R_common.dimen.default_layout_margin)
             inputEditTextField.layoutParams = params
             container.addView(inputEditTextField)
 
-            val builder = AlertDialog.Builder(value, R.style.AlertDialogTheme)
+            val builder = AlertDialog.Builder(value, R_common.style.AlertDialogTheme)
             builder.setTitle(value.getString(R.string.github_pat_title))
             builder.setMessage(value.getString(R.string.github_pat_message))
             builder.setView(container)
@@ -185,7 +185,7 @@ internal sealed class ProfileSideEffect: SideEffect<Context>() {
     ): ProfileSideEffect() {
 
         override suspend fun execute(value: Context) {
-            val builder = AlertDialog.Builder(value, R.style.AlertDialogTheme)
+            val builder = AlertDialog.Builder(value, R_common.style.AlertDialogTheme)
             builder.setTitle(R.string.profile_delete_account)
             builder.setMessage(value.getString(R.string.profile_delete_account_description))
             builder.setPositiveButton(R_common.string.confirm) { _, _ ->

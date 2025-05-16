@@ -1,11 +1,13 @@
 package chat.sphinx.feature_coredb.adapters.chat
 
-import chat.sphinx.feature_coredb.adapters.common.DateTimeAdapter
 import chat.sphinx.wrapper_chat.*
-import chat.sphinx.wrapper_common.ItemId
 import chat.sphinx.wrapper_common.chat.ChatUUID
-import chat.sphinx.wrapper_common.feed.FeedId
-import chat.sphinx.wrapper_common.lightning.Sat
+import chat.sphinx.wrapper_common.message.RemoteTimezoneIdentifier
+import chat.sphinx.wrapper_chat.TimezoneEnabled
+import chat.sphinx.wrapper_chat.TimezoneIdentifier
+import chat.sphinx.wrapper_chat.TimezoneUpdated
+import chat.sphinx.wrapper_chat.toTimezoneEnabled
+import chat.sphinx.wrapper_chat.toTimezoneUpdated
 import com.squareup.moshi.Moshi
 import com.squareup.sqldelight.ColumnAdapter
 
@@ -138,4 +140,42 @@ internal class NotifyAdapter: ColumnAdapter<NotificationLevel, Long> {
     override fun encode(value: NotificationLevel): Long {
         return value.value.toLong()
     }
+}
+
+internal class SecondBrainUrlAdapter: ColumnAdapter<SecondBrainUrl, String> {
+    override fun decode(databaseValue: String): SecondBrainUrl {
+        return SecondBrainUrl(databaseValue)
+    }
+
+    override fun encode(value: SecondBrainUrl): String {
+        return value.value
+    }
+}
+
+internal class TimezoneEnabledAdapter : ColumnAdapter<TimezoneEnabled, Long> {
+    override fun decode(databaseValue: Long): TimezoneEnabled =
+        databaseValue.toInt().toTimezoneEnabled()
+
+    override fun encode(value: TimezoneEnabled): Long = value.value.toLong()
+}
+
+internal class TimezoneIdentifierAdapter : ColumnAdapter<TimezoneIdentifier, String> {
+    override fun decode(databaseValue: String): TimezoneIdentifier =
+        TimezoneIdentifier(databaseValue)
+
+    override fun encode(value: TimezoneIdentifier): String = value.value
+}
+
+internal class RemoteTimezoneIdentifierAdapter : ColumnAdapter<RemoteTimezoneIdentifier, String> {
+    override fun decode(databaseValue: String): RemoteTimezoneIdentifier =
+        RemoteTimezoneIdentifier(databaseValue)
+
+    override fun encode(value: RemoteTimezoneIdentifier): String = value.value
+}
+
+internal class TimezoneUpdatedAdapter : ColumnAdapter<TimezoneUpdated, Long> {
+    override fun decode(databaseValue: Long): TimezoneUpdated =
+        databaseValue.toInt().toTimezoneUpdated()
+
+    override fun encode(value: TimezoneUpdated): Long = value.value.toLong()
 }

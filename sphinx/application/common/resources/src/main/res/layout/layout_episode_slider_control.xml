@@ -1,42 +1,67 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/layout_constraint_episode_slider_control"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:paddingVertical="@dimen/default_layout_margin">
 
-
-    <androidx.appcompat.widget.AppCompatSeekBar
-        android:id="@+id/seek_bar_current_episode_progress"
-        style="?android:attr/seekBarStyle"
+    <!-- SeekBar & Marker Overlay Container -->
+    <FrameLayout
+        android:id="@+id/frame_layout_seekbar_container"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:secondaryProgressTint="@color/receivedIcon"
-        android:thumbTint="@color/receivedIcon"
-        android:progressDrawable="@drawable/podcast_player_seek_bar_progress"
-        android:thumb="@drawable/podcast_player_seek_bar_thumb"
-        android:progress="0"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent">
 
+        <!-- SeekBar -->
+        <androidx.appcompat.widget.AppCompatSeekBar
+            android:id="@+id/seek_bar_current_episode_progress"
+            style="?android:attr/seekBarStyle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:progress="0"
+            android:progressDrawable="@drawable/podcast_player_seek_bar_progress"
+            android:thumb="@drawable/podcast_player_seek_bar_thumb"
+            android:thumbTint="@color/receivedIcon"
+            android:secondaryProgressTint="@color/receivedIcon" />
 
+        <!-- Chapter Marker Overlay (white circles) -->
+        <FrameLayout
+            android:id="@+id/frame_layout_seekbar_overlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="center" />
+    </FrameLayout>
+
+    <!-- Time - Start -->
     <TextView
         android:id="@+id/text_view_current_episode_progress"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="@dimen/player_time_labels_horizontal_margin"
         android:fontFamily="@font/roboto_regular"
-        android:gravity="end"
-        android:lines="1"
+        android:gravity="start"
         android:textColor="@color/receivedIcon"
         android:text="00:00:00"
-        app:layout_constraintStart_toStartOf="@id/seek_bar_current_episode_progress"
-        app:layout_constraintTop_toBottomOf="@id/seek_bar_current_episode_progress" />
+        app:layout_constraintStart_toStartOf="@id/frame_layout_seekbar_container"
+        app:layout_constraintTop_toBottomOf="@id/frame_layout_seekbar_container" />
 
+    <!-- Time - End -->
+    <TextView
+        android:id="@+id/text_view_current_episode_duration"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="@dimen/player_time_labels_horizontal_margin"
+        android:fontFamily="@font/roboto_regular"
+        android:gravity="end"
+        android:textColor="@color/text"
+        android:text="00:00:00"
+        app:layout_constraintEnd_toEndOf="@id/frame_layout_seekbar_container"
+        app:layout_constraintTop_toBottomOf="@id/frame_layout_seekbar_container" />
 
+    <!-- Loading Spinner -->
     <ProgressBar
         android:id="@+id/progress_bar_audio_loading"
         style="?android:attr/progressBarStyle"
@@ -46,23 +71,8 @@
         android:indeterminate="true"
         android:indeterminateTint="@color/text"
         android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="@+id/text_view_current_episode_progress"
-        app:layout_constraintEnd_toStartOf="@id/text_view_current_episode_duration"
-        app:layout_constraintTop_toTopOf="@+id/text_view_current_episode_progress"
-        tools:visibility="visible" />
-
-    <TextView
-        android:id="@+id/text_view_current_episode_duration"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="@dimen/player_time_labels_horizontal_margin"
-        android:fontFamily="@font/roboto_regular"
-        android:lines="1"
-        android:textColor="@color/text"
-        android:text="00:00:00"
-        app:layout_constraintBottom_toBottomOf="@+id/progress_bar_audio_loading"
-        app:layout_constraintEnd_toEndOf="@id/seek_bar_current_episode_progress"
-        app:layout_constraintTop_toTopOf="@+id/progress_bar_audio_loading" />
-
+        app:layout_constraintTop_toTopOf="@id/text_view_current_episode_progress"
+        app:layout_constraintBottom_toBottomOf="@id/text_view_current_episode_progress"
+        app:layout_constraintEnd_toStartOf="@id/text_view_current_episode_duration" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

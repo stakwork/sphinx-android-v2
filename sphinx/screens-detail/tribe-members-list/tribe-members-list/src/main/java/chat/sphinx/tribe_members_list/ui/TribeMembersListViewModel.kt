@@ -4,10 +4,9 @@ import android.app.Application
 import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
-import chat.sphinx.concept_network_query_contact.NetworkQueryContact
 import chat.sphinx.concept_repository_chat.ChatRepository
 import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
-import chat.sphinx.concept_repository_connect_manager.model.ConnectionManagerState
+import chat.sphinx.concept_repository_connect_manager.model.OwnerRegistrationState
 import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.concept_repository_message.MessageRepository
 import chat.sphinx.example.wrapper_mqtt.TribeMembersResponse
@@ -15,6 +14,7 @@ import chat.sphinx.kotlin_response.LoadResponse
 import chat.sphinx.kotlin_response.Response
 import chat.sphinx.kotlin_response.ResponseError
 import chat.sphinx.tribe_members_list.R
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.tribe_members_list.navigation.TribeMembersListNavigator
 import chat.sphinx.tribe_members_list.ui.viewstate.TribeMemberHolderViewState
 import chat.sphinx.wrapper_common.dashboard.ChatId
@@ -55,7 +55,6 @@ internal class TribeMembersListViewModel @Inject constructor(
     private val messageRepository: MessageRepository,
     private val chatRepository: ChatRepository,
     private val contactRepository: ContactRepository,
-    private val networkQueryContact: NetworkQueryContact,
     private val connectManagerRepository: ConnectManagerRepository,
     savedStateHandle: SavedStateHandle,
 ): SideEffectViewModel<
@@ -116,62 +115,29 @@ internal class TribeMembersListViewModel @Inject constructor(
                     tribeServerPubKey,
                     tribePubKey
                 )
+            } else {
+                submitSideEffect(
+                    TribeMembersListSideEffect.Notify(
+                        app.getString(R_common.string.connect_manager_server_pubkey_error)
+                    )
+                )
             }
         }
-
-//        networkQueryContact.getTribeMembers(
-//            chatId = ChatId(args.argChatId),
-//            offset = page * itemsPerPage,
-//            limit = itemsPerPage
-//        ).collect{ loadResponse ->
-//            val firstPage = (page == 0)
-//
-//            @Exhaustive
-//            when (loadResponse) {
-//                is LoadResponse.Loading -> {
-//                    updateViewState(
-//                        TribeMembersListViewState.ListMode(listOf(), true, firstPage)
-//                    )
-//                }
-//                is Response.Error -> {
-//                    updateViewState(
-//                        TribeMembersListViewState.ListMode(listOf(), false, firstPage)
-//                    )
-//                }
-//                is Response.Success -> {
-//                    if (loadResponse.value.contacts.isNotEmpty()) {
-//                        updateViewState(
-//                            TribeMembersListViewState.ListMode(
-//                                processMembers(
-//                                    loadResponse.value.contacts,
-//                                    getOwner()
-//                                ),
-//                                false,
-//                                firstPage
-//                            )
-//                        )
-//                    }
-//                }
-//            }
-//        }
     }
 
     private suspend fun fetchTribeMembers(){
-        connectManagerRepository.connectionManagerState.collect { connectionState ->
-            when (connectionState) {
-                is ConnectionManagerState.TribeMembersList -> {
+        connectManagerRepository.tribeMembersState.collect { tribeMembersList ->
+            if (tribeMembersList != null) {
+                val tribeMembers = TribeMembersListViewState.ListMode(
+                    processMembers(
+                        tribeMembersList,
+                        getOwner()
+                    ),
+                    false,
+                    true
+                )
 
-                    val tribeMembers = TribeMembersListViewState.ListMode(
-                        processMembers(
-                            connectionState.tribeMembers,
-                            getOwner()
-                        ),
-                        false,
-                        true
-                    )
-
-                    updateViewState(tribeMembers)
-                }
+                updateViewState(tribeMembers)
             }
         }
     }
@@ -289,13 +255,13 @@ internal class TribeMembersListViewModel @Inject constructor(
             if (type is MessageType.GroupAction.MemberApprove) {
                 submitSideEffect(
                     TribeMembersListSideEffect.Notify(
-                        app.getString(R.string.failed_to_approve_member)
+                        app.getString(R_common.string.failed_to_approve_member)
                     )
                 )
             } else if (type is MessageType.GroupAction.MemberReject) {
                 submitSideEffect(
                     TribeMembersListSideEffect.Notify(
-                        app.getString(R.string.failed_to_reject_member)
+                        app.getString(R_common.string.failed_to_reject_member)
                     )
                 )
             }

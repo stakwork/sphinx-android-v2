@@ -10,9 +10,13 @@ import chat.sphinx.chat_common.ui.viewstate.messageholder.ReplyUserHolder
 import chat.sphinx.concept_repository_chat.ChatRepository
 import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.concept_repository_message.MessageRepository
+import chat.sphinx.highlighting_tool.boldTexts
 import chat.sphinx.highlighting_tool.highlightedTexts
+import chat.sphinx.highlighting_tool.markDownLinkTexts
 import chat.sphinx.highlighting_tool.replacingHighlightedDelimiters
+import chat.sphinx.highlighting_tool.replacingMarkdown
 import chat.sphinx.threads.R
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.threads.model.FileAttachment
 import chat.sphinx.threads.model.ThreadItem
 import chat.sphinx.threads.navigation.ThreadsNavigator
@@ -250,12 +254,14 @@ internal class ThreadsViewModel @Inject constructor(
             aliasAndColorKey = senderInfo,
             photoUrl = senderPhotoUrl,
             date = originalMessage?.date?.chatTimeFormat() ?: "",
-            message = threadMessage.replacingHighlightedDelimiters(),
+            message = threadMessage.replacingMarkdown(),
             highlightedTexts = threadMessage.highlightedTexts(),
+            boldTexts = threadMessage.boldTexts(),
+            markdownLinkTexts = threadMessage.markDownLinkTexts(),
             usersReplies = createReplyUserHolders(repliesList, chat, owner),
             usersCount = repliesList?.size ?: 0,
-            repliesAmount = String.format(app.getString(R.string.replies_amount), messagesForThread?.drop(1)?.size?.toString() ?: "0"),
-            lastReplyDate = messagesForThread?.last()?.date?.timeAgo(),
+            repliesAmount = String.format(app.getString(R_common.string.replies_amount), messagesForThread?.drop(1)?.size?.toString() ?: "0"),
+            lastReplyDate = messagesForThread?.first()?.date?.timeAgo(),
             uuid = uuid ?: "",
             imageAttachment = imageAttachment,
             videoAttachment = videoAttachment,

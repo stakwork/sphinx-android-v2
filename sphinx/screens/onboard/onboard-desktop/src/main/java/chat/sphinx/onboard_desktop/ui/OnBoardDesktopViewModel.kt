@@ -19,26 +19,19 @@ internal class OnBoardDesktopViewModel @Inject constructor(
     dispatchers: CoroutineDispatchers,
     private val app: Application,
     private val navigator: OnBoardDesktopNavigator,
-    private val onBoardStepHandler: OnBoardStepHandler,
 ): BaseViewModel<
         OnBoardDesktopViewState
         >(dispatchers, OnBoardDesktopViewState.Idle)
 {
 
     private var nextScreenJob: Job? = null
-    fun nextScreen(inviterData: OnBoardInviterData) {
+    fun nextScreen() {
         if (nextScreenJob?.isActive == true) {
             return
         }
 
         nextScreenJob = viewModelScope.launch {
-            val step4 = onBoardStepHandler.persistOnBoardStep4Data(inviterData)
-
-            if (step4 != null) {
-                navigator.toOnBoardReadyScreen(step4)
-            } else {
-                // TODO: Handle Persistence Error
-            }
+            navigator.toOnBoardReadyScreen()
         }
     }
 

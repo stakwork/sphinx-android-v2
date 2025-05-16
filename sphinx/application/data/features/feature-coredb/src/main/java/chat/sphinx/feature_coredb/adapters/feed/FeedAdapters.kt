@@ -243,3 +243,25 @@ internal class PlayerSpeedAdapter: ColumnAdapter<FeedPlayerSpeed, Double> {
         return value.value
     }
 }
+
+internal class FeedReferenceIdAdapter: ColumnAdapter<FeedReferenceId, String> {
+
+    override fun decode(databaseValue: String): FeedReferenceId {
+        return FeedReferenceId(databaseValue)
+    }
+
+    override fun encode(value: FeedReferenceId): String {
+        return value.value
+    }
+}
+
+internal class FeedChapterDataAdapter: ColumnAdapter<FeedChaptersData, String> {
+
+    override fun decode(databaseValue: String): FeedChaptersData {
+        return FeedChaptersData(databaseValue)
+    }
+
+    override fun encode(value: FeedChaptersData): String {
+        return value.value
+    }
+}

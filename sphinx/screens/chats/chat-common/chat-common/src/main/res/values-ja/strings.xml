@@ -27,7 +27,7 @@
     <!--  Message type invoices  -->
     <string name="request_expired">リクエストの有効期限が切れています</string>
     <string name="request_expiration">有効期限: %s</string>
-    <string name="invoice_paid_on">%sに支払ったインボイス</string>
+    <string name="invoice_paid_on">%s の請求書は %s に支払われました</string>
     <string name="alert_confirm_pay_chat_invoice_title">インボイスに支払いをする</string>
     <string name="alert_confirm_pay_chat_invoice_message">インボイスに支払いをしてよいですか？</string>
 
@@ -183,6 +183,8 @@
     <string name="message_pinned">メッセージをピン留めしました</string>
     <string name="message_unpinned">メッセージのピン留めを外しました</string>
     <string name="pin_message_error">エラーが発生しました。後でもう一度お試しください</string>
+    <string name="chat_placeholder_invited">Invited on %s</string>
+    <string name="chat_placeholder_secure">Messages and calls are secured\nwith end to end encryption</string>
 
     <string name="cancel_search">キャンセル</string>
 </resources>

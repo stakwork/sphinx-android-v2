@@ -17,6 +17,7 @@ import chat.sphinx.concept_repository_media.RepositoryMedia
 import chat.sphinx.concept_service_media.MediaPlayerServiceController
 import chat.sphinx.concept_service_media.MediaPlayerServiceState
 import chat.sphinx.concept_service_media.UserAction
+import chat.sphinx.create_description.BuildConfig
 import chat.sphinx.create_description.R
 import chat.sphinx.episode_description.model.FeedItemDescription
 import chat.sphinx.episode_description.navigation.EpisodeDescriptionNavigator
@@ -29,6 +30,7 @@ import chat.sphinx.wrapper_feed.FeedItemDuration
 import chat.sphinx.wrapper_podcast.Podcast
 import chat.sphinx.wrapper_podcast.PodcastEpisode
 import chat.sphinx.wrapper_podcast.toHrAndMin
+import chat.sphinx.resources.R as R_common
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.matthewnelson.android_feature_navigation.util.navArgs
 import io.matthewnelson.android_feature_viewmodel.*
@@ -217,7 +219,7 @@ internal class EpisodeDescriptionViewModel @Inject constructor(
                     manager.setPrimaryClip(clipData)
                     submitSideEffect(
                         EpisodeDescriptionSideEffect.Notify(
-                            app.getString(R.string.episode_detail_clipboard)
+                            app.getString(R_common.string.episode_detail_clipboard)
                         )
                     )
                 }
@@ -257,7 +259,30 @@ internal class EpisodeDescriptionViewModel @Inject constructor(
                         episode,
                         episode.currentTimeMilliseconds ?: 0,
                         ::retrieveEpisodeDuration
-                    )
+                    ) { referenceIdExist ->
+                        viewModelScope.launch(mainImmediate) {
+                            val workflowId = BuildConfig.GRAPH_MINDSET_WORKFLOW_ID.toInt()
+                            val token = BuildConfig.GRAPH_MINDSET_TOKEN
+
+                            if (referenceIdExist) {
+                                feedRepository.getChaptersData(
+                                    episode,
+                                    podcast.title,
+                                    episode.referenceId!!,
+                                    episode.id,
+                                    workflowId,
+                                    token
+                                )
+                            } else {
+                                feedRepository.checkIfEpisodeNodeExists(
+                                    episode,
+                                    podcast.title,
+                                    workflowId,
+                                    token
+                                )
+                            }
+                        }
+                    }
 
                     mediaPlayerServiceController.submitAction(
                         UserAction.ServiceAction.Play(

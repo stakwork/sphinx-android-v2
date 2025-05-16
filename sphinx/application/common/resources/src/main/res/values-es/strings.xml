@@ -13,6 +13,8 @@
     <string name="uploading">Subiendo</string>
     <string name="unknown">Desconocido</string>
     <string name="decryption_error">ERROR DE DECRIPTACIÓN...</string>
+    <string name="waiting_for_approval">Aprobación pendiente</string>
+
     <string name="null_name_error">ERROR: NOMBRE VACÍO</string>
     <string name="public_key">Clave Pública</string>
     <string name="loading_dots">Cargando ...</string>
@@ -36,6 +38,7 @@
     <string name="payment_request">Solicitud de Pago</string>
     <string name="error_payment_message">Error de pago: %s </string>
     <string name="failed_to_request_payment">La solicitud de pago falló</string>
+    <string name="error_payment_empty_router">Router URL vacia</string>
     <!-- Tribe Member error messages -->
     <string name="failed_to_approve_member">No se ha podido aprobar la solicitud</string>
     <string name="failed_to_reject_member">No se ha podido denegar la solicitud</string>
@@ -63,7 +66,13 @@
 
 
     <string name="balance_too_low">Balance demasiado bajo</string>
+    <string name="skipping_ad_three_sec">Salteando publicidad en 3 segundos</string>
     <string name="boost_amount_too_low">El monto del Boost debe ser mayor a 0</string>
+
+    <string name="invalid_invoice">Factura inválida</string>
+    <string name="router_url_not_found">URL del enrutador no encontrada</string>
+    <string name="error_getting_route">Error al obtener la ruta</string>
+    <string name="processing_invoice">Procesando el pago: este proceso podría demorar hasta 60 segundos. Por favor, tenga paciencia.</string>
 
     <string name="tribe_member_profile_send_sats">Enviar Sats</string>
     <string name="tribe_member_profile_price_to_meet">Monto para conectar:</string>
@@ -162,4 +171,43 @@
     <string name="signer_phone_error_mqtt">Error al concterse con MQTT</string>
     <string name="signer_phone_connected_to_mqtt">El dispositivo está conectado a MQTT</string>
 
+<!--    Connect Manager-->
+    <string name="connect_manager_generate_xpub_error">Error al generar clave pública extendida.</string>
+    <string name="connect_manager_generate_mnemonic_error">Error al intentar generar mnemonics.</string>
+    <string name="connect_manager_process_invite_error">Error al procesar invitación.</string>
+    <string name="connect_manager_mqtt_connect_error">Error al conectar con el servidor MQTT.</string>
+    <string name="connect_manager_subscribe_owner_error">Error al suscribirse al owner topic.</string>
+    <string name="connect_manager_mqtt_client_error">Error con el cliente MQTT.</string>
+    <string name="connect_manager_mqtt_init_error">Error durante la inicialización de MQTT.</string>
+    <string name="connect_manager_send_message_error">Error al enviar mensaje.</string>
+    <string name="connect_manager_delete_message_error">Error al eliminar mensaje.</string>
+    <string name="connect_manager_join_tribe_error">Error al unirse a la tribu.</string>
+    <string name="connect_manager_create_tribe_error">Error al crear tribu.</string>
+    <string name="connect_manager_create_invite_error">Error al crear invitación.</string>
+    <string name="connect_manager_delete_invite_error">Error cancelar la invitación.</string>
+    <string name="connect_manager_create_invoice_error">Error al crear factura.</string>
+    <string name="connect_manager_server_pubkey_error">Error al obtener la clave pública del servidor.</string>
+    <string name="connect_manager_pay_contact_invoice_error">Error al pagar factura de contacto.</string>
+    <string name="connect_manager_pay_invoice_error">Error al pagar factura.</string>
+    <string name="connect_manager_payment_hash_error">Error al generar hash de pago.</string>
+    <string name="connect_manager_list_tribe_members_error">Error al listar miembros de la tribu.</string>
+    <string name="connect_manager_fetch_message_error">Error al recuperar mensaje.</string>
+    <string name="connect_manager_fetch_first_message_error">Error al recuperar el primer mensaje.</string>
+    <string name="connect_manager_message_count_error">Error en el conteo de mensajes.</string>
+    <string name="connect_manager_set_device_id_error">Error al establecer ID de dispositivo.</string>
+    <string name="connect_manager_set_router_url">Error al establecer router url.</string>
+    <string name="connect_manager_media_token_error">Error al obtener media token.</string>
+    <string name="connect_manager_read_message_error">Error al leer mensaje.</string>
+    <string name="connect_manager_get_read_messages_error">Error al recuperar mensajes leídos.</string>
+    <string name="connect_manager_sign_bytes_error">Error al firmar bytes.</string>
+    <string name="connect_manager_set_mute_error">>Error al configurar el estado de silencio</string>
+    <string name="connect_manager_keysend_error">Error al enviar keysend</string>
+    <string name="connect_manager_mqtt_reconnect_error">Error al intentar reconectar</string>
+    <string name="connect_manager_xpub_or_sign_error">Error al generar xPub o al intentar realizar una firma</string>
+    <string name="connect_manager_parse_invite_error">Error parsing invite</string>
+    <string name="connect_manager_restore_connection_error">Error connecting to MQTT</string>
+    <string name="connect_manager_load_transactions_error">Error al cargar transacciones</string>
+    <string name="alert_confirm_delete_invite_title">Eliminar Invitación</string>
+    <string name="alert_confirm_delete_invite_message">¿Está seguro de que desea eliminar esta invitación?</string>
+    <string name="chat_placeholder_hint">Tu chat se habilitará en cuanto tu\n;contacto esté en línea</string>
 </resources>

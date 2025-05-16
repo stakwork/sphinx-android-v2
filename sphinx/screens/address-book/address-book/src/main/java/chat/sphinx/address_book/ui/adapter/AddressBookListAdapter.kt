@@ -24,7 +24,12 @@ import chat.sphinx.wrapper_common.util.getInitials
 import chat.sphinx.wrapper_contact.Contact
 import chat.sphinx.wrapper_contact.getColorKey
 import chat.sphinx.wrapper_contact.isBlocked
+import chat.sphinx.wrapper_contact.isInviteContact
+import chat.sphinx.resources.R as R_common
+import io.matthewnelson.android_feature_screens.util.gone
 import io.matthewnelson.android_feature_screens.util.goneIfFalse
+import io.matthewnelson.android_feature_screens.util.invisible
+import io.matthewnelson.android_feature_screens.util.visible
 import io.matthewnelson.android_feature_viewmodel.collectViewState
 import io.matthewnelson.android_feature_viewmodel.currentViewState
 import io.matthewnelson.android_feature_viewmodel.util.OnStopSupervisor
@@ -140,7 +145,7 @@ internal class AddressBookListAdapter(
 
     private val imageLoaderOptions: ImageLoaderOptions by lazy {
         ImageLoaderOptions.Builder()
-            .placeholderResId(R.drawable.ic_profile_avatar_circle)
+            .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
             .transformation(Transformation.CircleCrop)
             .build()
     }
@@ -232,7 +237,7 @@ internal class AddressBookListAdapter(
                                             layoutAddressBookInitialHolder.textViewInitials.context.getRandomHexCode()
                                         )
                                     ),
-                                    R.drawable.chat_initials_circle
+                                    R_common.drawable.chat_initials_circle
                                 )
                         }
                     }
@@ -244,7 +249,7 @@ internal class AddressBookListAdapter(
                     addressBookContact.alias?.value
                 } else {
                     // Should never make it here, but just in case...
-                    textViewAddressBookHolderName.setTextColorExt(R.color.primaryRed)
+                    textViewAddressBookHolderName.setTextColorExt(R_common.color.primaryRed)
                     "ERROR: NULL NAME"
                 }
 
@@ -259,6 +264,16 @@ internal class AddressBookListAdapter(
                         R.string.block_contact
                     }
                 )
+
+                //Invite
+
+                if (addressBookContact.isInviteContact()) {
+                    layoutConstraintDashboardChatHolderInvite.visible
+                    layoutAddressBookInitialHolder.root.invisible
+                } else {
+                    layoutConstraintDashboardChatHolderInvite.gone
+                    layoutAddressBookInitialHolder.root.visible
+                }
             }
         }
     }

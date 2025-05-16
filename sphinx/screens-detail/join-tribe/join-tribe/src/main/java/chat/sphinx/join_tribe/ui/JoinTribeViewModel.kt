@@ -22,12 +22,13 @@ import chat.sphinx.kotlin_response.LoadResponse
 import chat.sphinx.kotlin_response.Response
 import chat.sphinx.menu_bottom_profile_pic.PictureMenuHandler
 import chat.sphinx.menu_bottom_profile_pic.PictureMenuViewModel
-import chat.sphinx.wrapper_chat.ChatHost
+import chat.sphinx.wrapper_chat.toChatHost
 import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_common.lightning.LightningNodePubKey
 import chat.sphinx.wrapper_common.tribe.toTribeJoinLink
 import chat.sphinx.wrapper_contact.Contact
 import chat.sphinx.wrapper_contact.toContactAlias
+import chat.sphinx.resources.R as R_common
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.matthewnelson.android_feature_navigation.util.navArgs
 import io.matthewnelson.android_feature_viewmodel.SideEffectViewModel
@@ -61,9 +62,18 @@ internal class JoinTribeViewModel @Inject constructor(
         >(dispatchers, JoinTribeViewState.LoadingTribe),
     PictureMenuViewModel
 {
+    companion object {
+        const val SERVER_SETTINGS_SHARED_PREFERENCES = "server_ip_settings"
+        const val ENVIRONMENT_TYPE = "environment_type"
+    }
+
     private val args: JoinTribeFragmentArgs by savedStateHandle.navArgs()
-//    private var tribeInfo : TribeDto? = null
     private var newTribeInfo : NewTribeDto? = null
+
+    private val isProductionEnvironment = app.getSharedPreferences(
+        SERVER_SETTINGS_SHARED_PREFERENCES,
+        Context.MODE_PRIVATE
+    ).getBoolean(ENVIRONMENT_TYPE, true)
 
     fun setMyAlias(alias: String?) {
         this.newTribeInfo?.myAlias = alias
@@ -119,7 +129,7 @@ internal class JoinTribeViewModel @Inject constructor(
 
     val imageLoaderDefaults by lazy {
         ImageLoaderOptions.Builder()
-            .placeholderResId(R.drawable.ic_profile_avatar_circle)
+            .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
             .transformation(Transformation.CircleCrop)
             .build()
     }
@@ -140,32 +150,41 @@ internal class JoinTribeViewModel @Inject constructor(
 
         args.argTribeLink.toTribeJoinLink()?.let { tribeJoinLink ->
             viewModelScope.launch(mainImmediate) {
+                val chatHost = tribeJoinLink.tribeHost.toChatHost()
 
-                networkQueryChat.getTribeInfo(ChatHost(tribeJoinLink.tribeHost), LightningNodePubKey(tribeJoinLink.tribePubkey)).collect { loadResponse ->
-                    when (loadResponse) {
-                        is LoadResponse.Loading ->
-                            viewStateContainer.updateViewState(JoinTribeViewState.LoadingTribe)
-                        is Response.Error -> {
-                            submitSideEffect(JoinTribeSideEffect.Notify.InvalidTribe)
-                            viewStateContainer.updateViewState(JoinTribeViewState.ErrorLoadingTribe)
-                        }
-                        is Response.Success -> {
+                if (chatHost != null) {
+                    networkQueryChat.getTribeInfo(
+                        chatHost,
+                        LightningNodePubKey(tribeJoinLink.tribePubkey),
+                        isProductionEnvironment
+                    ).collect { loadResponse ->
+                        when (loadResponse) {
+                            is LoadResponse.Loading ->
+                                viewStateContainer.updateViewState(JoinTribeViewState.LoadingTribe)
 
-                            newTribeInfo = loadResponse.value
-                            newTribeInfo?.set(tribeJoinLink.tribeHost, tribeJoinLink.tribePubkey)
+                            is Response.Error -> {
+                                submitSideEffect(JoinTribeSideEffect.Notify.InvalidTribe)
+                                viewStateContainer.updateViewState(JoinTribeViewState.ErrorLoadingTribe)
+                            }
 
-                            val tribeLoaded = JoinTribeViewState.TribeLoaded(
-                                loadResponse.value.name,
-                                loadResponse.value.description.toString(),
-                                loadResponse.value.img,
-                                loadResponse.value.price_to_join.toString(),
-                                loadResponse.value.price_per_message.toString(),
-                                loadResponse.value.escrow_amount.toString(),
-                                loadResponse.value.escrow_millis.escrowMillisToHours().toString(),
-                                accountOwnerStateFlow.value?.alias?.value,
-                                accountOwnerStateFlow.value?.photoUrl?.value
-                            )
-                            updateViewState(tribeLoaded)
+                            is Response.Success -> {
+
+                                newTribeInfo = loadResponse.value
+                                newTribeInfo?.set(tribeJoinLink.tribeHost, tribeJoinLink.tribePubkey)
+
+                                val tribeLoaded = JoinTribeViewState.TribeLoaded(
+                                    loadResponse.value.name,
+                                    loadResponse.value.description.toString(),
+                                    loadResponse.value.img,
+                                    loadResponse.value.getPriceToJoinInSats().toString(),
+                                    loadResponse.value.getPricePerMessageInSats().toString(),
+                                    loadResponse.value.getEscrowAmountInSats().toString(),
+                                    loadResponse.value.escrow_millis.escrowMillisToHours().toString(),
+                                    accountOwnerStateFlow.value?.alias?.value,
+                                    accountOwnerStateFlow.value?.photoUrl?.value
+                                )
+                                updateViewState(tribeLoaded)
+                            }
                         }
                     }
                 }
@@ -201,9 +220,9 @@ internal class JoinTribeViewModel @Inject constructor(
                     tribeInfo.img,
                     tribeInfo.private ?: false,
                     alias,
-                    tribeInfo.price_per_message,
-                    tribeInfo.escrow_amount,
-                    tribeInfo.price_to_join,
+                    tribeInfo.getPricePerMessageInSats(),
+                    tribeInfo.getEscrowAmountInSats(),
+                    tribeInfo.getPriceToJoinInSats(),
 
                 )
                 updateViewState(JoinTribeViewState.TribeJoined)

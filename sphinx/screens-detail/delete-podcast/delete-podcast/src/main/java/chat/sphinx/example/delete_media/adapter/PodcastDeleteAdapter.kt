@@ -13,6 +13,7 @@ import chat.sphinx.concept_image_loader.Disposable
 import chat.sphinx.concept_image_loader.ImageLoader
 import chat.sphinx.concept_image_loader.ImageLoaderOptions
 import chat.sphinx.delete.media.R
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.delete.media.databinding.StorageElementListItemHolderBinding
 import chat.sphinx.example.delete_media.model.PodcastToDelete
 import chat.sphinx.example.delete_media.ui.DeletePodcastViewModel
@@ -142,7 +143,7 @@ internal class PodcastDeleteAdapter(
 
     private val imageLoaderOptions: ImageLoaderOptions by lazy {
         ImageLoaderOptions.Builder()
-            .placeholderResId(R.drawable.ic_podcast_type)
+            .placeholderResId(R_common.drawable.ic_podcast_type)
             .build()
     }
 
@@ -185,10 +186,6 @@ internal class PodcastDeleteAdapter(
                     }.let { job ->
                         holderJobs.add(job)
                     }
-                } ?: run {
-                    imageViewElementPicture.setImageDrawable(
-                        ContextCompat.getDrawable(root.context, R.drawable.ic_tribe)
-                    )
                 }
                 textViewManageStorageElementText.text = section?.title
                 textViewManageStorageElementNumber.text = section?.size

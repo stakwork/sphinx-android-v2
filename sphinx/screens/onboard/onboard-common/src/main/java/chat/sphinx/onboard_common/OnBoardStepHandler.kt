@@ -1,11 +1,13 @@
 package chat.sphinx.onboard_common
 
+import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.logger.SphinxLogger
 import chat.sphinx.logger.e
 import chat.sphinx.onboard_common.internal.json.*
 import chat.sphinx.onboard_common.model.OnBoardInviterData
 import chat.sphinx.onboard_common.model.OnBoardStep
 import chat.sphinx.wrapper_common.lightning.LightningNodePubKey
+import chat.sphinx.wrapper_contact.Contact
 import chat.sphinx.wrapper_relay.AuthorizationToken
 import chat.sphinx.wrapper_relay.RelayHMacKey
 import chat.sphinx.wrapper_relay.RelayUrl
@@ -13,6 +15,8 @@ import chat.sphinx.wrapper_rsa.RsaPublicKey
 import com.squareup.moshi.Moshi
 import io.matthewnelson.concept_authentication.data.AuthenticationStorage
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -21,6 +25,7 @@ import javax.inject.Inject
 
 class OnBoardStepHandler @Inject constructor(
     private val authenticationStorage: AuthenticationStorage,
+    private val contactRepository: ContactRepository,
     private val moshi: Moshi,
     private val LOG: SphinxLogger,
     dispatchers: CoroutineDispatchers
@@ -37,6 +42,8 @@ class OnBoardStepHandler @Inject constructor(
         private const val STEP_2 = "STEP_2"
         private const val STEP_3 = "STEP_3"
         private const val STEP_4 = "STEP_4"
+
+        private const val IS_ACCOUNT_SETUP = "IS_ACCOUNT_SETUP"
 
         // Character lengths must stay the same for
         // onboard step retrieval to function properly
@@ -107,27 +114,6 @@ class OnBoardStepHandler @Inject constructor(
         }
     }
 
-    suspend fun persistOnBoardStep3Data(inviterData: OnBoardInviterData): OnBoardStep.Step3_Picture? {
-        lock.withLock {
-
-            val step3 = OnBoardStep.Step3_Picture(inviterData)
-            val step3Json: String = try {
-                withContext(default) {
-                    moshi
-                        .adapter(Step3Json::class.java)
-                        .toJson(Step3Json(inviterData.toInviteDataJson()))
-                } ?: throw IOException("Failed to convert Step3Json data to String")
-            } catch (e: Exception) {
-                LOG.e(TAG, "Step3 Json Conversion Error", e)
-                return null
-            }
-
-            authenticationStorage.putString(KEY, STEP_3 + step3Json)
-
-            return step3
-        }
-    }
-
     suspend fun persistOnBoardStep4Data(inviterData: OnBoardInviterData): OnBoardStep.Step4_Ready? {
         lock.withLock {
 
@@ -147,6 +133,27 @@ class OnBoardStepHandler @Inject constructor(
 
             return step4
         }
+    }
+
+    suspend fun finishOnboard() {
+        lock.withLock {
+            authenticationStorage.putString(IS_ACCOUNT_SETUP, "true")
+        }
+    }
+
+    suspend fun isAccountSetup(): Boolean {
+        lock.withLock {
+            authenticationStorage.getString(IS_ACCOUNT_SETUP, null)?.let { isAccountSetupString ->
+                return isAccountSetupString == "true"
+            }
+        }
+        contactRepository.getOwnerContact()?.alias?.let { nnAlias ->
+            if (nnAlias.value.isNotEmpty()) {
+                finishOnboard()
+                return true
+            }
+        }
+        return false
     }
 
     suspend fun finishOnBoardSteps() {

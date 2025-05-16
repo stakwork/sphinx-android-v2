@@ -1,14 +1,11 @@
 package chat.sphinx.transactions.ui
 
-import android.util.Log
 import androidx.lifecycle.viewModelScope
-import chat.sphinx.concept_network_query_message.NetworkQueryMessage
-import chat.sphinx.concept_network_query_message.model.TransactionDto
 import chat.sphinx.concept_repository_chat.ChatRepository
+import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
 import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.concept_repository_message.MessageRepository
-import chat.sphinx.kotlin_response.LoadResponse
-import chat.sphinx.kotlin_response.Response
+import chat.sphinx.example.wrapper_mqtt.TransactionDto
 import chat.sphinx.transactions.navigation.TransactionsNavigator
 import chat.sphinx.transactions.ui.viewstate.TransactionHolderViewState
 import chat.sphinx.wrapper_chat.isConversation
@@ -19,16 +16,19 @@ import chat.sphinx.wrapper_common.message.MessageUUID
 import chat.sphinx.wrapper_common.message.toMessageUUID
 import chat.sphinx.wrapper_contact.Contact
 import chat.sphinx.wrapper_message.SenderAlias
+import chat.sphinx.wrapper_message.toSenderAlias
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.matthewnelson.android_feature_viewmodel.BaseViewModel
 import io.matthewnelson.android_feature_viewmodel.currentViewState
 import io.matthewnelson.android_feature_viewmodel.updateViewState
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
-import javax.annotation.meta.Exhaustive
+import kotlinx.coroutines.withContext
+import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
 import javax.inject.Inject
 
 @HiltViewModel
@@ -38,7 +38,7 @@ internal class TransactionsViewModel @Inject constructor(
     private val contactRepository: ContactRepository,
     private val chatRepository: ChatRepository,
     private val messageRepository: MessageRepository,
-    private val networkQueryMessage: NetworkQueryMessage,
+    private val connectManagerRepository: ConnectManagerRepository,
 ): BaseViewModel<TransactionsViewState>(
     dispatchers,
     TransactionsViewState.ListMode(
@@ -51,6 +51,10 @@ internal class TransactionsViewModel @Inject constructor(
     private var page: Int = 0
     private var loading: Boolean = false
     private val itemsPerPage: Int = 50
+    private var loadedItems: Int = 0
+    private var lastMessageDate: Long = System.currentTimeMillis()
+
+    private var succeededPaymentHashes: MutableList<String> = mutableListOf()
 
     private suspend fun getOwnerContact(): Contact {
         return contactRepository.accountOwner.value.let { contact ->
@@ -74,58 +78,71 @@ internal class TransactionsViewModel @Inject constructor(
         }
     }
 
+    private suspend fun getLastMessageDate(): Long? {
+        val lastMsgDate = messageRepository.getLastMessage().firstOrNull()?.date?.value?.time
+        lastMessageDate = lastMsgDate ?: 0L
+        return lastMsgDate
+    }
     init {
         viewModelScope.launch(mainImmediate) {
             loadTransactions(
-                getOwnerContact()
+                System.currentTimeMillis()
             )
         }
+        collectTransactions()
     }
 
     suspend fun loadMoreTransactions() {
         if (loading) {
             return
         }
-
         loading = true
         page += 1
 
         loadTransactions(
-            getOwnerContact()
+            lastMessageDate
         )
-
-        loading = false
     }
 
-    private suspend fun loadTransactions(
-        owner: Contact
+    private fun loadTransactions(
+        lastMessageDate: Long
     ) {
-        networkQueryMessage.getPayments(
-            offset = page * itemsPerPage,
-            limit = itemsPerPage
-        ).collect { loadResponse ->
-            val firstPage = (page == 0)
+        connectManagerRepository.getPayments(lastMessageDate, itemsPerPage)
+    }
 
-            @Exhaustive
-            when (loadResponse) {
-                is LoadResponse.Loading -> {
-                    updateViewState(
-                        TransactionsViewState.ListMode(currentViewState.list, true, firstPage)
-                    )
-                }
-                is Response.Error -> {
-                    updateViewState(
-                        TransactionsViewState.ListMode(listOf(), false, firstPage)
-                    )
-                }
-                is Response.Success -> {
+    private fun collectTransactions(){
+        viewModelScope.launch(mainImmediate) {
+
+            connectManagerRepository.transactionDtoState.collect { transactionsDto ->
+
+                succeededPaymentHashes += (transactionsDto ?: mutableListOf())
+                    .filter { it.isSucceededPayment() }
+                    .mapNotNull { it.payment_hash }
+
+                val transactionsToShow = (transactionsDto ?: mutableListOf())
+                    .filter { it.isSucceededPayment() || (it.payment_hash == null) || (it.isFailedPayment() && !succeededPaymentHashes.contains(it.payment_hash)) }
+
+                if (transactionsToShow.isNotEmpty()) {
+                    val firstPage = (page == 0)
+                    val lastItemDate =  transactionsToShow.lastOrNull()?.date?.value?.time ?: lastMessageDate
+
+                    if (lastMessageDate == lastItemDate) {
+                        loading = false
+                        updateViewState(TransactionsViewState.LastItem)
+                        return@collect
+                    }
+
+                    lastMessageDate = lastItemDate
+                    loadedItems = loadedItems.plus(transactionsToShow.size)
+
                     updateViewState(
                         TransactionsViewState.ListMode(
-                            processTransactions(loadResponse.value, owner),
+                            processTransactions(transactionsToShow.distinct(), getOwnerContact()),
                             false,
                             firstPage
                         )
                     )
+                    loading = false
                 }
             }
         }
@@ -148,7 +165,7 @@ internal class TransactionsViewModel @Inject constructor(
                     transaction.getSenderId()?.let { senderId ->
                         contactIdsMap[transaction.id] = senderId
                     }
-                    transaction.getSenderAlias()?.let { senderAlias ->
+                    transaction.getSenderAlias()?.toSenderAlias()?.let { senderAlias ->
                         contactAliasMap[transaction.id] = senderAlias
                     }
                 }
@@ -214,46 +231,64 @@ internal class TransactionsViewModel @Inject constructor(
         val transactionsHVSs: MutableList<TransactionHolderViewState> = currentViewState.list.toMutableList()
 
         if (transactionsHVSs.lastOrNull() is TransactionHolderViewState.Loader) {
-            transactionsHVSs.removeLast()
+            transactionsHVSs.removeAt(transactionsHVSs.lastIndex)
         }
 
         for (transaction in transactions) {
             val senderId = contactIdsMap[transaction.id]
             val senderAlias: String? = contactAliasMap[transaction.id]?.value ?: contactsMap[senderId?.value]?.alias?.value
 
-            if (transaction.isOutgoingPayment(owner.id)) {
-                transactionsHVSs.add(
-                    TransactionHolderViewState.Outgoing(
-                        transaction,
-                        null,
-                        senderAlias ?: "-",
-                    )
-                )
-            }
-            if (transaction.isIncomingPayment(owner.id)) {
+            if (transaction.isBountyPayment()) {
                 transactionsHVSs.add(
                     TransactionHolderViewState.Incoming(
                         transaction,
                         null,
-                        senderAlias ?: "-",
+                        withContext(Dispatchers.IO) {
+                            URLDecoder.decode(
+                                transaction.message_content,
+                                StandardCharsets.UTF_8.toString()
+                            )
+                        } ?: "-",
+                        true
                     )
                 )
-            }
-            if (transaction.isFailedPayment()) {
-                transactionsHVSs.add(
-                    TransactionHolderViewState.Failed.Closed(
-                        transaction,
-                        null,
-                        senderAlias ?: "-",
+            } else {
+                if (transaction.isOutgoingPayment(owner.id)) {
+                    transactionsHVSs.add(
+                        TransactionHolderViewState.Outgoing(
+                            transaction,
+                            null,
+                            senderAlias ?: transaction.message_content ?: "-",
+                        )
                     )
-                )
+                }
+                if (transaction.isIncomingPayment(owner.id)) {
+                    transactionsHVSs.add(
+                        TransactionHolderViewState.Incoming(
+                            transaction,
+                            null,
+                            senderAlias ?: "-",
+                            false
+                        )
+                    )
+                }
+                if (transaction.isFailedPayment()) {
+                    transactionsHVSs.add(
+                        TransactionHolderViewState.Failed.Closed(
+                            transaction,
+                            null,
+                            senderAlias ?: transaction.message_content ?: "-",
+                        )
+                    )
+                }
             }
         }
 
-        if (transactions.size == itemsPerPage) {
+        if (loadedItems >= itemsPerPage) {
             transactionsHVSs.add(
                 TransactionHolderViewState.Loader()
             )
+            loadedItems = 0
         }
 
         return transactionsHVSs

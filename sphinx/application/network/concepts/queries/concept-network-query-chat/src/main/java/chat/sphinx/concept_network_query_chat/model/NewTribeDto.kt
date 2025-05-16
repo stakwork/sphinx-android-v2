@@ -2,6 +2,8 @@ package chat.sphinx.concept_network_query_chat.model
 
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import java.io.File
 
 @JsonClass(generateAdapter = true)
@@ -23,7 +25,12 @@ data class NewTribeDto(
     val updated: Long?,
     val member_count: Int?,
     val last_active: Int?,
-    val unique_name: String?
+    val unique_name: String?,
+    val pin: String?,
+    val app_url: String?,
+    val second_brain_url: String?,
+    val feed_url: String?,
+    val feed_type: Int?
 ) {
 
     var amount: Long? = null
@@ -55,6 +62,26 @@ data class NewTribeDto(
     ) {
         this.host = host
         this.uuid = tribePubKey
+    }
+
+    fun toJsonString(): String {
+        val moshi = Moshi.Builder()
+            .add(KotlinJsonAdapterFactory())
+            .build()
+        val jsonAdapter = moshi.adapter(NewTribeDto::class.java)
+        return jsonAdapter.toJson(this)
+    }
+
+    fun getPricePerMessageInSats(): Long {
+        return if (price_per_message == 0L) 0L else price_per_message / 1000
+    }
+
+    fun getPriceToJoinInSats(): Long {
+        return if (price_to_join == 0L) 0L else price_to_join / 1000
+    }
+
+    fun getEscrowAmountInSats(): Long {
+        return if (escrow_amount == 0L) 0L else escrow_amount / 1000
     }
 
 

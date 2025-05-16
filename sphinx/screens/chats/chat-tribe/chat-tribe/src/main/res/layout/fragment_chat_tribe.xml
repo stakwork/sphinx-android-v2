@@ -79,6 +79,23 @@
         android:elevation="8dp"
         app:layout_constraintBottom_toTopOf="@+id/layout_constraint_chat_footer_container" />
 
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/layout_constraint_chat_inactive_contact_container"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toTopOf="@+id/layout_constraint_chat_footer_container"
+        app:layout_constraintTop_toBottomOf="@+id/layout_constraint_chat_header_container">
+
+        <include
+            android:id="@+id/include_chat_inactive_contact_placeholder"
+            layout="@layout/layout_chat_inactive_contact_placeholder"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+
     <androidx.appcompat.widget.AppCompatImageView
         android:id="@+id/image_view_chat_footer_shadow"
         android:layout_width="match_parent"

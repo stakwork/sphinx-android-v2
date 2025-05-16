@@ -16,6 +16,7 @@ import chat.sphinx.onboard_lightning.R
 import chat.sphinx.onboard_lightning.databinding.FragmentOnBoardLightningBinding
 import chat.sphinx.onboard_lightning.navigation.inviterData
 import chat.sphinx.resources.SphinxToastUtils
+import chat.sphinx.resources.R as R_common
 import dagger.hilt.android.AndroidEntryPoint
 import io.matthewnelson.android_feature_screens.navigation.CloseAppOnBackPress
 import io.matthewnelson.android_feature_screens.ui.base.BaseFragment
@@ -54,7 +55,7 @@ internal class OnBoardLightningFragment: BaseFragment<
         lifecycleScope.launch {
             imageLoader.load(
                 binding.imageViewOnBoardLightning,
-                R.drawable.lightning_network,
+                R_common.drawable.lightning_network,
             )
         }
 

@@ -20,7 +20,9 @@ import chat.sphinx.wrapper_chat.Chat
 import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.menu_bottom_profile_pic.PictureMenuHandler
 import chat.sphinx.menu_bottom_profile_pic.PictureMenuViewModel
+import chat.sphinx.wrapper_chat.toChatHost
 import chat.sphinx.wrapper_common.lightning.LightningNodePubKey
+import chat.sphinx.resources.R as R_common
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.matthewnelson.android_feature_navigation.util.navArgs
 import io.matthewnelson.android_feature_viewmodel.SideEffectViewModel
@@ -33,7 +35,6 @@ import kotlinx.coroutines.flow.*
 import io.matthewnelson.concept_media_cache.MediaCacheHandler
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import kotlin.system.exitProcess
 
 internal inline val CreateTribeFragmentArgs.chatId: ChatId?
     get() = if (argChatId == ChatId.NULL_CHAT_ID.toLong()) {
@@ -58,8 +59,24 @@ internal class CreateTribeViewModel @Inject constructor(
         CreateTribeViewState>(dispatchers, CreateTribeViewState.Idle),
     PictureMenuViewModel
 {
+    companion object {
+        const val SERVER_SETTINGS_SHARED_PREFERENCES = "server_ip_settings"
+        const val ENVIRONMENT_TYPE = "environment_type"
+        const val TRIBE_SERVER_IP = "tribe_server_ip"
+    }
+
     private val args: CreateTribeFragmentArgs by savedStateHandle.navArgs()
     private val chatId: ChatId? = args.chatId
+
+    private val isProductionEnvironment = app.getSharedPreferences(
+        SERVER_SETTINGS_SHARED_PREFERENCES,
+        Context.MODE_PRIVATE
+    ).getBoolean(ENVIRONMENT_TYPE, true)
+
+    private val tribeDefaultServerUrl = app.getSharedPreferences(
+        SERVER_SETTINGS_SHARED_PREFERENCES,
+        Context.MODE_PRIVATE
+    ).getString(TRIBE_SERVER_IP, null)
 
     private val chatSharedFlow: SharedFlow<Chat?> = flow {
         chatId?.let {
@@ -111,7 +128,7 @@ internal class CreateTribeViewModel @Inject constructor(
 
     val imageLoaderDefaults by lazy {
         ImageLoaderOptions.Builder()
-            .placeholderResId(R.drawable.ic_media_library)
+            .placeholderResId(R_common.drawable.ic_media_library)
             .transformation(Transformation.CircleCrop)
             .build()
     }
@@ -141,10 +158,14 @@ internal class CreateTribeViewModel @Inject constructor(
             getChat()?.let { chat ->
                 updateViewState(CreateTribeViewState.LoadingExistingTribe)
 
-                val host = chat.host
+                val host = chat.host ?: tribeDefaultServerUrl?.toChatHost()
 
                 if (host != null) {
-                    networkQueryChat.getTribeInfo(host, LightningNodePubKey(chat.uuid.value)).collect { loadResponse ->
+                    networkQueryChat.getTribeInfo(
+                        host,
+                        LightningNodePubKey(chat.uuid.value),
+                        isProductionEnvironment
+                    ).collect { loadResponse ->
                         when (loadResponse) {
                             is LoadResponse.Loading -> {}
 
@@ -164,14 +185,15 @@ internal class CreateTribeViewModel @Inject constructor(
                                     tribeInfo.description ?: "",
                                     tribeInfo.img,
                                     tribeInfo.tags,
-                                    tribeInfo.price_to_join.toString(),
-                                    tribeInfo.price_per_message.toString(),
-                                    tribeInfo.escrow_amount.toString(),
-                                    tribeInfo.escrow_millis.toString(),
-                                    "",
+                                    tribeInfo.getPriceToJoinInSats().toString(),
+                                    tribeInfo.getPricePerMessageInSats().toString(),
+                                    tribeInfo.getEscrowAmountInSats().toString(),
+                                    convertMilliToHour(tribeInfo.escrow_millis).toString(),
+                                    tribeInfo.app_url,
+                                    tribeInfo.second_brain_url,
+                                    tribeInfo.feed_url,
                                     null,
-                                    null,
-                                    null,
+                                    tribeInfo.unlisted,
                                     tribeInfo.private,
                                 )
                                 updateViewState(existingTribe)
@@ -182,7 +204,6 @@ internal class CreateTribeViewModel @Inject constructor(
                     submitSideEffect(CreateTribeSideEffect.FailedToLoadTribe)
                     navigator.closeDetailScreen()
                 }
-
             }
         }
     }
@@ -237,19 +258,8 @@ internal class CreateTribeViewModel @Inject constructor(
             createTribeBuilder.build()?.let {
                 updateViewState(CreateTribeViewState.SavingTribe)
                 saveTribeJob = viewModelScope.launch(mainImmediate) {
-                    if (chatId == null) {
-                        chatRepository.createTribe(it)
-                        navigator.closeDetailScreen()
-                    } else {
-                        when(chatRepository.updateTribe(chatId, it)) {
-                            is Response.Error -> {
-                                submitSideEffect(CreateTribeSideEffect.FailedToUpdateTribe)
-                            }
-                            is Response.Success -> {
-                                navigator.closeDetailScreen()
-                            }
-                        }
-                    }
+                    chatRepository.storeTribe(it, chatId)
+                    navigator.closeDetailScreen()
                 }
             }
         } else {
@@ -266,4 +276,14 @@ internal class CreateTribeViewModel @Inject constructor(
             )
         }
     }
+
+    private fun convertMilliToHour(millisecond: Long): Long? {
+        return try {
+            if (millisecond < 0) null else (millisecond / 3_600_000)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+
 }

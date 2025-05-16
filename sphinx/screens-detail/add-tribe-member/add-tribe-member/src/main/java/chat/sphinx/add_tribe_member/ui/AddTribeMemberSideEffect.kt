@@ -3,6 +3,7 @@ package chat.sphinx.add_tribe_member.ui
 import android.content.Context
 import chat.sphinx.add_tribe_member.R
 import chat.sphinx.resources.SphinxToastUtils
+import chat.sphinx.resources.R as R_common
 import io.matthewnelson.android_feature_toast_utils.show
 import io.matthewnelson.concept_views.sideeffect.SideEffect
 
@@ -27,7 +28,7 @@ internal sealed class AddTribeMemberSideEffect: SideEffect<Context>() {
 
     object InvalidUrl: AddTribeMemberSideEffect() {
         override suspend fun execute(value: Context) {
-            SphinxToastUtils(true).show(value, R.string.invalid_url)
+            SphinxToastUtils(true).show(value, R_common.string.invalid_url)
         }
     }
 

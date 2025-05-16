@@ -61,6 +61,7 @@
 
     <string name="last_message_description_has_join_tribe">%sがトライブに参加しました</string>
     <string name="last_message_description_just_left_tribe">%sがトライブから退会しました</string>
+    <string name="last_message_description_member_kicked">You have removed a member from this tribe</string>
     <string name="last_message_description_wants_to_join">%sがトライブに参加したいと思っています</string>
     <string name="last_message_description_declined_request_from">%sからのリクエストを拒否しました</string>
     <string name="last_message_description_approved_request_from">%sからのリクエストを承認しました</string>
@@ -81,6 +82,7 @@
     <string name="dashboard_authorize_popup_title">次で認証しますか:</string>
     <string name="dashboard_authorize_button">認証</string>
     <string name="dashboard_authorize_generic_error">外部ソースの承認中にエラーが発生しました。後でもう一度お試しください</string>
+    <string name="dashboard_authorize_success">ログインに成功しました</string>
 
     <string name="dashboard_redeem_sats_popup_title">以下から %s sats の利用:</string>
     <string name="dashboard_redeem_sats_button">確認</string>
@@ -93,6 +95,8 @@
     <string name="dashboard_connect_retrieve_person_data_error">人物情報の取得に失敗しました</string>
     <string name="dashboard_connect_message_empty">メッセージは空にできません</string>
     <string name="dashboard_connect_generic_error">ユーザーへの接続中にエラーが発生しました。後でもう一度お試しください</string>
+    <string name="dashboard_connect_existing_contact">既にこの人と繋がっています</string>
+    <string name="dashboard_connect_invalid_public_key">無効な公開鍵</string>
 
     <string name="dashboard_network_disconnected_node_toast">ノードが切断されました</string>
     <string name="dashboard_network_connected_node_toast">ノードが接続されました</string>
@@ -161,6 +165,8 @@
 
     <string name="time_left">残り%s</string>
     <string name="dashboard_invite_code_screen">INVITE CODE</string>
+
+    <string name="dashboard_enter_personal_info">ニックネームとオプションのプロフィール写真を入力して\nプロフィールの設定を完了します</string>
 </resources>
 
 

@@ -14,7 +14,8 @@ data class Message(
     val replyUuid: String?,
     val threadUuid: String?,
     val member: String?,
-    val invoice: String?
+    val invoice: String?,
+    val metadata: String?
 ) {
     @Throws(AssertionError::class)
     fun toJson(moshi: Moshi): String {

@@ -277,6 +277,18 @@
             app:layout_constraintTop_toTopOf="parent" />
 
         <androidx.appcompat.widget.AppCompatImageView
+            android:id="@+id/button_list_icon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/default_header_margin_horizontal"
+            android:visibility="gone"
+            android:src="@drawable/ic_list"
+            app:layout_constraintBottom_toBottomOf="@+id/button_additional_options"
+            app:layout_constraintStart_toEndOf="@id/button_additional_options"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:visibility="visible"/>
+
+        <androidx.appcompat.widget.AppCompatImageView
             android:id="@+id/button_play_episode"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -299,6 +311,16 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recycler_view_chapters"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:nestedScrollingEnabled="false"
+        android:overScrollMode="never"
+        android:layout_marginTop="@dimen/default_layout_margin"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@+id/layout_constraint_episode_icons_container"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -24,6 +24,7 @@ import chat.sphinx.wrapper_message.MessageType
 import chat.sphinx.wrapper_message.Msg
 import chat.sphinx.wrapper_message.MsgSender
 import chat.sphinx.wrapper_message.SenderAlias
+import chat.sphinx.wrapper_message.TagMessage
 import chat.sphinx.wrapper_message.ThreadUUID
 import kotlinx.coroutines.flow.Flow
 
@@ -37,7 +38,20 @@ interface MessageRepository {
     fun searchMessagesBy(chatId: ChatId, term: String): Flow<List<Message>>
 
     fun getMessageById(messageId: MessageId): Flow<Message?>
+
     fun getMessagesByIds(messagesIds: List<MessageId>): Flow<List<Message?>>
+
+    fun messageGetOkKeysByChatId(chatId: ChatId): Flow<List<MessageId>>
+
+    fun getSentConfirmedMessagesByChatId(chatId: ChatId): Flow<List<Message>>
+
+    fun getDeletedMessages(): Flow<List<Message>>
+
+    fun getMessagesByPaymentHashes(paymentHashes: List<LightningPaymentHash>): Flow<List<Message?>>
+
+    fun getMaxIdMessage(): Flow<Long?>
+    fun getLastMessage(): Flow<Message?>
+
     fun getTribeLastMemberRequestBySenderAlias(alias: SenderAlias, chatId: ChatId): Flow<Message?>
     fun getMessageByUUID(messageUUID: MessageUUID): Flow<Message?>
     fun getPaymentsTotalFor(feedId: FeedId): Flow<Sat?>
@@ -49,7 +63,10 @@ interface MessageRepository {
 
     suspend fun fetchPinnedMessageByUUID(messageUUID: MessageUUID, chatId: ChatId)
 
-    fun updateMessageContentDecrypted(messageId: MessageId, messageContentDecrypted: MessageContentDecrypted)
+    fun updateMessageContentDecrypted(
+        messageId: MessageId,
+        messageContentDecrypted: MessageContentDecrypted
+    )
 
     suspend fun readMessages(chatId: ChatId)
 
@@ -73,10 +90,10 @@ interface MessageRepository {
         chat: Chat,
     )
 
-    fun flagMessage(
-        message: Message,
-        chat: Chat,
-    )
+//    fun flagMessage(
+//        message: Message,
+//        chat: Chat,
+//    )
 
     fun sendBoost(
         chatId: ChatId,
@@ -85,19 +102,13 @@ interface MessageRepository {
 
     suspend fun deleteMessage(message: Message)
 
-    suspend fun getPaymentTemplates() : Response<List<PaymentTemplate>, ResponseError>
+    suspend fun deleteAllMessagesAndPubKey(pubKey: String, chatId: ChatId)
+
+    suspend fun getPaymentTemplates(): Response<List<PaymentTemplate>, ResponseError>
 
     suspend fun sendPayment(
         sendPayment: SendPayment?
     ): Response<Any, ResponseError>
-
-    suspend fun sendPaymentRequest(
-        requestPayment: SendPaymentRequest
-    ): Response<Any, ResponseError>
-
-    suspend fun payPaymentRequest(message: Message) : Response<Any, ResponseError>
-
-    suspend fun payNewPaymentRequest(message: Message)
 
     suspend fun sendNewPaymentRequest(
         requestPayment: SendPaymentRequest
@@ -128,9 +139,11 @@ interface MessageRepository {
     suspend fun upsertMqttMessage(
         msg: Msg,
         msgSender: MsgSender,
+        contactTribePubKey: String,
         msgType: MessageType,
         msgUuid: MessageUUID,
         msgIndex: MessageId,
+        msgAmount: Sat?,
         originalUuid: MessageUUID?,
         timestamp: DateTime?,
         date: DateTime?,
@@ -138,8 +151,12 @@ interface MessageRepository {
         amount: Sat?,
         paymentRequest: LightningPaymentRequest?,
         paymentHash: LightningPaymentHash?,
-        bolt11: Bolt11?
+        bolt11: Bolt11?,
+        tag: TagMessage?,
+        isRestore: Boolean
     )
 
     suspend fun deleteMqttMessage(messageUuid: MessageUUID)
+
+    suspend fun fetchDeletedMessagesOnDb()
 }

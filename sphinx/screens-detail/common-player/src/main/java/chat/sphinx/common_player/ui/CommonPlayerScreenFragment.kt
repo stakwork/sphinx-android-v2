@@ -30,6 +30,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import app.cash.exhaustive.Exhaustive
 import by.kirich1409.viewbindingdelegate.viewBinding
 import chat.sphinx.common_player.R
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.common_player.adapter.RecommendedItemsAdapter
 import chat.sphinx.common_player.adapter.RecommendedItemsFooterAdapter
 import chat.sphinx.common_player.databinding.FragmentCommonPlayerScreenBinding
@@ -421,7 +422,7 @@ internal class CommonPlayerScreenFragment : SideEffectFragment<
                         imageViewProfilePicture,
                         photoUrl.value,
                         ImageLoaderOptions.Builder()
-                            .placeholderResId(R.drawable.ic_podcast_placeholder)
+                            .placeholderResId(R_common.drawable.ic_podcast_placeholder)
                             .transformation(Transformation.CircleCrop)
                             .build()
                     )
@@ -448,7 +449,7 @@ internal class CommonPlayerScreenFragment : SideEffectFragment<
             includeLayoutPlayerDescriptionAndControls.includeLayoutEpisodePlaybackControls.apply {
                 textViewPlayPauseButton.background =
                     ContextCompat.getDrawable(root.context,
-                        if (playing) R.drawable.ic_podcast_pause_circle else R.drawable.ic_podcast_play_circle
+                        if (playing) R_common.drawable.ic_podcast_pause_circle else R_common.drawable.ic_podcast_play_circle
                     )
             }
         }
@@ -469,7 +470,7 @@ internal class CommonPlayerScreenFragment : SideEffectFragment<
                         imageViewPodcastImage,
                         podcastImage,
                         ImageLoaderOptions.Builder()
-                            .placeholderResId(R.drawable.ic_podcast_placeholder)
+                            .placeholderResId(R_common.drawable.ic_podcast_placeholder)
                             .build()
                     )
                 }
@@ -573,33 +574,33 @@ internal class CommonPlayerScreenFragment : SideEffectFragment<
 
     private fun showSpeedPopup() {
         binding.includeLayoutPlayerDescriptionAndControls.includeLayoutEpisodePlaybackControls.apply {
-            val wrapper: Context = ContextThemeWrapper(context, R.style.speedMenu)
+            val wrapper: Context = ContextThemeWrapper(context, R_common.style.speedMenu)
             val popup = PopupMenu(wrapper, textViewPlaybackSpeedButton)
-            popup.inflate(R.menu.speed_menu)
+            popup.inflate(R_common.menu.speed_menu)
 
             popup.setOnMenuItemClickListener { item: MenuItem? ->
                 when (item!!.itemId) {
-                    R.id.speed0_5 -> {
+                    R_common.id.speed0_5 -> {
                         textViewPlaybackSpeedButton.text = "0.5x"
                         viewModel.adjustSpeed(0.5)
                     }
-                    R.id.speed0_8 -> {
+                    R_common.id.speed0_8 -> {
                         textViewPlaybackSpeedButton.text = "0.8x"
                         viewModel.adjustSpeed(0.8)
                     }
-                    R.id.speed1 -> {
+                    R_common.id.speed1 -> {
                         textViewPlaybackSpeedButton.text = "1x"
                         viewModel.adjustSpeed(1.0)
                     }
-                    R.id.speed1_2 -> {
+                    R_common.id.speed1_2 -> {
                         textViewPlaybackSpeedButton.text = "1.2x"
                         viewModel.adjustSpeed(1.2)
                     }
-                    R.id.speed1_5 -> {
+                    R_common.id.speed1_5 -> {
                         textViewPlaybackSpeedButton.text = "1.5x"
                         viewModel.adjustSpeed(1.5)
                     }
-                    R.id.speed2_1 -> {
+                    R_common.id.speed2_1 -> {
                         textViewPlaybackSpeedButton.text = "2.1x"
                         viewModel.adjustSpeed(2.1)
                     }
@@ -711,7 +712,7 @@ internal class CommonPlayerScreenFragment : SideEffectFragment<
     private fun feedItemDetailsCommonInfoBinding(viewState: RecommendedFeedItemDetailsViewState.Open) {
         binding.includeLayoutFeedItem.includeLayoutFeedItemDetails.apply {
             textViewMainEpisodeTitle.text = viewState.feedItemDetail?.header
-            imageViewItemRowEpisodeType.setImageDrawable(ContextCompat.getDrawable(root.context, viewState.feedItemDetail?.episodeTypeImage ?: R.drawable.ic_podcast_type))
+            imageViewItemRowEpisodeType.setImageDrawable(ContextCompat.getDrawable(root.context, viewState.feedItemDetail?.episodeTypeImage ?: R_common.drawable.ic_podcast_type))
             textViewEpisodeType.text = viewState.feedItemDetail?.episodeTypeText
             textViewEpisodeDate.text = viewState.feedItemDetail?.episodeDate
             textViewEpisodeDuration.text = viewState.feedItemDetail?.episodeDuration
@@ -723,7 +724,7 @@ internal class CommonPlayerScreenFragment : SideEffectFragment<
                         imageViewEpisodeDetailImage,
                         it,
                         ImageLoaderOptions.Builder()
-                            .placeholderResId(R.drawable.ic_podcast_placeholder)
+                            .placeholderResId(R_common.drawable.ic_podcast_placeholder)
                             .build()
                     )
                 }
@@ -879,10 +880,10 @@ inline fun String.youTubeVideoId(): String {
 
 inline fun PodcastEpisode.getPlaceHolderImageRes(): Int {
     if (isMusicClip) {
-        return R.drawable.ic_podcast_placeholder
+        return R_common.drawable.ic_podcast_placeholder
     }
     if (isYouTubeVideo) {
-        return R.drawable.ic_video_placeholder
+        return R_common.drawable.ic_video_placeholder
     }
-    return R.drawable.ic_podcast_placeholder
+    return R_common.drawable.ic_podcast_placeholder
 }

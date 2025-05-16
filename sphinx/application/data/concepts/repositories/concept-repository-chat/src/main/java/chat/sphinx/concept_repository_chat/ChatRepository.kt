@@ -1,22 +1,24 @@
 package chat.sphinx.concept_repository_chat
 
-import chat.sphinx.concept_network_query_chat.model.ChatDto
 import chat.sphinx.concept_network_query_chat.model.NewTribeDto
 import chat.sphinx.concept_repository_chat.model.AddMember
 import chat.sphinx.concept_repository_chat.model.CreateTribe
-import chat.sphinx.kotlin_response.LoadResponse
 import chat.sphinx.kotlin_response.Response
 import chat.sphinx.kotlin_response.ResponseError
 import chat.sphinx.wrapper_chat.Chat
-import chat.sphinx.wrapper_chat.ChatAlias
 import chat.sphinx.wrapper_chat.NotificationLevel
-import chat.sphinx.wrapper_chat.TribeData
 import chat.sphinx.wrapper_common.chat.ChatUUID
 import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_common.dashboard.ContactId
-import chat.sphinx.wrapper_common.lightning.LightningNodePubKey
-import chat.sphinx.wrapper_meme_server.PublicAttachmentInfo
+import chat.sphinx.wrapper_common.lsat.Lsat
+import chat.sphinx.wrapper_common.lsat.LsatIdentifier
+import chat.sphinx.wrapper_common.lsat.LsatIssuer
+import chat.sphinx.wrapper_common.lsat.LsatStatus
 import chat.sphinx.wrapper_message.Message
+import chat.sphinx.wrapper_common.message.RemoteTimezoneIdentifier
+import chat.sphinx.wrapper_chat.TimezoneEnabled
+import chat.sphinx.wrapper_chat.TimezoneIdentifier
+import chat.sphinx.wrapper_chat.TimezoneUpdated
 import chat.sphinx.wrapper_podcast.Podcast
 import kotlinx.coroutines.flow.Flow
 
@@ -43,8 +45,6 @@ interface ChatRepository {
      * is empty.
      * */
     fun getUnseenMessagesByChatId(chatId: ChatId): Flow<Long?>
-    
-    val networkRefreshChats: Flow<LoadResponse<Boolean, ResponseError>>
 
     suspend fun getAllChatsByIds(chatIds: List<ChatId>): List<Chat>
 
@@ -57,7 +57,10 @@ interface ChatRepository {
      *
      * Returns error if something went wrong (networking)
      * */
-    suspend fun setNotificationLevel(chat: Chat, level: NotificationLevel): Response<Boolean, ResponseError>
+    suspend fun setNotificationLevel(
+        chat: Chat,
+        level: NotificationLevel
+    ): Response<Boolean, ResponseError>
 
     suspend fun updateChatContentSeenAt(chatId: ChatId)
 
@@ -66,31 +69,59 @@ interface ChatRepository {
         page: Int,
         itemsPerPage: Int,
         searchTerm: String? = null,
-        tags: String? = null
+        tags: String? = null,
+        tribeServer: String?
     ): Flow<List<NewTribeDto>>
 
-    suspend fun updateTribeInfo(chat: Chat): TribeData?
-    suspend fun createTribe(createTribe: CreateTribe)
-    suspend fun updateTribe(chatId: ChatId, createTribe: CreateTribe): Response<Any, ResponseError>
+    fun getSecondBrainTribes(): Flow<List<Chat?>>
+
+    suspend fun updateTribeInfo(chat: Chat, isProductionEnvironment: Boolean): NewTribeDto?
+    suspend fun storeTribe(createTribe: CreateTribe, chatId: ChatId?)
+    suspend fun updateTribe(chatId: ChatId, createTribe: CreateTribe)
     suspend fun exitAndDeleteTribe(tribe: Chat)
 
     suspend fun pinMessage(
         chatId: ChatId,
-        message: Message
+        message: Message,
+        isProductionEnvironment: Boolean
     ): Response<Any, ResponseError>
 
     suspend fun unPinMessage(
         chatId: ChatId,
-        message: Message
+        message: Message,
+        isProductionEnvironment: Boolean
     ): Response<Any, ResponseError>
 
     suspend fun addTribeMember(addMember: AddMember): Response<Any, ResponseError>
 
-    suspend fun updateChatProfileInfo(
-        chatId: ChatId,
-        alias: ChatAlias? = null,
-        profilePic: PublicAttachmentInfo? = null,
-    ): Response<ChatDto, ResponseError>
+    // LSAT related
+    suspend fun getLastLsatByIssuer(issuer: LsatIssuer): Flow<Lsat?>
+    suspend fun getLastLsatActive(): Flow<Lsat?>
 
-    suspend fun kickMemberFromTribe(chatId: ChatId, contactPubKey: LightningNodePubKey): Response<Any, ResponseError>
+    suspend fun getLsatByIdentifier(identifier: LsatIdentifier): Flow<Lsat?>
+    suspend fun upsertLsat(lsat: Lsat)
+    suspend fun updateLsatStatus(identifier: LsatIdentifier, status: LsatStatus)
+
+    suspend fun updateTimezoneEnabledStatus(
+        isTimezoneEnabled: TimezoneEnabled,
+        chatId: ChatId
+    )
+
+    suspend fun updateTimezoneIdentifier(
+        timezoneIdentifier: TimezoneIdentifier?,
+        chatId: ChatId
+    )
+
+    suspend fun updateTimezoneUpdated(
+        timezoneUpdated: TimezoneUpdated,
+        chatId: ChatId
+    )
+
+    suspend fun updateTimezoneUpdatedOnSystemChange()
+
+    suspend fun updateChatRemoteTimezoneIdentifier(
+        remoteTimezoneIdentifier: RemoteTimezoneIdentifier?,
+        chatId: ChatId,
+        isRestore: Boolean
+    )
 }

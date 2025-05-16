@@ -3,9 +3,8 @@ package chat.sphinx.payment_receive.ui
 import android.app.Application
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
-import chat.sphinx.concept_network_query_lightning.NetworkQueryLightning
-import chat.sphinx.concept_network_query_lightning.model.invoice.PostRequestPaymentDto
 import chat.sphinx.concept_repository_chat.ChatRepository
+import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
 import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.concept_repository_message.MessageRepository
 import chat.sphinx.concept_repository_message.model.SendPaymentRequest
@@ -15,6 +14,7 @@ import chat.sphinx.payment_common.ui.PaymentViewModel
 import chat.sphinx.payment_common.ui.viewstate.AmountViewState
 import chat.sphinx.payment_common.ui.viewstate.receive.PaymentReceiveViewState
 import chat.sphinx.payment_receive.R
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.payment_receive.navigation.PaymentReceiveNavigator
 import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_common.dashboard.ContactId
@@ -53,9 +53,9 @@ internal class PaymentReceiveViewModel @Inject constructor(
     private val paymentReceiveNavigator: PaymentReceiveNavigator,
     private val app: Application,
     private val contactRepository: ContactRepository,
-    private val networkQueryLightning: NetworkQueryLightning,
     private val messageRepository: MessageRepository,
     private val chatRepository: ChatRepository,
+    private val connectManagerRepository: ConnectManagerRepository
 ): PaymentViewModel<PaymentReceiveFragmentArgs, PaymentReceiveViewState>(
     dispatchers,
     paymentReceiveNavigator,
@@ -100,45 +100,35 @@ internal class PaymentReceiveViewModel @Inject constructor(
             sendPaymentRequest()
             return
         }
+        viewModelScope.launch(mainImmediate) {
+            val requestPayment = sendPaymentRequestBuilder.build()
 
-//        viewModelScope.launch(mainImmediate) {
-//            val requestPayment = sendPaymentRequestBuilder.build()
-//
-//            if (requestPayment != null) {
-//                updateViewState(PaymentReceiveViewState.ProcessingRequest)
-//
-//                val postRequestPaymentDto = PostRequestPaymentDto(
-//                    requestPayment.amount,
-//                    requestPayment.memo,
-//                )
-//
-//                networkQueryLightning.postRequestPayment(postRequestPaymentDto).collect { loadResponse ->
-//                    @Exhaustive
-//                    when (loadResponse) {
-//                        is LoadResponse.Loading -> {}
-//                        is Response.Error -> {
-//                            submitSideEffect(
-//                                PaymentSideEffect.Notify(app.getString(R.string.failed_to_request_payment))
-//                            )
-//                            refreshViewState()
-//                        }
-//                        is Response.Success -> {
-//                            paymentReceiveNavigator.toQRCodeDetail(
-//                                loadResponse.value.invoice,
-//                                app.getString(R.string.payment_request),
-//                                app.getString(R.string.amount_n_sats, requestPayment.amount),
-//                                false
-//                            )
-//                            refreshViewState()
-//                            delay(100L)
-//                            updateAmount("")
-//                        }
-//                    }
-//                }
-//            } else {
-//                submitSideEffect(PaymentSideEffect.Notify("Failed to request payment"))
-//            }
-//        }
+            if (requestPayment != null) {
+                updateViewState(PaymentReceiveViewState.ProcessingRequest)
+
+                val invoiceAndHash = connectManagerRepository.createInvoice(requestPayment.amount, requestPayment.memo ?: "")
+
+                if (invoiceAndHash != null) {
+                    paymentReceiveNavigator.toQRCodeDetail(
+                        invoiceAndHash.first,
+                        app.getString(R_common.string.payment_request),
+                        app.getString(R_common.string.amount_n_sats, requestPayment.amount),
+                        false
+                    )
+                    refreshViewState()
+                    delay(100L)
+                    updateAmount("")
+                } else {
+                    submitSideEffect(
+                        PaymentSideEffect.Notify(app.getString(R_common.string.failed_to_request_payment))
+                    )
+                    refreshViewState()
+
+                }
+            } else {
+                submitSideEffect(PaymentSideEffect.Notify("Failed to request payment"))
+            }
+        }
     }
 
     fun sendPaymentRequest() {
@@ -149,23 +139,6 @@ internal class PaymentReceiveViewModel @Inject constructor(
 
                 messageRepository.sendNewPaymentRequest(requestPayment)
                 navigator.closeDetailScreen()
-
-//                updateViewState(PaymentReceiveViewState.ProcessingRequest)
-//
-//                val response = messageRepository.sendPaymentRequest(requestPayment)
-//
-//                @Exhaustive
-//                when (response) {
-//                    is Response.Error -> {
-//                        submitSideEffect(
-//                            PaymentSideEffect.Notify(app.getString(R.string.failed_to_request_payment))
-//                        )
-//                        refreshViewState()
-//                    }
-//                    is Response.Success -> {
-//                        navigator.closeDetailScreen()
-//                    }
-//                }
             } else {
                 submitSideEffect(PaymentSideEffect.Notify("Failed to request payment"))
             }

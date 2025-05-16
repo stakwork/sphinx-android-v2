@@ -2,7 +2,7 @@ package chat.sphinx.chat_common.navigation
 
 import androidx.navigation.NavController
 import chat.sphinx.chat_common.R
-import chat.sphinx.chat_common.ui.activity.FullscreenVideoActivityArgs
+import chat.sphinx.chat_common.ui.activity.full_screen_activity.FullscreenVideoActivityArgs
 import chat.sphinx.detail_resources.DetailNavOptions
 import chat.sphinx.wrapper_common.message.MessageId
 import io.matthewnelson.concept_navigation.NavigationRequest

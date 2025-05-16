@@ -1,6 +1,8 @@
 package chat.sphinx.web_view.ui
 
 import android.app.Application
+import android.content.Context
+import android.content.SharedPreferences
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
@@ -12,6 +14,7 @@ import chat.sphinx.concept_repository_lightning.LightningRepository
 import chat.sphinx.concept_repository_media.RepositoryMedia
 import chat.sphinx.concept_repository_message.MessageRepository
 import chat.sphinx.web_view.R
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.web_view.navigation.WebViewNavigator
 import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_common.feed.toFeedId
@@ -54,6 +57,12 @@ internal class WebViewViewModel @Inject constructor(
         WebViewSideEffect,
         WebViewViewState>(dispatchers, WebViewViewState.Idle)
 {
+    companion object {
+        const val SERVER_SETTINGS_SHARED_PREFERENCES = "server_ip_settings"
+        const val ROUTER_URL= "router_url"
+        const val ROUTER_PUBKEY= "router_pubkey"
+    }
+
     private val args: WebViewFragmentArgs by savedStateHandle.navArgs()
 
     private suspend fun getAccountBalance(): StateFlow<NodeBalance?> =
@@ -82,6 +91,9 @@ internal class WebViewViewModel @Inject constructor(
         SharingStarted.WhileSubscribed(2_000),
         replay = 1,
     )
+
+    private val serverSettingsSharedPreferences: SharedPreferences =
+        app.getSharedPreferences(SERVER_SETTINGS_SHARED_PREFERENCES, Context.MODE_PRIVATE)
 
     init {
         args.chatId?.let { chatId ->
@@ -188,14 +200,14 @@ internal class WebViewViewModel @Inject constructor(
                             (amount.value > balance.balance.value) -> {
                                 submitSideEffect(
                                     WebViewSideEffect.Notify(
-                                        app.getString(R.string.balance_too_low)
+                                        app.getString(R_common.string.balance_too_low)
                                     )
                                 )
                             }
                             (amount.value <= 0) -> {
                                 submitSideEffect(
                                     WebViewSideEffect.Notify(
-                                        app.getString(R.string.boost_amount_too_low)
+                                        app.getString(R_common.string.boost_amount_too_low)
                                     )
                                 )
                             }
@@ -222,6 +234,9 @@ internal class WebViewViewModel @Inject constructor(
 
                                 feed.destinations.let { destinations ->
 
+                                    val routerUrl = serverSettingsSharedPreferences.getString(ROUTER_URL, null)
+                                    val routerPubKey = serverSettingsSharedPreferences.getString(ROUTER_PUBKEY, null)
+
                                     feedRepository.streamFeedPayments(
                                         chatId,
                                         feed.id.value,
@@ -229,7 +244,9 @@ internal class WebViewViewModel @Inject constructor(
                                         0,
                                         amount,
                                         FeedPlayerSpeed(1.0),
-                                        destinations
+                                        destinations,
+                                        routerUrl = routerUrl,
+                                        routerPubKey = routerPubKey
                                     )
                                 }
                             }

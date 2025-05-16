@@ -35,6 +35,8 @@ dependencies {
 
     // Sphinx
     api project(path: ':sphinx:screens-detail:payments:payment-common:payment-common')
+    api project(path: ':sphinx:application:data:concepts:repositories:concept-repository-connect-manager')
+    api project(path: ':sphinx:application:network:concepts:queries:concept-network-query-contact')
 
     implementation deps.google.hilt
     kapt kaptDeps.google.hilt

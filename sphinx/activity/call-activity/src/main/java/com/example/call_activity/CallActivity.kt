@@ -10,7 +10,6 @@ import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Parcelable
-import android.util.Log
 import android.util.Rational
 import android.view.View
 import android.view.WindowManager
@@ -44,14 +43,11 @@ import io.matthewnelson.android_feature_toast_utils.ToastUtils
 import io.matthewnelson.android_feature_toast_utils.ToastUtilsResponse
 import io.matthewnelson.android_feature_toast_utils.show
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
 import kotlinx.parcelize.Parcelize
 import javax.inject.Inject
-
 
 @AndroidEntryPoint
 class CallActivity : AppCompatActivity() {
@@ -71,8 +67,8 @@ class CallActivity : AppCompatActivity() {
     lateinit var dispatchers: CoroutineDispatchers
 
     private var lastToast: Toast? = null
-
     private var bottomSheet: ParticipantsBottomSheetFragment? = null
+    private lateinit var binding: CallActivityBinding
 
     private val viewModel: CallViewModel by viewModelByFactory {
         val args = intent.getParcelableExtra<BundleArgs>(KEY_ARGS)
@@ -92,7 +88,6 @@ class CallActivity : AppCompatActivity() {
         )
     }
 
-    private lateinit var binding: CallActivityBinding
     private val screenCaptureIntentLauncher =
         registerForActivityResult(
             ActivityResultContracts.StartActivityForResult(),
@@ -111,14 +106,26 @@ class CallActivity : AppCompatActivity() {
 
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         binding = CallActivityBinding.inflate(layoutInflater)
-
         setContentView(binding.root)
 
         requestNeededPermissions {
             viewModel.reconnect()
         }
 
-        // Audience row setup
+        // Initialize bottom sheet with empty data
+        bottomSheet = ParticipantsBottomSheetFragment.newInstance(
+            emptyList(),
+            mutableMapOf()
+        )
+
+        setupAudienceView()
+        setupSpeakerView()
+        setupRecordingStateObservers()
+        setupControls()
+        setupParticipantCountObserver()
+    }
+
+    private fun setupAudienceView() {
         val audienceAdapter = GroupieAdapter()
         binding.audienceRow.apply {
             layoutManager = LinearLayoutManager(this@CallActivity, LinearLayoutManager.HORIZONTAL, false)
@@ -126,252 +133,158 @@ class CallActivity : AppCompatActivity() {
         }
 
         lifecycleScope.launchWhenCreated {
-            viewModel.participants
-                .collect { participants ->
-                    val items = participants.map { participant ->
-                        ParticipantItem(
-                            viewModel.room,
-                            participant,
-                            moshi = moshi,
-                            imageLoader = imageLoader,
-                            color = viewModel.participantColors[participant.getNonEmptySCI()]
-                        )
-                    }
-                    audienceAdapter.update(items)
+            viewModel.participants.collect { participants ->
+                val items = participants.map { participant ->
+                    ParticipantItem(
+                        viewModel.room,
+                        participant,
+                        moshi = moshi,
+                        imageLoader = imageLoader,
+                        color = viewModel.participantColors[participant.getNonEmptySCI()]
+                    )
                 }
+                audienceAdapter.update(items)
+
+                // Update bottom sheet with current participants
+                bottomSheet?.updateParticipants(participants, viewModel.participantColors)
+            }
         }
-        // speaker view setup
+    }
+
+    private fun setupSpeakerView() {
         val speakerAdapter = GroupieAdapter()
         binding.speakerView.apply {
             layoutManager = LinearLayoutManager(this@CallActivity, LinearLayoutManager.HORIZONTAL, false)
             adapter = speakerAdapter
         }
+
         lifecycleScope.launchWhenCreated {
             viewModel.primarySpeaker.collectLatest { speaker ->
-                val items = listOfNotNull(speaker)
-                    .map { participant ->
-                        ParticipantItem(
-                            viewModel.room,
-                            participant,
-                            speakerView = true,
-                            moshi = moshi,
-                            imageLoader = imageLoader,
-                            color = viewModel.participantColors[participant.getNonEmptySCI()]
-                        )
-                    }
+                val items = listOfNotNull(speaker).map { participant ->
+                    ParticipantItem(
+                        viewModel.room,
+                        participant,
+                        speakerView = true,
+                        moshi = moshi,
+                        imageLoader = imageLoader,
+                        color = viewModel.participantColors[participant.getNonEmptySCI()]
+                    )
+                }
                 speakerAdapter.update(items)
             }
         }
+    }
 
+    private fun setupRecordingStateObservers() {
         lifecycleScope.launch {
             viewModel.startRecordingState
                 .flowWithLifecycle(lifecycle, Lifecycle.State.STARTED)
-                .collectLatest {
-                    (recordingState: StartRecordingState, isLocalParticipantRecording: Boolean)  ->
-
-                when (recordingState) {
-                    StartRecordingState.Error -> {
-                        binding.recordButton.isEnabled = true
-                        showCustomToastMessage(messageRes = R.string.error_message_call_recording)
-                    }
-
-                    StartRecordingState.Empty -> {}
-
-                    StartRecordingState.Recording -> {
-                        showCustomToastMessage(messageRes = R.string.call_recording_in_progress_message)
-
-                        binding.apply {
-                            recordButton.also {
-                                it.setImageDrawable(getRecordDrawable(isLocalParticipantRecording))
-                                it.isEnabled = isLocalParticipantRecording
+                .collectLatest { (recordingState, isLocalParticipantRecording) ->
+                    when (recordingState) {
+                        StartRecordingState.Error -> {
+                            binding.recordButton.isEnabled = true
+                            showCustomToastMessage(R.string.error_message_call_recording)
+                        }
+                        StartRecordingState.Empty -> {}
+                        StartRecordingState.Recording -> {
+                            showCustomToastMessage(R.string.call_recording_in_progress_message)
+                            binding.apply {
+                                recordButton.also {
+                                    it.setImageDrawable(getRecordDrawable(isLocalParticipantRecording))
+                                    it.isEnabled = isLocalParticipantRecording
+                                }
+                                fadeInFadeOutAnimation(
+                                    viewToFadeOut = recordButton,
+                                    durationMillis = 700,
+                                    alphaStartValue = 1.0f,
+                                    alphaEndValue = 0.5f,
+                                )
                             }
-
-                            fadeInFadeOutAnimation(
-                                viewToFadeOut = recordButton,
-                                durationMillis = 700,
-                                alphaStartValue = 1.0f,
-                                alphaEndValue = 0.5f,
-                            )
+                        }
+                        StartRecordingState.Loading -> {
+                            showCustomToastMessage(R.string.starting_call_recording_message)
+                            binding.recordButton.isEnabled = false
                         }
                     }
-
-                    StartRecordingState.Loading -> {
-                        showCustomToastMessage(messageRes = R.string.starting_call_recording_message)
-
-                        binding.recordButton.isEnabled = false
-                    }
                 }
-            }
         }
 
         lifecycleScope.launch {
             viewModel.stopRecordingState
                 .flowWithLifecycle(lifecycle, Lifecycle.State.STARTED)
                 .collectLatest { state ->
-                when(state) {
-                    StopRecordingState.Error -> {
-                        showCustomToastMessage(messageRes = R.string.error_message_call_recording)
-                    }
-
-                    StopRecordingState.Empty -> {}
-
-                    StopRecordingState.Stopped -> {
-                        binding.apply {
-                            showCustomToastMessage(messageRes = R.string.stopped_call_record_message)
-
-                            recordButton.also {
-                                it.clearAnimation()
-                                it.isEnabled = true
-                                it.setImageResource(R.drawable.radio_button_checked)
+                    when(state) {
+                        StopRecordingState.Error -> {
+                            showCustomToastMessage(R.string.error_message_call_recording)
+                        }
+                        StopRecordingState.Empty -> {}
+                        StopRecordingState.Stopped -> {
+                            binding.apply {
+                                showCustomToastMessage(R.string.stopped_call_record_message)
+                                recordButton.also {
+                                    it.clearAnimation()
+                                    it.isEnabled = true
+                                    it.setImageResource(R.drawable.radio_button_checked)
+                                }
                             }
                         }
-                    }
-
-                    StopRecordingState.Loading -> {
-                        showCustomToastMessage(messageRes = R.string.stopping_call_recording_message)
-
-                        binding.apply {
-                            recordButton.also {
-                                it.isEnabled = false
-                                it.setImageResource(R.drawable.radio_button_checked_recording)
+                        StopRecordingState.Loading -> {
+                            showCustomToastMessage(R.string.stopping_call_recording_message)
+                            binding.apply {
+                                recordButton.also {
+                                    it.isEnabled = false
+                                    it.setImageResource(R.drawable.radio_button_checked_recording)
+                                }
                             }
                         }
                     }
                 }
-            }
         }
+    }
 
-        lifecycleScope.launchWhenCreated {
-            viewModel.participants.collect { participants ->
-                if (bottomSheet == null) {
-                    bottomSheet = ParticipantsBottomSheetFragment.newInstance(participants.toMutableList(), viewModel.participantColors)
-                } else {
-                    bottomSheet?.setParticipants(participants.toMutableList(), viewModel.participantColors)
-                }
-            }
-        }
-
-        // Controls setup
+    private fun setupControls() {
         viewModel.cameraEnabled.observe(this) { enabled ->
-            binding.camera.setOnClickListener { viewModel.setCameraEnabled(!enabled) }
-
-            binding.camera.setImageResource(
+            binding.camera.apply {
+                setOnClickListener { viewModel.setCameraEnabled(!enabled) }
+                setImageResource(if (enabled) R.drawable.camera else R.drawable.camera_off)
                 if (enabled) {
-                    R.drawable.camera
+                    clearColorFilter()
                 } else {
-                    R.drawable.camera_off
+                    setColorFilter(ContextCompat.getColor(this@CallActivity, R.color.disabled_icons_color))
                 }
-            )
-
-            if (enabled) {
-                binding.camera.clearColorFilter()
-            } else {
-                binding.camera.setColorFilter(ContextCompat.getColor(this, R.color.disabled_icons_color)) // Apply red tint when off
+                background = ContextCompat.getDrawable(
+                    this@CallActivity,
+                    if (enabled) R.drawable.circle_icon_call_button else R.drawable.circle_icon_call_button_disabled
+                )
             }
-
-            binding.camera.background = if (enabled) {
-                ContextCompat.getDrawable(this, R.drawable.circle_icon_call_button)
-            } else {
-                ContextCompat.getDrawable(this, R.drawable.circle_icon_call_button_disabled)
+            binding.flipCamera.apply {
+                visibility = if (enabled) View.VISIBLE else View.GONE
+                isEnabled = enabled
+                setOnClickListener { viewModel.flipCamera() }
             }
-
-            binding.flipCamera.visibility = if (enabled) {
-                View.VISIBLE
-            } else {
-                View.GONE
-            }
-
-
-            binding.flipCamera.isEnabled = enabled
         }
 
         viewModel.micEnabled.observe(this) { enabled ->
-            binding.mic.setOnClickListener { viewModel.setMicEnabled(!enabled) }
-            binding.mic.setImageResource(
+            binding.mic.apply {
+                setOnClickListener { viewModel.setMicEnabled(!enabled) }
+                setImageResource(if (enabled) R.drawable.mic else R.drawable.mic_off)
                 if (enabled) {
-                    R.drawable.mic
+                    clearColorFilter()
                 } else {
-                    R.drawable.mic_off
+                    setColorFilter(ContextCompat.getColor(this@CallActivity, R.color.disabled_icons_color))
                 }
-            )
-
-            if (enabled) {
-                binding.mic.clearColorFilter()
-            } else {
-                binding.mic.setColorFilter(ContextCompat.getColor(this, R.color.disabled_icons_color)) // Apply red tint when off
-            }
-
-            binding.mic.background = if (enabled) {
-                ContextCompat.getDrawable(this, R.drawable.circle_icon_call_button)
-            } else {
-                ContextCompat.getDrawable(this, R.drawable.circle_icon_call_button_disabled)
+                background = ContextCompat.getDrawable(
+                    this@CallActivity,
+                    if (enabled) R.drawable.circle_icon_call_button else R.drawable.circle_icon_call_button_disabled
+                )
             }
         }
-
-
-        binding.flipCamera.setOnClickListener { viewModel.flipCamera() }
-
-        /* viewModel.screenshareEnabled.observe(this) { enabled ->
-            binding.screenShare.setOnClickListener {
-                if (enabled) {
-                    viewModel.stopScreenCapture()
-                } else {
-                    requestMediaProjection()
-                }
-            }
-            binding.screenShare.setImageResource(
-                if (enabled) {
-                    R.drawable.baseline_cast_connected_24
-                } else {
-                    R.drawable.baseline_cast_24
-                },
-            )
-        }
-
-        binding.message.setOnClickListener {
-            val editText = EditText(this)
-            AlertDialog.Builder(this)
-                .setTitle("Send Message")
-                .setView(editText)
-                .setPositiveButton("Send") { dialog, _ ->
-                    viewModel.sendData(editText.text?.toString() ?: "")
-                }
-                .setNegativeButton("Cancel") { _, _ -> }
-                .create()
-                .show()
-        }
-©
-        viewModel.enhancedNsEnabled.observe(this) { enabled ->
-            binding.enhancedNs.visibility = if (enabled) {
-                android.view.View.VISIBLE
-            } else {
-                android.view.View.GONE
-            }
-        }
-
-        binding.enhancedNs.setOnClickListener {
-            showAudioProcessorSwitchDialog(viewModel)
-        }*/
 
         binding.exit.setOnClickListener {
             lastToast?.cancel()
             viewModel.stopRecording()
             finish()
         }
-
-
-//        binding.audioSelect.setOnClickListener {
-//            showSelectAudioDeviceDialog(viewModel)
-//        }
-        /* lifecycleScope.launchWhenCreated {
-            viewModel.permissionAllowed.collect { allowed ->
-                val resource = if (allowed) R.drawable.account_cancel_outline else R.drawable.account_cancel
-                binding.permissions.setImageResource(resource)
-            }
-        }
-        binding.permissions.setOnClickListener {
-            viewModel.toggleSubscriptionPermissions()
-        }*/
 
         binding.debugMenu.setOnClickListener {
             showDebugMenuDialog(viewModel)
@@ -382,28 +295,30 @@ class CallActivity : AppCompatActivity() {
         }
 
         binding.listParticipants.setOnClickListener {
-            if (bottomSheet?.isAdded == false) {
-                bottomSheet?.show(supportFragmentManager, bottomSheet?.tag)
+            bottomSheet?.let {
+                if (!it.isAdded) {
+                    it.show(supportFragmentManager, it.tag)
+                }
             }
         }
 
         binding.recordButton.setOnClickListener {
             viewModel.toggleRecording()
         }
+    }
 
+    private fun setupParticipantCountObserver() {
         lifecycleScope.launchWhenCreated {
             viewModel.participants.collect { participants ->
-                // Update the participant count on the badge
-                val participantCountBadge = findViewById<TextView>(R.id.participantCountBadge)
-                if (participants.isNotEmpty()) {
-                    // Show badge and set the count
-                    participantCountBadge.visibility = View.VISIBLE
-                    participantCountBadge.text = participants.size.toString()
-                } else {
-                    // Hide badge if no participants
-                    participantCountBadge.visibility = View.GONE
-                }
+                updateParticipantCountBadge(participants.size)
             }
+        }
+    }
+
+    private fun updateParticipantCountBadge(count: Int) {
+        binding.participantCountBadge.apply {
+            visibility = if (count > 0) View.VISIBLE else View.GONE
+            text = count.toString()
         }
     }
 
@@ -414,11 +329,7 @@ class CallActivity : AppCompatActivity() {
             toastBackgroundTint = R.color.color_recording_background,
             showOnTop = true,
             verticalPositionInPixels = 140
-        ).show(
-            this@CallActivity,
-            messageRes
-        ).let { response ->
-
+        ).show(this, messageRes).let { response ->
             if (response is ToastUtilsResponse.Success) {
                 lastToast = response.toast
             }
@@ -426,12 +337,8 @@ class CallActivity : AppCompatActivity() {
     }
 
     private fun getRecordDrawable(isLocalParticipantRecording: Boolean): Drawable? {
-        val recordButtonActiveColor = resources.getColor(
-            R.color.disabled_icons_color,
-            null
-        )
-
-        val drawable = ResourcesCompat.getDrawable(
+        val recordButtonActiveColor = resources.getColor(R.color.disabled_icons_color, null)
+        return ResourcesCompat.getDrawable(
             resources,
             if (isLocalParticipantRecording) R.drawable.stop_circle else R.drawable.radio_button_checked,
             null
@@ -442,14 +349,13 @@ class CallActivity : AppCompatActivity() {
                 setColorFilter(recordButtonActiveColor, PorterDuff.Mode.SRC_ATOP)
             }
         }
-        return drawable
     }
 
     private fun fadeInFadeOutAnimation(
         viewToFadeOut: View,
         durationMillis: Long = 500,
-        alphaStartValue: Float =  1.0f,
-        alphaEndValue: Float =  0.5f,
+        alphaStartValue: Float = 1.0f,
+        alphaEndValue: Float = 0.5f,
     ) {
         val animation = AlphaAnimation(alphaStartValue, alphaEndValue).apply {
             fillAfter = true
@@ -458,48 +364,44 @@ class CallActivity : AppCompatActivity() {
             interpolator = AccelerateInterpolator()
             repeatMode = Animation.REVERSE
         }
-
         viewToFadeOut.startAnimation(animation)
     }
 
     override fun onUserLeaveHint() {
-        // Trigger PiP mode when the user presses the home button or switches apps
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val aspectRatio = Rational(9, 16) // Aspect ratio of the PiP window
-            val pipParams = PictureInPictureParams.Builder()
-                .setAspectRatio(aspectRatio)
+            enterPictureInPictureMode(PictureInPictureParams.Builder()
+                .setAspectRatio(Rational(9, 16))
                 .build()
-            enterPictureInPictureMode(pipParams)
-
-            binding.controlsBox.visibility = android.view.View.GONE
-            binding.controlsBox2.visibility = android.view.View.GONE
-            binding.audienceRow.visibility = android.view.View.GONE
-
+            )
+            binding.controlsBox.visibility = View.GONE
+            binding.controlsBox2.visibility = View.GONE
+            binding.audienceRow.visibility = View.GONE
         }
     }
 
-    // Function to start Picture-in-Picture mode
     @Deprecated("Deprecated in Java")
     override fun enterPictureInPictureMode() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val aspectRatio = Rational(9, 16) // Define the aspect ratio of the PiP window
-            val pipParams = PictureInPictureParams.Builder()
-                .setAspectRatio(aspectRatio)  // Set aspect ratio
+            enterPictureInPictureMode(PictureInPictureParams.Builder()
+                .setAspectRatio(Rational(9, 16))
                 .build()
-            enterPictureInPictureMode(pipParams)
-
-            binding.controlsBox.visibility = android.view.View.GONE
-            binding.controlsBox2.visibility = android.view.View.GONE
-            binding.audienceRow.visibility = android.view.View.GONE
+            )
+            binding.controlsBox.visibility = View.GONE
+            binding.controlsBox2.visibility = View.GONE
+            binding.audienceRow.visibility = View.GONE
         }
     }
 
     override fun onResume() {
         super.onResume()
+        binding.controlsBox.visibility = View.VISIBLE
+        binding.controlsBox2.visibility = View.VISIBLE
+        binding.audienceRow.visibility = View.VISIBLE
+
         lifecycleScope.launchWhenResumed {
             viewModel.error.collect {
-                if (it != null) {
-                    Toast.makeText(this@CallActivity, "Error: $it", Toast.LENGTH_LONG).show()
+                it?.let { error ->
+                    Toast.makeText(this@CallActivity, "Error: $error", Toast.LENGTH_LONG).show()
                     viewModel.dismissError()
                 }
             }
@@ -510,15 +412,10 @@ class CallActivity : AppCompatActivity() {
                 Toast.makeText(this@CallActivity, "Data received: $it", Toast.LENGTH_LONG).show()
             }
         }
-
-        binding.controlsBox.visibility = View.VISIBLE
-        binding.controlsBox2.visibility = View.VISIBLE
-        binding.audienceRow.visibility = View.VISIBLE
     }
 
     private fun requestMediaProjection() {
-        val mediaProjectionManager =
-            getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+        val mediaProjectionManager = getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         screenCaptureIntentLauncher.launch(mediaProjectionManager.createScreenCaptureIntent())
     }
 
@@ -527,7 +424,7 @@ class CallActivity : AppCompatActivity() {
         binding.speakerView.adapter = null
         lastToast?.cancel()
         lastToast = null
-
+        bottomSheet = null
         super.onDestroy()
     }
 

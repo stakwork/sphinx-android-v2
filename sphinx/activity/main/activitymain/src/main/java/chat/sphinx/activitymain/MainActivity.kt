@@ -136,6 +136,9 @@ class MainActivity: MotionLayoutNavigationActivity<
             }
         }
         }
+        intent.dataString?.let { deepLink ->
+            handleDeepLink(deepLink)
+        }
     }
 
     override fun onStart() {

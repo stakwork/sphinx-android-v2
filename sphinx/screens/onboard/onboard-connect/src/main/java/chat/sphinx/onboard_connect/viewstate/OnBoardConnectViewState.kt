@@ -4,6 +4,6 @@ import io.matthewnelson.concept_views.viewstate.ViewState
 
 internal sealed class OnBoardConnectViewState: ViewState<OnBoardConnectViewState>() {
     object Idle: OnBoardConnectViewState()
-    object NewUser: OnBoardConnectViewState()
+    data class NewUser(val code: String?) : OnBoardConnectViewState()
     object ExistingUser: OnBoardConnectViewState()
 }

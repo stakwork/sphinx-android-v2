@@ -19,6 +19,7 @@ import chat.sphinx.concept_repository_media.RepositoryMedia
 import chat.sphinx.concept_service_media.MediaPlayerServiceController
 import chat.sphinx.dashboard.navigation.ToDashboardScreen
 import chat.sphinx.dashboard.ui.getMediaDuration
+import chat.sphinx.onboard_connect.navigation.ToOnBoardConnectScreen
 import chat.sphinx.wrapper_common.StorageData
 import chat.sphinx.wrapper_common.StorageLimit.DEFAULT_STORAGE_LIMIT
 import chat.sphinx.wrapper_common.StorageLimit.STORAGE_LIMIT_KEY
@@ -34,6 +35,7 @@ import io.matthewnelson.concept_authentication.state.AuthenticationState
 import io.matthewnelson.concept_authentication.state.AuthenticationStateManager
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collect
 import javax.inject.Inject
 
@@ -79,6 +81,22 @@ class MainViewModel @Inject constructor(
         getStorageData()
     }
 
+    private suspend fun processDeepLink(deepLink: String) {
+        val uri = Uri.parse(deepLink)
+        val action = uri.getQueryParameter("action")
+        val data = uri.getQueryParameter("d")
+
+        if (action == "i" && !data.isNullOrEmpty()) {
+            navigationDriver.submitNavigationRequest(
+                ToOnBoardConnectScreen(
+                    popUpToId = R.id.main_primary_nav_graph,
+                    newUser = true,
+                    code = deepLink
+                )
+            )
+        }
+    }
+
     suspend fun handleDeepLink(deepLink: String) {
         if (authenticationStateManager.authenticationStateFlow.value == AuthenticationState.NotRequired) {
             navigationDriver.submitNavigationRequest(
@@ -88,6 +106,9 @@ class MainViewModel @Inject constructor(
                     deepLink = deepLink
                 )
             )
+        }
+        else {
+            processDeepLink(deepLink)
         }
     }
 

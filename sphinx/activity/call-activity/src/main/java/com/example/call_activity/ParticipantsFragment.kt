@@ -3,17 +3,11 @@ package com.example.call_activity
 import android.app.Activity
 import android.content.Context
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.ViewTreeObserver
-import android.widget.ArrayAdapter
 import android.widget.ImageView
-import android.widget.ListView
 import android.widget.TextView
-import androidx.annotation.ColorInt
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
 import chat.sphinx.call_activity.R
@@ -25,8 +19,8 @@ import chat.sphinx.wrapper_common.util.getInitials
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.squareup.moshi.Moshi
 import io.livekit.android.room.participant.Participant
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import dagger.hilt.android.AndroidEntryPoint
 import java.util.Locale
 import javax.inject.Inject
 
@@ -36,31 +30,63 @@ class ParticipantsBottomSheetFragment : BottomSheetDialogFragment() {
     @Inject
     lateinit var imageLoader: ImageLoader<ImageView>
 
-    private lateinit var adapter: ParticipantAdapter
+    @Inject
+    lateinit var moshi: Moshi
 
     private var _binding: FragmentParticipantsBinding? = null
-    private val binding get() = _binding!! // Only use when safe
+    private val binding get() = _binding!!
+    private lateinit var adapter: ParticipantAdapter
 
     private var participants: MutableList<Participant> = mutableListOf()
     private var participantColors: MutableMap<String, Int> = mutableMapOf()
 
     companion object {
+        private const val PARTICIPANTS_KEY = "participants"
+        private const val COLORS_KEY = "colors"
+
         fun newInstance(
-            participants: MutableList<Participant>,
-            participantColors: MutableMap<String, Int>
-        ) = ParticipantsBottomSheetFragment().apply {
-            this.participants = participants
-            this.participantColors = participantColors
+            participants: List<Participant>,
+            participantColors: Map<String, Int>
+        ): ParticipantsBottomSheetFragment {
+            return ParticipantsBottomSheetFragment().apply {
+                arguments = Bundle().apply {
+                    putParcelableArrayList(PARTICIPANTS_KEY, ArrayList(participants.map { ParticipantParcelable(it) }))
+                    putSerializable(COLORS_KEY, HashMap(participantColors))
+                }
+            }
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        arguments?.let {
+            participants = it.getParcelableArrayList<ParticipantParcelable>(PARTICIPANTS_KEY)
+                ?.map { it.toParticipant() }
+                ?.toMutableList() ?: mutableListOf()
+            participantColors = (it.getSerializable(COLORS_KEY) as? Map<String, Int>)?.toMutableMap() ?: mutableMapOf()
         }
     }
 
     override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
+        inflater: LayoutInflater,
+        container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
         _binding = FragmentParticipantsBinding.inflate(inflater, container, false)
+        return binding.root
+    }
 
-        adapter = ParticipantAdapter(requireContext(), participants, imageLoader, lifecycleScope, participantColors)
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        adapter = ParticipantAdapter(
+            requireContext(),
+            participants,
+            imageLoader,
+            moshi,
+            lifecycleScope,
+            participantColors
+        )
         binding.listView.adapter = adapter
 
         updateParticipantCount()
@@ -69,24 +95,25 @@ class ParticipantsBottomSheetFragment : BottomSheetDialogFragment() {
             dismiss()
         }
 
-        return binding.root
+        // Observe participant changes if needed
+        (activity as? CallActivity)?.let { callActivity ->
+            lifecycleScope.launchWhenStarted {
+                callActivity.viewModel.participants.collectLatest { updatedParticipants ->
+                    participants = updatedParticipants.toMutableList()
+                    participantColors = callActivity.viewModel.participantColors
+                    adapter.setParticipants(participants, participantColors)
+                    updateParticipantCount()
+                }
+            }
+        }
     }
 
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null // Avoid memory leaks
-    }
-
-    fun setParticipants(
-        newParticipants: MutableList<Participant>,
-        newParticipantColors: MutableMap<String, Int>
-    ) {
-        this.participants = newParticipants
-        this.participantColors = newParticipantColors
-
-        if (_binding != null) { // Ensure the view exists
-            updateParticipantCount()
+    fun updateParticipants(newParticipants: List<Participant>, newColors: Map<String, Int>) {
+        participants = newParticipants.toMutableList()
+        participantColors = newColors.toMutableMap()
+        if (::adapter.isInitialized) {
             adapter.setParticipants(participants, participantColors)
+            updateParticipantCount()
         }
     }
 
@@ -97,61 +124,66 @@ class ParticipantsBottomSheetFragment : BottomSheetDialogFragment() {
         }
     }
 
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
+    }
+
     class ParticipantAdapter(
         context: Context,
         private var participants: MutableList<Participant>,
         private val imageLoader: ImageLoader<ImageView>,
+        private val moshi: Moshi,
         private val lifecycleScope: androidx.lifecycle.LifecycleCoroutineScope,
         private var participantColors: MutableMap<String, Int>
-    ) : ArrayAdapter<Participant>(context, 0, participants) {
+    ) : androidx.recyclerview.widget.RecyclerView.Adapter<ParticipantAdapter.ViewHolder>() {
 
-        private val moshi: Moshi = Moshi.Builder().build() // Reuse instead of recreating in getView()
+        inner class ViewHolder(itemView: View) : androidx.recyclerview.widget.RecyclerView.ViewHolder(itemView) {
+            val nameTextView: TextView = itemView.findViewById(R.id.participantName)
+            val cameraStatusImageView: ImageView = itemView.findViewById(R.id.cameraStatus)
+            val micStatusImageView: ImageView = itemView.findViewById(R.id.micStatus)
+            val profileImageView: ImageView = itemView.findViewById(R.id.profileImageView)
+            val textViewInitials: TextView = itemView.findViewById(R.id.textViewInitials)
+        }
 
-        override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
-            val viewHolder: ViewHolder
-            val view: View
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+            val view = LayoutInflater.from(parent.context)
+                .inflate(R.layout.participant_list_item, parent, false)
+            return ViewHolder(view)
+        }
 
-            if (convertView == null) {
-                view = LayoutInflater.from(context).inflate(R.layout.participant_list_item, parent, false)
-                viewHolder = ViewHolder(view)
-                view.tag = viewHolder
-            } else {
-                view = convertView
-                viewHolder = convertView.tag as ViewHolder
-            }
+        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+            val participant = participants[position]
 
-            val participant = getItem(position) ?: return view
+            holder.nameTextView.text = participant.name
 
-            // Set participant name
-            viewHolder.nameTextView.text = participant.name
-
-            // Camera status visibility
-            viewHolder.cameraStatusImageView.apply {
-                visibility = if (participant.isCameraEnabled()) View.VISIBLE else View.GONE
-                if (visibility == View.VISIBLE) setImageResource(R.drawable.camera)
+            // Camera status
+            holder.cameraStatusImageView.visibility = if (participant.isCameraEnabled()) View.VISIBLE else View.GONE
+            if (holder.cameraStatusImageView.visibility == View.VISIBLE) {
+                holder.cameraStatusImageView.setImageResource(R.drawable.camera)
             }
 
             // Microphone status
-            viewHolder.micStatusImageView.setImageResource(
+            holder.micStatusImageView.setImageResource(
                 if (participant.isMicrophoneEnabled()) R.drawable.mic else R.drawable.mic_off
             )
 
-            // Load profile picture or initials
+
             val participantMetaData = participant.metadata?.toParticipantMetaDataOrNull(moshi)
 
             participantMetaData?.profilePictureUrl?.let { imageUrl ->
-                viewHolder.textViewInitials.visibility = View.GONE
-                viewHolder.profileImageView.visibility = View.VISIBLE
-                viewHolder.profileImageView.setImageDrawable(null)
+                holder.textViewInitials.visibility = View.GONE
+                holder.profileImageView.visibility = View.VISIBLE
+                holder.profileImageView.setImageDrawable(null)
 
                 lifecycleScope.launch {
-                    imageLoader.load(viewHolder.profileImageView, imageUrl)
+                    imageLoader.load(holder.profileImageView, imageUrl)
                 }
             } ?: run {
                 val initials = participant.name?.getInitials()
 
-                viewHolder.profileImageView.visibility = View.GONE
-                viewHolder.textViewInitials.apply {
+                holder.profileImageView.visibility = View.GONE
+                holder.textViewInitials.apply {
                     visibility = View.VISIBLE
                     text = initials?.uppercase(Locale.getDefault()) ?: ""
 
@@ -160,26 +192,40 @@ class ParticipantsBottomSheetFragment : BottomSheetDialogFragment() {
                     setBackgroundRandomColor(R.drawable.circle_icon_4, color)
                 }
             }
-
-            return view
         }
+
+        override fun getItemCount(): Int = participants.size
 
         fun setParticipants(
-            participants: MutableList<Participant>,
-            participantColors: MutableMap<String, Int>
+            newParticipants: MutableList<Participant>,
+            newParticipantColors: MutableMap<String, Int>
         ) {
-            this.participants = participants
-            this.participantColors = participantColors
+            participants = newParticipants
+            participantColors = newParticipantColors
             notifyDataSetChanged()
         }
+    }
+}
 
-        // ViewHolder to optimize findViewById calls
-        private class ViewHolder(view: View) {
-            val nameTextView: TextView = view.findViewById(R.id.participantName)
-            val cameraStatusImageView: ImageView = view.findViewById(R.id.cameraStatus)
-            val micStatusImageView: ImageView = view.findViewById(R.id.micStatus)
-            val profileImageView: ImageView = view.findViewById(R.id.profileImageView)
-            val textViewInitials: TextView = view.findViewById(R.id.textViewInitials)
+data class ParticipantParcelable(val participant: Participant) : android.os.Parcelable {
+    constructor(parcel: android.os.Parcel) : this(
+    )
+
+    override fun writeToParcel(parcel: android.os.Parcel, flags: Int) {
+
+    }
+
+    override fun describeContents(): Int = 0
+
+    fun toParticipant(): Participant = participant
+
+    companion object CREATOR : android.os.Parcelable.Creator<ParticipantParcelable> {
+        override fun createFromParcel(parcel: android.os.Parcel): ParticipantParcelable {
+            return ParticipantParcelable(parcel)
+        }
+
+        override fun newArray(size: Int): Array<ParticipantParcelable?> {
+            return arrayOfNulls(size)
         }
     }
 }

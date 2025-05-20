@@ -36,12 +36,18 @@
     </LinearLayout>
 
 
-    <ListView
+     <ListView
         android:id="@+id/listView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:maxHeight="400dp"
         android:divider="@color/blackSemiTransparent"
-        android:dividerHeight="1dp"/>
+        android:dividerHeight="1dp"
+        android:drawSelectorOnTop="true"
+        android:fastScrollEnabled="false"
+        android:scrollingCache="false"
+        android:animationCache="false"
+        android:smoothScrollbar="true"/>
 
     <View
         android:layout_width="match_parent"

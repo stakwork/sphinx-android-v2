@@ -53,6 +53,9 @@ import chat.sphinx.resources.R as R_common
 internal inline val OnBoardConnectFragmentArgs.newUser: Boolean
     get() = argNewUser
 
+internal inline val OnBoardConnectFragmentArgs.codeArg: String?
+    get() = argCode
+
 @HiltViewModel
 internal class OnBoardConnectViewModel @Inject constructor(
     dispatchers: CoroutineDispatchers,
@@ -100,7 +103,7 @@ internal class OnBoardConnectViewModel @Inject constructor(
     init {
         updateViewState(
             if (args.newUser) {
-                OnBoardConnectViewState.NewUser
+                OnBoardConnectViewState.NewUser(args.argCode)
             } else {
                 OnBoardConnectViewState.ExistingUser
             }

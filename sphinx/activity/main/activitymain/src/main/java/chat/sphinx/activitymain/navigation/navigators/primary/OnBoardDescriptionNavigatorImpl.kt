@@ -12,7 +12,7 @@ internal class OnBoardDescriptionNavigatorImpl @Inject constructor(
 
     override suspend fun toOnBoardConnectScreen(newUser: Boolean) {
         navigationDriver.submitNavigationRequest(
-            ToOnBoardConnectScreen(popUpToId = R_onboard.id.on_board_description_nav_graph, newUser)
+            ToOnBoardConnectScreen(popUpToId = R_onboard.id.on_board_description_nav_graph, newUser, null)
         )
     }
 

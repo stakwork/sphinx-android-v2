@@ -80,6 +80,10 @@ internal class OnBoardConnectViewModel @Inject constructor(
 {
 
     private val args: OnBoardConnectFragmentArgs by handle.navArgs()
+
+    private val newUser: Boolean = handle["argNewUser"] ?: false
+    private val codeArg: String? = handle["argCode"]
+
     private lateinit var signerManager: SignerManager
 
     companion object {
@@ -102,8 +106,8 @@ internal class OnBoardConnectViewModel @Inject constructor(
 
     init {
         updateViewState(
-            if (args.newUser) {
-                OnBoardConnectViewState.NewUser(args.argCode)
+            if (newUser) {
+                OnBoardConnectViewState.NewUser(codeArg)
             } else {
                 OnBoardConnectViewState.ExistingUser
             }

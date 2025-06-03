@@ -213,6 +213,11 @@ internal class OnBoardConnectFragment: SideEffectFragment<
                     editTextCodeInput.hint = getString(R_onboard_resources.string.on_board_connect_paste_connection_code)
                     imageButtonScanner.visible
 //                    layoutConstrainSkipContainer.visible
+
+                    if (!viewState.code.isNullOrEmpty()) {
+                        editTextCodeInput.setText(viewState.code)
+                        hideKeyboardFrom(binding.editTextCodeInput.context, binding.editTextCodeInput)
+                    }
                 }
             }
             is OnBoardConnectViewState.ExistingUser -> {

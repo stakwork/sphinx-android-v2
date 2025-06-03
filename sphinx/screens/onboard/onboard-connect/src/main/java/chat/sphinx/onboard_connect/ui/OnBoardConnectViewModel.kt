@@ -53,6 +53,9 @@ import chat.sphinx.resources.R as R_common
 internal inline val OnBoardConnectFragmentArgs.newUser: Boolean
     get() = argNewUser
 
+internal inline val OnBoardConnectFragmentArgs.codeArg: String?
+    get() = argCode
+
 @HiltViewModel
 internal class OnBoardConnectViewModel @Inject constructor(
     dispatchers: CoroutineDispatchers,
@@ -77,6 +80,10 @@ internal class OnBoardConnectViewModel @Inject constructor(
 {
 
     private val args: OnBoardConnectFragmentArgs by handle.navArgs()
+
+    private val newUser: Boolean = handle["argNewUser"] ?: false
+    private val codeArg: String? = handle["argCode"]
+
     private lateinit var signerManager: SignerManager
 
     companion object {
@@ -99,8 +106,8 @@ internal class OnBoardConnectViewModel @Inject constructor(
 
     init {
         updateViewState(
-            if (args.newUser) {
-                OnBoardConnectViewState.NewUser
+            if (newUser) {
+                OnBoardConnectViewState.NewUser(codeArg)
             } else {
                 OnBoardConnectViewState.ExistingUser
             }

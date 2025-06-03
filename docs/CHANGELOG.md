@@ -1,8 +1,19 @@
 # ChangeLog
 
-## Version 1.0.0-alpha45 (2025-04-02)
+## Version 1.0.0-alpha48 (2025-05-22)
+- Fixes crash on app launch
+- Handles invite codes received as deep links
+
+## Version 1.0.0-alpha47 (2025-05-21)
+- Handles invite codes received as deep links
+- General fixes and improvements
+
+## Version 1.0.0-alpha46 (2025-04-30)
+- Adds missing keys for podcast processing endpoints
+
+## Version 1.0.0-alpha45 (2025-04-29)
 - Adds support for podcast episode chapters and ads
-  - Adds place holder view for pending contacts and empty chats
+- Adds place holder view for pending contacts and empty chats
 
 ## Version 1.0.0-alpha44 (2025-04-02)
 - Upgrades LiveKit library

@@ -10,12 +10,13 @@ import io.matthewnelson.concept_navigation.NavigationRequest
 class ToOnBoardConnectScreen(
     @IdRes private val popUpToId: Int,
     private val newUser: Boolean,
+    private val code: String?
 ): NavigationRequest<NavController>() {
 
     override fun navigate(controller: NavController) {
         controller.navigate(
             R.id.on_board_connect_nav_graph,
-            OnBoardConnectFragmentArgs.Builder(newUser).build().toBundle(),
+            OnBoardConnectFragmentArgs.Builder(newUser, code).build().toBundle(),
             DefaultNavOptions.defaultAnims
                 .setPopUpTo(popUpToId, false)
                 .build()

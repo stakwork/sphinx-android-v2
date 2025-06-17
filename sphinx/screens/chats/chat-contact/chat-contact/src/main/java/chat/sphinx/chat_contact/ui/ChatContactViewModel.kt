@@ -312,4 +312,8 @@ internal class ChatContactViewModel @Inject constructor(
     override fun onSmallProfileImageClick(message: Message) {
         navigateToChatDetailScreen()
     }
+
+    override fun shouldProcessMemberMentions(s: CharSequence?) {
+        // Nothing to do. Only implemented on Tribes
+    }
 }

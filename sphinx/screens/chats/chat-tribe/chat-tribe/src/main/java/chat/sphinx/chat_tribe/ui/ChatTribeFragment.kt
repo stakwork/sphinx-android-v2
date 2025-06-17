@@ -325,16 +325,6 @@ internal class ChatTribeFragment: ChatFragment<
             }
         }
 
-        footerBinding.editTextChatFooter.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                viewModel.processMemberMention(s)
-            }
-
-            override fun afterTextChanged(s: Editable?) {}
-        })
-
         tribeAppBinding.includeLayoutTribeAppDetails.apply {
             (requireActivity() as InsetterActivity).addNavigationBarPadding(layoutConstraintBudget)
 
@@ -353,17 +343,19 @@ internal class ChatTribeFragment: ChatFragment<
         }
 
         mentionMembersPopup.listviewMentionTribeMembers.setOnItemClickListener { parent, _, position, _ ->
-            (parent.adapter as? ArrayAdapter<String>?)?.let {
-                it.getItem(position)?.let { selectedAlias ->
-                    footerBinding.editTextChatFooter.apply {
+            (parent.adapter as? ArrayAdapter<*>?)?.let {
+                it.getItem(position)?.let { selectedMembr ->
+                    (selectedMembr as? Triple<*, *, *>)?.let {
+                        footerBinding.editTextChatFooter.apply {
 
-                        val newText = text.toString().messageWithMention(selectedAlias)
+                            val newText = text.toString().messageWithMention((selectedMembr.first as? String) ?: "")
 
-                        setText(newText)
-                        setSelection(length())
+                            setText(newText)
+                            setSelection(length())
+                        }
+
+                        mentionMembersPopup.root.gone
                     }
-
-                    mentionMembersPopup.root.gone
                 }
             }
         }

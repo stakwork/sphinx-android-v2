@@ -512,7 +512,9 @@ abstract class ChatFragment<
             editTextChatFooter.addTextChangedListener(object : TextWatcher {
                 override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
-                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                    viewModel.shouldProcessMemberMentions(s)
+                }
 
                 override fun afterTextChanged(s: Editable?) {
                     val sendAttachmentViewState = viewModel.getAttachmentSendViewStateFlow().value
@@ -531,17 +533,15 @@ abstract class ChatFragment<
                             )
                         }
                     }
+
+                    if (viewModel.getFooterViewStateFlow().value !is FooterViewState.Attachment) {
+                        textViewChatFooterSend.goneIfTrue(s?.trim().isNullOrEmpty())
+                        imageViewChatFooterMicrophone.goneIfFalse(s?.trim().isNullOrEmpty())
+                    }
                 }
             })
 
             editTextChatFooter.onCommitContentListener = viewModel.onIMEContent
-            editTextChatFooter.addTextChangedListener { editable ->
-                //Do not toggle microphone and send icon if on attachment mode
-                if (viewModel.getFooterViewStateFlow().value !is FooterViewState.Attachment) {
-                    textViewChatFooterSend.goneIfTrue(editable?.trim().isNullOrEmpty())
-                    imageViewChatFooterMicrophone.goneIfFalse(editable?.trim().isNullOrEmpty())
-                }
-            }
         }
 
         searchFooterBinding.apply {

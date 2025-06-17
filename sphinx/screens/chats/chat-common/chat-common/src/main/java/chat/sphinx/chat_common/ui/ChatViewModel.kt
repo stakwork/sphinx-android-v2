@@ -2495,6 +2495,8 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         }
     }
 
+    abstract fun shouldProcessMemberMentions(s: CharSequence?)
+
     fun processMemberMention(s: CharSequence?) {
         val lastWord = s?.split(" ")?.last()?.toString() ?: ""
 

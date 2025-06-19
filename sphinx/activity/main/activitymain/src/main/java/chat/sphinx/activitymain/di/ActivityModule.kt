@@ -1,10 +1,14 @@
 package chat.sphinx.activitymain.di
 
 import android.content.Context
+import android.widget.ImageView
 import chat.sphinx.concept_connectivity_helper.ConnectivityHelper
+import chat.sphinx.concept_grapheneos_manager.GrapheneOsManager
+import chat.sphinx.concept_image_loader.ImageLoader
 import chat.sphinx.concept_signer_manager.SignerManager
 import chat.sphinx.concept_user_colors_helper.UserColorsHelper
 import chat.sphinx.connectivity_helper.ConnectivityHelperImpl
+import chat.sphinx.grapheneos_manager.GrapheneOsManagerImpl
 import chat.sphinx.signer_manager.SignerManagerImpl
 import chat.sphinx.user_colors_helper.UserColorsHelperImpl
 import dagger.Module
@@ -60,5 +64,20 @@ object ActivityModule {
         signerManagerImpl: SignerManagerImpl
     ): SignerManager =
         signerManagerImpl
+
+    @Provides
+    @ActivityScoped
+    fun provideGrapheneOsManagerImpl(
+        @ApplicationContext appContext: Context,
+        dispatchers: CoroutineDispatchers,
+        imageLoader: ImageLoader<ImageView>
+    ): GrapheneOsManagerImpl =
+        GrapheneOsManagerImpl(appContext, imageLoader, dispatchers)
+
+    @Provides
+    fun provideGrapheneOsManager(
+        grapheneOsManagerImpl: GrapheneOsManagerImpl
+    ): GrapheneOsManager =
+        grapheneOsManagerImpl
 
 }

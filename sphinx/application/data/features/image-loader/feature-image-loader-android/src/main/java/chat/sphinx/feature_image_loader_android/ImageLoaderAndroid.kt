@@ -3,31 +3,38 @@ package chat.sphinx.feature_image_loader_android
 import android.content.Context
 import android.os.Build
 import android.widget.ImageView
+import androidx.annotation.ContentView
 import androidx.annotation.DrawableRes
 import app.cash.exhaustive.Exhaustive
 import chat.sphinx.concept_image_loader.*
 import chat.sphinx.concept_network_client.NetworkClientClearedListener
 import chat.sphinx.concept_network_client_cache.NetworkClientCache
+import chat.sphinx.feature_image_loader_android.transformations.BlurTransformation
+import chat.sphinx.feature_image_loader_android.transformations.GrayscaleTransformation
 import chat.sphinx.logger.SphinxLogger
 import chat.sphinx.logger.e
 import coil.annotation.ExperimentalCoilApi
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.decode.SvgDecoder
-import coil.fetch.VideoFrameFileFetcher
-import coil.fetch.VideoFrameUriFetcher
+import coil.disk.DiskCache
+import coil.memory.MemoryCache
+import coil.request.CachePolicy
 import coil.request.ImageRequest
 import coil.request.ImageResult
-import coil.transform.BlurTransformation
+import coil.request.SuccessResult
+import coil.size.Scale
 import coil.transform.CircleCropTransformation
-import coil.transform.GrayscaleTransformation
 import coil.transform.RoundedCornersTransformation
 import coil.transition.CrossfadeTransition
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import okhttp3.CacheControl
+import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import java.io.File
+import java.util.concurrent.TimeUnit
 
 class ImageLoaderAndroid(
     context: Context,
@@ -44,6 +51,9 @@ class ImageLoaderAndroid(
     }
 
     private val appContext: Context = context.applicationContext
+
+    private var isHighQualityMode = true
+    private var isPaused = false
 
     @Volatile
     private var loader: coil.ImageLoader? = null
@@ -97,8 +107,7 @@ class ImageLoaderAndroid(
             // Always retrieve the client, as Tor may be enabled but
             // in a suspended state and we don't want to do any requests
             // w/o a proxied client.
-            val client = networkClientCache.getCachingClient()
-            val loader: coil.ImageLoader = retrieveLoader(client)
+            val loader: coil.ImageLoader = retrieveLoader()
 
             return DisposableAndroid(loader.enqueue(request.build()))
         }
@@ -111,8 +120,7 @@ class ImageLoaderAndroid(
         listener: OnImageLoadListener? = null,
     ) {
         loaderLock.withLock {
-            val client = networkClientCache.getCachingClient()
-            retrieveLoader(client)
+            retrieveLoader()
         }.let { loader ->
             val builder = buildRequest(imageView, any, options, listener)
             loader.execute(builder.build())
@@ -128,14 +136,26 @@ class ImageLoaderAndroid(
     ): ImageRequest.Builder {
         val request = ImageRequest.Builder(appContext)
             .data(any)
+            .memoryCachePolicy(CachePolicy.ENABLED)
+            .diskCachePolicy(CachePolicy.ENABLED)
+            .networkCachePolicy(if (isPaused) CachePolicy.DISABLED else CachePolicy.ENABLED)
+            .apply {
+                if (!isHighQualityMode) {
+                    size(512, 512)
+                    scale(Scale.FIT)
+                }
+
+                transformations(
+                    RoundedCornersTransformation(8f) // Reduce sharp corners processing
+                )
+            }
             .dispatcher(io)
             .listener(
                 object: ImageRequest.Listener {
-                    override fun onSuccess(request: ImageRequest, metadata: ImageResult.Metadata) {
-                        super.onSuccess(request, metadata)
-                        listener?.let {
-                            it.onSuccess()
-                        }
+                    override fun onSuccess(request: ImageRequest, result: SuccessResult) {
+                        super.onSuccess(request, result)
+
+                        listener?.onSuccess()
                     }
                 }
             )
@@ -154,7 +174,6 @@ class ImageLoaderAndroid(
                     is Transformation.Blur -> {
                         request.transformations(
                             BlurTransformation(
-                                appContext,
                                 transform.radius,
                                 transform.sampling
                             )
@@ -187,17 +206,19 @@ class ImageLoaderAndroid(
                 @Exhaustive
                 when (transition) {
                     is Transition.CrossFade -> {
-                        request.transition(
+                        request.transitionFactory { target, result ->
                             CrossfadeTransition(
+                                target,
+                                result,
                                 transition.durationMillis,
                                 transition.preferExactIntrinsicSize
                             )
-                        )
+                        }
                     }
                     is Transition.None -> {
-                        request.transition(
-                            coil.transition.Transition.NONE
-                        )
+                        request.transitionFactory { target, result ->
+                            CrossfadeTransition(target, result, 0)
+                        }
                     }
                 }
             }
@@ -214,19 +235,117 @@ class ImageLoaderAndroid(
         return request
     }
 
-    private fun retrieveLoader(okHttpClient: OkHttpClient): coil.ImageLoader =
+    private fun retrieveLoader(): coil.ImageLoader =
         loader ?: coil.ImageLoader.Builder(appContext)
-            .okHttpClient(okHttpClient)
-            .componentRegistry {
-                if (Build.VERSION.SDK_INT >= 28) {
-                    add(ImageDecoderDecoder(appContext))
-                } else {
-                    add(GifDecoder())
-                }
-                add(SvgDecoder(appContext))
-                add(VideoFrameFileFetcher(appContext))
-                add(VideoFrameUriFetcher(appContext))
+            .memoryCache(
+                MemoryCache.Builder(appContext)
+                    .maxSizePercent(0.15)
+                    .build()
+            )
+            .diskCache {
+                DiskCache.Builder()
+                    .directory(appContext.cacheDir.resolve("image_cache"))
+                    .maxSizeBytes(50 * 1024 * 1024) // 50MB cache
+                    .build()
             }
+            .okHttpClient(
+                OkHttpClient.Builder()
+                    .connectTimeout(10, TimeUnit.SECONDS)
+                    .readTimeout(30, TimeUnit.SECONDS)
+                    .writeTimeout(30, TimeUnit.SECONDS)
+                    .retryOnConnectionFailure(true)
+                    .addInterceptor(createNetworkInterceptor())
+                    .build()
+            )
+            .components {
+                if (Build.VERSION.SDK_INT >= 28) {
+                    add(ImageDecoderDecoder.Factory())
+                } else {
+                    add(GifDecoder.Factory())
+                }
+                add(SvgDecoder.Factory())
+            }
+            .respectCacheHeaders(false)
+            .allowHardware(false)
+            .crossfade(200)
             .build()
             .also { loader = it }
+
+
+    private fun createNetworkInterceptor() = Interceptor { chain ->
+        val request = chain.request()
+
+        if (isPaused) {
+            // Return cached response if network is paused
+            val cacheOnlyRequest = request.newBuilder()
+                .cacheControl(CacheControl.FORCE_CACHE)
+                .build()
+            chain.proceed(cacheOnlyRequest)
+        } else {
+            var response = chain.proceed(request)
+            var retryCount = 0
+
+            while (!response.isSuccessful && retryCount < 3) {
+                response.close()
+                retryCount++
+                Thread.sleep((500 * Math.pow(2.0, retryCount.toDouble())).toLong())
+                response = chain.proceed(request)
+            }
+
+            // Add aggressive caching headers for GrapheneOS
+            response.newBuilder()
+                .header("Cache-Control", "public, max-age=86400") // 24 hours
+                .build()
+        }
+    }
+
+    override fun preloadImages(urls: List<String>) {
+        if (isPaused || !isHighQualityMode) return
+
+        urls.forEach { url ->
+            val request = ImageRequest.Builder(appContext)
+                .data(url)
+                .memoryCachePolicy(CachePolicy.ENABLED)
+                .diskCachePolicy(CachePolicy.ENABLED)
+                .size(256, 256) // Smaller preload size
+                .build()
+
+            retrieveLoader().enqueue(request)
+        }
+    }
+
+    override fun setHighQualityMode(enabled: Boolean) {
+        isHighQualityMode = enabled
+    }
+
+    override fun pauseImageLoading() {
+        isPaused = true
+    }
+
+    override fun resumeImageLoading() {
+        isPaused = false
+    }
+
+    override fun clearMemoryCache() {
+        retrieveLoader().memoryCache?.clear()
+    }
+
+    override fun getCacheStats(): String {
+        val memoryCache = loader?.memoryCache
+        val diskCache = loader?.diskCache
+
+        return buildString {
+            appendLine("=== ImageLoader Cache Stats ===")
+            memoryCache?.let {
+                appendLine("Memory Cache: ${it.size}/${it.maxSize} bytes")
+            }
+            diskCache?.let {
+                appendLine("Disk Cache: ${it.size}/${it.maxSize} bytes")
+            }
+        }
+    }
+
+    override fun trimMemory() {
+        loader?.memoryCache?.clear()
+    }
 }

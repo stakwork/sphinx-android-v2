@@ -25,6 +25,20 @@ abstract class ImageLoader<ImageView> {
         listener: OnImageLoadListener? = null,
     ): Disposable
 
+    abstract fun preloadImages(urls: List<String>)
+
+    abstract fun setHighQualityMode(enabled: Boolean)
+
+    abstract fun pauseImageLoading()
+
+    abstract fun resumeImageLoading()
+
+    abstract fun clearMemoryCache()
+
+    abstract fun getCacheStats(): String
+
+    abstract fun trimMemory()
+
 }
 
 interface OnImageLoadListener {

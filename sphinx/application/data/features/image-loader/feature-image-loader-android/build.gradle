@@ -38,6 +38,7 @@ dependencies {
     implementation deps.instacart.coilGif
     implementation deps.instacart.coilSvg
     implementation deps.instacart.coilVideo
+    implementation deps.instacart.coilTransformations
 
     testImplementation project(path: ':kotlin:test:test-concept-coroutines')
 }

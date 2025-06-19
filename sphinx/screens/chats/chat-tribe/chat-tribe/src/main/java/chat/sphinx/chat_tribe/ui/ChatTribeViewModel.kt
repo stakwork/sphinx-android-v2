@@ -39,7 +39,9 @@ import chat.sphinx.kotlin_response.message
 import chat.sphinx.logger.SphinxLogger
 import chat.sphinx.menu_bottom.ui.MenuBottomViewState
 import chat.sphinx.wrapper_chat.*
+import chat.sphinx.wrapper_common.DateTime
 import chat.sphinx.wrapper_common.PhotoUrl
+import chat.sphinx.wrapper_common.before
 import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_common.dashboard.ContactId
 import chat.sphinx.wrapper_common.feed.FeedType
@@ -657,4 +659,7 @@ class ChatTribeViewModel @Inject constructor(
         return pinnedMessageData
     }
 
+    override fun shouldProcessMemberMentions(s: CharSequence?) {
+        processMemberMention(s)
+    }
 }

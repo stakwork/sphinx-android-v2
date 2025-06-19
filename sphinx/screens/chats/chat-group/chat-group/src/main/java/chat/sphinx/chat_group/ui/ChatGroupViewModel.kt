@@ -181,4 +181,8 @@ class ChatGroupViewModel @Inject constructor(
     override fun navigateToNotificationLevel() {
         // We do nothing because Chat Groups are being aren't supported anymore
     }
+
+    override fun shouldProcessMemberMentions(s: CharSequence?) {
+        // Nothing to do. Only implemented on Tribes
+    }
 }

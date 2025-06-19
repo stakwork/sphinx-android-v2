@@ -4,6 +4,7 @@ plugins {
     id 'dagger.hilt.android.plugin'
     id 'kotlin-android'
     id 'kotlin-kapt'
+    id 'com.google.gms.google-services'
 }
 
 android {
@@ -114,6 +115,9 @@ dependencies {
     implementation project(path: ':sphinx:screens:onboard:key-restore')
 
     implementation project(path: ':sphinx:service:features:media-player:feature-service-media-player-android')
+
+    api platform('com.google.firebase:firebase-bom:27.1.0')
+    api 'com.google.firebase:firebase-messaging-ktx'
 
     // See `/sphinx/service/features/notifications/README.md`
     if (findProperty("SPHINX_COMPILE_PUSH_NOTIFICATION_TYPE") == "firebase") {

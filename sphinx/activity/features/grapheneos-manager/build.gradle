@@ -55,6 +55,7 @@ dependencies {
     implementation deps.kotlinx.serialization
     implementation project(':sphinx:application:data:concepts:concept-image-loader')
     implementation 'androidx.recyclerview:recyclerview:1.4.0'
+    implementation 'androidx.viewpager2:viewpager2:1.1.0'
 //    implementation deps.msgpack.sdk
 //    implementation deps.square.moshi
 

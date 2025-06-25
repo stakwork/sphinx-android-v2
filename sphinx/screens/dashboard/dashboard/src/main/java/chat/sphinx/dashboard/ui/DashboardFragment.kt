@@ -20,6 +20,7 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import androidx.viewpager2.widget.ViewPager2
 import app.cash.exhaustive.Exhaustive
 import by.kirich1409.viewbindingdelegate.viewBinding
+import chat.sphinx.concept_grapheneos_manager.GrapheneOsManager
 import chat.sphinx.concept_image_loader.Disposable
 import chat.sphinx.concept_image_loader.ImageLoader
 import chat.sphinx.concept_image_loader.ImageLoaderOptions
@@ -74,6 +75,10 @@ internal class DashboardFragment : MotionLayoutFragment<
     @Suppress("ProtectedInFinal")
     protected lateinit var signerManager: SignerManager
 
+    @Inject
+    @Suppress("ProtectedInFinal")
+    protected lateinit var grapheneOsManager: GrapheneOsManager
+
     override val viewModel: DashboardViewModel by viewModels()
     private val dashboardPodcastViewModel: DashboardPodcastViewModel by viewModels()
 
@@ -94,6 +99,8 @@ internal class DashboardFragment : MotionLayoutFragment<
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        grapheneOsManager.optimizeViewContainer(this)
 
         viewModel.screenInit()
 

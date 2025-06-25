@@ -1,6 +1,7 @@
 package chat.sphinx.database
 
 import android.content.Context
+import androidx.sqlite.db.SupportSQLiteDatabase
 import chat.sphinx.concept_coredb.SphinxDatabase
 import chat.sphinx.feature_coredb.CoreDBImpl
 import com.squareup.moshi.Moshi
@@ -37,7 +38,21 @@ class SphinxCoreDBImpl(
             AndroidSqliteDriver(
                 SphinxDatabase.Schema,
                 appContext,
-                DB_NAME
+                DB_NAME,
+                callback = object : AndroidSqliteDriver.Callback(SphinxDatabase.Schema) {
+                    override fun onOpen(db: SupportSQLiteDatabase) {
+                        super.onOpen(db)
+
+                        driver?.let {
+                            optimizeDatabase(it)
+                        }
+                    }
+
+                    override fun onConfigure(db: SupportSQLiteDatabase) {
+                        super.onConfigure(db)
+                        driver?.execute(null, "PRAGMA foreign_keys = ON", 0)
+                    }
+                }
             )
         } else {
             @OptIn(RawPasswordAccess::class)
@@ -50,8 +65,36 @@ class SphinxCoreDBImpl(
                 SphinxDatabase.Schema,
                 appContext,
                 DB_NAME,
-                factory
+                factory,
+                callback = object : AndroidSqliteDriver.Callback(SphinxDatabase.Schema) {
+                    override fun onOpen(db: SupportSQLiteDatabase) {
+                        super.onOpen(db)
+
+                        driver?.let {
+                            optimizeDatabase(it)
+                        }
+                    }
+
+                    override fun onConfigure(db: SupportSQLiteDatabase) {
+                        super.onConfigure(db)
+                        driver?.execute(null, "PRAGMA foreign_keys = ON", 0)
+                    }
+                }
             )
         }
+    }
+
+    private fun optimizeDatabase(driver: SqlDriver) {
+        // SQLite optimizations for GrapheneOS
+        driver.execute(null, "PRAGMA journal_mode = WAL", 0)
+        driver.execute(null, "PRAGMA synchronous = NORMAL", 0)
+        driver.execute(null, "PRAGMA cache_size = 10000", 0) // 10MB cache
+        driver.execute(null, "PRAGMA temp_store = MEMORY", 0)
+        driver.execute(null, "PRAGMA mmap_size = 268435456", 0) // 256MB mmap
+        driver.execute(null, "PRAGMA optimize", 0)
+
+        // GrapheneOS specific optimizations
+        driver.execute(null, "PRAGMA auto_vacuum = INCREMENTAL", 0)
+        driver.execute(null, "PRAGMA incremental_vacuum(1000)", 0)
     }
 }

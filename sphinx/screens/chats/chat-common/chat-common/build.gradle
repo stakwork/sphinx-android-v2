@@ -46,6 +46,7 @@ dependencies {
     api project(path: ':sphinx:activity:insetter-activity')
     api project(path: ':sphinx:activity:call-activity')
     api project(path: ':sphinx:activity:concepts:concept-user-colors-helper')
+    api project(path: ':sphinx:activity:concepts:concept-grapheneos-manager')
 
     implementation project(path: ':sphinx:activity:features:video-player-controller')
 

@@ -8,12 +8,15 @@ import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import androidx.core.widget.NestedScrollView
 import androidx.recyclerview.widget.RecyclerView
+import androidx.viewpager2.widget.ViewPager2
 import chat.sphinx.concept_grapheneos_manager.GrapheneOsManager
 import chat.sphinx.concept_image_loader.ImageLoader
 import chat.sphinx.grapheneos_manager.optimizers.GrapheneOSOptimizer
 import chat.sphinx.grapheneos_manager.optimizers.MemoryOptimizer
 import chat.sphinx.grapheneos_manager.optimizers.NetworkOptimizer
+import chat.sphinx.grapheneos_manager.optimizers.UIOptimizer
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
@@ -32,7 +35,7 @@ class GrapheneOsManagerImpl(
     private val networkOptimizer = NetworkOptimizer(context, imageLoader)
 //    private val sqlDelightOptimizer = SQLDelightOptimizer()
     private val memoryOptimizer = MemoryOptimizer(context, imageLoader)
-//    private val uiOptimizer = UIOptimizer()
+    private val uiOptimizer = UIOptimizer(imageLoader)
 
     override fun initializeOptimizations() {
         // Apply network optimizations
@@ -49,23 +52,6 @@ class GrapheneOsManagerImpl(
 
         // Setup performance monitoring
         setupPerformanceMonitoring()
-    }
-
-    fun optimizeFragment(fragment: Fragment) {
-        fragment.view?.let { view ->
-            // Find and optimize RecyclerViews
-            optimizeRecyclerViews(view)
-        }
-    }
-
-    private fun optimizeRecyclerViews(view: View) {
-        if (view is RecyclerView) {
-//            uiOptimizer.optimizeRecyclerView(view)
-        } else if (view is ViewGroup) {
-            for (i in 0 until view.childCount) {
-                optimizeRecyclerViews(view.getChildAt(i))
-            }
-        }
     }
 
     private fun setupPerformanceMonitoring() {
@@ -110,6 +96,55 @@ class GrapheneOsManagerImpl(
 
     fun setImageQualityMode(highQuality: Boolean) {
         imageLoader.setHighQualityMode(highQuality)
+    }
+
+    // Add convenience methods
+    private fun optimizeRecyclerView(recyclerView: RecyclerView) {
+        uiOptimizer.optimizeRecyclerView(recyclerView)
+    }
+
+    private fun optimizeViewPager2(viewPager: ViewPager2) {
+        uiOptimizer.optimizeViewPager2(viewPager)
+    }
+
+    private fun optimizeNestedScrollView(nestedScrollView: NestedScrollView) {
+        uiOptimizer.optimizeNestedScrollView(nestedScrollView)
+    }
+
+    private fun optimizeViewGroup(viewGroup: ViewGroup) {
+        uiOptimizer.optimizeViewGroup(viewGroup)
+    }
+
+    override fun <T : Any> optimizeViewContainer(container: T) {
+        when (container) {
+            is Fragment -> optimizeFragment(container)
+        }
+    }
+
+    fun optimizeFragment(fragment: Fragment) {
+        fragment.view?.let { view ->
+            optimizeViews(view)
+        }
+    }
+
+    private fun optimizeViews(view: View) {
+        if (view is RecyclerView) {
+            optimizeRecyclerView(view)
+        } else if (view is ViewGroup) {
+            optimizeViewGroup(view)
+
+            for (i in 0 until view.childCount) {
+                val childView = view.getChildAt(i)
+                if (childView is RecyclerView) {
+                    optimizeRecyclerView(childView)
+                } else if (childView is NestedScrollView){
+                    optimizeNestedScrollView(childView)
+                } else if (childView is ViewPager2) {
+                    optimizeViewPager2(childView)
+                }
+
+            }
+        }
     }
 
 }

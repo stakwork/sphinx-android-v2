@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import app.cash.exhaustive.Exhaustive
 import by.kirich1409.viewbindingdelegate.viewBinding
+import chat.sphinx.concept_grapheneos_manager.GrapheneOsManager
 import chat.sphinx.concept_image_loader.ImageLoader
 import chat.sphinx.concept_user_colors_helper.UserColorsHelper
 import chat.sphinx.dashboard.R
@@ -62,11 +63,17 @@ internal class ChatListFragment : SideEffectFragment<
     @Suppress("ProtectedInFinal")
     protected lateinit var userColorsHelper: UserColorsHelper
 
+    @Inject
+    @Suppress("ProtectedInFinal")
+    protected lateinit var grapheneOsManager: GrapheneOsManager
+
     override val viewModel: ChatListViewModel by viewModels()
     override val binding: FragmentChatListBinding by viewBinding(FragmentChatListBinding::bind)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        grapheneOsManager.optimizeViewContainer(this)
 
         setupSearch()
         setupChats()

@@ -59,6 +59,7 @@ import chat.sphinx.chat_common.ui.widgets.SlideToCancelImageView
 import chat.sphinx.chat_common.ui.widgets.SphinxFullscreenImageView
 import chat.sphinx.chat_common.util.AudioRecorderController
 import chat.sphinx.chat_common.util.VideoThumbnailUtil
+import chat.sphinx.concept_grapheneos_manager.GrapheneOsManager
 import chat.sphinx.concept_image_loader.Disposable
 import chat.sphinx.concept_image_loader.ImageLoader
 import chat.sphinx.concept_image_loader.ImageLoaderOptions
@@ -111,6 +112,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 abstract class ChatFragment<
         VB: ViewBinding,
@@ -150,6 +152,7 @@ abstract class ChatFragment<
 
     protected abstract val userColorsHelper: UserColorsHelper
     protected abstract val imageLoader: ImageLoader<ImageView>
+    protected abstract val grapheneOsManager: GrapheneOsManager
 
     protected val sendMessageBuilder = SendMessage.Builder()
 
@@ -203,6 +206,9 @@ abstract class ChatFragment<
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        grapheneOsManager.optimizeViewContainer(this)
+
         viewModel.init()
     }
 

@@ -48,6 +48,7 @@ import chat.sphinx.chat_tribe.ui.viewstate.BoostAnimationViewState
 import chat.sphinx.chat_tribe.ui.viewstate.TribeMemberDataViewState
 import chat.sphinx.chat_tribe.ui.viewstate.TribeMemberProfileViewState
 import chat.sphinx.chat_tribe.ui.viewstate.*
+import chat.sphinx.concept_grapheneos_manager.GrapheneOsManager
 import chat.sphinx.concept_image_loader.ImageLoader
 import chat.sphinx.concept_image_loader.ImageLoaderOptions
 import chat.sphinx.concept_image_loader.Transformation
@@ -178,6 +179,12 @@ internal class ChatTribeFragment: ChatFragment<
     protected lateinit var _imageLoader: ImageLoader<ImageView>
     override val imageLoader: ImageLoader<ImageView>
         get() = _imageLoader
+
+    @Inject
+    @Suppress("ProtectedInFinal", "PropertyName")
+    protected lateinit var _grapheneOsManager: GrapheneOsManager
+    override val grapheneOsManager: GrapheneOsManager
+        get() = _grapheneOsManager
 
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

@@ -13,6 +13,7 @@ import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import app.cash.exhaustive.Exhaustive
 import by.kirich1409.viewbindingdelegate.viewBinding
+import chat.sphinx.concept_grapheneos_manager.GrapheneOsManager
 import chat.sphinx.concept_image_loader.ImageLoader
 import chat.sphinx.dashboard.R
 import chat.sphinx.dashboard.databinding.FragmentFeedBinding
@@ -54,11 +55,17 @@ internal class FeedFragment : SideEffectFragment<
     @Suppress("ProtectedInFinal")
     protected lateinit var imageLoader: ImageLoader<ImageView>
 
+    @Inject
+    @Suppress("ProtectedInFinal")
+    protected lateinit var grapheneOsManager: GrapheneOsManager
+
     override val viewModel: FeedViewModel by viewModels()
     override val binding: FragmentFeedBinding by viewBinding(FragmentFeedBinding::bind)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        grapheneOsManager.optimizeViewContainer(this)
 
         setupSearch()
         setupFeedViewPager()

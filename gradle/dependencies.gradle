@@ -3,9 +3,9 @@
 /*************************/
 ext.versions = [
     'buildTools': "30.0.3",
-    'compileSdk': 34,
-    'minSdk': 23,
-    'androidGradle': '8.0.0',
+    'compileSdk': 35,
+    'minSdk': 24,
+    'androidGradle': '8.5.0',
     'arch': '2.1.0',
     'camera': '1.1.0-alpha10',
     'cameraView': '1.0.0-alpha30',
@@ -65,7 +65,8 @@ ext.deps = [
             ui: "androidx.navigation:navigation-ui-ktx:${versions.navigation}",
         ],
         paging3: "androidx.paging:paging-runtime:3.0.0",
-        recyclerView: "androidx.recyclerview:recyclerview:1.2.1",
+        recyclerView: "androidx.recyclerview:recyclerview:1.4.0",
+        viewPager2: "androidx.viewpager2:viewpager2:1.1.0",
         swipeRefreshLayout: "androidx.swiperefreshlayout:swiperefreshlayout:1.1.0",
         securityCrypto: "androidx.security:security-crypto:1.1.0-alpha03",
         viewBinding: "androidx.databinding:viewbinding:${versions.androidGradle}",
@@ -89,7 +90,6 @@ ext.deps = [
         coilGif: "io.coil-kt:coil-gif:${versions.coil}",
         coilSvg: "io.coil-kt:coil-svg:${versions.coil}",
         coilVideo: "io.coil-kt:coil-video:${versions.coil}",
-        coilTransformations: "io.coil-kt:coil-transformations:${versions.coil}",
     ],
     javax: [
         inject: "javax.inject:javax.inject:1",

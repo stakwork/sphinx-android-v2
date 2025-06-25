@@ -43,14 +43,13 @@ class SphinxCoreDBImpl(
                     override fun onOpen(db: SupportSQLiteDatabase) {
                         super.onOpen(db)
 
-                        driver?.let {
-                            optimizeDatabase(it)
-                        }
+                        optimizeDatabase(db)
                     }
 
                     override fun onConfigure(db: SupportSQLiteDatabase) {
                         super.onConfigure(db)
-                        driver?.execute(null, "PRAGMA foreign_keys = ON", 0)
+
+                        db.execSQL("PRAGMA foreign_keys = ON")
                     }
                 }
             )
@@ -70,31 +69,53 @@ class SphinxCoreDBImpl(
                     override fun onOpen(db: SupportSQLiteDatabase) {
                         super.onOpen(db)
 
-                        driver?.let {
-                            optimizeDatabase(it)
-                        }
+                        optimizeDatabase(db)
                     }
 
                     override fun onConfigure(db: SupportSQLiteDatabase) {
                         super.onConfigure(db)
-                        driver?.execute(null, "PRAGMA foreign_keys = ON", 0)
+                        db.execSQL("PRAGMA foreign_keys = ON")
                     }
                 }
             )
         }
     }
 
-    private fun optimizeDatabase(driver: SqlDriver) {
-        // SQLite optimizations for GrapheneOS
-        driver.execute(null, "PRAGMA journal_mode = WAL", 0)
-        driver.execute(null, "PRAGMA synchronous = NORMAL", 0)
-        driver.execute(null, "PRAGMA cache_size = 10000", 0) // 10MB cache
-        driver.execute(null, "PRAGMA temp_store = MEMORY", 0)
-        driver.execute(null, "PRAGMA mmap_size = 268435456", 0) // 256MB mmap
-        driver.execute(null, "PRAGMA optimize", 0)
+    private fun optimizeDatabase(db: SupportSQLiteDatabase) {
+        val configPragmas = listOf(
+            "PRAGMA foreign_keys = ON",
+            "PRAGMA journal_mode = WAL",
+            "PRAGMA synchronous = NORMAL",
+            "PRAGMA cache_size = 10000",
+            "PRAGMA temp_store = MEMORY",
+            "PRAGMA mmap_size = 268435456",
+            "PRAGMA auto_vacuum = INCREMENTAL"
+        )
 
-        // GrapheneOS specific optimizations
-        driver.execute(null, "PRAGMA auto_vacuum = INCREMENTAL", 0)
-        driver.execute(null, "PRAGMA incremental_vacuum(1000)", 0)
+        // Execute configuration PRAGMAs
+        configPragmas.forEach { pragma ->
+            try {
+                db.execSQL(pragma)
+            } catch (e: Exception) {
+                android.util.Log.w("SphinxDB", "Failed to execute: $pragma", e)
+            }
+        }
+
+        // Execute query PRAGMAs
+        val queryPragmas = listOf(
+            "PRAGMA optimize",
+            "PRAGMA incremental_vacuum(1000)"
+        )
+
+        queryPragmas.forEach { pragma ->
+            try {
+                db.query(pragma).use { cursor ->
+                    // Just execute the query, don't need to process results
+                    cursor.moveToFirst()
+                }
+            } catch (e: Exception) {
+                android.util.Log.w("SphinxDB", "Failed to execute query: $pragma", e)
+            }
+        }
     }
 }

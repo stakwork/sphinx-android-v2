@@ -28,6 +28,7 @@ class GrapheneOSOptimizer(private val context: Context) {
     private fun requestBatteryOptimizationExemption() {
         val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
             data = Uri.parse("package:${context.packageName}")
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }
 
         if (intent.resolveActivity(context.packageManager) != null) {

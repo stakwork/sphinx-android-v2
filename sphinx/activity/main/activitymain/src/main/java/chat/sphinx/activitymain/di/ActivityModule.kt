@@ -64,20 +64,4 @@ object ActivityModule {
         signerManagerImpl: SignerManagerImpl
     ): SignerManager =
         signerManagerImpl
-
-    @Provides
-    @ActivityScoped
-    fun provideGrapheneOsManagerImpl(
-        @ApplicationContext appContext: Context,
-        dispatchers: CoroutineDispatchers,
-        imageLoader: ImageLoader<ImageView>
-    ): GrapheneOsManagerImpl =
-        GrapheneOsManagerImpl(appContext, imageLoader, dispatchers)
-
-    @Provides
-    fun provideGrapheneOsManager(
-        grapheneOsManagerImpl: GrapheneOsManagerImpl
-    ): GrapheneOsManager =
-        grapheneOsManagerImpl
-
 }

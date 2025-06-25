@@ -34,30 +34,11 @@ dependencies {
 
     // Sphinx
     api project(path: ':sphinx:activity:concepts:concept-grapheneos-manager')
-
-//    implementation project(path: ':sphinx:screens-detail:common:detail-resources')
-//    implementation project(path: ':sphinx:application:common:resources')
-//    implementation project(path: ':sphinx:application:data:concepts:repositories:concept-repository-lightning')
-//    implementation project(path: ':sphinx:application:data:concepts:concept-wallet')
-//    implementation project(path: ':sphinx:application:common:wrappers:wrapper-message-media')
-//
-//    implementation project(path: ':sphinx:application:data:concepts:concept-background-login')
-//    implementation project(path: ':sphinx:application:data:concepts:repositories:concept-repository-media')
-//    implementation project(path: ':sphinx:application:data:concepts:repositories:concept-repository-contact')
-//    implementation project(path: ':sphinx:application:network:concepts:queries:concept-network-query-crypter')
-//    implementation project(path: ':sphinx:application:network:concepts:queries:concept-network-query-contact')
-//    implementation project(path: ':sphinx:application:data:concepts:concept-relay')
-
-//    implementation deps.jncryptor
-//
-//    implementation deps.jna.sdk
-//    implementation deps.paho.sdk
-    implementation deps.kotlinx.serialization
     implementation project(':sphinx:application:data:concepts:concept-image-loader')
-    implementation 'androidx.recyclerview:recyclerview:1.4.0'
-    implementation 'androidx.viewpager2:viewpager2:1.1.0'
-//    implementation deps.msgpack.sdk
-//    implementation deps.square.moshi
+
+    implementation deps.kotlinx.serialization
+    implementation deps.androidx.recyclerView
+    implementation deps.androidx.viewPager2
 
 
     testImplementation project(path: ':kotlin:test:test-concept-coroutines')

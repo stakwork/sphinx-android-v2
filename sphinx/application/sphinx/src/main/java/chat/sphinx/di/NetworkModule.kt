@@ -59,6 +59,8 @@ import io.matthewnelson.concept_coroutines.CoroutineDispatchers
 import io.matthewnelson.concept_encryption_key.EncryptionKeyHandler
 import io.matthewnelson.feature_authentication_core.AuthenticationCoreManager
 import kotlinx.coroutines.CoroutineScope
+import okhttp3.Cache
+import java.io.File
 import javax.inject.Singleton
 
 @Module
@@ -152,10 +154,15 @@ object NetworkModule {
         torManager: TorManager,
         dispatchers: CoroutineDispatchers,
         LOG: SphinxLogger,
-    ): NetworkClientImpl =
-        NetworkClientImpl(
+    ): NetworkClientImpl {
+
+        val cacheSize = 50L * 1024L * 1024L // 50 MB
+        val cacheDir = File(appContext.cacheDir, "http_cache")
+        val cache = Cache(cacheDir, cacheSize)
+
+        return NetworkClientImpl(
             buildConfigDebug,
-            CoilUtils.createDefaultCache(appContext),
+            cache,
             dispatchers,
             NetworkClientImpl.RedactedLoggingHeaders(
                 listOf(
@@ -167,6 +174,7 @@ object NetworkModule {
             torManager,
             LOG,
         )
+    }
 
     @Provides
     fun provideNetworkClient(

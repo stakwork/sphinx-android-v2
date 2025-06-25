@@ -172,7 +172,7 @@ internal fun LayoutMessageHolderBinding.setView(
             }
 
             disposables.add(disposable)
-            disposable.await()
+//            disposable.await()
         }
     }
 
@@ -326,7 +326,7 @@ internal fun LayoutMessageHolderBinding.setView(
                     )
 
                     disposables.add(disposable)
-                    disposable.await()
+//                    disposable.await()
                 }.let { job ->
                     holderJobs.add(job)
                 }
@@ -417,7 +417,7 @@ internal fun LayoutMessageHolderBinding.setView(
                     }
 
                     disposables.add(disposable)
-                    disposable.await()
+//                    disposable.await()
                 }.let { job ->
                     holderJobs.add(job)
                 }

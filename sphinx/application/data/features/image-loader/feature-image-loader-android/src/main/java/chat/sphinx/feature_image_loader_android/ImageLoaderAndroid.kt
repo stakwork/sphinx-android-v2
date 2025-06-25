@@ -215,11 +215,7 @@ class ImageLoaderAndroid(
                             )
                         }
                     }
-                    is Transition.None -> {
-                        request.transitionFactory { target, result ->
-                            CrossfadeTransition(target, result, 0)
-                        }
-                    }
+                    is Transition.None -> {}
                 }
             }
 

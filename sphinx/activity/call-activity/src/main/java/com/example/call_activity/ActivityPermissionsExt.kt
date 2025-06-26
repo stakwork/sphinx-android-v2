@@ -2,6 +2,7 @@ package com.example.call_activity
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.os.Build
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
@@ -30,9 +31,23 @@ fun ComponentActivity.requestNeededPermissions(onPermissionsGranted: (() -> Unit
             }
         }
 
-    val neededPermissions = listOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA)
+    val neededPermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        listOf(
+            Manifest.permission.RECORD_AUDIO,
+            Manifest.permission.CAMERA,
+            Manifest.permission.FOREGROUND_SERVICE_MICROPHONE,
+            Manifest.permission.FOREGROUND_SERVICE_CAMERA,
+        )
         .filter { ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_DENIED }
         .toTypedArray()
+    } else {
+        listOf(
+            Manifest.permission.RECORD_AUDIO,
+            Manifest.permission.CAMERA,
+        )
+            .filter { ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_DENIED }
+            .toTypedArray()
+    }
 
     if (neededPermissions.isNotEmpty()) {
         requestPermissionLauncher.launch(neededPermissions)

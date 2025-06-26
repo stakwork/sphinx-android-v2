@@ -14,8 +14,10 @@ import android.widget.ImageView
 import android.widget.ListView
 import android.widget.TextView
 import androidx.annotation.ColorInt
+import androidx.core.view.isVisible
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.RecyclerView
 import chat.sphinx.call_activity.R
 import chat.sphinx.call_activity.databinding.FragmentParticipantsBinding
 import chat.sphinx.concept_image_loader.ImageLoader
@@ -60,8 +62,14 @@ class ParticipantsBottomSheetFragment : BottomSheetDialogFragment() {
     ): View {
         _binding = FragmentParticipantsBinding.inflate(inflater, container, false)
 
-        adapter = ParticipantAdapter(requireContext(), participants, imageLoader, lifecycleScope, participantColors)
-        binding.listView.adapter = adapter
+        adapter = ParticipantAdapter(
+            requireContext(),
+            participants,
+            imageLoader,
+            lifecycleScope,
+            participantColors
+        )
+        binding.participantsRv.adapter = adapter
 
         updateParticipantCount()
 
@@ -103,32 +111,28 @@ class ParticipantsBottomSheetFragment : BottomSheetDialogFragment() {
         private val imageLoader: ImageLoader<ImageView>,
         private val lifecycleScope: androidx.lifecycle.LifecycleCoroutineScope,
         private var participantColors: MutableMap<String, Int>
-    ) : ArrayAdapter<Participant>(context, 0, participants) {
+    ) : RecyclerView.Adapter<ParticipantAdapter.ViewHolder>() {
 
-        private val moshi: Moshi = Moshi.Builder().build() // Reuse instead of recreating in getView()
+        private val moshi: Moshi =
+            Moshi.Builder().build() // Reuse instead of recreating in getView()
 
-        override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
-            val viewHolder: ViewHolder
-            val view: View
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+            val view = LayoutInflater.from(parent.context)
+                .inflate(R.layout.participant_list_item, parent, false)
+            return ViewHolder(view)
+        }
 
-            if (convertView == null) {
-                view = LayoutInflater.from(context).inflate(R.layout.participant_list_item, parent, false)
-                viewHolder = ViewHolder(view)
-                view.tag = viewHolder
-            } else {
-                view = convertView
-                viewHolder = convertView.tag as ViewHolder
-            }
-
-            val participant = getItem(position) ?: return view
+        override fun onBindViewHolder(viewHolder: ViewHolder, position: Int) {
+            val participant = participants[position]
 
             // Set participant name
             viewHolder.nameTextView.text = participant.name
 
-            // Camera status visibility
-            viewHolder.cameraStatusImageView.apply {
-                visibility = if (participant.isCameraEnabled()) View.VISIBLE else View.GONE
-                if (visibility == View.VISIBLE) setImageResource(R.drawable.camera)
+            // Camera status
+            viewHolder.cameraStatusImageView.visibility =
+                if (participant.isCameraEnabled()) View.VISIBLE else View.GONE
+            if (viewHolder.cameraStatusImageView.isVisible) {
+                viewHolder.cameraStatusImageView.setImageResource(R.drawable.camera)
             }
 
             // Microphone status
@@ -160,9 +164,9 @@ class ParticipantsBottomSheetFragment : BottomSheetDialogFragment() {
                     setBackgroundRandomColor(R.drawable.circle_icon_4, color)
                 }
             }
-
-            return view
         }
+
+        override fun getItemCount(): Int = participants.size
 
         fun setParticipants(
             participants: MutableList<Participant>,
@@ -173,13 +177,13 @@ class ParticipantsBottomSheetFragment : BottomSheetDialogFragment() {
             notifyDataSetChanged()
         }
 
-        // ViewHolder to optimize findViewById calls
-        private class ViewHolder(view: View) {
-            val nameTextView: TextView = view.findViewById(R.id.participantName)
-            val cameraStatusImageView: ImageView = view.findViewById(R.id.cameraStatus)
-            val micStatusImageView: ImageView = view.findViewById(R.id.micStatus)
-            val profileImageView: ImageView = view.findViewById(R.id.profileImageView)
-            val textViewInitials: TextView = view.findViewById(R.id.textViewInitials)
+        inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+            val nameTextView: TextView = itemView.findViewById(R.id.participantName)
+            val cameraStatusImageView: ImageView = itemView.findViewById(R.id.cameraStatus)
+            val micStatusImageView: ImageView = itemView.findViewById(R.id.micStatus)
+            val profileImageView: ImageView = itemView.findViewById(R.id.profileImageView)
+            val textViewInitials: TextView = itemView.findViewById(R.id.textViewInitials)
         }
+
     }
 }

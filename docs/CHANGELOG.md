@@ -1,5 +1,8 @@
 # ChangeLog
 
+## Version 1.0.0-alpha49 (2025-06-30)
+- Fixes and improvements for GrapheneOS
+
 ## Version 1.0.0-alpha48 (2025-05-22)
 - Fixes crash on app launch
 - Handles invite codes received as deep links

@@ -1,0 +1,5 @@
+
+CREATE INDEX idx_message_reply_uuid ON messageDbo(reply_uuid);
+CREATE INDEX idx_message_thread_uuid ON messageDbo(thread_uuid);
+CREATE INDEX idx_message_media_id ON messageMediaDbo(id);
+CREATE INDEX idx_message_media_chat_id ON messageMediaDbo(chat_id);

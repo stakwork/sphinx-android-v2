@@ -16,6 +16,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
+        android:visibility="gone"
         tools:visibility="visible" />
 
     <include
@@ -26,6 +27,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
+        android:visibility="gone"
         tools:visibility="visible" />
 
     <!-- Group Action Indicator  -->
@@ -37,6 +39,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
+        android:visibility="gone"
         tools:visibility="visible" />
 
     <include
@@ -47,6 +50,7 @@
         android:layout_height="@dimen/message_holder_in_photo_holder_xy"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
+        android:visibility="gone"
         tools:visibility="visible" />
 
 
@@ -62,6 +66,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
+        android:visibility="gone"
         tools:visibility="visible" />
 
     <include
@@ -73,6 +78,7 @@
         app:layout_constraintEnd_toStartOf="@+id/space_message_holder_right"
         app:layout_constraintStart_toEndOf="@+id/space_message_holder_left"
         app:layout_constraintTop_toTopOf="parent"
+        android:visibility="gone"
         tools:visibility="visible" />
 
     <!-- width is programmatically set depending on sender -->
@@ -106,6 +112,7 @@
         app:layout_constraintEnd_toStartOf="@+id/space_message_holder_right"
         app:layout_constraintStart_toEndOf="@+id/space_message_holder_left"
         app:layout_constraintTop_toTopOf="parent"
+        android:visibility="gone"
         tools:visibility="gone" />
 
     <include
@@ -116,6 +123,7 @@
         app:layout_constraintEnd_toStartOf="@+id/space_message_holder_right"
         app:layout_constraintStart_toEndOf="@+id/space_message_holder_left"
         app:layout_constraintTop_toBottomOf="@+id/include_message_status_header"
+        android:visibility="gone"
         tools:visibility="gone" />
 
     <include
@@ -129,6 +137,7 @@
         app:layout_constraintStart_toEndOf="@+id/space_message_holder_left"
         app:layout_constraintTop_toBottomOf="@+id/include_message_status_header"
         app:layout_constraintVertical_bias="0.517"
+        android:visibility="gone"
         tools:visibility="visible" />
 
     <View
@@ -139,6 +148,7 @@
         android:background="@drawable/received_bubble_arrow"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="@+id/include_message_holder_bubble"
+        android:visibility="gone"
         tools:visibility="visible" />
 
     <View
@@ -148,6 +158,7 @@
         android:background="@drawable/sent_bubble_arrow"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@+id/include_message_holder_bubble"
+        android:visibility="gone"
         tools:visibility="visible" />
 
     <Space

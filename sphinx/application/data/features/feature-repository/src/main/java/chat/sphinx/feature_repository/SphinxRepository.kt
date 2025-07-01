@@ -165,6 +165,7 @@ import java.io.File
 import java.io.InputStream
 import java.security.SecureRandom
 import java.util.*
+import kotlin.coroutines.CoroutineContext
 
 
 abstract class SphinxRepository(
@@ -705,7 +706,7 @@ abstract class SphinxRepository(
     }
 
     override fun updateNewContactInvited(contact: NewContact) {
-        applicationScope.launch(io) {
+        applicationScope.launch(mainImmediate) {
             val queries = coreDB.getSphinxDatabaseQueries()
             val invite = queries.inviteGetByCode(contact.inviteCode?.let { InviteCode(it) }).executeAsOneOrNull()
 
@@ -1184,7 +1185,7 @@ abstract class SphinxRepository(
         date: Long?,
         isRestore: Boolean
     ) {
-        applicationScope.launch(io) {
+        applicationScope.launch(mainImmediate) {
             try {
                 if (msgIndex.toLong() == 2171L) {
                     LOG.d(TAG, "onBountyPayment: ${msg}")
@@ -2985,7 +2986,7 @@ abstract class SphinxRepository(
             val chatStatus = if (status) ChatStatus.Approved else ChatStatus.Pending
 
             contactLock.withLock {
-                withContext(dispatchers.io) {
+                withContext(dispatchers.mainImmediate) {
                     queries.contactUpdateDetails(
                         contact.contactAlias,
                         contact.photoUrl,
@@ -2995,7 +2996,7 @@ abstract class SphinxRepository(
                 }
             }
             chatLock.withLock {
-                withContext(dispatchers.io) {
+                withContext(dispatchers.mainImmediate) {
                     queries.chatUpdateDetails(
                         contact.photoUrl,
                         chatStatus,
@@ -3077,14 +3078,14 @@ abstract class SphinxRepository(
             )
 
             contactLock.withLock {
-                withContext(dispatchers.io) {
+                withContext(dispatchers.mainImmediate) {
                     queries.transaction {
                         upsertNewContact(newContact, queries)
                     }
                 }
             }
             chatLock.withLock {
-                withContext(dispatchers.io) {
+                withContext(dispatchers.mainImmediate) {
                     queries.transaction {
                         upsertNewChat(
                             newChat,
@@ -3099,7 +3100,7 @@ abstract class SphinxRepository(
             }
             inviteLock.withLock {
                 invite?.let { invite ->
-                    withContext(dispatchers.io) {
+                    withContext(dispatchers.mainImmediate) {
                         queries.transaction {
                             upsertNewInvite(invite, queries)
                         }

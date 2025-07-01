@@ -638,7 +638,6 @@ class ConnectManagerImpl: ConnectManager()
         }
 
         if (isRestoreAccount()) {
-
             if (restoreStateFlow.value is RestoreState.RestoringContacts) {
                 val highestIndex = msgs.maxByOrNull { it.index?.toLong() ?: 0L }?.index?.toLong()
                 highestIndex?.let { nnHighestIndex ->

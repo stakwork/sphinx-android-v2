@@ -8,6 +8,7 @@ import chat.sphinx.wrapper_contact.NewContact
 import chat.sphinx.wrapper_lightning.WalletMnemonic
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlin.coroutines.CoroutineContext
 
 /**
  * The ConnectManager abstract class defines the structure for managing the account,
@@ -229,7 +230,7 @@ interface ConnectManagerListener {
         fromMe: Boolean?,
         tag: String?,
         date: Long?,
-        isRestore: Boolean,
+        isRestore: Boolean
     )
     fun onMessageTagAndUuid(tag: String?, msgUUID: String, provisionalId: Long)
     fun onMessagesCounts(msgsCounts: String)

@@ -808,30 +808,16 @@ abstract class ChatFragment<
                 viewModel.navigateToPdfPage(-1)
             }
 
-            imageViewAttachmentFullscreen.onSingleTapListener = object: SphinxFullscreenImageView.OnSingleTapListener {
-                override fun onSingleTapConfirmed() {
-                    layoutConstraintAttachmentFullscreenHeader.goneIfTrue(
-                        layoutConstraintAttachmentFullscreenHeader.isVisible
-                    )
-                }
-            }
-
-            imageViewAttachmentFullscreen.onCloseViewHandler = object: SphinxFullscreenImageView.OnCloseViewHandler() {
-                override fun onCloseView() {
-                    imageViewAttachmentFullscreen.animate()
-                        .scaleY(0f)
-                        .scaleX(0f)
-                        .setDuration(200L)
-                        .withEndAction {
-                            viewModel.updateAttachmentFullscreenViewState(
-                                AttachmentFullscreenViewState.Idle
-                            )
-                        }
-                        .start()
-
-                }
+            imageViewAttachmentFullscreen.setOnClickListener {
+                hideFullScreenAnimated()
             }
         }
+    }
+
+    private fun hideFullScreenAnimated() {
+        viewModel.updateAttachmentFullscreenViewState(
+            AttachmentFullscreenViewState.Idle
+        )
     }
 
     /**
@@ -1802,6 +1788,7 @@ abstract class ChatFragment<
                     when (viewState) {
                         is AttachmentFullscreenViewState.Idle -> {
                             root.gone
+                            progressBarAttachmentFullscreen.visible
                             imageViewAttachmentFullscreen.setImageDrawable(null)
                         }
                         is AttachmentFullscreenViewState.ImageFullscreen -> {
@@ -1809,7 +1796,7 @@ abstract class ChatFragment<
                             textViewAttachmentNextPage.gone
                             textViewAttachmentPreviousPage.gone
 
-                            imageViewAttachmentFullscreen.resetInteractionProperties()
+                            imageViewAttachmentFullscreen.resetZoom()
                             imageViewAttachmentFullscreen.setBackgroundColor(
                                 getColor(android.R.color.transparent)
                             )
@@ -1856,7 +1843,10 @@ abstract class ChatFragment<
                                 }
                             }
 
-                            root.visible
+                            imageViewAttachmentFullscreen.onDrawableLoaded = {
+                                progressBarAttachmentFullscreen.gone
+                                root.visible
+                            }
                         }
                         is AttachmentFullscreenViewState.PdfFullScreen -> {
                             val page = viewState.pdfRender.openPage(viewState.currentPage)
@@ -1870,7 +1860,7 @@ abstract class ChatFragment<
                             page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                             page.close()
 
-                            imageViewAttachmentFullscreen.resetInteractionProperties()
+                            imageViewAttachmentFullscreen.resetZoom()
                             imageViewAttachmentFullscreen.setImageBitmap(bitmap)
                             imageViewAttachmentFullscreen.setBackgroundColor(
                                 getColor(android.R.color.white)
@@ -1884,8 +1874,10 @@ abstract class ChatFragment<
                             textViewAttachmentNextPage.goneIfFalse(viewState.currentPage < viewState.pageCount - 1)
                             textViewAttachmentPreviousPage.goneIfFalse(viewState.currentPage > 0)
 
-                            progressBarAttachmentFullscreen.gone
-                            root.visible
+                            imageViewAttachmentFullscreen.onDrawableLoaded = {
+                                progressBarAttachmentFullscreen.gone
+                                root.visible
+                            }
                         }
                     }
                 }

@@ -2347,6 +2347,14 @@ class ConnectManagerImpl: ConnectManager()
     private fun setContactKeyTotal(firstForEachScid: Long?) {
         firstForEachScid?.let {
             restoreProgress.totalContactsKey = it.toInt()
+
+            if (isRestoreAccount()) {
+                restoreProgress.progressPercentage = 1
+
+                notifyListeners {
+                    onRestoreProgress(restoreProgress.progressPercentage)
+                }
+            }
         }
     }
 

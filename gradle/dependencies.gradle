@@ -24,7 +24,7 @@ ext.versions = [
     'livekit' : '2.14.0',
     'groupie': '2.9.0',
     'timberkt' : '1.5.1',
-    'targetSdk'  : 34
+    'targetSdk'  : 35
 ]
 
 /**

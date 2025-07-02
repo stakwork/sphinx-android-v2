@@ -1,6 +1,7 @@
 package chat.sphinx.feature_image_loader_android
 
 import android.content.Context
+import android.graphics.drawable.Animatable
 import android.os.Build
 import android.widget.ImageView
 import androidx.annotation.ContentView
@@ -81,8 +82,9 @@ class ImageLoaderAndroid(
         @DrawableRes drawableResId: Int,
         options: ImageLoaderOptions?,
         listener: OnImageLoadListener?,
+        isGif: Boolean,
     ): Disposable {
-        return loadImpl(imageView, drawableResId, options, listener)
+        return loadImpl(imageView, drawableResId, options, listener, isGif)
     }
 
     override suspend fun load(
@@ -99,9 +101,10 @@ class ImageLoaderAndroid(
         any: Any,
         options: ImageLoaderOptions?,
         listener: OnImageLoadListener? = null,
+        isGif: Boolean = false
     ): Disposable {
         loaderLock.withLock {
-            val request = buildRequest(imageView, any, options, listener)
+            val request = buildRequest(imageView, any, options, listener, isGif)
 
             // Future-proofing:
             // Always retrieve the client, as Tor may be enabled but
@@ -133,6 +136,7 @@ class ImageLoaderAndroid(
         any: Any,
         options: ImageLoaderOptions?,
         listener: OnImageLoadListener? = null,
+        isGif: Boolean = false
     ): ImageRequest.Builder {
         val request = ImageRequest.Builder(appContext)
             .data(any)
@@ -140,14 +144,16 @@ class ImageLoaderAndroid(
             .diskCachePolicy(CachePolicy.ENABLED)
             .networkCachePolicy(if (isPaused) CachePolicy.DISABLED else CachePolicy.ENABLED)
             .apply {
-                if (!isHighQualityMode) {
-                    size(512, 512)
-                    scale(Scale.FIT)
-                }
+                if (!isGif) {
+                    if (!isHighQualityMode) {
+                        size(512, 512)
+                        scale(Scale.FIT)
+                    }
 
-                transformations(
-                    RoundedCornersTransformation(8f) // Reduce sharp corners processing
-                )
+                    transformations(
+                        RoundedCornersTransformation(8f)
+                    )
+                }
             }
             .dispatcher(io)
             .listener(
@@ -256,9 +262,8 @@ class ImageLoaderAndroid(
             .components {
                 if (Build.VERSION.SDK_INT >= 28) {
                     add(ImageDecoderDecoder.Factory())
-                } else {
-                    add(GifDecoder.Factory())
                 }
+                add(GifDecoder.Factory())
                 add(SvgDecoder.Factory())
             }
             .respectCacheHeaders(false)

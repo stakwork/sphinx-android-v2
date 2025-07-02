@@ -12,6 +12,7 @@ import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
 import chat.sphinx.concept_repository_connect_manager.model.NetworkStatus
 import chat.sphinx.logger.SphinxLogger
 import chat.sphinx.logger.d
+import chat.sphinx.logger.e
 import chat.sphinx.wrapper_chat.isTribe
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
@@ -65,9 +66,8 @@ internal class SphinxFirebaseMessagingService: FirebaseMessagingService() {
         super.onMessageReceived(p0)
 
         val title: String = p0.data["title"] ?: ""
-        var messageBody: String = "You have new messages"
-        val child: String? = p0.data["child"]
         val message = "You have new messages %s"
+        val child: String? = p0.data["child"]
 
         if (child == null || child == "null") {
             LOG.d(TAG, "Network not connected or null child value. Skipping notification.")
@@ -75,76 +75,82 @@ internal class SphinxFirebaseMessagingService: FirebaseMessagingService() {
         }
 
         if (p0.notification != null) {
-            ///Old notification, no need to create notification from code
+            // Old notification, handled by system
             return
         }
 
         if (MainActivity.isActive) {
-            ///If app is in foreground, then do not show notification
+            // App in foreground, don't show notification
             return
         }
 
-        // Get Contact/Tribe name from the child
-        if (!MainActivity.isAppCompletelyClosed) {
-            runBlocking {
-                child.let { nnChild ->
-                    val chatId =
-                        connectManagerRepository.getChatIdByEncryptedChild(nnChild).firstOrNull()
-                    val chat = chatId?.let { chatRepository.getChatById(it).firstOrNull() }
+        // Launch async work off the main thread
+        CoroutineScope(Dispatchers.IO).launch {
+            var messageBody = "You have new messages"
+
+            if (!MainActivity.isAppCompletelyClosed) {
+                try {
+                    val chatId = connectManagerRepository
+                        .getChatIdByEncryptedChild(child)
+                        .firstOrNull()
+
+                    val chat = chatId?.let {
+                        chatRepository.getChatById(it).firstOrNull()
+                    }
+
                     val name = chat?.name?.value
 
-                    messageBody = if (chat?.isTribe() == true && !name.isNullOrEmpty()) {
-                        String.format(message, "in $name Tribe")
-                    } else if (chat != null) {
-                        String.format(message, "from $name")
-                    } else {
-                        String.format(message, "")
+                    messageBody = when {
+                        chat?.isTribe() == true && !name.isNullOrEmpty() -> {
+                            String.format(message, "in $name Tribe")
+                        }
+                        chat != null -> {
+                            String.format(message, "from $name")
+                        }
+                        else -> {
+                            String.format(message, "")
+                        }
                     }
+                } catch (e: Exception) {
+                    LOG.e(TAG, "Failed to fetch chat info", e)
                 }
             }
-        }
 
-        // Create an intent to open MainActivity when the notification is clicked
-        val intent = Intent(
-            this,
-            MainActivity::class.java
-        )
+            val intent = Intent(applicationContext, MainActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                putExtra("child", child)
+            }
 
-        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-        intent.putExtra("child", child)
+            val pendingIntent = PendingIntent.getActivity(
+                applicationContext,
+                0,
+                intent,
+                PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
+            )
 
-        val pendingIntent = PendingIntent.getActivity(
-            this,
-            0,
-            intent,
-            PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        // Build the notification
-        val notificationBuilder: NotificationCompat.Builder =
-            NotificationCompat.Builder(this, "channel_id")
+            val notificationBuilder = NotificationCompat.Builder(applicationContext, "channel_id")
                 .setSmallIcon(R_common.drawable.sphinx_white_logo)
                 .setContentTitle(title)
                 .setContentText(messageBody)
                 .setAutoCancel(true)
                 .setContentIntent(pendingIntent)
 
-        // Get the NotificationManager
-        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+            val notificationManager =
+                getSystemService(NOTIFICATION_SERVICE) as NotificationManager
 
-        // Check if the device is running Android Oreo or higher
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                "channel_id",
-                "Channel Name",
-                NotificationManager.IMPORTANCE_DEFAULT
-            )
-            notificationManager.createNotificationChannel(channel)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val channel = NotificationChannel(
+                    "channel_id",
+                    "Channel Name",
+                    NotificationManager.IMPORTANCE_DEFAULT
+                )
+                notificationManager.createNotificationChannel(channel)
+            }
+
+            notificationManager.notify(0, notificationBuilder.build())
         }
-
-        // Show the notification
-        notificationManager.notify(0, notificationBuilder.build())
     }
+
 
     override fun onNewToken(p0: String) {
         super.onNewToken(p0)

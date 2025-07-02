@@ -16,6 +16,7 @@ abstract class ImageLoader<ImageView> {
         drawableResId: Int,
         options: ImageLoaderOptions? = null,
         listener: OnImageLoadListener? = null,
+        isGif: Boolean = false,
     ): Disposable
 
     abstract suspend fun load(

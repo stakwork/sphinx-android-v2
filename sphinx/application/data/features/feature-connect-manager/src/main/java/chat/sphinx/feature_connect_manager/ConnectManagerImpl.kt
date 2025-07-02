@@ -587,7 +587,7 @@ class ConnectManagerImpl: ConnectManager()
                     Log.d("RESTORE_PROCESS_CONTACTS", "$contactsToRestore")
 
                     notifyListeners {
-                        onUpsertContacts(contactsToRestore) {
+                        onUpsertContacts(contactsToRestore, isRestoreAccount()) {
                             // Handle new messages
                             msgs.forEach { msg ->
                                 processMessage(msg)

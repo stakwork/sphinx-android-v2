@@ -197,6 +197,7 @@ interface ConnectManagerListener {
     fun onRestoreAccount(isProductionEnvironment: Boolean)
     fun onUpsertContacts(
         contacts: List<Pair<String?, Long?>>,
+        isRestore: Boolean = false,
         callback: (() -> Unit)? = null
     )
     fun onRestoreMessages()
@@ -230,7 +231,7 @@ interface ConnectManagerListener {
         fromMe: Boolean?,
         tag: String?,
         date: Long?,
-        isRestore: Boolean
+        isRestore: Boolean = false
     )
     fun onMessageTagAndUuid(tag: String?, msgUUID: String, provisionalId: Long)
     fun onMessagesCounts(msgsCounts: String)

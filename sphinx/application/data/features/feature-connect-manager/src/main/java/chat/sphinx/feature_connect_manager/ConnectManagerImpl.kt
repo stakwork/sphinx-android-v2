@@ -616,6 +616,7 @@ class ConnectManagerImpl: ConnectManager()
                 notifyListeners { onRestoreProgress(restoreProgress.fixedContactPercentage + restoreProgress.fixedMessagesPercentage) }
                 _restoreStateFlow.value = RestoreState.RestoreFinished
                 notifyListeners { onRestoreFinished() }
+                setMnemonicWords(null)
             }
 
             updatePaidInvoices()

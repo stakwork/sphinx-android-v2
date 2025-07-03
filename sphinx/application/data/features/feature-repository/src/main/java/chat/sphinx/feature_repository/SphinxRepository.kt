@@ -166,6 +166,7 @@ import java.io.InputStream
 import java.security.SecureRandom
 import java.util.*
 import kotlin.coroutines.CoroutineContext
+import kotlin.math.max
 
 
 abstract class SphinxRepository(
@@ -219,6 +220,8 @@ abstract class SphinxRepository(
 
         const val MEDIA_KEY_SIZE = 32
     }
+
+    var lastMessageIndex: Long? = null
 
     ////////////////////////
     /// Connect Manager ///
@@ -737,8 +740,6 @@ abstract class SphinxRepository(
                     contact.photoUrl,
                     contactId
                 )
-
-            } else {
             }
         }
     }
@@ -1762,11 +1763,11 @@ abstract class SphinxRepository(
 
         contact?.id?.let { contactId ->
             if (!fromMe) {
-                val lastMessageIndex = getLastMessage().firstOrNull()?.id?.value
+                lastMessageIndex = (max(msgIndex.value, (lastMessageIndex ?: 0).toLong()))
                 val newMessageIndex = msgIndex.value
 
-                if (lastMessageIndex != null) {
-                    if (lastMessageIndex < newMessageIndex) {
+                if ((lastMessageIndex ?: 0) > 0) {
+                    if ((lastMessageIndex ?: 0) < newMessageIndex) {
                         contactLock.withLock {
                             msgSender.photo_url?.takeIf { it.isNotEmpty() && it != contact.photoUrl?.value }
                                 ?.let {

@@ -1,5 +1,8 @@
 # ChangeLog
 
+## Version 1.0.0-alpha52 (2025-07-03)
+- Fixes and improvements for GrapheneOS
+
 ## Version 1.0.0-alpha51 (2025-07-02)
 - Fixes and improvements for GrapheneOS
 

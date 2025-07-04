@@ -1104,7 +1104,8 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         if (chatId == null) {
             shimmerViewState.updateViewState(ShimmerViewState.Off)
         }
-
+        collectThread()
+        collectUnseenMessagesNumber()
         var isScrollDownButtonSetup = false
         messagesLoadJob = viewModelScope.launch(mainImmediate) {
             connectManagerRepository.getTagsByChatId(getChat().id)
@@ -1117,26 +1118,13 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                     val completeThread = listOf(originalMessage) + messages.reversed()
                     val list = getMessageHolderViewStateList(completeThread.filterNotNull()).toList()
 
-                    messageHolderViewStateFlow.value = list
                     changeThreadHeaderState(true)
-                    shimmerViewState.updateViewState(ShimmerViewState.Off)
-
                     scrollDownButtonCount.value = messages.size.toLong()
+                    messageHolderViewStateFlow.value = list
+//                    shimmerViewState.updateViewState(ShimmerViewState.Off)
                 }
             } else {
-                messageRepository.getAllMessagesToShowByChatId(getChat().id, 100).firstOrNull()?.let { messages ->
-                    delay(200)
-
-                    messageHolderViewStateFlow.value = getMessageHolderViewStateList(messages).toList()
-                    shimmerViewState.updateViewState(ShimmerViewState.Off)
-                }
-
-                delay(1000L)
-
                 messageRepository.getAllMessagesToShowByChatId(getChat().id, 1000).distinctUntilChanged().collect { messages ->
-                    messageHolderViewStateFlow.value = getMessageHolderViewStateList(messages).toList()
-                    shimmerViewState.updateViewState(ShimmerViewState.Off)
-
                     reloadPinnedMessage()
 
                     if (!isScrollDownButtonSetup) {
@@ -1151,11 +1139,12 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                     } == true
 
                     updateClockIconState(showClockIcon)
+                    messageHolderViewStateFlow.value = getMessageHolderViewStateList(messages).toList()
+//                    shimmerViewState.updateViewState(ShimmerViewState.Off)
                 }
             }
         }
-        collectThread()
-        collectUnseenMessagesNumber()
+
     }
 
     private val _clockIconState = MutableStateFlow(false)
@@ -1331,7 +1320,6 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                         submitSideEffect(
                             ChatSideEffect.Notify(response.message)
                         )
-                        delay(2_000)
                     }
                     is Response.Success -> {
                         if (response.value) {
@@ -1376,7 +1364,6 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
                     messagesSearchJob?.cancel()
                     messagesSearchJob = viewModelScope.launch(io) {
-                        delay(500L)
 
                         messageRepository.searchMessagesBy(nnChatId, nnText).firstOrNull()
                             ?.let { messages ->

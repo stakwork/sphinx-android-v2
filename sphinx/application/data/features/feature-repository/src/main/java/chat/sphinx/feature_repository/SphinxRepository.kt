@@ -674,7 +674,7 @@ abstract class SphinxRepository(
         date: Long?,
         isRestore: Boolean = false
     ) {
-        applicationScope.launch(if (isRestore) mainImmediate else io) {
+        applicationScope.launch(if (isRestore) mainImmediate else default) {
             val contactInfo = msgSender.toMsgSender(moshi)
             val contact = NewContact(
                 contactAlias = contactInfo.alias?.toContactAlias(),
@@ -713,7 +713,7 @@ abstract class SphinxRepository(
         contact: NewContact,
         isRestore: Boolean = false
     ) {
-        applicationScope.launch(if (isRestore) mainImmediate else io) {
+        applicationScope.launch(if (isRestore) mainImmediate else default) {
             val queries = coreDB.getSphinxDatabaseQueries()
             val invite = queries.inviteGetByCode(contact.inviteCode?.let { InviteCode(it) }).executeAsOneOrNull()
 
@@ -837,7 +837,7 @@ abstract class SphinxRepository(
             }
             return
         }
-        applicationScope.launch(if (isRestore) mainImmediate else io) {
+        applicationScope.launch(if (isRestore) mainImmediate else default) {
             val contactList: List<Pair<MsgSender?, DateTime?>> = contacts.mapNotNull { contact ->
                 Pair(contact.first?.toMsgSenderNull(moshi), contact.second?.toDateTime())
             }.groupBy { it.first?.pubkey }
@@ -1193,7 +1193,7 @@ abstract class SphinxRepository(
         date: Long?,
         isRestore: Boolean
     ) {
-        applicationScope.launch(if (isRestore) mainImmediate else io) {
+        applicationScope.launch(if (isRestore) mainImmediate else default) {
             try {
                 if (msgIndex.toLong() == 2171L) {
                     LOG.d(TAG, "onBountyPayment: ${msg}")
@@ -2997,7 +2997,7 @@ abstract class SphinxRepository(
             val chatStatus = if (status) ChatStatus.Approved else ChatStatus.Pending
 
             contactLock.withLock {
-                withContext(if (isRestore) mainImmediate else io) {
+                withContext(if (isRestore) mainImmediate else default) {
                     queries.contactUpdateDetails(
                         contact.contactAlias,
                         contact.photoUrl,
@@ -3007,7 +3007,7 @@ abstract class SphinxRepository(
                 }
             }
             chatLock.withLock {
-                withContext(if (isRestore) mainImmediate else io) {
+                withContext(if (isRestore) mainImmediate else default) {
                     queries.chatUpdateDetails(
                         contact.photoUrl,
                         chatStatus,
@@ -3089,14 +3089,14 @@ abstract class SphinxRepository(
             )
 
             contactLock.withLock {
-                withContext(if (isRestore) mainImmediate else io) {
+                withContext(if (isRestore) mainImmediate else default) {
                     queries.transaction {
                         upsertNewContact(newContact, queries)
                     }
                 }
             }
             chatLock.withLock {
-                withContext(if (isRestore) mainImmediate else io) {
+                withContext(if (isRestore) mainImmediate else default) {
                     queries.transaction {
                         upsertNewChat(
                             newChat,
@@ -3111,7 +3111,7 @@ abstract class SphinxRepository(
             }
             inviteLock.withLock {
                 invite?.let { invite ->
-                    withContext(if (isRestore) mainImmediate else io) {
+                    withContext(if (isRestore) mainImmediate else default) {
                         queries.transaction {
                             upsertNewInvite(invite, queries)
                         }

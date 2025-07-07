@@ -214,7 +214,7 @@ class ConnectManagerImpl: ConnectManager()
                     subscribeOwnerMQTT()
 
                     notifyListeners {
-                        onNetworkStatusChange(true)
+                        onNetworkStatusChange(false, isLoading = true)
                     }
                     Log.d("MQTT_MESSAGES", "MQTT CONNECTED!")
                 }
@@ -483,7 +483,12 @@ class ConnectManagerImpl: ConnectManager()
                     onUpdateMutes(muteLevels)
                 }
                 Log.d("MQTT_MESSAGES", "=> muteLevels $muteLevels")
+
+                notifyListeners {
+                    onNetworkStatusChange(true)
+                }
             }
+
             rr.ping?.let { ping ->
                 if (ping.isNotEmpty()) {
                     handlePing(ping)
@@ -1027,7 +1032,7 @@ class ConnectManagerImpl: ConnectManager()
             getMutedChats()
 
             notifyListeners {
-                onNetworkStatusChange(true)
+                onNetworkStatusChange(false, isLoading = true)
             }
 
             return

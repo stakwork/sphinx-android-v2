@@ -363,8 +363,16 @@ internal class ChatListAdapter(
                 val activeChatOrInvite = ((dashboardChat is DashboardChat.Active && chatHasMessages)
                         || dashboardChat is DashboardChat.Inactive.Invite
                         || isPending)
-                layoutConstraintDashboardChatHolderMessage.invisibleIfFalse(activeChatOrInvite)
-                layoutConstraintDashboardChatNoMessageHolder.invisibleIfFalse(!activeChatOrInvite)
+
+                textViewDashboardChatHolderName.invisibleIfFalse(activeChatOrInvite)
+                imageViewChatHolderLock.invisibleIfFalse(activeChatOrInvite)
+                textViewChatHolderMessageIcon.invisibleIfFalse(activeChatOrInvite)
+                startIconClock.invisibleIfFalse(activeChatOrInvite)
+                textViewChatHolderMessage.invisibleIfFalse(activeChatOrInvite)
+                textViewChatHolderTime.invisibleIfFalse(activeChatOrInvite)
+
+                textViewChatHolderCenteredName.invisibleIfFalse(!activeChatOrInvite)
+                imageViewChatHolderCenteredLock.invisibleIfFalse(!activeChatOrInvite)
 
                 if (dashboardChat is DashboardChat.Active.Conversation) {
                     imageViewChatHolderLock.visible
@@ -444,17 +452,23 @@ internal class ChatListAdapter(
                 binding.apply {
                     textViewChatHolderTime.visible
                     textViewChatHolderMessageIcon.gone
-                    layoutConstraintDashboardChatHolderContact.visible
-                    layoutConstraintDashboardChatHolderInvite.gone
-                    layoutConstraintDashboardChatHolderInvitePrice.gone
+
+                    includeDashboardChatHolderInitial.root.visible
+                    initialsDashboardPendingChatHolder.root.visible
+
+                    imageViewDashboardChatHolderPicture.gone
+
+                    textViewDashboardChatHolderInvitePrice.gone
 
                     if (nnDashboardChat is DashboardChat.Inactive.Invite) {
                         textViewChatHolderTime.gone
                         textViewChatHolderMessage.setTextFont(R_common.font.roboto_bold)
                         textViewChatHolderMessage.setTextColorExt(R_common.color.text)
 
-                        layoutConstraintDashboardChatHolderContact.gone
-                        layoutConstraintDashboardChatHolderInvite.visible
+                        includeDashboardChatHolderInitial.root.gone
+                        initialsDashboardPendingChatHolder.root.gone
+
+                        imageViewDashboardChatHolderPicture.visible
 
                         nnDashboardChat.getInviteIconAndColor()?.let { iconAndColor ->
                             textViewChatHolderMessageIcon.visible
@@ -464,7 +478,7 @@ internal class ChatListAdapter(
 
                         nnDashboardChat.getInvitePrice()?.let { price ->
                             val paymentPending = nnDashboardChat.invite?.status?.isPaymentPending() == true
-                            layoutConstraintDashboardChatHolderInvitePrice.goneIfFalse(paymentPending)
+                            textViewDashboardChatHolderInvitePrice.goneIfFalse(paymentPending)
                             textViewDashboardChatHolderInvitePrice.text = price.asFormattedString()
                         }
                     }
@@ -542,5 +556,17 @@ internal class ChatListAdapter(
 
     init {
         lifecycleOwner.lifecycle.addObserver(this)
+
+        recyclerView.apply {
+            setHasFixedSize(true)
+            setItemViewCacheSize(10)
+
+            recycledViewPool.setMaxRecycledViews(0, 20)
+
+            (layoutManager as? LinearLayoutManager)?.apply {
+                isItemPrefetchEnabled = true
+                initialPrefetchItemCount = 4
+            }
+        }
     }
 }

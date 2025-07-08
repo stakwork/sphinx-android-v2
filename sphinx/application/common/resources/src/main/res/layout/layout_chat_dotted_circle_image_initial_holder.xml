@@ -37,7 +37,6 @@
         android:layout_margin="4dp"
         tools:text="TT" />
 
-
     <!-- Clock Icon -->
     <androidx.appcompat.widget.AppCompatImageView
         android:id="@+id/icon_clock"
@@ -47,4 +46,5 @@
         android:tint="@color/secondaryText"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

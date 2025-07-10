@@ -1431,10 +1431,8 @@ class ConnectManagerImpl: ConnectManager()
             handleRunReturn(fetchMessages)
 
         } catch (e: Exception) {
-//            notifyListeners {
-//                onConnectManagerError(ConnectManagerError.FetchMessageError)
-//            }
             Log.e("MQTT_MESSAGES", "fetchMessagesOnAppInit ${e.message}")
+            reconnectWithBackOff()
         }
     }
 

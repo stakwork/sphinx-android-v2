@@ -282,12 +282,15 @@ internal class ChatListAdapter(
                 textViewChatHolderMessage.setTextFont(R_common.font.roboto_regular)
                 textViewDashboardChatHolderBadgeCount.invisibleIfFalse(false)
 
+                includeDashboardChatHolderInitial.root.visible
+                initialsDashboardPendingChatHolder.root.gone
+                imageViewDashboardChatHolderPicture.gone
+
                 // Image
                 dashboardChat.photoUrl.let { url ->
                     if (isPending) {
-                        includeDashboardChatHolderInitial.root.invisible
-
                         onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+                            includeDashboardChatHolderInitial.root.gone
                             initialsDashboardPendingChatHolder.apply {
                                 root.visible
                                 iconClock.gone
@@ -310,6 +313,7 @@ internal class ChatListAdapter(
                         }
                     } else {
                         includeDashboardChatHolderInitial.apply {
+                            root.visible
                             imageViewChatPicture.goneIfFalse(url != null)
                             textViewInitials.goneIfFalse(url == null)
                         }
@@ -375,8 +379,6 @@ internal class ChatListAdapter(
                 imageViewChatHolderCenteredLock.invisibleIfFalse(!activeChatOrInvite)
 
                 if (dashboardChat is DashboardChat.Active.Conversation) {
-                    imageViewChatHolderLock.visible
-                    imageViewChatHolderCenteredLock.visible
                     imageViewChatHolderLock.text = getString(R_common.string.material_icon_name_lock)
                     imageViewChatHolderCenteredLock.text = getString(R_common.string.material_icon_name_lock)
                 }
@@ -387,14 +389,10 @@ internal class ChatListAdapter(
                 }
 
                 if (dashboardChat is DashboardChat.Inactive.Conversation) {
-                    imageViewChatHolderLock.visible
-                    imageViewChatHolderCenteredLock.visible
                     imageViewChatHolderLock.text = getString(R_common.string.material_icon_name_lock_open)
                     imageViewChatHolderCenteredLock.text = getString(R_common.string.material_icon_name_lock_open)
                 }
                 if (dashboardChat is DashboardChat.Active.GroupOrTribe) {
-                    imageViewChatHolderLock.visible
-                    imageViewChatHolderCenteredLock.visible
                     imageViewChatHolderLock.text = getString(R_common.string.material_icon_name_lock)
                     imageViewChatHolderCenteredLock.text = getString(R_common.string.material_icon_name_lock)
                 }
@@ -403,7 +401,6 @@ internal class ChatListAdapter(
                 textViewChatHolderTime.text = dashboardChat.getDisplayTime(today00)
 
                 // Message
-
                 val messageText = if (isPending) getString(R_common.string.waiting_for_approval) else dashboardChat.getMessageText(root.context)
                 val hasUnseenMessages = dashboardChat.hasUnseenMessages()
 
@@ -418,20 +415,8 @@ internal class ChatListAdapter(
                 textViewChatHolderMessage.text = messageText
                 textViewChatHolderMessage.goneIfTrue(messageText.isEmpty())
 
-                if (isPending) {
-                    startIconClock.visible
-                    val layoutParams = textViewChatHolderMessage.layoutParams as ConstraintLayout.LayoutParams
-                    layoutParams.startToEnd = R.id.start_icon_clock
-                    layoutParams.startToStart = ConstraintLayout.LayoutParams.UNSET
-                    layoutParams.startToStart = ConstraintLayout.LayoutParams.UNSET
-                    textViewChatHolderMessage.layoutParams = layoutParams
-                } else {
-                    val layoutParams = textViewChatHolderMessage.layoutParams as ConstraintLayout.LayoutParams
-                    layoutParams.startToEnd = R.id.text_view_chat_holder_message_icon
-                    layoutParams.startToStart = ConstraintLayout.LayoutParams.UNSET
-                    layoutParams.startToStart = ConstraintLayout.LayoutParams.UNSET
-                    textViewChatHolderMessage.layoutParams = layoutParams
-                }
+                startIconClock.goneIfFalse(isPending)
+                iconReferenceView.goneIfFalse(isPending)
 
                 handleInviteLayouts()
 
@@ -453,13 +438,6 @@ internal class ChatListAdapter(
                     textViewChatHolderTime.visible
                     textViewChatHolderMessageIcon.gone
 
-                    includeDashboardChatHolderInitial.root.visible
-                    initialsDashboardPendingChatHolder.root.visible
-
-                    imageViewDashboardChatHolderPicture.gone
-
-                    textViewDashboardChatHolderInvitePrice.gone
-
                     if (nnDashboardChat is DashboardChat.Inactive.Invite) {
                         textViewChatHolderTime.gone
                         textViewChatHolderMessage.setTextFont(R_common.font.roboto_bold)
@@ -467,10 +445,12 @@ internal class ChatListAdapter(
 
                         includeDashboardChatHolderInitial.root.gone
                         initialsDashboardPendingChatHolder.root.gone
-
+                        imageViewDashboardChatHolderPicture.gone
+                        textViewDashboardChatHolderInvitePrice.gone
                         imageViewDashboardChatHolderPicture.visible
 
                         nnDashboardChat.getInviteIconAndColor()?.let { iconAndColor ->
+                            iconReferenceView.invisible
                             textViewChatHolderMessageIcon.visible
                             textViewChatHolderMessageIcon.text = getString(iconAndColor.first)
                             textViewChatHolderMessageIcon.setTextColor(getColor(iconAndColor.second))

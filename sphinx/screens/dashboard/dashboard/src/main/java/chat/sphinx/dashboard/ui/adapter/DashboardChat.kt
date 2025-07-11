@@ -5,18 +5,41 @@ import chat.sphinx.dashboard.R
 import chat.sphinx.dashboard.ui.adapter.DashboardChat.Active
 import chat.sphinx.dashboard.ui.adapter.DashboardChat.Inactive
 import chat.sphinx.highlighting_tool.replacingMarkdown
-import chat.sphinx.wrapper_chat.*
-import chat.sphinx.wrapper_common.*
+import chat.sphinx.wrapper_chat.Chat
+import chat.sphinx.wrapper_chat.getColorKey
+import chat.sphinx.wrapper_chat.isConversation
+import chat.sphinx.wrapper_chat.isTribe
+import chat.sphinx.wrapper_chat.isTribeOwnedByAccount
+import chat.sphinx.wrapper_common.DateTime
+import chat.sphinx.wrapper_common.PhotoUrl
+import chat.sphinx.wrapper_common.chatTimeFormat
 import chat.sphinx.wrapper_common.dashboard.ContactId
-import chat.sphinx.wrapper_common.invite.InviteStatus
+import chat.sphinx.wrapper_common.isTrue
 import chat.sphinx.wrapper_common.lightning.Sat
 import chat.sphinx.wrapper_common.lightning.asFormattedString
+import chat.sphinx.wrapper_common.time
 import chat.sphinx.wrapper_contact.Contact
 import chat.sphinx.wrapper_contact.getColorKey
-import chat.sphinx.wrapper_message.*
+import chat.sphinx.wrapper_message.Message
+import chat.sphinx.wrapper_message.isAttachment
+import chat.sphinx.wrapper_message.isBoost
+import chat.sphinx.wrapper_message.isCallLink
+import chat.sphinx.wrapper_message.isDeleted
+import chat.sphinx.wrapper_message.isDirectPayment
+import chat.sphinx.wrapper_message.isGroupJoin
+import chat.sphinx.wrapper_message.isGroupKick
+import chat.sphinx.wrapper_message.isGroupLeave
+import chat.sphinx.wrapper_message.isInvoice
+import chat.sphinx.wrapper_message.isInvoicePayment
+import chat.sphinx.wrapper_message.isMemberApprove
+import chat.sphinx.wrapper_message.isMemberReject
+import chat.sphinx.wrapper_message.isMemberRequest
+import chat.sphinx.wrapper_message.isMessage
+import chat.sphinx.wrapper_message.isSphinxCallLink
+import chat.sphinx.wrapper_message.isTribeDelete
 import chat.sphinx.wrapper_message_media.MediaType
-import chat.sphinx.resources.R as R_common
 import kotlinx.coroutines.flow.Flow
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.wrapper_invite.Invite as InviteWrapper
 
 /**

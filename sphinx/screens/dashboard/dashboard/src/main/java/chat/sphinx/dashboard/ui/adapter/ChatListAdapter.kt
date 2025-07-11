@@ -74,16 +74,15 @@ internal class ChatListAdapter(
 
                 val same: Boolean = when {
                     old is DashboardChat.Active && new is DashboardChat.Active -> {
-                        old.chat.id                 == new.chat.id                  &&
-                        old.chat.latestMessageId    == new.chat.latestMessageId
+                        old.chat.id                 == new.chat.id
                     }
                     old is DashboardChat.Inactive.Invite && new is DashboardChat.Inactive.Invite -> {
-                        old.invite?.status == new.invite?.status &&
                         old.invite?.id              == new.invite?.id               &&
-                        old.contact.status          == new.contact.status
+                        old.contact.id              == new.contact.id
                     }
-                    old is DashboardChat.Inactive && new is DashboardChat.Inactive -> {
-                        old.chatName                == new.chatName
+                    old is DashboardChat.Inactive.Conversation && new is DashboardChat.Inactive.Conversation -> {
+                        old.chatName                == new.chatName                 &&
+                        old.contact.id              == new.contact.id
                     }
                     else -> {
                         false
@@ -112,14 +111,15 @@ internal class ChatListAdapter(
                         old.chatName                == new.chatName                 &&
                         old.chat.notify             == new.chat.notify              &&
                         old.chat.seen               == new.chat.seen                &&
-                        old.chat.photoUrl           == new.chat.photoUrl
+                        old.chat.photoUrl           == new.chat.photoUrl            &&
+                        old.chat.latestMessageId    == new.chat.latestMessageId     &&
+                        old.message?.seen           == new.message?.seen
                     }
                     old is DashboardChat.Inactive.Invite && new is DashboardChat.Inactive.Invite -> {
-                        old.invite?.status == new.invite?.status &&
-                        old.invite?.id              == new.invite?.id               &&
+                        old.invite?.status          == new.invite?.status &&
                         old.contact.status          == new.contact.status
                     }
-                    old is DashboardChat.Inactive && new is DashboardChat.Inactive -> {
+                    old is DashboardChat.Inactive.Conversation && new is DashboardChat.Inactive.Conversation -> {
                         old.chatName                == new.chatName
                     }
                     else -> {

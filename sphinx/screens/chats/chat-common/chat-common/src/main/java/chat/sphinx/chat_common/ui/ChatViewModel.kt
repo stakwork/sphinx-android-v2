@@ -287,7 +287,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                         isMuted = chat?.notify?.isMuteChat() == true,
                         isChatAvailable = chat?.status?.isApproved() ?: false,
                         createdAt = chat?.createdAt?.time?.toFormattedDate(),
-                        colorKey = chat?.getColorKey() ?: ""
+                        colorKey = chat?.getColorKey() ?: chat?.getColorKey() ?: ""
                     )
 
                     chat?.let { nnChat ->

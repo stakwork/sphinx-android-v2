@@ -1177,7 +1177,6 @@ abstract class ChatFragment<
 
         onStopSupervisor.scope.launch(viewModel.mainImmediate) {
             viewModel.chatHeaderViewStateContainer.collect { viewState ->
-
                 @Exhaustive
                 when (viewState) {
                     is ChatHeaderViewState.Idle -> {}
@@ -1221,18 +1220,10 @@ abstract class ChatFragment<
 
                                         inactiveContactPlaceHolder.apply {
                                             root.visible
+
                                             initialsHolderPlaceholder.textViewInitials.apply {
                                                 visible
                                                 text = viewState.chatHeaderName.getInitials()
-                                                setBackgroundRandomColor(
-                                                    R_common.drawable.chat_initials_circle,
-                                                    Color.parseColor(
-                                                        userColorsHelper.getHexCodeForKey(
-                                                            viewState.colorKey,
-                                                            root.context.getRandomHexCode(),
-                                                        )
-                                                    ),
-                                                )
                                             }
                                             textViewPlaceholderName.text = viewState.chatHeaderName
                                             textViewPlaceholderInvited.text = root.context.getString(
@@ -1299,6 +1290,31 @@ abstract class ChatFragment<
                     @Exhaustive
                     when (viewState) {
                         is InitialHolderViewState.Initials -> {
+                            inactiveContactPlaceHolder.apply {
+                                includeEmptyChatHolderInitial.textViewInitials
+                                    .setInitialsColor(
+                                        Color.parseColor(
+                                            userColorsHelper.getHexCodeForKey(
+                                                viewState.colorKey,
+                                                root.context.getRandomHexCode()
+                                            )
+                                        ),
+                                        R_common.drawable.chat_initials_circle_big
+                                    )
+
+                                initialsHolderPlaceholder.textViewInitials.apply {
+                                    setBackgroundRandomColor(
+                                        R_common.drawable.chat_initials_circle,
+                                        Color.parseColor(
+                                            userColorsHelper.getHexCodeForKey(
+                                                viewState.colorKey,
+                                                root.context.getRandomHexCode(),
+                                            )
+                                        ),
+                                    )
+                                }
+                            }
+
                             if (viewState.isPending) {
                                 root.invisible
                                 headerBinding.layoutPendingContactInitialHolder.apply {
@@ -1403,21 +1419,6 @@ abstract class ChatFragment<
                         } else {
                             includeEmptyChatHolderInitial.textViewInitials.text =
                                 chat.name?.value?.getInitials() ?: ""
-
-                            onStopSupervisor.scope.launch(viewModel.mainImmediate) {
-                                includeEmptyChatHolderInitial.textViewInitials
-                                    .setInitialsColor(
-                                        chat.getColorKey()?.let { colorKey ->
-                                            Color.parseColor(
-                                                userColorsHelper.getHexCodeForKey(
-                                                    colorKey,
-                                                    root.context.getRandomHexCode()
-                                                )
-                                            )
-                                        },
-                                        R_common.drawable.chat_initials_circle
-                                    )
-                            }
                         }
                     }
                 } else {

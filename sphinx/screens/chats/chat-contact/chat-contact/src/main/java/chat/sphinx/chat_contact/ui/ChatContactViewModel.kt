@@ -196,7 +196,7 @@ internal class ChatContactViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
             }
-            delay(25L)
+            // delay(25L)
 
             return Triple(
                 alias?.value?.let { ChatName(it) },
@@ -249,7 +249,7 @@ internal class ChatContactViewModel @Inject constructor(
             }
         } catch (e: Exception) {
         }
-        delay(25L)
+        // delay(25L)
 
         return initialHolder ?: InitialHolderViewState.None
     }
@@ -268,7 +268,7 @@ internal class ChatContactViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
             }
-            delay(25L)
+            // delay(25L)
         }
 
         return contact

@@ -357,7 +357,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
             }
         } catch (e: Exception) {
         }
-        delay(25L)
+        // delay(25L)
 
         return chat!!
     }
@@ -405,7 +405,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                     }
                 } catch (e: Exception) {
                 }
-                delay(25L)
+                // delay(25L)
 
                 resolvedOwner!!
             }
@@ -1025,7 +1025,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         }
 
         viewModelScope.launch(mainImmediate) {
-            delay(500)
+            // delay(500)
             // cancel the setup jobs as the view has taken over observation
             // and we don't want to continue collecting endlessly if any of
             // them are still active. WhileSubscribed will take over.
@@ -1111,7 +1111,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
             if (isThreadChat()) {
                 messageRepository.getAllMessagesToShowByChatId(getChat().id, 0, getThreadUUID()).distinctUntilChanged().collect { messages ->
-                    delay(200)
+                    //delay(200)
 
                     val originalMessage = messageRepository.getMessageByUUID(MessageUUID(getThreadUUID()?.value!!)).firstOrNull()
                     val completeThread = listOf(originalMessage) + messages.reversed()
@@ -1125,13 +1125,13 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                 }
             } else {
                 messageRepository.getAllMessagesToShowByChatId(getChat().id, 100).firstOrNull()?.let { messages ->
-                    delay(200)
+                    //delay(200)
 
                     messageHolderViewStateFlow.value = getMessageHolderViewStateList(messages).toList()
                     shimmerViewState.updateViewState(ShimmerViewState.Off)
                 }
 
-                delay(1000L)
+                //delay(1000L)
 
                 messageRepository.getAllMessagesToShowByChatId(getChat().id, 1000).distinctUntilChanged().collect { messages ->
                     messageHolderViewStateFlow.value = getMessageHolderViewStateList(messages).toList()

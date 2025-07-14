@@ -1111,23 +1111,21 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
             if (isThreadChat()) {
                 messageRepository.getAllMessagesToShowByChatId(getChat().id, 0, getThreadUUID()).distinctUntilChanged().collect { messages ->
-                    delay(200)
-
                     val originalMessage = messageRepository.getMessageByUUID(MessageUUID(getThreadUUID()?.value!!)).firstOrNull()
                     val completeThread = listOf(originalMessage) + messages.reversed()
                     val list = getMessageHolderViewStateList(completeThread.filterNotNull()).toList()
 
                     messageHolderViewStateFlow.value = list
                     changeThreadHeaderState(true)
-                    shimmerViewState.updateViewState(ShimmerViewState.Off)
 
+                    delay(50)
+                    shimmerViewState.updateViewState(ShimmerViewState.Off)
                     scrollDownButtonCount.value = messages.size.toLong()
                 }
             } else {
                 messageRepository.getAllMessagesToShowByChatId(getChat().id, 100).firstOrNull()?.let { messages ->
-                    delay(200)
-
                     messageHolderViewStateFlow.value = getMessageHolderViewStateList(messages).toList()
+                    delay(50)
                     shimmerViewState.updateViewState(ShimmerViewState.Off)
                 }
 

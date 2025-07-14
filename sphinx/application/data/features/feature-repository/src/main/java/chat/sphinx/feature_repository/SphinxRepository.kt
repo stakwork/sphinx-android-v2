@@ -1151,7 +1151,9 @@ abstract class SphinxRepository(
     }
 
     override fun onRestoreProgress(progress: Int) {
-        restoreProgress.value = progress
+        applicationScope.launch(mainImmediate) {
+            restoreProgress.value = progress
+        }
     }
 
     override fun onRestoreFinished() {

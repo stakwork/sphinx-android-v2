@@ -112,6 +112,14 @@ internal class ChatListViewModel @Inject constructor(
     private var contactsCollectionInitialized: Boolean = false
     private var chatsCollectionInitialized: Boolean = false
 
+    private var hasLoadedOnce = false
+
+    fun markAsLoaded() {
+        hasLoadedOnce = true
+    }
+
+    fun isFirstLoad(): Boolean = !hasLoadedOnce
+
     init {
         if (args.isChatListTypeConversation) {
             viewModelScope.launch(mainImmediate) {

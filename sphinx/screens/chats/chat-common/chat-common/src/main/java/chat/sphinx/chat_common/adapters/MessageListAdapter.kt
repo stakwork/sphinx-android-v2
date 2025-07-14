@@ -11,6 +11,7 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavArgs
+import androidx.recyclerview.widget.AsyncListDiffer
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -50,7 +51,6 @@ import io.matthewnelson.android_feature_screens.util.visible
 import io.matthewnelson.android_feature_viewmodel.util.OnStopSupervisor
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 internal class MessageListAdapter<ARGS : NavArgs>(
     private val recyclerView: RecyclerView,
@@ -89,79 +89,49 @@ internal class MessageListAdapter<ARGS : NavArgs>(
         }
     }
 
-    private inner class Diff(
-        private val oldList: List<MessageHolderViewState>,
-        private val newList: List<MessageHolderViewState>
-    ): DiffUtil.Callback() {
-        override fun getOldListSize(): Int {
-            return oldList.size
+    // AsyncListDiffer setup
+    private val diffCallback = object : DiffUtil.ItemCallback<MessageHolderViewState>() {
+        override fun areItemsTheSame(oldItem: MessageHolderViewState, newItem: MessageHolderViewState): Boolean {
+            return oldItem.message?.id == newItem.message?.id
         }
 
-        override fun getNewListSize(): Int {
-            return newList.size
-        }
-
-        override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-            return try {
-                oldList[oldItemPosition].message?.id == newList[newItemPosition].message?.id
-            } catch (e: IndexOutOfBoundsException) {
-                false
-            }
-        }
-
-        override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-            return try {
-                val old = oldList[oldItemPosition]
-                val new = newList[newItemPosition]
-
-                when {
-                    old is MessageHolderViewState.Received && new is MessageHolderViewState.Received -> {
-                        old.background                         == new.background                   &&
-                        old.message                            == new.message                      &&
-                        old.invoiceLinesHolderViewState        == new.invoiceLinesHolderViewState  &&
-                        old.message?.thread                    == new.message?.thread
-                    }
-                    old is MessageHolderViewState.Sent && new is MessageHolderViewState.Sent -> {
-                        old.background                         == new.background                    &&
-                        old.message                            == new.message                       &&
-                        old.invoiceLinesHolderViewState        == new.invoiceLinesHolderViewState   &&
-                        old.isPinned                           == new.isPinned                      &&
-                        old.message?.thread                    == new.message?.thread
-                    }
-                    else -> {
-                        false
-                    }
+        override fun areContentsTheSame(oldItem: MessageHolderViewState, newItem: MessageHolderViewState): Boolean {
+            return when {
+                oldItem is MessageHolderViewState.Received && newItem is MessageHolderViewState.Received -> {
+                    oldItem.background                      == newItem.background                   &&
+                            oldItem.message                         == newItem.message                      &&
+                            oldItem.invoiceLinesHolderViewState     == newItem.invoiceLinesHolderViewState  &&
+                            oldItem.message?.thread                 == newItem.message?.thread
                 }
-            } catch (e: IndexOutOfBoundsException) {
-                false
+                oldItem is MessageHolderViewState.Sent && newItem is MessageHolderViewState.Sent -> {
+                    oldItem.background                      == newItem.background                    &&
+                            oldItem.message                         == newItem.message                       &&
+                            oldItem.invoiceLinesHolderViewState     == newItem.invoiceLinesHolderViewState   &&
+                            oldItem.isPinned                        == newItem.isPinned                      &&
+                            oldItem.message?.thread                 == newItem.message?.thread
+                }
+                else -> false
             }
         }
     }
 
-    private val messages = ArrayList<MessageHolderViewState>(viewModel.messageHolderViewStateFlow.value)
+    private val differ = AsyncListDiffer(this, diffCallback)
 
     override fun onStart(owner: LifecycleOwner) {
         super.onStart(owner)
 
         onStopSupervisor.scope.launch(viewModel.main) {
             viewModel.messageHolderViewStateFlow.collect { list ->
-
-                // Delay added to ensure navigation animation is done
-                if (messages.isEmpty()) {
-                    messages.addAll(list)
-                    notifyDataSetChanged()
-                    scrollToUnseenSeparatorOrBottom(list)
+                // Check if this is the initial load
+                if (differ.currentList.isEmpty()) {
+                    // Submit list and scroll after diff completes
+                    differ.submitList(list) {
+                        scrollToUnseenSeparatorOrBottom(list)
+                    }
                 } else {
-                    withContext(viewModel.dispatchers.default) {
-                        DiffUtil.calculateDiff(
-                            Diff(messages, list)
-                        )
-                    }.let { result ->
-                        scrollToPreviousPosition(callback = {
-                            messages.clear()
-                            messages.addAll(list)
-                            result.dispatchUpdatesTo(this@MessageListAdapter)
-                        })
+                    // For updates, handle scroll position
+                    scrollToPreviousPositionWithCallback {
+                        differ.submitList(list)
                     }
                 }
             }
@@ -169,7 +139,7 @@ internal class MessageListAdapter<ARGS : NavArgs>(
     }
 
     override fun getItemViewType(position: Int): Int {
-        return when (messages.getOrNull(position)) {
+        return when (differ.currentList.getOrNull(position)) {
             is MessageHolderViewState.ThreadHeader -> VIEW_TYPE_THREAD_HEADER
             else -> VIEW_TYPE_MESSAGE
         }
@@ -196,14 +166,14 @@ internal class MessageListAdapter<ARGS : NavArgs>(
         itemsDiff: Int = 0
     ) {
         val lastVisibleItemPositionBeforeDispatch = layoutManager.findLastVisibleItemPosition()
-        val listSizeBeforeDispatch = messages.size
+        val listSizeBeforeDispatch = differ.currentList.size
 
         if (callback != null) {
             callback()
         }
 
-        val listSizeAfterDispatch = messages.size
-        val lastItemPosition = messages.size - 1
+        val listSizeAfterDispatch = differ.currentList.size
+        val lastItemPosition = differ.currentList.size - 1
 
         if (
             (!viewModel.isMessageSelected() || replyingToMessage)                    &&
@@ -215,23 +185,29 @@ internal class MessageListAdapter<ARGS : NavArgs>(
         }
     }
 
-    private fun scrollToPreviousPosition(
+    private fun scrollToPreviousPositionWithCallback(
         callback: (() -> Unit)? = null,
     ) {
         val lastVisibleItemPositionBeforeDispatch = layoutManager.findLastVisibleItemPosition()
-        val listSizeBeforeDispatch = messages.size
+        val listSizeBeforeDispatch = differ.currentList.size
         val diffToBottom = listSizeBeforeDispatch - lastVisibleItemPositionBeforeDispatch
 
         if (callback != null) {
             callback()
         }
 
-        val listSizeAfterDispatch = messages.size
-        recyclerView.scrollToPosition(listSizeAfterDispatch - diffToBottom)
+        // Use post to ensure the diff has been applied
+        recyclerView.post {
+            val listSizeAfterDispatch = differ.currentList.size
+            val targetPosition = listSizeAfterDispatch - diffToBottom
+            if (targetPosition >= 0) {
+                recyclerView.scrollToPosition(targetPosition)
+            }
+        }
     }
 
     fun forceScrollToBottom() {
-        recyclerView.layoutManager?.smoothScrollToPosition(recyclerView, null, messages.size);
+        recyclerView.layoutManager?.smoothScrollToPosition(recyclerView, null, differ.currentList.size);
     }
 
     fun highlightAndScrollToSearchResult(
@@ -242,7 +218,7 @@ internal class MessageListAdapter<ARGS : NavArgs>(
         var previousMessageUpdated = (previousMessage == null)
         var indexToScroll: Int? = null
 
-        for ((index, messageHolderVS) in messages.withIndex()) {
+        for ((index, messageHolderVS) in differ.currentList.withIndex()) {
             if (messageHolderVS.message?.id == previousMessage?.id && !previousMessageUpdated) {
 
                 (messageHolderVS as? MessageHolderViewState.Sent)?.let {
@@ -279,7 +255,7 @@ internal class MessageListAdapter<ARGS : NavArgs>(
     }
 
     fun resetHighlighted() {
-        for ((index, messageHolderVS) in messages.withIndex()) {
+        for ((index, messageHolderVS) in differ.currentList.withIndex()) {
             if (messageHolderVS.highlightedText != null) {
                 messageHolderVS.highlightedText = null
                 notifyItemChanged(index)
@@ -299,7 +275,7 @@ internal class MessageListAdapter<ARGS : NavArgs>(
         oldBottom: Int
     ) {
         if (bottom != oldBottom) {
-            val lastPosition = messages.size - 1
+            val lastPosition = differ.currentList.size - 1
             if (
                 !viewModel.isMessageSelected()                              &&
                 recyclerView.scrollState == RecyclerView.SCROLL_STATE_IDLE  &&
@@ -307,7 +283,6 @@ internal class MessageListAdapter<ARGS : NavArgs>(
             ) {
                 recyclerView.scrollToPosition(lastPosition)
             }
-
         }
     }
 
@@ -354,7 +329,7 @@ internal class MessageListAdapter<ARGS : NavArgs>(
     }
 
     override fun getItemCount(): Int {
-        return messages.size
+        return differ.currentList.size
     }
 
     private val recyclerViewWidth: Px by lazy(LazyThreadSafetyMode.NONE) {
@@ -370,15 +345,15 @@ internal class MessageListAdapter<ARGS : NavArgs>(
     }
 
     private val pinedMessageHeader: Px
-    get() {
-        return headerPinBinding?.let {
-            if (headerPinBinding.root.isVisible) {
-                Px(headerPinBinding.root.measuredHeight.toFloat())
-            } else {
-                Px(0f)
-            }
-        } ?: Px(0f)
-    }
+        get() {
+            return headerPinBinding?.let {
+                if (headerPinBinding.root.isVisible) {
+                    Px(headerPinBinding.root.measuredHeight.toFloat())
+                } else {
+                    Px(0f)
+                }
+            } ?: Px(0f)
+        }
 
     inner class MessageViewHolder(
         private val binding: LayoutMessageHolderBinding
@@ -630,7 +605,7 @@ internal class MessageListAdapter<ARGS : NavArgs>(
         }
 
         fun bind(position: Int) {
-            val viewState = messages.elementAtOrNull(position).also { currentViewState = it } ?: return
+            val viewState = differ.currentList.elementAtOrNull(position).also { currentViewState = it } ?: return
             audioAttachmentJob?.cancel()
 
             binding.setView(
@@ -779,7 +754,7 @@ internal class MessageListAdapter<ARGS : NavArgs>(
         }
 
         fun bind(position: Int) {
-            val threadHeader = messages.getOrNull(position) as MessageHolderViewState.ThreadHeader
+            val threadHeader = differ.currentList.getOrNull(position) as MessageHolderViewState.ThreadHeader
             threadHeaderViewState = threadHeader
 
             binding.apply {
@@ -914,12 +889,12 @@ internal class MessageListAdapter<ARGS : NavArgs>(
                                     if (fileAttachment.isPdf) {
                                         if (fileAttachment.pageCount > 1) {
                                             "${fileAttachment.pageCount} ${getString(
-                                                    chat.sphinx.chat_common.R.string.pdf_pages
-                                                )}"
+                                                chat.sphinx.chat_common.R.string.pdf_pages
+                                            )}"
                                         } else {
                                             "${fileAttachment.pageCount} ${getString(
-                                                    chat.sphinx.chat_common.R.string.pdf_page
-                                                )}"
+                                                chat.sphinx.chat_common.R.string.pdf_page
+                                            )}"
                                         }
                                     } else {
                                         fileAttachment.fileSize.asFormattedString()

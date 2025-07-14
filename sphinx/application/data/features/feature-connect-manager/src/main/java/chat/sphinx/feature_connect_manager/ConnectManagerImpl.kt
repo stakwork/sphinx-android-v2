@@ -424,6 +424,10 @@ class ConnectManagerImpl: ConnectManager()
                     onLastReadMessages(lastRead)
                 }
                 Log.d("MQTT_MESSAGES", "=> lastRead $lastRead")
+
+                notifyListeners {
+                    onNetworkStatusChange(true)
+                }
             }
 
             rr.initialTribe?.let { initialTribe ->

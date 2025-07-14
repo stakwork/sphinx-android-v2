@@ -4,9 +4,8 @@ import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.widget.ImageView
-import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.*
+import androidx.recyclerview.widget.AsyncListDiffer
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -19,14 +18,12 @@ import chat.sphinx.dashboard.R
 import chat.sphinx.dashboard.databinding.LayoutChatListChatHolderBinding
 import chat.sphinx.dashboard.ui.ChatListViewModel
 import chat.sphinx.dashboard.ui.collectChatViewState
-import chat.sphinx.dashboard.ui.currentChatViewState
 import chat.sphinx.resources.*
 import chat.sphinx.wrapper_chat.*
 import chat.sphinx.wrapper_common.DateTime
 import chat.sphinx.wrapper_common.invite.*
 import chat.sphinx.wrapper_common.lightning.asFormattedString
 import chat.sphinx.wrapper_common.util.getInitials
-import chat.sphinx.wrapper_message.*
 import chat.sphinx.resources.R as R_common
 import io.matthewnelson.android_feature_screens.util.gone
 import io.matthewnelson.android_feature_screens.util.goneIfFalse
@@ -37,9 +34,6 @@ import io.matthewnelson.android_feature_screens.util.visible
 import io.matthewnelson.android_feature_viewmodel.util.OnStopSupervisor
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.util.*
-import kotlin.collections.ArrayList
 
 internal class ChatListAdapter(
     private val recyclerView: RecyclerView,
@@ -51,135 +45,68 @@ internal class ChatListAdapter(
     private val userColorsHelper: UserColorsHelper
 ): RecyclerView.Adapter<ChatListAdapter.ChatViewHolder>(), DefaultLifecycleObserver {
 
-    private inner class Diff(
-        private val oldList: List<DashboardChat>,
-        private val newList: List<DashboardChat>,
-    ): DiffUtil.Callback() {
-
-        override fun getOldListSize(): Int {
-            return oldList.size
-        }
-
-        override fun getNewListSize(): Int {
-            return newList.size
-        }
-
-        @Volatile
-        var sameList: Boolean = oldListSize == newListSize
-
-        override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-            return try {
-                val old = oldList[oldItemPosition]
-                val new = newList[newItemPosition]
-
-                val same: Boolean = when {
-                    old is DashboardChat.Active && new is DashboardChat.Active -> {
-                        old.chat.id                 == new.chat.id
-                    }
-                    old is DashboardChat.Inactive.Invite && new is DashboardChat.Inactive.Invite -> {
-                        old.invite?.id              == new.invite?.id               &&
-                        old.contact.id              == new.contact.id
-                    }
-                    old is DashboardChat.Inactive.Conversation && new is DashboardChat.Inactive.Conversation -> {
-                        old.chatName                == new.chatName                 &&
-                        old.contact.id              == new.contact.id
-                    }
-                    else -> {
-                        false
-                    }
+    // AsyncListDiffer setup
+    private val diffCallback = object : DiffUtil.ItemCallback<DashboardChat>() {
+        override fun areItemsTheSame(oldItem: DashboardChat, newItem: DashboardChat): Boolean {
+            return when {
+                oldItem is DashboardChat.Active && newItem is DashboardChat.Active -> {
+                    oldItem.chat.id == newItem.chat.id
                 }
-
-                if (sameList) {
-                    sameList = same
+                oldItem is DashboardChat.Inactive.Invite && newItem is DashboardChat.Inactive.Invite -> {
+                    oldItem.invite?.id == newItem.invite?.id &&
+                            oldItem.contact.id == newItem.contact.id
                 }
-
-                same
-            } catch (e: IndexOutOfBoundsException) {
-                sameList = false
-                false
+                oldItem is DashboardChat.Inactive.Conversation && newItem is DashboardChat.Inactive.Conversation -> {
+                    oldItem.chatName == newItem.chatName &&
+                            oldItem.contact.id == newItem.contact.id
+                }
+                else -> false
             }
         }
 
-        override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-            return try {
-                val old = oldList[oldItemPosition]
-                val new = newList[newItemPosition]
-
-                val same: Boolean = when {
-                    old is DashboardChat.Active && new is DashboardChat.Active -> {
-                        old.chat.type               == new.chat.type                &&
-                        old.chatName                == new.chatName                 &&
-                        old.chat.notify             == new.chat.notify              &&
-                        old.chat.seen               == new.chat.seen                &&
-                        old.chat.photoUrl           == new.chat.photoUrl            &&
-                        old.chat.latestMessageId    == new.chat.latestMessageId     &&
-                        old.message?.seen           == new.message?.seen
-                    }
-                    old is DashboardChat.Inactive.Invite && new is DashboardChat.Inactive.Invite -> {
-                        old.invite?.status          == new.invite?.status &&
-                        old.contact.status          == new.contact.status
-                    }
-                    old is DashboardChat.Inactive.Conversation && new is DashboardChat.Inactive.Conversation -> {
-                        old.chatName                == new.chatName
-                    }
-                    else -> {
-                        false
-                    }
+        override fun areContentsTheSame(oldItem: DashboardChat, newItem: DashboardChat): Boolean {
+            return when {
+                oldItem is DashboardChat.Active && newItem is DashboardChat.Active -> {
+                    oldItem.chat.type == newItem.chat.type &&
+                            oldItem.chatName == newItem.chatName &&
+                            oldItem.chat.notify == newItem.chat.notify &&
+                            oldItem.chat.seen == newItem.chat.seen &&
+                            oldItem.chat.photoUrl == newItem.chat.photoUrl &&
+                            oldItem.chat.latestMessageId == newItem.chat.latestMessageId &&
+                            oldItem.message?.seen == newItem.message?.seen
                 }
-
-                if (sameList) {
-                    sameList = same
+                oldItem is DashboardChat.Inactive.Invite && newItem is DashboardChat.Inactive.Invite -> {
+                    oldItem.invite?.status == newItem.invite?.status &&
+                            oldItem.contact.status == newItem.contact.status
                 }
-
-                same
-            } catch (e: IndexOutOfBoundsException) {
-                sameList = false
-                false
+                oldItem is DashboardChat.Inactive.Conversation && newItem is DashboardChat.Inactive.Conversation -> {
+                    oldItem.chatName == newItem.chatName
+                }
+                else -> false
             }
         }
-
     }
 
-    private val dashboardChats = ArrayList<DashboardChat>(viewModel.currentChatViewState.list)
+    private val differ = AsyncListDiffer(this, diffCallback)
 
     override fun onStart(owner: LifecycleOwner) {
         super.onStart(owner)
         onStopSupervisor.scope.launch(viewModel.mainImmediate) {
             viewModel.collectChatViewState { viewState ->
-
-                if (dashboardChats.isEmpty()) {
-                    dashboardChats.addAll(viewState.list)
-                    this@ChatListAdapter.notifyDataSetChanged()
-                } else {
-
-                    val diff = Diff(dashboardChats, viewState.list)
-
-                    withContext(viewModel.dispatchers.default) {
-                        DiffUtil.calculateDiff(diff)
-                    }.let { result ->
-
-                        if (!diff.sameList) {
-                            val firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
-
-                            dashboardChats.clear()
-                            dashboardChats.addAll(viewState.list)
-                            result.dispatchUpdatesTo(this@ChatListAdapter)
-
-                            if (
-                                firstVisibleItemPosition == 0                               &&
-                                recyclerView.scrollState == RecyclerView.SCROLL_STATE_IDLE
-                            ) {
-                                recyclerView.scrollToPosition(0)
-                            }
-                        }
+                if (viewModel.isFirstLoad() && differ.currentList.isEmpty() && viewState.list.isNotEmpty()) {
+                    viewModel.markAsLoaded()
+                    differ.submitList(viewState.list) {
+                        recyclerView.scrollToPosition(0)
                     }
+                } else {
+                    differ.submitList(viewState.list)
                 }
             }
         }
     }
 
     override fun getItemCount(): Int {
-        return dashboardChats.size
+        return differ.currentList.size
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ChatListAdapter.ChatViewHolder {
@@ -233,16 +160,15 @@ internal class ChatListAdapter(
                                 if (dashboardChat.chat.type.isTribe()) {
                                     viewModel.dashboardNavigator.toChatTribe(dashboardChat.chat.id)
                                 }
-
                             }
                         }
                         is DashboardChat.Inactive.Conversation -> {
                             lifecycleOwner.lifecycleScope.launch {
-                                    viewModel.dashboardNavigator.toChatContact(
-                                        null,
-                                        dashboardChat.contact.id
-                                    )
-                                }
+                                viewModel.dashboardNavigator.toChatContact(
+                                    null,
+                                    dashboardChat.contact.id
+                                )
+                            }
                         }
                         is DashboardChat.Inactive.Invite -> {
                             dashboardChat.invite?.let { invite ->
@@ -264,7 +190,7 @@ internal class ChatListAdapter(
         @OptIn(ExperimentalStdlibApi::class)
         fun bind(position: Int) {
             binding.apply {
-                val dashboardChat: DashboardChat = dashboardChats.getOrNull(position) ?: let {
+                val dashboardChat: DashboardChat = differ.currentList.getOrNull(position) ?: let {
                     dChat = null
                     return
                 }
@@ -276,7 +202,7 @@ internal class ChatListAdapter(
                 val isPending = dashboardChat is DashboardChat.Inactive.Conversation
 
                 // Set Defaults
-                layoutConstraintChatHolderBorder.goneIfFalse(position != dashboardChats.lastIndex)
+                layoutConstraintChatHolderBorder.goneIfFalse(position != differ.currentList.lastIndex)
                 textViewDashboardChatHolderName.setTextColorExt(android.R.color.white)
                 textViewChatHolderMessage.setTextColorExt(R_common.color.placeholderText)
                 textViewChatHolderMessage.setTextFont(R_common.font.roboto_regular)
@@ -482,10 +408,10 @@ internal class ChatListAdapter(
                                 alpha = if (chatIsMutedOrOnlyMentions) 0.2f else 1.0f
 
                                 backgroundTintList = binding.getColorStateList(if (chatIsMutedOrOnlyMentions) {
-                                        R_common.color.washedOutReceivedText
-                                    } else {
-                                        R_common.color.primaryBlue
-                                    }
+                                    R_common.color.washedOutReceivedText
+                                } else {
+                                    R_common.color.primaryBlue
+                                }
                                 )
                             }
 
@@ -531,7 +457,6 @@ internal class ChatListAdapter(
         init {
             lifecycleOwner.lifecycle.addObserver(this)
         }
-
     }
 
     init {

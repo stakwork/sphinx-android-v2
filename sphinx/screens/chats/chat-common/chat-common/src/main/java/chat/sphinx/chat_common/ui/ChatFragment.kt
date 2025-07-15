@@ -7,8 +7,6 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.pdf.PdfRenderer
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.os.ParcelFileDescriptor
 import android.text.Editable
 import android.text.InputFilter
@@ -26,7 +24,6 @@ import androidx.annotation.LayoutRes
 import androidx.constraintlayout.motion.widget.MotionLayout
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
-import androidx.core.view.doOnPreDraw
 import androidx.core.view.isVisible
 import androidx.core.widget.addTextChangedListener
 import androidx.fragment.app.FragmentActivity
@@ -214,6 +211,9 @@ abstract class ChatFragment<
 
         SelectedMessageStateBackPressHandler(viewLifecycleOwner, requireActivity())
 
+        // Start loading data immediately, before UI setup
+        viewModel.screenInit()
+
         val insetterActivity = (requireActivity() as InsetterActivity)
         setupMenu(insetterActivity)
         setupFooter(insetterActivity)
@@ -224,7 +224,6 @@ abstract class ChatFragment<
         setupAttachmentFullscreen(insetterActivity)
         setupScrollDown()
         setupRecyclerView()
-        Handler(Looper.getMainLooper()).postDelayed({ viewModel.screenInit() },1000)
     }
 
     override fun onResume() {
@@ -1437,7 +1436,6 @@ abstract class ChatFragment<
                     } else {
                         inactiveContactPlaceHolder.root.gone
                     }
-                    viewModel.shimmerViewState.updateViewState(ShimmerViewState.Off)
                 }
             }
         }

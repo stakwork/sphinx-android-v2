@@ -2,6 +2,7 @@ package chat.sphinx.chat_contact.navigation
 
 import androidx.annotation.IdRes
 import androidx.navigation.NavController
+import androidx.navigation.NavOptions
 import chat.sphinx.chat_contact.R
 import chat.sphinx.chat_contact.ui.ChatContactFragmentArgs
 import chat.sphinx.wrapper_common.dashboard.ChatId
@@ -17,20 +18,25 @@ class ToChatContactScreen(
 ): NavigationRequest<NavController>() {
 
     override fun navigate(controller: NavController) {
+        val args = ChatContactFragmentArgs.Builder(
+            contactId.value,
+            chatId?.value ?: ChatId.NULL_CHAT_ID.toLong()
+        ).build().toBundle()
+        
+        // Create optimized navigation options to reduce transition delay
+        val navOptions = NavOptions.Builder()
+            .setLaunchSingleTop(true)  // Avoid recreating if already on top
+            .apply {
+                popUpToId?.let { id ->
+                    setPopUpTo(id, popUpToInclusive)
+                }
+            }
+            .build()
+
         controller.navigate(
             R.id.chat_contact_nav_graph,
-
-            ChatContactFragmentArgs.Builder(
-                contactId.value,
-                chatId?.value ?: ChatId.NULL_CHAT_ID.toLong()
-            ).build().toBundle(),
-
-            DefaultNavOptions.defaultAnims.let { builder ->
-                popUpToId?.let { id ->
-                    builder.setPopUpTo(id, popUpToInclusive)
-                }
-                builder.build()
-            }
+            args,
+            navOptions
         )
     }
 }

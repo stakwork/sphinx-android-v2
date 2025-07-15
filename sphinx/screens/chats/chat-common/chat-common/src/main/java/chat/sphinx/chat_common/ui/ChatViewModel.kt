@@ -1104,47 +1104,67 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         if (chatId == null) {
             shimmerViewState.updateViewState(ShimmerViewState.Off)
         }
-        collectThread()
-        collectUnseenMessagesNumber()
+
         var isScrollDownButtonSetup = false
         messagesLoadJob = viewModelScope.launch(mainImmediate) {
-            connectManagerRepository.getTagsByChatId(getChat().id)
+            // Start fetching tags in a separate coroutine to avoid blocking the UI
+            val tagsJob = launch { connectManagerRepository.getTagsByChatId(getChat().id) }
 
             if (isThreadChat()) {
                 messageRepository.getAllMessagesToShowByChatId(getChat().id, 0, getThreadUUID()).distinctUntilChanged().collect { messages ->
-                    delay(200)
-
                     val originalMessage = messageRepository.getMessageByUUID(MessageUUID(getThreadUUID()?.value!!)).firstOrNull()
                     val completeThread = listOf(originalMessage) + messages.reversed()
                     val list = getMessageHolderViewStateList(completeThread.filterNotNull()).toList()
 
-                    changeThreadHeaderState(true)
-                    scrollDownButtonCount.value = messages.size.toLong()
                     messageHolderViewStateFlow.value = list
-//                    shimmerViewState.updateViewState(ShimmerViewState.Off)
+                    changeThreadHeaderState(true)
+                    shimmerViewState.updateViewState(ShimmerViewState.Off)
+
+                    scrollDownButtonCount.value = messages.size.toLong()
                 }
             } else {
-                messageRepository.getAllMessagesToShowByChatId(getChat().id, 1000).distinctUntilChanged().collect { messages ->
-                    reloadPinnedMessage()
-
-                    if (!isScrollDownButtonSetup) {
-                        setupScrollDownButtonCount()
-                        isScrollDownButtonSetup = true
+                try {
+                    // Pre-load initial messages immediately with a higher priority
+                    withContext(mainImmediate) {
+                        messageRepository.getAllMessagesToShowByChatId(getChat().id, 100).firstOrNull()?.let { messages ->
+                            // Prepare first batch of messages for immediate display
+                            messageHolderViewStateFlow.value = getMessageHolderViewStateList(messages).toList()
+                            
+                            // Turn off shimmer as soon as initial messages are loaded
+                            shimmerViewState.updateViewState(ShimmerViewState.Off)
+                        }
                     }
+                    
+                    // Load more messages in the background
+                    messageRepository.getAllMessagesToShowByChatId(getChat().id, 1000).distinctUntilChanged().collect { messages ->
+                        messageHolderViewStateFlow.value = getMessageHolderViewStateList(messages).toList()
+                        
+                        reloadPinnedMessage()
 
-                    val lastMessage = messages.lastOrNull()
-                    val showClockIcon = lastMessage?.let {
-                        it.status == MessageStatus.Pending &&
-                                System.currentTimeMillis() - it.date.time > 30_000
-                    } == true
+                        if (!isScrollDownButtonSetup) {
+                            setupScrollDownButtonCount()
+                            isScrollDownButtonSetup = true
+                        }
 
-                    updateClockIconState(showClockIcon)
-                    messageHolderViewStateFlow.value = getMessageHolderViewStateList(messages).toList()
-//                    shimmerViewState.updateViewState(ShimmerViewState.Off)
+                        val lastMessage = messages.lastOrNull()
+                        val showClockIcon = lastMessage?.let {
+                            it.status == MessageStatus.Pending &&
+                                    System.currentTimeMillis() - it.date.time > 30_000
+                        } == true
+
+                        updateClockIconState(showClockIcon)
+                    }
+                } catch (e: Exception) {
+                    // Turn off shimmer if there's an error loading messages
+                    shimmerViewState.updateViewState(ShimmerViewState.Off)
                 }
             }
+            
+            // Ensure tags job completes
+            tagsJob.join()
         }
-
+        collectThread()
+        collectUnseenMessagesNumber()
     }
 
     private val _clockIconState = MutableStateFlow(false)
@@ -1320,6 +1340,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                         submitSideEffect(
                             ChatSideEffect.Notify(response.message)
                         )
+                        delay(2_000)
                     }
                     is Response.Success -> {
                         if (response.value) {
@@ -1364,6 +1385,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
                     messagesSearchJob?.cancel()
                     messagesSearchJob = viewModelScope.launch(io) {
+                        delay(500L)
 
                         messageRepository.searchMessagesBy(nnChatId, nnText).firstOrNull()
                             ?.let { messages ->

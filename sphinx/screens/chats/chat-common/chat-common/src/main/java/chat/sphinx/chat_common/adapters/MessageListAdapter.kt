@@ -25,7 +25,6 @@ import chat.sphinx.chat_common.ui.viewstate.audio.AudioMessageState
 import chat.sphinx.chat_common.ui.viewstate.audio.AudioPlayState
 import chat.sphinx.chat_common.ui.viewstate.messageholder.*
 import chat.sphinx.chat_common.ui.viewstate.selected.SelectedMessageViewState
-import chat.sphinx.chat_common.ui.viewstate.shimmer.ShimmerViewState
 import chat.sphinx.chat_common.util.*
 import chat.sphinx.concept_image_loader.*
 import chat.sphinx.concept_user_colors_helper.UserColorsHelper
@@ -53,7 +52,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class MessageListAdapter<ARGS : NavArgs>(
+internal class MessageListAdapter<ARGS : NavArgs>(
     private val recyclerView: RecyclerView,
     private val headerBinding: LayoutChatHeaderBinding,
     private val headerPinBinding: LayoutChatPinedMessageHeaderBinding?,
@@ -152,7 +151,6 @@ class MessageListAdapter<ARGS : NavArgs>(
                     messages.addAll(list)
                     notifyDataSetChanged()
                     scrollToUnseenSeparatorOrBottom(list)
-
                 } else {
                     withContext(viewModel.dispatchers.default) {
                         DiffUtil.calculateDiff(
@@ -164,9 +162,7 @@ class MessageListAdapter<ARGS : NavArgs>(
                             messages.addAll(list)
                             result.dispatchUpdatesTo(this@MessageListAdapter)
                         })
-                    viewModel.shimmerViewState.updateViewState(ShimmerViewState.Off)
                     }
-
                 }
             }
         }

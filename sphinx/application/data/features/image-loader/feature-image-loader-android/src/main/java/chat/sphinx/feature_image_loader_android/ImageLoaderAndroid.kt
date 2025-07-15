@@ -73,8 +73,9 @@ class ImageLoaderAndroid(
         url: String,
         options: ImageLoaderOptions?,
         listener: OnImageLoadListener?,
+        isGif: Boolean
     ): Disposable {
-        return loadImpl(imageView, url, options, listener)
+        return loadImpl(imageView, url, options, listener, isGif)
     }
 
     override suspend fun load(
@@ -92,8 +93,9 @@ class ImageLoaderAndroid(
         file: File,
         options: ImageLoaderOptions?,
         listener: OnImageLoadListener?,
+        isGif: Boolean,
     ): Disposable {
-        return loadImpl(imageView, file, options, listener)
+        return loadImpl(imageView, file, options, listener, isGif)
     }
 
     private suspend fun loadImpl(

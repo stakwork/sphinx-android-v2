@@ -1806,7 +1806,8 @@ abstract class ChatFragment<
                                 lifecycleScope.launch(viewModel.mainImmediate) {
                                     val disposable = imageLoader.load(
                                         imageViewAttachmentFullscreen,
-                                        nnLocalFile
+                                        nnLocalFile,
+                                        isGif = viewState.media.mediaType.isGif
                                     )
                                     fullScreenViewStateDisposables.add(disposable)
                                 }.let { job ->
@@ -1836,7 +1837,8 @@ abstract class ChatFragment<
                                     val disposable = imageLoader.load(
                                         imageViewAttachmentFullscreen,
                                         viewState.url,
-                                        builder.build()
+                                        builder.build(),
+                                        isGif = viewState.media?.mediaType?.isGif == true || viewState.url.contains("gif", ignoreCase = true)
                                     )
                                     fullScreenViewStateDisposables.add(disposable)
                                 }.let { job ->

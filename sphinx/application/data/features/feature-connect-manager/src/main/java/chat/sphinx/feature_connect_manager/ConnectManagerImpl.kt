@@ -623,7 +623,7 @@ class ConnectManagerImpl: ConnectManager()
         if (restoreStateFlow.value is RestoreState.RestoringMessages || restoreStateFlow.value == null) {
             if (restoreStateFlow.value is RestoreState.RestoringMessages) {
                 notifyListeners { onRestoreProgress(restoreProgress.fixedContactPercentage + restoreProgress.fixedMessagesPercentage) }
-                _restoreStateFlow.value = RestoreState.RestoreFinished
+                _restoreStateFlow.value = null
                 notifyListeners { onRestoreFinished() }
                 setMnemonicWords(null)
             }

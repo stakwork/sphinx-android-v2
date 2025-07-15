@@ -18,6 +18,18 @@ inline val MediaType.isVideo: Boolean
 inline val MediaType.isUnknown: Boolean
     get() = this is MediaType.Unknown
 
+inline val MediaType.isGif: Boolean
+    get() {
+        return when (this) {
+            is MediaType.Image -> {
+                this.isGif
+            }
+            else -> {
+                false
+            }
+        }
+    }
+
 @Suppress("NOTHING_TO_INLINE")
 inline fun String.toMediaType(): MediaType =
     when {

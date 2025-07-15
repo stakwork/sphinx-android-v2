@@ -9,6 +9,7 @@ abstract class ImageLoader<ImageView> {
         url: String,
         options: ImageLoaderOptions? = null,
         listener: OnImageLoadListener? = null,
+        isGif: Boolean = false
     ): Disposable
 
     abstract suspend fun load(
@@ -24,6 +25,7 @@ abstract class ImageLoader<ImageView> {
         file: File,
         options: ImageLoaderOptions? = null,
         listener: OnImageLoadListener? = null,
+        isGif: Boolean = false,
     ): Disposable
 
     abstract fun preloadImages(urls: List<String>)

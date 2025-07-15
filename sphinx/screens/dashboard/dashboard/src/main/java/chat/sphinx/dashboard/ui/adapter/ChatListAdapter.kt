@@ -99,7 +99,18 @@ internal class ChatListAdapter(
                         recyclerView.scrollToPosition(0)
                     }
                 } else {
-                    differ.submitList(viewState.list)
+                    val firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
+
+                    if (
+                        firstVisibleItemPosition == 0                               &&
+                        recyclerView.scrollState == RecyclerView.SCROLL_STATE_IDLE
+                    ) {
+                        differ.submitList(viewState.list) {
+                            recyclerView.scrollToPosition(0)
+                        }
+                    } else {
+                        differ.submitList(viewState.list)
+                    }
                 }
             }
         }

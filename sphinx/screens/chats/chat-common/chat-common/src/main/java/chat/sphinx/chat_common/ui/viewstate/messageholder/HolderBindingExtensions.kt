@@ -69,6 +69,8 @@ import chat.sphinx.wrapper_message.isExpiredInvoice
 import chat.sphinx.wrapper_message.isPodcastBoost
 import chat.sphinx.wrapper_message.isSphinxCallLink
 import chat.sphinx.wrapper_message_media.MessageMedia
+import chat.sphinx.wrapper_message_media.isGif
+import chat.sphinx.wrapper_message_media.isImage
 import chat.sphinx.wrapper_view.Px
 import io.matthewnelson.android_feature_screens.util.gone
 import io.matthewnelson.android_feature_screens.util.goneIfFalse
@@ -160,7 +162,7 @@ internal fun LayoutMessageHolderBinding.setView(
                         loadingContainer.gone
                         onRowLayoutListener?.onRowHeightChanged()
                     }
-                })
+                }, media.mediaType.isGif)
             } else {
                 imageLoader.load(imageView, url, options, object : OnImageLoadListener {
                     override fun onSuccess() {
@@ -168,7 +170,7 @@ internal fun LayoutMessageHolderBinding.setView(
                         loadingContainer.gone
                         onRowLayoutListener?.onRowHeightChanged()
                     }
-                })
+                }, media?.mediaType?.isGif == true || url.contains("gif", ignoreCase = true))
             }
 
             disposables.add(disposable)

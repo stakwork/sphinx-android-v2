@@ -629,6 +629,11 @@ SELECT *
 FROM inviteDbo
 WHERE id = ?;
 
+inviteGetAllByIds:
+SELECT *
+FROM inviteDbo
+WHERE id IN :invite_ids;
+
 inviteGetByInviteString:
 SELECT *
 FROM inviteDbo

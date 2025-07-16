@@ -36,6 +36,7 @@ interface ContactRepository {
     fun getInviteByContactId(contactId: ContactId): Flow<Invite?>
     fun getInviteById(inviteId: InviteId): Flow<Invite?>
     fun getInviteByString(inviteString: InviteString): Flow<Invite?>
+    fun getInvitesByIds(inviteIds: List<InviteId>): Flow<List<Invite?>>
 
     var updatedContactIds: MutableList<ContactId>
 

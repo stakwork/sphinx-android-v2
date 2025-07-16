@@ -2367,6 +2367,13 @@ abstract class SphinxRepository(
         )
     }
 
+    private val unseenFlowCache = mutableMapOf<ChatId, Flow<Long?>>()
+    override fun getUnseenMessagesByChatIdCache(chatId: ChatId): Flow<Long?> {
+        return unseenFlowCache.getOrPut(chatId) {
+            getUnseenMessagesByChatId(chatId).distinctUntilChanged()
+        }
+    }
+
     override fun getUnseenMentionsByChatId(chatId: ChatId): Flow<Long?> = flow {
         var ownerId: ContactId? = accountOwner.value?.id
 
@@ -2392,6 +2399,13 @@ abstract class SphinxRepository(
                 .mapToOneOrNull(io)
                 .distinctUntilChanged()
         )
+    }
+
+    private val unseenMentionsFlowCache = mutableMapOf<ChatId, Flow<Long?>>()
+    override fun getUnseenMentionsByChatIdCache(chatId: ChatId): Flow<Long?> {
+        return unseenMentionsFlowCache.getOrPut(chatId) {
+            getUnseenMentionsByChatId(chatId).distinctUntilChanged()
+        }
     }
 
     override fun getUnseenActiveConversationMessagesCount(): Flow<Long?> = flow {
@@ -2600,6 +2614,20 @@ abstract class SphinxRepository(
                 .asFlow()
                 .mapToOneOrNull(io)
                 .map { it?.let { inviteDboPresenterMapper.mapFrom(it) } }
+                .distinctUntilChanged()
+        )
+    }
+
+    override fun getInvitesByIds(inviteIds: List<InviteId>): Flow<List<Invite?>> = flow {
+        emitAll(
+            coreDB.getSphinxDatabaseQueries().inviteGetAllByIds(inviteIds)
+                .asFlow()
+                .mapToList(io)
+                .map { listInviteDbo ->
+                    listInviteDbo.map {
+                        inviteDboPresenterMapper.mapFrom(it)
+                    }
+                }
                 .distinctUntilChanged()
         )
     }
@@ -3622,6 +3650,8 @@ abstract class SphinxRepository(
     }
 
     override fun getMessagesByIds(messagesIds: List<MessageId>): Flow<List<Message?>> = flow {
+        val queries = coreDB.getSphinxDatabaseQueries()
+
         emitAll(
             coreDB.getSphinxDatabaseQueries()
                 .messageGetMessagesByIds(messagesIds)
@@ -3629,7 +3659,7 @@ abstract class SphinxRepository(
                 .mapToList(io)
                 .map { listMessageDbo ->
                     listMessageDbo.map {
-                        messageDboPresenterMapper.mapFrom(it)
+                        mapMessageDboAndDecryptContentIfNeeded(queries, it)
                     }
                 }
                 .distinctUntilChanged()

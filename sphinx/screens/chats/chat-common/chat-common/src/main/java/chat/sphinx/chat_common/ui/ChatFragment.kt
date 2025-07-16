@@ -943,8 +943,9 @@ abstract class ChatFragment<
                 }
             })
         }
-        Log.d("TimeTracker", "Chat messages were displayed in ${System.currentTimeMillis() - timeTrackerStart} milliseconds")
-        viewModel.sendAppLog("- Chat messages were displayed in ${System.currentTimeMillis() - timeTrackerStart} milliseconds")
+//        viewModel.hideShimmeringView()
+//        Log.d("TimeTracker", "Chat messages were displayed in ${System.currentTimeMillis() - timeTrackerStart} milliseconds")
+//        viewModel.sendAppLog("- Chat messages were displayed in ${System.currentTimeMillis() - timeTrackerStart} milliseconds")
     }
 
     protected fun scrollToBottom(

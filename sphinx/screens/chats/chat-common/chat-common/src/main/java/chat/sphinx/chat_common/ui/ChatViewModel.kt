@@ -1119,21 +1119,20 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                     changeThreadHeaderState(true)
 
                     delay(50)
-                    shimmerViewState.updateViewState(ShimmerViewState.Off)
+                    hideShimmeringView()
                     scrollDownButtonCount.value = messages.size.toLong()
                 }
             } else {
                 messageRepository.getAllMessagesToShowByChatId(getChat().id, 100).firstOrNull()?.let { messages ->
                     messageHolderViewStateFlow.value = getMessageHolderViewStateList(messages).toList()
                     delay(50)
-                    shimmerViewState.updateViewState(ShimmerViewState.Off)
+                    hideShimmeringView()
                 }
 
                 delay(1000L)
 
                 messageRepository.getAllMessagesToShowByChatId(getChat().id, 1000).distinctUntilChanged().collect { messages ->
                     messageHolderViewStateFlow.value = getMessageHolderViewStateList(messages).toList()
-                    shimmerViewState.updateViewState(ShimmerViewState.Off)
 
                     reloadPinnedMessage()
 
@@ -1154,6 +1153,10 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         }
         collectThread()
         collectUnseenMessagesNumber()
+    }
+
+    fun hideShimmeringView() {
+        shimmerViewState.updateViewState(ShimmerViewState.Off)
     }
 
     private val _clockIconState = MutableStateFlow(false)

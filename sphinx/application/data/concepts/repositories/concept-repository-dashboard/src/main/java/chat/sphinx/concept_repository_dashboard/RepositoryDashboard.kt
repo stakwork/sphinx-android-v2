@@ -30,6 +30,10 @@ interface RepositoryDashboard {
 
     fun getUnseenMessagesByChatId(chatId: ChatId): Flow<Long?>
     fun getUnseenMentionsByChatId(chatId: ChatId): Flow<Long?>
+
+    fun getUnseenMessagesByChatIdCache(chatId: ChatId): Flow<Long?>
+    fun getUnseenMentionsByChatIdCache(chatId: ChatId): Flow<Long?>
+
     fun getUnseenActiveConversationMessagesCount(): Flow<Long?>
     fun getUnseenTribeMessagesCount(): Flow<Long?>
 

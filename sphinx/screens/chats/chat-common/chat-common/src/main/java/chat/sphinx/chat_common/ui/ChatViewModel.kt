@@ -482,7 +482,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
         val newList = ArrayList<MessageHolderViewState>(messages.size)
 
-        withContext(io) {
+        withContext(default) {
 
             var groupingDate: DateTime? = null
             var openSentPaidInvoicesCount = 0
@@ -1131,7 +1131,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
                 delay(1000L)
 
-                messageRepository.getAllMessagesToShowByChatId(getChat().id, 1000).distinctUntilChanged().collect { messages ->
+                messageRepository.getAllMessagesToShowByChatId(getChat().id, 500).distinctUntilChanged().collect { messages ->
                     messageHolderViewStateFlow.value = getMessageHolderViewStateList(messages).toList()
 
                     reloadPinnedMessage()

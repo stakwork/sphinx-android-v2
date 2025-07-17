@@ -1585,6 +1585,7 @@ internal class DashboardViewModel @Inject constructor(
 
     fun cancelRestore() {
         jobNetworkRefresh?.cancel()
+
         viewModelScope.launch(mainImmediate) {
             repositoryDashboard.didCancelRestore()
         }

@@ -23,6 +23,7 @@ import chat.sphinx.wrapper_chat.ChatType
 import chat.sphinx.wrapper_chat.isConversation
 import chat.sphinx.wrapper_common.chat.ChatUUID
 import chat.sphinx.wrapper_common.dashboard.ContactId
+import chat.sphinx.wrapper_common.time
 import chat.sphinx.wrapper_common.tribe.TribeJoinLink
 import chat.sphinx.wrapper_common.tribe.toTribeJoinLink
 import chat.sphinx.wrapper_contact.*
@@ -162,7 +163,7 @@ internal class ChatListViewModel @Inject constructor(
                 val inviteIds = contactsMap.mapNotNull { it.value.inviteId }
                 val invitesMap = contactRepository.getInvitesByIds(inviteIds).first().associateBy { it?.id }
 
-                withContext(default) {
+                withContext(mainImmediate) {
                     for (chat in chats) {
                         val message: Message? = chat.latestMessageId?.let {
                             messagesMap[it]
@@ -182,12 +183,12 @@ internal class ChatListViewModel @Inject constructor(
                                     }
                                     if (contactInvite != null) {
                                         newList.add(
-                                            DashboardChat.Inactive.Invite(contact, contactInvite)
+                                            DashboardChat.Inactive.Invite(contact, contactInvite, Long.MAX_VALUE)
                                         )
                                     }
                                 } else {
                                     newList.add(
-                                        DashboardChat.Inactive.Conversation(contact)
+                                        DashboardChat.Inactive.Conversation(contact, contact.createdAt.time)
                                     )
                                 }
                             }
@@ -201,6 +202,7 @@ internal class ChatListViewModel @Inject constructor(
                                         message,
                                         contact,
                                         repositoryDashboard.getUnseenMessagesByChatIdCache(chat.id),
+                                        chat.contentSeenAt?.time ?: message?.date?.time ?: chat.createdAt.time
                                     )
                                 )
                             }
@@ -211,7 +213,8 @@ internal class ChatListViewModel @Inject constructor(
                                     message,
                                     accountOwnerStateFlow.value ?: getOwner(),
                                     repositoryDashboard.getUnseenMessagesByChatIdCache(chat.id),
-                                    repositoryDashboard.getUnseenMentionsByChatIdCache(chat.id)
+                                    repositoryDashboard.getUnseenMentionsByChatIdCache(chat.id),
+                                    chat.contentSeenAt?.time ?: message?.date?.time ?: chat.createdAt.time
                                 )
                             )
                         }
@@ -349,13 +352,13 @@ internal class ChatListViewModel @Inject constructor(
                             }
                             if (contactInvite != null) {
                                 currentChats.add(
-                                    DashboardChat.Inactive.Invite(contact, contactInvite)
+                                    DashboardChat.Inactive.Invite(contact, contactInvite, Long.MAX_VALUE)
                                 )
                                 continue
                             }
                         }
 
-                        var updatedContactChat: DashboardChat = DashboardChat.Inactive.Conversation(contact)
+                        var updatedContactChat: DashboardChat = DashboardChat.Inactive.Conversation(contact, contact.createdAt.time)
 
                         for (chat in currentChatViewState.originalList) {
                             if (chat is DashboardChat.Active.Conversation) {
@@ -364,7 +367,8 @@ internal class ChatListViewModel @Inject constructor(
                                         chat.chat,
                                         chat.message,
                                         contact,
-                                        chat.unseenMessageFlow
+                                        chat.unseenMessageFlow,
+                                        chat.chat.contentSeenAt?.time ?: chat.message?.date?.time ?: chat.chat.createdAt.time
                                     )
                                 }
                             }
@@ -381,7 +385,8 @@ internal class ChatListViewModel @Inject constructor(
                                     contactChat,
                                     message,
                                     contact,
-                                    repositoryDashboard.getUnseenMessagesByChatId(contactChat.id)
+                                    repositoryDashboard.getUnseenMessagesByChatId(contactChat.id),
+                                    contactChat.contentSeenAt?.time ?: message?.date?.time ?: contactChat.createdAt.time
                                 )
                             }
                         }

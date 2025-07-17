@@ -51,7 +51,8 @@ sealed class DashboardChat {
 
     abstract val chatName: String?
     abstract val photoUrl: PhotoUrl?
-    abstract val sortBy: Long
+
+    open val sortBy: Long? = null
 
     abstract val unseenMessageFlow: Flow<Long?>?
 
@@ -78,17 +79,6 @@ sealed class DashboardChat {
         abstract val message: Message?
 
         open val owner: Contact? = null
-
-        override val sortBy: Long
-            get() {
-                val lastContentSeenDate = chat.contentSeenAt?.time
-                val lastMessageActionDate = message?.date?.time ?: chat.createdAt.time
-
-                if (lastContentSeenDate != null && lastContentSeenDate > lastMessageActionDate) {
-                    return lastContentSeenDate
-                }
-                return lastMessageActionDate
-            }
 
         override fun getDisplayTime(today00: DateTime): String {
             return message?.date?.chatTimeFormat(today00) ?: ""
@@ -322,6 +312,7 @@ sealed class DashboardChat {
             override val message: Message?,
             val contact: Contact,
             override val unseenMessageFlow: Flow<Long?>,
+            override val sortBy: Long
         ): Active() {
 
             init {
@@ -364,7 +355,8 @@ sealed class DashboardChat {
             override val message: Message?,
             override val owner: Contact?,
             override val unseenMessageFlow: Flow<Long?>,
-            override val unseenMentionsFlow: Flow<Long?>
+            override val unseenMentionsFlow: Flow<Long?>,
+            override val sortBy: Long
         ): Active() {
 
             override val chatName: String?
@@ -397,7 +389,8 @@ sealed class DashboardChat {
         }
 
         class Conversation(
-            val contact: Contact
+            val contact: Contact,
+            override val sortBy: Long
         ): Inactive() {
 
             override val chatName: String?
@@ -405,9 +398,6 @@ sealed class DashboardChat {
 
             override val photoUrl: PhotoUrl?
                 get() = contact.photoUrl
-
-            override val sortBy: Long
-                get() = contact.createdAt.time
 
             override val unseenMessageFlow: Flow<Long?>?
                 get() = null
@@ -436,7 +426,8 @@ sealed class DashboardChat {
 
         class Invite(
             val contact: Contact,
-            val invite: InviteWrapper?
+            val invite: InviteWrapper?,
+            override val sortBy: Long
         ): Inactive() {
 
             override val chatName: String?
@@ -444,9 +435,6 @@ sealed class DashboardChat {
 
             override val photoUrl: PhotoUrl?
                 get() = contact.photoUrl
-
-            override val sortBy: Long
-                get() = Long.MAX_VALUE
 
             override val unseenMessageFlow: Flow<Long?>?
                 get() = null

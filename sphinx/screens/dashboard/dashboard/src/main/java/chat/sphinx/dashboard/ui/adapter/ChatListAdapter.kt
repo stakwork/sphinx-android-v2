@@ -340,14 +340,14 @@ internal class ChatListAdapter(
                 // Message
                 val messageText = if (isPending) getString(R_common.string.waiting_for_approval) else dashboardChat.getMessageText(root.context)
                 val hasUnseenMessages = dashboardChat.hasUnseenMessages()
+                val isChatMuted = (dChat as? DashboardChat.Active)?.chat?.isMuted() == true
 
                 if (messageText == root.context.getString(R_common.string.decryption_error)) {
                     textViewChatHolderMessage.setTextColorExt(R_common.color.primaryRed)
                 } else {
-                    textViewChatHolderMessage.setTextColorExt(if (hasUnseenMessages) R_common.color.text else R_common.color.placeholderText)
+                    textViewChatHolderMessage.setTextColorExt(if (hasUnseenMessages && !isChatMuted) R_common.color.text else R_common.color.placeholderText)
                 }
-
-                textViewChatHolderMessage.setTextFont(if (hasUnseenMessages) R_common.font.roboto_bold else R_common.font.roboto_regular)
+                textViewChatHolderMessage.setTextFont(if (hasUnseenMessages && !isChatMuted) R_common.font.roboto_bold else R_common.font.roboto_regular)
 
                 textViewChatHolderMessage.text = messageText
                 textViewChatHolderMessage.goneIfTrue(messageText.isEmpty())

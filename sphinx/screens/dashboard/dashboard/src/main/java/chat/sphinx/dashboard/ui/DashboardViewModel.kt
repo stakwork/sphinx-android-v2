@@ -117,12 +117,17 @@ import io.matthewnelson.android_feature_viewmodel.submitSideEffect
 import io.matthewnelson.build_config.BuildConfigVersionCode
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
 import io.matthewnelson.concept_views.viewstate.ViewStateContainer
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jitsi.meet.sdk.JitsiMeetActivity
@@ -242,7 +247,7 @@ internal class DashboardViewModel @Inject constructor(
         actionsRepository.syncActions()
         feedRepository.restoreContentFeedStatuses()
 
-        networkRefresh(true)
+        networkRefresh()
     }
 
     fun processTimezoneChanges() {
@@ -1182,7 +1187,7 @@ internal class DashboardViewModel @Inject constructor(
                         )
                     }
                     is Response.Success -> {
-//                        networkRefresh(false)
+//                        networkRefresh()
                     }
                 }
             }
@@ -1568,23 +1573,29 @@ internal class DashboardViewModel @Inject constructor(
     val restoreProgressStateFlow: StateFlow<Int?>
         get() = connectManagerRepository.restoreProgress.asStateFlow()
 
-    private var jobNetworkRefresh: Job? = null
-    private var jobPushNotificationRegistration: Job? = null
+    private var jobNetworkJob: Job? = null
+    private var jobNetworkScope: CoroutineScope? = null
 
-    fun networkRefresh(
-        screenStart: Boolean
-    ) {
-        if (jobNetworkRefresh?.isActive == true) {
+    fun networkRefresh() {
+        if (jobNetworkJob?.isActive == true) {
             return
         }
 
-        jobNetworkRefresh = viewModelScope.launch(dispatchers.mainImmediate) {
+        jobNetworkScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+        jobNetworkJob = jobNetworkScope?.launch {
             connectManagerRepository.reconnectMqtt()
         }
     }
 
     fun cancelRestore() {
-        jobNetworkRefresh?.cancel()
+        jobNetworkScope?.cancel()
+        jobNetworkScope = null
+
+        jobNetworkJob?.cancel()
+        jobNetworkJob = null
+
+        System.gc()
 
         viewModelScope.launch(mainImmediate) {
             repositoryDashboard.didCancelRestore()

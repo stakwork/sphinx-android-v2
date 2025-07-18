@@ -79,6 +79,7 @@ import uniffi.sphinxrs.signBytes
 import uniffi.sphinxrs.signedTimestamp
 import uniffi.sphinxrs.updateTribe
 import uniffi.sphinxrs.xpubFromSeed
+import java.lang.Long.max
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import java.util.Calendar
@@ -598,10 +599,7 @@ class ConnectManagerImpl: ConnectManager()
                     notifyListeners {
                         onUpsertContacts(contactsToRestore, isRestoreAccount()) {
                             // Handle new messages
-                            msgs.forEach { msg ->
-                                processMessage(msg)
-                            }
-
+                            processMessages(msgs)
                             continueRestore(msgs, topic)
                         }
                     }
@@ -620,8 +618,15 @@ class ConnectManagerImpl: ConnectManager()
             notifyListeners { onRestoreMessages() }
         }
 
-        if (restoreStateFlow.value is RestoreState.RestoringMessages || restoreStateFlow.value == null) {
-            if (restoreStateFlow.value is RestoreState.RestoringMessages) {
+        if (
+            restoreStateFlow.value is RestoreState.RestoringMessages ||
+            restoreStateFlow.value is RestoreState.RestoreFinished ||
+            restoreStateFlow.value == null
+        ) {
+            if (
+                restoreStateFlow.value is RestoreState.RestoringMessages ||
+                restoreStateFlow.value is RestoreState.RestoreFinished
+            ) {
                 notifyListeners { onRestoreProgress(restoreProgress.fixedContactPercentage + restoreProgress.fixedMessagesPercentage) }
                 _restoreStateFlow.value = null
                 notifyListeners { onRestoreFinished() }
@@ -633,6 +638,11 @@ class ConnectManagerImpl: ConnectManager()
             getMutedChats()
             getPings()
         }
+    }
+
+    override fun finishRestore() {
+        _restoreStateFlow.value = RestoreState.RestoreFinished
+        notifyListeners { onRestoreFinished() }
     }
 
     private fun updatePaidInvoices() {
@@ -674,6 +684,11 @@ class ConnectManagerImpl: ConnectManager()
                     }
                 }
             }
+
+            if (restoreStateFlow.value is RestoreState.RestoreFinished) {
+                goToNextPhaseOrFinish()
+            }
+
         } else {
             val highestIndexReceived = msgs.maxByOrNull { it.index?.toLong() ?: 0L }?.index?.toULong()
 
@@ -683,11 +698,9 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
-    private fun processMessage(msg: Msg) {
-        Log.d("RESTORE_PROCESS_MESSAGE", "${msg.index.orEmpty()}")
-
-        notifyListeners {
-            onMessage(
+    private fun processMessages(msgs: List<Msg>) {
+        val mqttMessages = msgs.map { msg ->
+            chat.sphinx.wrapper_common.message.MqttMessage(
                 msg.message.orEmpty(),
                 msg.sender.orEmpty(),
                 msg.type?.toInt() ?: 0,
@@ -698,10 +711,17 @@ class ConnectManagerImpl: ConnectManager()
                 msg.msat?.let { convertMillisatsToSats(it) },
                 msg.fromMe,
                 msg.tag,
-                msg.timestamp?.toLong(),
-                isRestoreAccount()
+                msg.timestamp?.toLong()
             )
         }
+
+        notifyListeners {
+            onMessages(mqttMessages, isRestoreAccount())
+        }
+
+        _ownerInfoStateFlow.value = ownerInfoStateFlow.value.copy(
+            messageLastIndex = max(_ownerInfoStateFlow.value.messageLastIndex ?: 0, mqttMessages.maxByOrNull { it.msgIndex.toLongOrNull() ?: 0L }?.msgIndex?.toLongOrNull() ?: 0L)
+        )
     }
 
     private fun fetchMessagesWithPagination(

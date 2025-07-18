@@ -160,7 +160,7 @@ internal class DashboardFragment : MotionLayoutFragment<
 
     override fun onRefresh() {
         binding.swipeRefreshLayoutDataReload.isRefreshing = false
-        viewModel.networkRefresh(true)
+        viewModel.networkRefresh()
     }
 
     private fun setupSignerManager(){
@@ -376,7 +376,11 @@ internal class DashboardFragment : MotionLayoutFragment<
     private fun setupRestorePopup() {
         binding.layoutDashboardRestore.layoutDashboardRestoreProgress.apply {
             buttonStopRestore.setOnClickListener {
-                binding.layoutDashboardRestore.root.gone
+
+                buttonStopRestore.isEnabled = false
+                buttonStopRestore.backgroundTintList = ContextCompat.getColorStateList(root.context, R_common.color.secondaryTextInverted)
+                buttonStopRestore.text = getString(R.string.dashboard_restore_stopping)
+
                 isRestoreCancelled = true
                 viewModel.cancelRestore()
             }
@@ -629,20 +633,21 @@ internal class DashboardFragment : MotionLayoutFragment<
 
                             textViewRestoreProgress.text = getString(label, progressString)
                             progressBarRestore.progress = response
-                            buttonStopRestore.isEnabled = false
+                            buttonStopRestore.isEnabled = response > 10
                             buttonStopRestore.backgroundTintList =
-                                if (false) ContextCompat.getColorStateList(root.context, R_common.color.primaryBlue)
+                                if (response > 10) ContextCompat.getColorStateList(root.context, R_common.color.primaryBlue)
                                 else ContextCompat.getColorStateList(root.context, R_common.color.secondaryTextInverted)
                         }
                         root.visible
                     } else {
                         viewModel.fetchDeletedMessagesOnDb()
-                        root.gone
 
                         if (response != null) {
                             ///Did finish restore
                             viewModel.finishSettingUpPersonalInfo()
                         }
+                        
+                        root.gone
                     }
                 }
             }

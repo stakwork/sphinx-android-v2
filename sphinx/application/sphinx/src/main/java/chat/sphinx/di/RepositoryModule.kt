@@ -92,7 +92,7 @@ object RepositoryModule {
         )
     }.stateIn(
         applicationScope,
-        SharingStarted.Lazily,
+        SharingStarted.Eagerly,
         null
     )
 

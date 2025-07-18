@@ -4,6 +4,7 @@ import chat.sphinx.example.concept_connect_manager.model.OwnerInfo
 import chat.sphinx.example.concept_connect_manager.model.RestoreState
 import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
 import chat.sphinx.example.wrapper_mqtt.MsgsCounts
+import chat.sphinx.wrapper_common.message.MqttMessage
 import chat.sphinx.wrapper_contact.NewContact
 import chat.sphinx.wrapper_lightning.WalletMnemonic
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,6 +34,7 @@ abstract class ConnectManager {
         routerUrl: String?
     )
     abstract fun restoreFailed()
+    abstract fun finishRestore()
     abstract fun setInviteCode(inviteString: String?)
     abstract fun setMnemonicWords(words: List<String>?)
     abstract fun setNetworkType(isTestEnvironment: Boolean)
@@ -217,21 +219,8 @@ interface ConnectManagerListener {
     fun onRestoreFinished()
     fun updatePaidInvoices()
 
-    // Messaging Callbacks
-    fun onMessage(
-        msg: String,
-        msgSender: String,
-        msgType: Int,
-        msgUuid: String,
-        msgIndex: String,
-        msgTimestamp: Long?,
-        sentTo: String,
-        amount: Long?,
-        fromMe: Boolean?,
-        tag: String?,
-        date: Long?,
-        isRestore: Boolean = false
-    )
+    fun onMessages(messages: List<MqttMessage>, isRestore: Boolean)
+
     fun onMessageTagAndUuid(tag: String?, msgUUID: String, provisionalId: Long)
     fun onMessagesCounts(msgsCounts: String)
     fun onSentStatus(sentStatus: String)

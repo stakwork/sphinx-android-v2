@@ -136,26 +136,6 @@ interface MessageRepository {
         alias: SenderAlias?,
     )
 
-    suspend fun upsertMqttMessage(
-        msg: Msg,
-        msgSender: MsgSender,
-        contactTribePubKey: String,
-        msgType: MessageType,
-        msgUuid: MessageUUID,
-        msgIndex: MessageId,
-        msgAmount: Sat?,
-        originalUuid: MessageUUID?,
-        timestamp: DateTime?,
-        date: DateTime?,
-        fromMe: Boolean,
-        amount: Sat?,
-        paymentRequest: LightningPaymentRequest?,
-        paymentHash: LightningPaymentHash?,
-        bolt11: Bolt11?,
-        tag: TagMessage?,
-        isRestore: Boolean
-    )
-
     suspend fun deleteMqttMessage(messageUuid: MessageUUID)
 
     suspend fun fetchDeletedMessagesOnDb()

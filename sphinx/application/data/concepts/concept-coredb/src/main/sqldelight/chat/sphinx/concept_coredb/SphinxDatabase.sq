@@ -1049,6 +1049,11 @@ SELECT *
 FROM messageDbo
 WHERE id IN ?;
 
+messageGetMessagesByUUIDs:
+SELECT *
+FROM messageDbo
+WHERE uuid IN ?;
+
 messageGetByPaymentHashes:
 SELECT *
 FROM messageDbo
@@ -1254,6 +1259,11 @@ messageMediaGetById:
 SELECT *
 FROM messageMediaDbo
 WHERE id = ?;
+
+messageMediaGetAllById:
+SELECT *
+FROM messageMediaDbo
+WHERE id IN ?;
 
 messageMediaUpdateMediaKeyDecrypted:
 UPDATE messageMediaDbo

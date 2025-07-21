@@ -892,34 +892,24 @@ abstract class SphinxRepository(
             return
         }
 
-        applicationScope.launch(io) {
-            val total = tribes.count();
-            var index = 0
+        val total = tribes.count();
+        var index = 0
 
-            val tribeList = tribes.mapNotNull { tribes ->
-                try {
-                    Pair(
-                        tribes.first?.toMsgSender(moshi),
-                        tribes.second
-                    )
-                } catch (e: Exception) {
-                    null
-                }
+        val tribeList = tribes.mapNotNull { tribes ->
+            try {
+                Pair(
+                    tribes.first?.toMsgSender(moshi),
+                    tribes.second
+                )
+            } catch (e: Exception) {
+                null
             }
+        }
 
-            tribeList.forEach { tribe ->
-                val isAdmin = (tribe.first?.role == 0 && tribe.second == true)
-                tribe.first?.let {
-                    joinTribeOnRestoreAccount(it, isAdmin, isProductionEnvironment) {
-                        if (index == total - 1) {
-                            callback?.let { nnCallback ->
-                                nnCallback()
-                            }
-                        } else {
-                            index += 1
-                        }
-                    }
-                } ?: run {
+        tribeList.forEach { tribe ->
+            val isAdmin = (tribe.first?.role == 0 && tribe.second == true)
+            tribe.first?.let {
+                joinTribeOnRestoreAccount(it, isAdmin, isProductionEnvironment) {
                     if (index == total - 1) {
                         callback?.let { nnCallback ->
                             nnCallback()
@@ -927,6 +917,14 @@ abstract class SphinxRepository(
                     } else {
                         index += 1
                     }
+                }
+            } ?: run {
+                if (index == total - 1) {
+                    callback?.let { nnCallback ->
+                        nnCallback()
+                    }
+                } else {
+                    index += 1
                 }
             }
         }
@@ -2119,15 +2117,16 @@ abstract class SphinxRepository(
         }
     }
 
-    private suspend fun joinTribeOnRestoreAccount(
+    private fun joinTribeOnRestoreAccount(
         contactInfo: MsgSender,
         isAdmin: Boolean,
         isProductionEnvironment: Boolean,
         callback: (() -> Unit)? = null
     ) {
         val host = contactInfo.host ?: return
-
-        withContext(dispatchers.io) {
+        applicationScope.launch(dispatchers.default) {
+            val queries = coreDB.getSphinxDatabaseQueries()
+            
             networkQueryChat.getTribeInfo(ChatHost(host), LightningNodePubKey(contactInfo.pubkey), isProductionEnvironment)
                 .collect { loadResponse ->
                     when (loadResponse) {
@@ -2138,8 +2137,6 @@ abstract class SphinxRepository(
                             }
                         }
                         is Response.Success -> {
-                            val queries = coreDB.getSphinxDatabaseQueries()
-
                             // TribeId is set from LONG.MAX_VALUE and decremented by 1 for each new tribe
                             val tribeId = queries.chatGetLastTribeId().executeAsOneOrNull()
                                 ?.let { it.MIN?.minus(1) }
@@ -2180,18 +2177,16 @@ abstract class SphinxRepository(
                                 timezoneUpdated = null
                             )
 
-                            messageLock.withLock {
-                                chatLock.withLock {
-                                    queries.transaction {
-                                        upsertNewChat(
-                                            newTribe,
-                                            moshi,
-                                            SynchronizedMap<ChatId, Seen>(),
-                                            queries,
-                                            null,
-                                            accountOwner.value?.nodePubKey
-                                        )
-                                    }
+                            chatLock.withLock {
+                                queries.transaction {
+                                    upsertNewChat(
+                                        newTribe,
+                                        moshi,
+                                        SynchronizedMap<ChatId, Seen>(),
+                                        queries,
+                                        null,
+                                        accountOwner.value?.nodePubKey
+                                    )
                                 }
                             }
 

@@ -1,5 +1,8 @@
 # ChangeLog
 
+## Version 1.0.0-alpha61 (2025-07-21)
+- Fixes and improvements on restore and new messages fetch process 
+
 ## Version 1.0.0-alpha60 (2025-07-18)
 - Fixes and improvements for GrapheneOS
 

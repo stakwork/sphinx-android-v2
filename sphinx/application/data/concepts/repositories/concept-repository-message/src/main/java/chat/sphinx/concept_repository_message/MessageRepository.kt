@@ -74,12 +74,6 @@ interface MessageRepository {
 
     suspend fun payAttachment(message: Message)
 
-    fun sendMediaKeyOnPaidPurchase(
-        msg: Msg,
-        contactInfo: MsgSender,
-        paidAmount: Sat
-    )
-
     fun updatePaidMessageMediaKey(
         msg: Msg,
         contactInfo: MsgSender,
@@ -135,8 +129,6 @@ interface MessageRepository {
         type: MessageType.GroupAction,
         alias: SenderAlias?,
     )
-
-    suspend fun deleteMqttMessage(messageUuid: MessageUUID)
 
     suspend fun fetchDeletedMessagesOnDb()
 }

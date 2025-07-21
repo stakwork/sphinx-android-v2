@@ -65,6 +65,7 @@ import chat.sphinx.example.wrapper_mqtt.toLspChannelInfo
 import chat.sphinx.feature_repository.mappers.action_track.*
 import chat.sphinx.feature_repository.mappers.chat.ChatDboPresenterMapper
 import chat.sphinx.feature_repository.mappers.contact.ContactDboPresenterMapper
+import chat.sphinx.feature_repository.mappers.contact.toContact
 import chat.sphinx.feature_repository.mappers.feed.*
 import chat.sphinx.feature_repository.mappers.feed.podcast.FeedDboFeedSearchResultPresenterMapper
 import chat.sphinx.feature_repository.mappers.feed.podcast.FeedDboPodcastPresenterMapper
@@ -146,6 +147,7 @@ import chat.sphinx.wrapper_rsa.RsaPrivateKey
 import chat.sphinx.wrapper_rsa.RsaPublicKey
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import com.squareup.sqldelight.TransactionWithoutReturn
 import com.squareup.sqldelight.runtime.coroutines.asFlow
 import com.squareup.sqldelight.runtime.coroutines.mapToList
 import com.squareup.sqldelight.runtime.coroutines.mapToOneOrNull
@@ -376,7 +378,10 @@ abstract class SphinxRepository(
 
     override fun createContact(contact: NewContact) {
         applicationScope.launch(mainImmediate) {
-            createNewContact(contact)
+            val queries = coreDB.getSphinxDatabaseQueries()
+            queries.transaction {
+                createNewContact(contact, queries, this)
+            }
             connectManager.createContact(contact)
         }
     }
@@ -668,30 +673,29 @@ abstract class SphinxRepository(
     }
 
     private fun saveNewContactRegistered(
+        queries: SphinxDatabaseQueries,
+        transaction: TransactionWithoutReturn,
         msgSender: String,
-        date: Long?,
-        isRestore: Boolean = false
+        date: Long?
     ) {
-        applicationScope.launch(default) {
-            val contactInfo = msgSender.toMsgSender(moshi)
-            val contact = NewContact(
-                contactAlias = contactInfo.alias?.toContactAlias(),
-                lightningNodePubKey = contactInfo.pubkey.toLightningNodePubKey(),
-                lightningRouteHint = contactInfo.route_hint?.toLightningRouteHint(),
-                photoUrl = contactInfo.photo_url?.toPhotoUrl(),
-                confirmed = contactInfo.confirmed,
-                null,
-                inviteCode = contactInfo.code,
-                invitePrice = null,
-                null,
-                date?.toDateTime()
-            )
+        val contactInfo = msgSender.toMsgSender(moshi)
+        val contact = NewContact(
+            contactAlias = contactInfo.alias?.toContactAlias(),
+            lightningNodePubKey = contactInfo.pubkey.toLightningNodePubKey(),
+            lightningRouteHint = contactInfo.route_hint?.toLightningRouteHint(),
+            photoUrl = contactInfo.photo_url?.toPhotoUrl(),
+            confirmed = contactInfo.confirmed,
+            null,
+            inviteCode = contactInfo.code,
+            invitePrice = null,
+            null,
+            date?.toDateTime()
+        )
 
-            if (contactInfo.code != null) {
-                updateNewContactInvited(contact, isRestore)
-            } else {
-                createNewContact(contact, isRestore)
-            }
+        if (contactInfo.code != null) {
+            updateNewContactInvited(queries, contact)
+        } else {
+            createNewContact(contact, queries, transaction)
         }
     }
 
@@ -708,37 +712,34 @@ abstract class SphinxRepository(
     }
 
     private fun updateNewContactInvited(
-        contact: NewContact,
-        isRestore: Boolean = false
+        queries: SphinxDatabaseQueries,
+        contact: NewContact
     ) {
-        applicationScope.launch(default) {
-            val queries = coreDB.getSphinxDatabaseQueries()
-            val invite = queries.inviteGetByCode(contact.inviteCode?.let { InviteCode(it) }).executeAsOneOrNull()
+        val invite = queries.inviteGetByCode(contact.inviteCode?.let { InviteCode(it) }).executeAsOneOrNull()
 
-            if (invite != null) {
-                val contactId = invite.contact_id
+        if (invite != null) {
+            val contactId = invite.contact_id
 
-                queries.contactUpdateInvitee(
-                    contact.contactAlias,
-                    contact.photoUrl,
-                    contact.lightningNodePubKey,
-                    ContactStatus.Confirmed,
-                    contact.lightningRouteHint,
-                    ContactId(invite.id.value)
-                )
+            queries.contactUpdateInvitee(
+                contact.contactAlias,
+                contact.photoUrl,
+                contact.lightningNodePubKey,
+                ContactStatus.Confirmed,
+                contact.lightningRouteHint,
+                ContactId(invite.id.value)
+            )
 
-                queries.inviteUpdateStatus(InviteStatus.Complete, invite.id)
-                queries.chatUpdateNameAndStatus(
-                    ChatName(contact.contactAlias?.value ?: "unknown"),
-                    ChatStatus.Approved,
-                    ChatId(contactId.value)
-                )
-                queries.dashboardUpdateConversation(
-                    contact.contactAlias?.value,
-                    contact.photoUrl,
-                    contactId
-                )
-            }
+            queries.inviteUpdateStatus(InviteStatus.Complete, invite.id)
+            queries.chatUpdateNameAndStatus(
+                ChatName(contact.contactAlias?.value ?: "unknown"),
+                ChatStatus.Approved,
+                ChatId(contactId.value)
+            )
+            queries.dashboardUpdateConversation(
+                contact.contactAlias?.value,
+                contact.photoUrl,
+                contactId
+            )
         }
     }
 
@@ -858,16 +859,19 @@ abstract class SphinxRepository(
                 )
             }
 
-            newContactList.forEach { newContact ->
-                if (newContact.inviteCode != null) {
-                    updateNewContactInvited(newContact, isRestore)
-                } else {
-                    createNewContact(newContact, isRestore)
+            val queries = coreDB.getSphinxDatabaseQueries()
+            queries.transaction {
+                newContactList.forEach { newContact ->
+                    if (newContact.inviteCode != null) {
+                        updateNewContactInvited(queries, newContact)
+                    } else {
+                        createNewContact(newContact, queries, this)
+                    }
                 }
-            }
 
-            callback?.let { nnCallback ->
-                nnCallback()
+                callback?.let { nnCallback ->
+                    nnCallback()
+                }
             }
         }
     }
@@ -1033,7 +1037,7 @@ abstract class SphinxRepository(
     override fun onLastReadMessages(
         lastReadMessages: String
     ) {
-        applicationScope.launch(io) {
+        applicationScope.launch(dispatchers.default) {
             val queries = coreDB.getSphinxDatabaseQueries()
 
             val lastReadMessagesMap = lastReadMessages.toLastReadMap(moshi)
@@ -1042,44 +1046,41 @@ abstract class SphinxRepository(
             val contactPubkey = pubKeys?.map { it.toLightningNodePubKey() }
             val tribePubKey = pubKeys?.map { it.toChatUUID() }
 
-            val contacts = contactPubkey?.filterNotNull()?.let { queries.contactGetAllByPubKeys(it).executeAsList() }
-            val tribes = tribePubKey?.filterNotNull()?.let { queries.chatGetAllByUUIDS(it).executeAsList() }
-
-            // Create a new map for mapping chatId to lastMsgIndex
-            val chatIdToLastMsgIndexMap = mutableMapOf<ChatId, MessageId>()
-
-            contacts?.forEach { contact ->
-                val lastMsgIndex = lastReadMessagesMap.get(contact.node_pub_key?.value)
-                if (lastMsgIndex != null) {
-                    chatIdToLastMsgIndexMap[ChatId(contact.id.value)] = MessageId(lastMsgIndex)
-                }
-            }
-
-            tribes?.forEach { tribe ->
-                val lastMsgIndex = lastReadMessagesMap.get(tribe.uuid.value)
-                if (lastMsgIndex != null) {
-                    chatIdToLastMsgIndexMap[tribe.id] = MessageId(lastMsgIndex)
-                }
-            }
-
             messageLock.withLock {
                 queries.transaction {
+                    val contacts = contactPubkey?.filterNotNull()?.let { queries.contactGetAllByPubKeys(it).executeAsList() }
+                    val tribes = tribePubKey?.filterNotNull()?.let { queries.chatGetAllByUUIDS(it).executeAsList() }
+
+                    // Create a new map for mapping chatId to lastMsgIndex
+                    val chatIdToLastMsgIndexMap = mutableMapOf<ChatId, MessageId>()
+
+                    contacts?.forEach { contact ->
+                        lastReadMessagesMap[contact.node_pub_key?.value]?.let {
+                            chatIdToLastMsgIndexMap[ChatId(contact.id.value)] = MessageId(it)
+                        }
+                    }
+
+                    tribes?.forEach { tribe ->
+                        val lastMsgIndex = lastReadMessagesMap.get(tribe.uuid.value)
+                        if (lastMsgIndex != null) {
+                            chatIdToLastMsgIndexMap[tribe.id] = MessageId(lastMsgIndex)
+                        }
+                    }
+
                     chatIdToLastMsgIndexMap.forEach { (chatId, lastMsgIndex) ->
                         queries.messageUpdateSeenByChatIdAndId(chatId, lastMsgIndex)
                     }
-                }
-            }
 
-            chatLock.withLock {
-                chatIdToLastMsgIndexMap.forEach { (chatId, lastMsgIndex) ->
-                    queries.chatUpdateSeenByLastMessage(chatId, lastMsgIndex)
+                    chatIdToLastMsgIndexMap.forEach { (chatId, lastMsgIndex) ->
+                        queries.chatUpdateSeenByLastMessage(chatId, lastMsgIndex)
+                    }
                 }
             }
         }
     }
 
     override fun onUpdateMutes(mutes: String) {
-        applicationScope.launch(io) {
+        applicationScope.launch(dispatchers.default) {
             val queries = coreDB.getSphinxDatabaseQueries()
 
             val mutesMap = mutes.toMuteLevelsMap(moshi)
@@ -1088,35 +1089,37 @@ abstract class SphinxRepository(
             val contactPubkey = pubKeys?.map { it.toLightningNodePubKey() }
             val tribePubKey = pubKeys?.map { it.toChatUUID() }
 
-            val contacts = contactPubkey?.filterNotNull()?.let { queries.contactGetAllByPubKeys(it).executeAsList() }
-            val tribes = tribePubKey?.filterNotNull()?.let { queries.chatGetAllByUUIDS(it).executeAsList() }
-
-            val notificationMap = mutableMapOf<ChatId, NotificationLevel>()
-
-            contacts?.forEach { contact ->
-                mutesMap[contact.node_pub_key?.value]?.let { level ->
-                    notificationMap[ChatId(contact.id.value)] = when (level) {
-                        NotificationLevel.SEE_ALL -> NotificationLevel.SeeAll
-                        NotificationLevel.ONLY_MENTIONS -> NotificationLevel.OnlyMentions
-                        NotificationLevel.MUTE_CHAT -> NotificationLevel.MuteChat
-                        else -> NotificationLevel.Unknown(level)
-                    }
-                }
-            }
-
-            tribes?.forEach { tribe ->
-                mutesMap[tribe.uuid.value]?.let { level ->
-                    notificationMap[ChatId(tribe.id.value)] = when (level) {
-                        NotificationLevel.SEE_ALL -> NotificationLevel.SeeAll
-                        NotificationLevel.ONLY_MENTIONS -> NotificationLevel.OnlyMentions
-                        NotificationLevel.MUTE_CHAT -> NotificationLevel.MuteChat
-                        else -> NotificationLevel.Unknown(level)
-                    }
-                }
-            }
-
             chatLock.withLock {
                 queries.transaction {
+                    val contacts = contactPubkey?.filterNotNull()
+                        ?.let { queries.contactGetAllByPubKeys(it).executeAsList() }
+                    val tribes = tribePubKey?.filterNotNull()
+                        ?.let { queries.chatGetAllByUUIDS(it).executeAsList() }
+
+                    val notificationMap = mutableMapOf<ChatId, NotificationLevel>()
+
+                    contacts?.forEach { contact ->
+                        mutesMap[contact.node_pub_key?.value]?.let { level ->
+                            notificationMap[ChatId(contact.id.value)] = when (level) {
+                                NotificationLevel.SEE_ALL -> NotificationLevel.SeeAll
+                                NotificationLevel.ONLY_MENTIONS -> NotificationLevel.OnlyMentions
+                                NotificationLevel.MUTE_CHAT -> NotificationLevel.MuteChat
+                                else -> NotificationLevel.Unknown(level)
+                            }
+                        }
+                    }
+
+                    tribes?.forEach { tribe ->
+                        mutesMap[tribe.uuid.value]?.let { level ->
+                            notificationMap[ChatId(tribe.id.value)] = when (level) {
+                                NotificationLevel.SEE_ALL -> NotificationLevel.SeeAll
+                                NotificationLevel.ONLY_MENTIONS -> NotificationLevel.OnlyMentions
+                                NotificationLevel.MUTE_CHAT -> NotificationLevel.MuteChat
+                                else -> NotificationLevel.Unknown(level)
+                            }
+                        }
+                    }
+
                     notificationMap.forEach { (chatId, level) ->
                         queries.chatUpdateNotificationLevel(level, chatId)
                     }
@@ -1195,27 +1198,30 @@ abstract class SphinxRepository(
             }
 
             val tribeUUIDs = contactPublicKeys.mapNotNull { it.value.toChatUUID() }
-            val messageIDs = messages.map { MessageId(it.msgIndex.toLong()) }
-            val messageUUIDs = messages.map { it.msgUuid.toMessageUUID() }
+            val messageIDs = messages.filter { it.msgIndex.isNotEmpty() }.map { MessageId(it.msgIndex.toLong()) }
+            val messageUUIDs = messages.mapNotNull { it.msgUuid.toMessageUUID() }
 
             val queries = coreDB.getSphinxDatabaseQueries()
-            val contactsMap = queries.contactGetAllByPubKeys(contactPublicKeys).executeAsList().associateBy { it.node_pub_key?.value }
-            val tribesMap = queries.chatGetAllByUUIDS(tribeUUIDs).executeAsList().associateBy { it.uuid.value }
-            val messagesByUUIDMap = queries.messageGetMessagesByUUIDs(messageUUIDs).executeAsList().associateBy { it.uuid?.value }
-            val messagesMediaByIDMap = queries.messageMediaGetAllById(messageIDs).executeAsList().associateBy { it.id.value }
 
-            messages.forEachIndexed { index, message ->
-                onMessage(
-                    message,
-                    contactsMap,
-                    tribesMap,
-                    messagesByUUIDMap,
-                    messagesMediaByIDMap,
-                    isRestore
-                )
+            messageLock.withLock {
+                queries.transaction {
+                    val contactsMap = queries.contactGetAllByPubKeys(contactPublicKeys).executeAsList().associateBy { it.node_pub_key?.value }
+                    val tribesMap = queries.chatGetAllByUUIDS(tribeUUIDs).executeAsList().associateBy { it.uuid.value }
+                    val messagesByUUIDMap = queries.messageGetMessagesByUUIDs(messageUUIDs).executeAsList().associateBy { it.uuid?.value }
+                    val messagesMediaByIDMap = queries.messageMediaGetAllById(messageIDs).executeAsList().associateBy { it.id.value }
 
-                if (index % 50 == 0) {
-                    yield()
+                    messages.forEach {message ->
+                        onMessage(
+                            queries,
+                            this,
+                            message,
+                            contactsMap,
+                            tribesMap,
+                            messagesByUUIDMap,
+                            messagesMediaByIDMap,
+                            isRestore
+                        )
+                    }
                 }
             }
         }
@@ -1286,7 +1292,9 @@ abstract class SphinxRepository(
         )
     }
 
-    private suspend fun onMessage(
+    private fun onMessage(
+        queries: SphinxDatabaseQueries,
+        transaction: TransactionWithoutReturn,
         mqttMessage: MqttMessage,
         contactsMap: Map<String?, ContactDbo>,
         tribesMap: Map<String, ChatDbo>,
@@ -1312,7 +1320,12 @@ abstract class SphinxRepository(
                 when (messageType) {
                     is MessageType.ContactKeyRecord -> {
                         if (!isRestore) {
-                            saveNewContactRegistered(mqttMessage.msgSender, mqttMessage.date)
+                            saveNewContactRegistered(
+                                queries,
+                                transaction,
+                                mqttMessage.msgSender,
+                                mqttMessage.date
+                            )
                         }
                     }
                     else -> {
@@ -1322,21 +1335,32 @@ abstract class SphinxRepository(
                             is MessageType.Purchase.Processing -> {
                                 message.amount?.toSat()?.let { paidAmount ->
                                     sendMediaKeyOnPaidPurchase(
+                                        queries,
+                                        transaction,
                                         message,
-                                        nnMessageSender,
                                         paidAmount
                                     )
                                 }
                             }
                             is MessageType.ContactKeyConfirmation -> {
-                                saveNewContactRegistered(mqttMessage.msgSender, message.date, isRestore)
+                                saveNewContactRegistered(
+                                    queries,
+                                    transaction,
+                                    mqttMessage.msgSender,
+                                    message.date
+                                )
                             }
                             is MessageType.ContactKey -> {
-                                saveNewContactRegistered(mqttMessage.msgSender, message.date, isRestore)
+                                saveNewContactRegistered(
+                                    queries,
+                                    transaction,
+                                    mqttMessage.msgSender,
+                                    message.date
+                                )
                             }
                             is MessageType.Delete -> {
                                 mqttMessage.msg.toMsg(moshi).replyUuid?.toMessageUUID()?.let { replyUuid ->
-                                    deleteMqttMessage(replyUuid)
+                                    deleteMqttMessage(replyUuid, queries)
                                 }
                             }
                             else -> {}
@@ -1351,6 +1375,8 @@ abstract class SphinxRepository(
                         ) ?: return
 
                         upsertMqttMessage(
+                            queries,
+                            transaction,
                             message,
                             nnMessageSender,
                             contactTribePubKey,
@@ -1372,10 +1398,16 @@ abstract class SphinxRepository(
 
                 if (mqttMessage.msgIndex.isNotEmpty() && message.content?.isNotEmpty() == true) {
 
-                    val components = createGenericPaymentComponents(mqttMessage.msgIndex, mqttMessage.amount, mqttMessage.msgTimestamp, message.paymentHash)
-                        ?: return
+                    val components = createGenericPaymentComponents(
+                        mqttMessage.msgIndex,
+                        mqttMessage.amount,
+                        mqttMessage.msgTimestamp,
+                        message.paymentHash
+                    ) ?: return
 
                     upsertGenericPaymentMsg(
+                        queries,
+                        transaction,
                         msg = message,
                         msgType = messageType,
                         msgIndex = components.messageId,
@@ -1659,7 +1691,10 @@ abstract class SphinxRepository(
                 inviteStatus = InviteStatus.Pending,
                 null
             )
-            createNewContact(newInvitee)
+            val queries = coreDB.getSphinxDatabaseQueries()
+            queries.transaction {
+                createNewContact(newInvitee, queries, this)
+            }
         }
     }
 
@@ -1688,7 +1723,9 @@ abstract class SphinxRepository(
         return host to tribePubKey
     }
 
-    private suspend fun upsertMqttMessage(
+    private fun upsertMqttMessage(
+        queries: SphinxDatabaseQueries,
+        transaction: TransactionWithoutReturn,
         msg: Msg,
         msgSender: MsgSender,
         contactTribePubKey: String,
@@ -1703,8 +1740,6 @@ abstract class SphinxRepository(
         messagesMediaByIDMap: Map<Long, MessageMediaDbo>,
         isRestore: Boolean
     ) {
-        val queries = coreDB.getSphinxDatabaseQueries()
-
         val owner = accountOwner.value
         val contact = contactsMap[contactTribePubKey]
         val chatTribe = tribesMap[contactTribePubKey]
@@ -1733,14 +1768,11 @@ abstract class SphinxRepository(
             }?.copy(id = messageComponents.messageId)
 
             existingMessageMedia?.let {
-                messageLock.withLock {
-                    queries.messageMediaDeleteById(messageId)
-                }
+                queries.messageMediaDeleteById(messageId)
                 messageMedia = existingMessageMedia
             }
         } else {
             msg.mediaToken?.toMediaToken()?.let { mediaToken ->
-
                 messageMedia = MessageMediaDbo(
                     messageComponents.messageId,
                     ChatId(chatId),
@@ -1754,9 +1786,7 @@ abstract class SphinxRepository(
             }
         }
 
-        messageLock.withLock {
-            queries.messageDeleteByUUID(messageComponents.messageUuid)
-        }
+        queries.messageDeleteByUUID(messageComponents.messageUuid)
 
         var senderAlias = msgSender.alias?.toSenderAlias()
 
@@ -1834,46 +1864,42 @@ abstract class SphinxRepository(
 
                 if ((lastMessageIndex ?: 0) > 0) {
                     if ((lastMessageIndex ?: 0) < newMessageIndex) {
-                        contactLock.withLock {
-                            msgSender.photo_url?.takeIf { it.isNotEmpty() && it != contact.photo_url?.value }
-                                ?.let {
-                                    queries.contactUpdatePhotoUrl(it.toPhotoUrl(), contactId)
-                                }
-                            msgSender.alias?.takeIf { it.isNotEmpty() && it != contact.alias?.value }
-                                ?.let {
-                                    queries.contactUpdateAlias(it.toContactAlias(), contactId)
-                                }
-                        }
+                        msgSender.photo_url?.takeIf { it.isNotEmpty() && it != contact.photo_url?.value }
+                            ?.let {
+                                queries.contactUpdatePhotoUrl(it.toPhotoUrl(), contactId)
+                            }
+                        msgSender.alias?.takeIf { it.isNotEmpty() && it != contact.alias?.value }
+                            ?.let {
+                                queries.contactUpdateAlias(it.toContactAlias(), contactId)
+                            }
                     }
                 }
             } else {
-                contactLock.withLock {
-                    if (owner != null) {
-                        if (owner.alias?.value == null) {
-                            msgSender.alias?.takeIf { it.isNotEmpty() && it != owner.alias?.value }
-                                ?.let {
-                                    queries.contactUpdateAlias(it.toContactAlias(), owner.id)
+                if (owner != null) {
+                    if (owner.alias?.value == null) {
+                        msgSender.alias?.takeIf { it.isNotEmpty() && it != owner.alias?.value }
+                            ?.let {
+                                queries.contactUpdateAlias(it.toContactAlias(), owner.id)
 
-                                    connectManager.ownerInfoStateFlow.value?.let { ownerInfo ->
-                                        connectManager.setOwnerInfo(
-                                            ownerInfo.copy(alias = it)
-                                        )
-                                    }
+                                connectManager.ownerInfoStateFlow.value?.let { ownerInfo ->
+                                    connectManager.setOwnerInfo(
+                                        ownerInfo.copy(alias = it)
+                                    )
                                 }
-                        }
+                            }
+                    }
 
-                        if (owner.photoUrl?.value == null) {
-                            msgSender.photo_url?.takeIf { it.isNotEmpty() && it != owner.photoUrl?.value }
-                                ?.let {
-                                    queries.contactUpdatePhotoUrl(it.toPhotoUrl(), owner.id)
+                    if (owner.photoUrl?.value == null) {
+                        msgSender.photo_url?.takeIf { it.isNotEmpty() && it != owner.photoUrl?.value }
+                            ?.let {
+                                queries.contactUpdatePhotoUrl(it.toPhotoUrl(), owner.id)
 
-                                    connectManager.ownerInfoStateFlow.value?.let { ownerInfo ->
-                                        connectManager.setOwnerInfo(
-                                            ownerInfo.copy(picture = it)
-                                        )
-                                    }
+                                connectManager.ownerInfoStateFlow.value?.let { ownerInfo ->
+                                    connectManager.setOwnerInfo(
+                                        ownerInfo.copy(picture = it)
+                                    )
                                 }
-                        }
+                            }
                     }
                 }
             }
@@ -1885,29 +1911,22 @@ abstract class SphinxRepository(
             )
         }
 
-        messageLock.withLock {
-            queries.transaction {
-                upsertNewMessage(newMessage, queries, messageMedia?.file_name)
+        transaction.upsertNewMessage(newMessage, queries, messageMedia?.file_name)
 
-                updateChatNewLatestMessage(
-                    newMessage,
-                    ChatId(chatId),
-                    latestMessageUpdatedTimeMap,
-                    queries
-                )
-            }
-        }
+        transaction.updateChatNewLatestMessage(
+            newMessage,
+            ChatId(chatId),
+            latestMessageUpdatedTimeMap,
+            queries
+        )
 
-        if (chatTribe?.seen?.isTrue() == true) {
-            chatLock.withLock {
-                queries.chatUpdateSeen(Seen.False, ChatId(chatId))
-            }
-        }
+        queries.chatUpdateSeen(Seen.False, ChatId(chatId))
 
         if (!fromMe) {
             msg.metadata?.toMessageMetadata(moshi)?.tz?.let {
                 if (!isTribe) {
                     updateChatRemoteTimezoneIdentifier(
+                        queries,
                         remoteTimezoneIdentifier = it.toRemoteTimezoneIdentifier(),
                         chatId = ChatId(chatId),
                         isRestore = isRestore
@@ -1917,7 +1936,9 @@ abstract class SphinxRepository(
         }
     }
 
-    private suspend fun upsertGenericPaymentMsg(
+    private fun upsertGenericPaymentMsg(
+        queries: SphinxDatabaseQueries,
+        transaction: TransactionWithoutReturn,
         msg: Msg,
         msgType: MessageType,
         msgIndex: MessageId,
@@ -1925,8 +1946,6 @@ abstract class SphinxRepository(
         timestamp: DateTime?,
         paymentHash: LightningPaymentHash?,
     ) {
-        val queries = coreDB.getSphinxDatabaseQueries()
-
         val newMessage = NewMessage(
             id = msgIndex,
             chatId = ChatId(ChatId.NULL_CHAT_ID.toLong()),
@@ -1943,19 +1962,14 @@ abstract class SphinxRepository(
             messageDecryptionError = false,
         )
 
-        messageLock.withLock {
-            queries.transaction {
-                upsertNewMessage(newMessage, queries, null)
-            }
-        }
+        transaction.upsertNewMessage(newMessage, queries, null)
     }
 
-    override suspend fun deleteMqttMessage(messageUuid: MessageUUID) {
-        val queries = coreDB.getSphinxDatabaseQueries()
-
-        messageLock.withLock {
-            queries.messageUpdateStatusByUUID(MessageStatus.Deleted, messageUuid)
-        }
+    private fun deleteMqttMessage(
+        messageUuid: MessageUUID,
+        queries: SphinxDatabaseQueries
+    ) {
+        queries.messageUpdateStatusByUUID(MessageStatus.Deleted, messageUuid)
     }
 
     override suspend fun fetchDeletedMessagesOnDb() {
@@ -2082,26 +2096,23 @@ abstract class SphinxRepository(
         }
     }
 
-    override suspend fun updateChatRemoteTimezoneIdentifier(
+    private fun updateChatRemoteTimezoneIdentifier(
+        queries: SphinxDatabaseQueries,
         remoteTimezoneIdentifier: RemoteTimezoneIdentifier?,
         chatId: ChatId,
         isRestore: Boolean
     ) {
-        val queries = coreDB.getSphinxDatabaseQueries()
-
         try {
-            chatLock.withLock {
-                if (isRestore) {
-                    queries.chatUpdateRemoteTimezoneIdentifierIfNull(
-                        remote_timezone_identifier = remoteTimezoneIdentifier,
-                        id = chatId
-                    )
-                } else {
-                    queries.chatUpdateRemoteTimezoneIdentifier(
-                        remote_timezone_identifier = remoteTimezoneIdentifier,
-                        id = chatId
-                    )
-                }
+            if (isRestore) {
+                queries.chatUpdateRemoteTimezoneIdentifierIfNull(
+                    remote_timezone_identifier = remoteTimezoneIdentifier,
+                    id = chatId
+                )
+            } else {
+                queries.chatUpdateRemoteTimezoneIdentifier(
+                    remote_timezone_identifier = remoteTimezoneIdentifier,
+                    id = chatId
+                )
             }
         } catch (ex: Exception) {
             LOG.e(TAG, ex.printStackTrace().toString(), ex)
@@ -2195,92 +2206,77 @@ abstract class SphinxRepository(
 
     override var updatedContactIds: MutableList<ContactId> = mutableListOf()
 
-    override fun sendMediaKeyOnPaidPurchase(
+    private fun sendMediaKeyOnPaidPurchase(
+        queries: SphinxDatabaseQueries,
+        transaction: TransactionWithoutReturn,
         msg: Msg,
-        contactInfo: MsgSender,
         paidAmount: Sat
     ) {
-        applicationScope.launch {
-            val queries = coreDB.getSphinxDatabaseQueries()
-            val muid = msg.mediaToken?.toMediaToken()?.getMUIDFromMediaToken()
+        val muid = msg.mediaToken?.toMediaToken()?.getMUIDFromMediaToken()
 
-            muid?.value?.let { nnMuid ->
-                val message = queries.messageGetByMuid(MessageMUID(nnMuid)).executeAsOneOrNull()
-                val mediaMessage = message?.id?.let { queries.messageMediaGetById(it) }?.executeAsOneOrNull()
+        muid?.value?.let { nnMuid ->
+            val message = queries.messageGetByMuid(MessageMUID(nnMuid)).executeAsOneOrNull()
+            val mediaMessage = message?.id?.let { queries.messageMediaGetById(it) }?.executeAsOneOrNull()
 
-                val contact: Contact? = message?.chat_id?.let { chatId ->
-                    getContactById(ContactId(chatId.value)).firstOrNull()
+            val contact: Contact? = message?.chat_id?.let { chatId ->
+                queries.contactGetById(ContactId(chatId.value)).executeAsOneOrNull()?.toContact()
+            }
+
+            val messageType = if (message?.amount?.value == paidAmount.value) {
+                MessageType.Purchase.Accepted
+            } else {
+                MessageType.Purchase.Denied
+            }
+
+            if (message != null && contact != null && mediaMessage != null) {
+
+                val currentProvisionalId: MessageId? = queries.messageGetLowestProvisionalMessageId().executeAsOneOrNull()
+                val provisionalId = MessageId((currentProvisionalId?.value ?: 0L) - 1)
+
+                // Message Accepted
+                val mediaMessageAccepted = mediaMessage.copy(media_key = null, media_key_decrypted = null, local_file = null)
+                val messageAccepted = message.copy(
+                    type = messageType,
+                    id = provisionalId
+                ).let { convertMessageDboToNewMessage(it, mediaMessageAccepted) }
+
+                transaction.upsertNewMessage(messageAccepted, queries, null)
+
+                transaction.updateChatNewLatestMessage(
+                    messageAccepted,
+                    message.chat_id,
+                    latestMessageUpdatedTimeMap,
+                    queries
+                )
+
+                val mediaKey = if (messageType is MessageType.Purchase.Accepted) {
+                    mediaMessage.media_key?.value
+                }
+                else {
+                    null
                 }
 
-                val messageType = if (message?.amount?.value == paidAmount.value) {
-                    MessageType.Purchase.Accepted
-                } else {
-                    MessageType.Purchase.Denied
-                }
+                val newPurchaseMessage = chat.sphinx.example.wrapper_mqtt.Message(
+                    null,
+                    null,
+                    mediaMessage.media_token.value,
+                    mediaKey,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null
+                ).toJson(moshi)
 
-                if (message != null && contact != null && mediaMessage != null) {
-
-                    val currentProvisionalId: MessageId? = withContext(io) {
-                        queries.messageGetLowestProvisionalMessageId().executeAsOneOrNull()
-                    }
-                    val provisionalId = MessageId((currentProvisionalId?.value ?: 0L) - 1)
-
-                    // Message Accepted
-                    val mediaMessageAccepted = mediaMessage.copy(media_key = null, media_key_decrypted = null, local_file = null)
-                    val messageAccepted = message.copy(
-                        type = messageType,
-                        id = provisionalId
-                    ).let { convertMessageDboToNewMessage(it, mediaMessageAccepted) }
-
-                    chatLock.withLock {
-                        messageLock.withLock {
-                            withContext(io) {
-
-                                queries.transaction {
-                                    upsertNewMessage(messageAccepted, queries, null)
-                                }
-
-                                queries.transaction {
-                                    updateChatNewLatestMessage(
-                                        messageAccepted,
-                                        message.chat_id,
-                                        latestMessageUpdatedTimeMap,
-                                        queries
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    val mediaKey = if (messageType is MessageType.Purchase.Accepted) {
-                        mediaMessage.media_key?.value
-                    }
-                    else {
-                        null
-                    }
-
-                    val newPurchaseMessage = chat.sphinx.example.wrapper_mqtt.Message(
+                contact.let { _ ->
+                    connectManager.sendMessage(
+                        newPurchaseMessage,
+                        contact.nodePubKey?.value ?: "",
+                        provisionalId.value,
+                        messageType.value,
                         null,
-                        null,
-                        mediaMessage.media_token.value,
-                        mediaKey,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null
-                    ).toJson(moshi)
-
-                    contact.let { nnContact ->
-                        connectManager.sendMessage(
-                            newPurchaseMessage,
-                            contact.nodePubKey?.value ?: "",
-                            provisionalId.value,
-                            messageType.value,
-                            null,
-                        )
-                    }
+                    )
                 }
             }
         }
@@ -3075,16 +3071,23 @@ abstract class SphinxRepository(
         }
     }
 
-    private suspend fun createNewContact(
+    private fun createNewContact(
         contact: NewContact,
-        isRestore: Boolean = false
+        queries: SphinxDatabaseQueries,
+        transaction: TransactionWithoutReturn
     ) {
-        val queries = coreDB.getSphinxDatabaseQueries()
         val now = DateTime.nowUTC()
-        val contactId = getNewContactIndex().firstOrNull()?.value
+
+        val contactId = queries.contactGetLastContactIndex()
+            .executeAsOneOrNull()?.let {
+                ContactId(it.value + 1)
+            }?.value
 
         val exitingContact = contact.lightningNodePubKey
-            ?.let { getContactByPubKey(it).firstOrNull() }
+            ?.let {
+                queries.contactGetByPubKey(it)
+                    .executeAsOneOrNull()?.toContact()
+            }
 
         val status = (contact.confirmed || exitingContact?.status?.isConfirmed() == true)
 
@@ -3092,25 +3095,18 @@ abstract class SphinxRepository(
             val contactStatus = if (status) ContactStatus.Confirmed else ContactStatus.Pending
             val chatStatus = if (status) ChatStatus.Approved else ChatStatus.Pending
 
-            contactLock.withLock {
-                withContext(default) {
-                    queries.contactUpdateDetails(
-                        contact.contactAlias,
-                        contact.photoUrl,
-                        contactStatus,
-                        exitingContact.id
-                    )
-                }
-            }
-            chatLock.withLock {
-                withContext(default) {
-                    queries.chatUpdateDetails(
-                        contact.photoUrl,
-                        chatStatus,
-                        ChatId(exitingContact.id.value)
-                    )
-                }
-            }
+            queries.contactUpdateDetails(
+                contact.contactAlias,
+                contact.photoUrl,
+                contactStatus,
+                exitingContact.id
+            )
+
+            queries.chatUpdateDetails(
+                contact.photoUrl,
+                chatStatus,
+                ChatId(exitingContact.id.value)
+            )
         } else {
             val invite = if (contact.invitePrice != null && contact.inviteCode != null) {
                 Invite(
@@ -3184,35 +3180,18 @@ abstract class SphinxRepository(
                 timezoneUpdated = null
             )
 
-            contactLock.withLock {
-                withContext(default) {
-                    queries.transaction {
-                        upsertNewContact(newContact, queries)
-                    }
-                }
-            }
-            chatLock.withLock {
-                withContext(default) {
-                    queries.transaction {
-                        upsertNewChat(
-                            newChat,
-                            moshi,
-                            SynchronizedMap<ChatId, Seen>(),
-                            queries,
-                            newContact,
-                            accountOwner.value?.nodePubKey
-                        )
-                    }
-                }
-            }
-            inviteLock.withLock {
-                invite?.let { invite ->
-                    withContext(default) {
-                        queries.transaction {
-                            upsertNewInvite(invite, queries)
-                        }
-                    }
-                }
+            transaction.upsertNewContact(newContact, queries)
+
+            transaction.upsertNewChat(
+                newChat,
+                moshi,
+                SynchronizedMap<ChatId, Seen>(),
+                queries,
+                newContact,
+                accountOwner.value?.nodePubKey
+            )
+            invite?.let { nnInvite ->
+                transaction.upsertNewInvite(nnInvite, queries)
             }
         }
     }

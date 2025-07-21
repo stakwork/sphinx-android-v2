@@ -118,10 +118,4 @@ interface ChatRepository {
     )
 
     suspend fun updateTimezoneUpdatedOnSystemChange()
-
-    suspend fun updateChatRemoteTimezoneIdentifier(
-        remoteTimezoneIdentifier: RemoteTimezoneIdentifier?,
-        chatId: ChatId,
-        isRestore: Boolean
-    )
 }

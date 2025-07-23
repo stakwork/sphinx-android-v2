@@ -1,5 +1,8 @@
 # ChangeLog
 
+## Version 1.0.0-alpha62 (2025-07-23)
+- Fixes and improvements chat view layouts
+
 ## Version 1.0.0-alpha61 (2025-07-21)
 - Fixes and improvements on restore and new messages fetch process 
 

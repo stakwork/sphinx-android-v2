@@ -46,14 +46,25 @@ inline val Message.shouldAdaptBubbleWidth: Boolean
             !flagged.isTrue()) ||
             type.isDirectPayment()
 
+inline val Message.isOnlyTextMessage: Boolean
+    get() = (type.isMessage() &&
+            !isSphinxCallLink &&
+            podcastClip == null &&
+            replyUUID == null &&
+            !isCopyLinkAllowed &&
+            (thread == null || thread!!.isEmpty()) &&
+            !status.isDeleted() &&
+            !flagged.isTrue() &&
+            (reactions ?: emptyList()).isEmpty())
+
 internal inline val MessageHolderViewState.isReceived: Boolean
-    get() = this is MessageHolderViewState.Received
+    get() = this is MessageHolderViewState.Received || this is MessageHolderViewState.MessageOnlyTextHolderViewState.Received
 
 internal inline val MessageHolderViewState.showReceivedBubbleArrow: Boolean
-    get() = background is BubbleBackground.First && this is MessageHolderViewState.Received
+    get() = background is BubbleBackground.First && (this is MessageHolderViewState.Received || this is MessageHolderViewState.MessageOnlyTextHolderViewState.Received)
 
 internal val MessageHolderViewState.showSentBubbleArrow: Boolean
-    get() = background is BubbleBackground.First && this is MessageHolderViewState.Sent
+    get() = background is BubbleBackground.First && (this is MessageHolderViewState.Sent || this is MessageHolderViewState.MessageOnlyTextHolderViewState.Sent)
 
 internal sealed class MessageHolderViewState(
     val message: Message?,
@@ -123,14 +134,16 @@ internal sealed class MessageHolderViewState(
                     } else null
                 } else null
 
+                val isSent = this is Sent || this is MessageOnlyTextHolderViewState.Sent
+
                 LayoutState.MessageStatusHeader(
                     if (chat.type.isConversation()) null else message.senderAlias?.value,
                     if (initialHolder is InitialHolderViewState.Initials) initialHolder.colorKey else message.getColorKey(),
-                    this is Sent,
-                    this is Sent && message.id.isProvisionalMessage && message.status.isPending(),
-                    (this is Sent && (message.status.isReceived() || message.status.isConfirmed())) || (this !is Sent && message.type.isInvoice()),
+                    isSent,
+                    isSent && message.id.isProvisionalMessage && message.status.isPending(),
+                    (isSent && (message.status.isReceived() || message.status.isConfirmed())) || (!isSent && message.type.isInvoice()),
                     message.isPaymentConfirmed(),
-                    this is Sent && message.status.isFailed(),
+                    isSent && message.status.isFailed(),
                     message.messageContentDecrypted != null || message.messageMedia?.mediaKeyDecrypted != null,
                     message.date.messageTimeFormat(),
                     message.errorMessage?.value?.trim(),
@@ -658,7 +671,7 @@ internal sealed class MessageHolderViewState(
             val list = ArrayList<MenuItemState>(4)
             val nnMessage = message!!
 
-            if (this is Received && nnMessage.isBoostAllowed) {
+            if ((this is Received || this is MessageOnlyTextHolderViewState.Received) && nnMessage.isBoostAllowed) {
                 list.add(MenuItemState.Boost)
             }
 
@@ -682,11 +695,11 @@ internal sealed class MessageHolderViewState(
                 list.add(MenuItemState.Resend)
             }
 
-            if (this is Sent || chat.isTribeOwnedByAccount(accountOwner().nodePubKey)) {
+            if ((this is Sent || this is MessageOnlyTextHolderViewState.Sent) || chat.isTribeOwnedByAccount(accountOwner().nodePubKey)) {
                 list.add(MenuItemState.Delete)
             }
 
-            if (this is Received) {
+            if (this is Received || this is MessageOnlyTextHolderViewState.Received) {
                 list.add(MenuItemState.Flag)
             }
 
@@ -992,6 +1005,78 @@ internal sealed class MessageHolderViewState(
                 isExpanded
             )
         }
+    }
+
+    open class MessageOnlyTextHolderViewState(
+        message: Message?,
+        messageHolderType: MessageHolderType,
+        chat: Chat,
+        background: BubbleBackground,
+        initialHolder: InitialHolderViewState,
+        highlightedText: String?,
+        messageSenderInfo: (Message) -> Triple<PhotoUrl?, ContactAlias?, String>?,
+        accountOwner: () -> Contact,
+        memberTimezoneIdentifier: String?,
+    ) : MessageHolderViewState(
+        message,
+        chat,
+        null,
+        messageHolderType,
+        null,
+        background,
+        InvoiceLinesHolderViewState(false, false),
+        initialHolder,
+        highlightedText,
+        messageSenderInfo,
+        accountOwner,
+        false,
+        { null },
+        { null },
+        {},
+        {},
+        memberTimezoneIdentifier
+    ) {
+
+        class Sent(
+            message: Message,
+            chat: Chat,
+            background: BubbleBackground,
+            highlightedText: String?,
+            messageSenderInfo: (Message) -> Triple<PhotoUrl?, ContactAlias?, String>,
+            accountOwner: () -> Contact,
+            memberTimezoneIdentifier: String?,
+        ) : MessageOnlyTextHolderViewState(
+            message,
+            MessageHolderType.OnlyTextMessage,
+            chat,
+            background,
+            InitialHolderViewState.None,
+            highlightedText,
+            messageSenderInfo,
+            accountOwner,
+            memberTimezoneIdentifier
+        )
+
+        class Received(
+            message: Message,
+            chat: Chat,
+            background: BubbleBackground,
+            initialHolder: InitialHolderViewState,
+            highlightedText: String?,
+            messageSenderInfo: (Message) -> Triple<PhotoUrl?, ContactAlias?, String>,
+            accountOwner: () -> Contact,
+            memberTimezoneIdentifier: String?,
+        ) : MessageOnlyTextHolderViewState(
+            message,
+            MessageHolderType.OnlyTextMessage,
+            chat,
+            background,
+            initialHolder,
+            highlightedText,
+            messageSenderInfo,
+            accountOwner,
+            memberTimezoneIdentifier
+        )
     }
 
     data class FileAttachment(

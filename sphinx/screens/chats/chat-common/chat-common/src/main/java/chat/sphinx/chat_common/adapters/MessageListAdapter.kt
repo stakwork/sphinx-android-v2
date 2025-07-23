@@ -1,5 +1,6 @@
 package chat.sphinx.chat_common.adapters
 
+import android.annotation.SuppressLint
 import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
@@ -71,6 +72,7 @@ internal class MessageListAdapter<ARGS : NavArgs>(
     companion object {
         private const val VIEW_TYPE_MESSAGE = 0
         private const val VIEW_TYPE_THREAD_HEADER = 1
+        private const val VIEW_TYPE_ONLY_TEXT_MSG = 2
     }
 
     interface OnRowLayoutListener {
@@ -98,17 +100,17 @@ internal class MessageListAdapter<ARGS : NavArgs>(
         override fun areContentsTheSame(oldItem: MessageHolderViewState, newItem: MessageHolderViewState): Boolean {
             return when {
                 oldItem is MessageHolderViewState.Received && newItem is MessageHolderViewState.Received -> {
-                    oldItem.background                      == newItem.background                   &&
+                            oldItem.background                      == newItem.background                   &&
                             oldItem.message                         == newItem.message                      &&
                             oldItem.invoiceLinesHolderViewState     == newItem.invoiceLinesHolderViewState  &&
-                            oldItem.message?.thread                 == newItem.message?.thread
+                            oldItem.message?.thread?.size           == newItem.message?.thread?.size
                 }
                 oldItem is MessageHolderViewState.Sent && newItem is MessageHolderViewState.Sent -> {
-                    oldItem.background                      == newItem.background                    &&
+                            oldItem.background                      == newItem.background                    &&
                             oldItem.message                         == newItem.message                       &&
                             oldItem.invoiceLinesHolderViewState     == newItem.invoiceLinesHolderViewState   &&
                             oldItem.isPinned                        == newItem.isPinned                      &&
-                            oldItem.message?.thread                 == newItem.message?.thread
+                            oldItem.message?.thread?.size           == newItem.message?.thread?.size
                 }
                 else -> false
             }
@@ -141,6 +143,7 @@ internal class MessageListAdapter<ARGS : NavArgs>(
     override fun getItemViewType(position: Int): Int {
         return when (differ.currentList.getOrNull(position)) {
             is MessageHolderViewState.ThreadHeader -> VIEW_TYPE_THREAD_HEADER
+            is MessageHolderViewState.MessageOnlyTextHolderViewState -> VIEW_TYPE_ONLY_TEXT_MSG
             else -> VIEW_TYPE_MESSAGE
         }
     }
@@ -305,6 +308,14 @@ internal class MessageListAdapter<ARGS : NavArgs>(
                 )
                 MessageViewHolder(binding)
             }
+            VIEW_TYPE_ONLY_TEXT_MSG -> {
+                val binding = LayoutOnlyTextMessageHolderBinding.inflate(
+                    LayoutInflater.from(parent.context),
+                    parent,
+                    false
+                )
+                MessageOnlyTextViewHolder(binding)
+            }
             VIEW_TYPE_THREAD_HEADER -> {
                 val binding = LayoutThreadMessageHeaderBinding.inflate(
                     LayoutInflater.from(parent.context),
@@ -318,12 +329,18 @@ internal class MessageListAdapter<ARGS : NavArgs>(
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        when {
-            VIEW_TYPE_THREAD_HEADER == getItemViewType(position) -> {
-                (holder as MessageListAdapter<ARGS>.ThreadHeaderViewHolder).bind(position)
+        when (holder) {
+            is MessageListAdapter<*>.ThreadHeaderViewHolder -> {
+                holder.bind(position)
+            }
+            is MessageListAdapter<*>.MessageOnlyTextViewHolder -> {
+                holder.bind(position)
+            }
+            is MessageListAdapter<*>.MessageViewHolder -> {
+                holder.bind(position)
             }
             else -> {
-                (holder as MessageListAdapter<ARGS>.MessageViewHolder).bind(position)
+                throw IllegalArgumentException("Unknown ViewHolder type: ${holder::class.java}")
             }
         }
     }
@@ -355,6 +372,7 @@ internal class MessageListAdapter<ARGS : NavArgs>(
             } ?: Px(0f)
         }
 
+    @SuppressLint("ClickableViewAccessibility")
     inner class MessageViewHolder(
         private val binding: LayoutMessageHolderBinding
     ): RecyclerView.ViewHolder(binding.root), DefaultLifecycleObserver {
@@ -669,6 +687,76 @@ internal class MessageListAdapter<ARGS : NavArgs>(
 
     }
 
+    inner class MessageOnlyTextViewHolder(
+        private val binding: LayoutOnlyTextMessageHolderBinding
+    ) : RecyclerView.ViewHolder(binding.root), DefaultLifecycleObserver {
+
+        private val holderJobs: ArrayList<Job> = ArrayList(15)
+        private val disposables: ArrayList<Disposable> = ArrayList(4)
+        private var currentViewState: MessageHolderViewState? = null
+
+        private val onSphinxInteractionListener: SphinxUrlSpan.OnInteractionListener
+
+        init {
+            binding.includeMessageHolderBubble.apply {
+
+                val selectedMessageLongClickListener = OnLongClickListener {
+                    SelectedMessageViewState.SelectedMessage.instantiate(
+                        messageHolderViewState = currentViewState,
+                        holderYPosTop = Px(binding.root.y + binding.includeMessageHolderBubble.root.y),
+                        holderHeight = Px(binding.root.measuredHeight.toFloat()),
+                        holderWidth = Px(binding.root.measuredWidth.toFloat()),
+                        bubbleXPosStart = Px(root.x),
+                        bubbleWidth = Px(root.measuredWidth.toFloat()),
+                        bubbleHeight = Px(root.measuredHeight.toFloat()),
+                        headerHeight = headerHeight,
+                        recyclerViewWidth = recyclerViewWidth,
+                        screenHeight = screenHeight,
+                        pinedHeaderHeight = pinedMessageHeader
+                    ).let { vs ->
+                        viewModel.updateSelectedMessageViewState(vs)
+                    }
+                    true
+                }
+
+                onSphinxInteractionListener = object: SphinxUrlSpan.OnInteractionListener(
+                    selectedMessageLongClickListener
+                ) {
+                    override fun onClick(url: String?) {
+                        ///Do nothing
+                    }
+                }
+
+                root.setOnLongClickListener(onSphinxInteractionListener)
+
+                SphinxLinkify.addLinks(textViewMessageText, SphinxLinkify.ALL, binding.root.context, onSphinxInteractionListener)
+
+                textViewMessageText.setOnLongClickListener(onSphinxInteractionListener)
+            }
+        }
+
+        fun bind(position: Int) {
+            val viewState = differ.currentList.elementAtOrNull(position).also { currentViewState = it } ?: return
+
+            binding.setView(
+                lifecycleOwner.lifecycleScope,
+                holderJobs,
+                disposables,
+                viewModel.dispatchers,
+                imageLoader,
+                recyclerViewWidth,
+                viewState,
+                userColorsHelper,
+                onSphinxInteractionListener
+            )
+        }
+
+        init {
+            lifecycleOwner.lifecycle.addObserver(this)
+        }
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
     inner class ThreadHeaderViewHolder(
         private val binding: LayoutThreadMessageHeaderBinding
     ) : RecyclerView.ViewHolder(binding.root), DefaultLifecycleObserver {
@@ -726,7 +814,7 @@ internal class MessageListAdapter<ARGS : NavArgs>(
                             viewModel.audioPlayerController.togglePlayPause(bubbleAudioAttachment)
                         }
                     }
-                    seekBarAttachmentAudio.setOnTouchListener { _, _ -> true }
+                    this.seekBarAttachmentAudio.setOnTouchListener { _, _ -> true }
                 }
 
                 includeMessageTypeFileAttachment.root.setBackgroundResource(R_common.drawable.background_thread_file_attachment)

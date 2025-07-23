@@ -26,6 +26,7 @@ sealed class MessageHolderType {
         const val DATE_SEPARATOR = 1
         const val UNSEEN_SEPARATOR = 2
         const val THREAD_HEADER = 3
+        const val ONLY_TEXT_MESSAGE = 4
     }
 
     abstract val value: Int
@@ -48,6 +49,11 @@ sealed class MessageHolderType {
     object ThreadHeader: MessageHolderType() {
         override val value: Int
             get() = THREAD_HEADER
+    }
+
+    object OnlyTextMessage: MessageHolderType() {
+        override val value: Int
+            get() = ONLY_TEXT_MESSAGE
     }
 
     class Unknown(override val value: Int) : MessageHolderType()

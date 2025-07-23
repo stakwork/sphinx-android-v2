@@ -611,159 +611,242 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
                 val isDeleted = message.status.isDeleted()
 
-                if (
-                    (sent && !message.isPaidInvoice) ||
-                    (!sent && message.isPaidInvoice)
-                ) {
-                    newList.add(
-                        MessageHolderViewState.Sent(
-                            message,
-                            chat,
-                            tribeAdmin,
-                            background = when {
-                                isDeleted -> {
-                                    BubbleBackground.Gone(setSpacingEqual = false)
-                                }
-                                message.type.isInvoicePayment() -> {
-                                    BubbleBackground.Gone(setSpacingEqual = false)
-                                }
-                                message.type.isGroupAction() -> {
-                                    BubbleBackground.Gone(setSpacingEqual = true)
-                                }
-                                else -> {
-                                    groupingDateAndBubbleBackground.second
-                                }
-                            },
-                            invoiceLinesHolderViewState = invoiceLinesHolderViewState,
-                            highlightedText = null,
-                            messageSenderInfo = { messageCallback ->
-                                when {
-                                    messageCallback.sender == chat.contactIds.firstOrNull() -> {
-                                        val accountOwner = contactRepository.accountOwner.value
+                if (message.isOnlyTextMessage) {
+                    if (sent) {
+                        newList.add(
+                            MessageHolderViewState.MessageOnlyTextHolderViewState.Sent(
+                                message,
+                                chat,
+                                background = groupingDateAndBubbleBackground.second,
+                                highlightedText = null,
+                                messageSenderInfo = { messageCallback ->
+                                    when {
+                                        messageCallback.sender == chat.contactIds.firstOrNull() -> {
+                                            val accountOwner = contactRepository.accountOwner.value
 
-                                        Triple(
-                                            accountOwner?.photoUrl,
-                                            accountOwner?.alias,
-                                            accountOwner?.getColorKey() ?: ""
-                                        )
+                                            Triple(
+                                                accountOwner?.photoUrl,
+                                                accountOwner?.alias,
+                                                accountOwner?.getColorKey() ?: ""
+                                            )
+                                        }
+                                        chat.type.isConversation() -> {
+                                            Triple(
+                                                chatPhotoUrl,
+                                                chatName?.value?.toContactAlias(),
+                                                chatColorKey
+                                            )
+                                        }
+                                        else -> {
+                                            Triple(
+                                                messageCallback.senderPic,
+                                                messageCallback.senderAlias?.value?.toContactAlias(),
+                                                messageCallback.getColorKey()
+                                            )
+                                        }
                                     }
-                                    chat.type.isConversation() -> {
-                                        Triple(
-                                            chatPhotoUrl,
-                                            chatName?.value?.toContactAlias(),
-                                            chatColorKey
-                                        )
-                                    }
-                                    else -> {
-                                        Triple(
-                                            messageCallback.senderPic,
-                                            messageCallback.senderAlias?.value?.toContactAlias(),
-                                            messageCallback.getColorKey()
-                                        )
-                                    }
-                                }
-                            },
-                            accountOwner = { owner },
-                            urlLinkPreviewsEnabled = areUrlLinkPreviewsEnabled(),
-                            previewProvider = { handleLinkPreview(it) },
-                            paidTextMessageContentProvider = { messageCallback ->
-                                handlePaidTextMessageContent(messageCallback)
-                            },
-                            onBindDownloadMedia = {
-                                repositoryMedia.downloadMediaIfApplicable(message, sent)
-                            },
-                            onBindThreadDownloadMedia = {
-                                message.thread?.last()?.let { lastReplyMessage ->
-                                    repositoryMedia.downloadMediaIfApplicable(lastReplyMessage, sent)
-                                }
-                            },
-                            memberTimezoneIdentifier = if (message.senderAlias != null) memberTimezones[message.senderAlias!!.value] else null
+                                },
+                                accountOwner = { owner },
+                                memberTimezoneIdentifier = if (message.senderAlias != null) memberTimezones[message.senderAlias!!.value] else null
+                            )
                         )
-                    )
+                    } else {
+                        newList.add(
+                            MessageHolderViewState.MessageOnlyTextHolderViewState.Received(
+                                message,
+                                chat,
+                                background = groupingDateAndBubbleBackground.second,
+                                initialHolder = getInitialHolderViewStateForReceivedMessage(message, owner),
+                                highlightedText = null,
+                                messageSenderInfo = { messageCallback ->
+                                    when {
+                                        messageCallback.sender == chat.contactIds.firstOrNull() -> {
+                                            val accountOwner = contactRepository.accountOwner.value
+
+                                            Triple(
+                                                accountOwner?.photoUrl,
+                                                accountOwner?.alias,
+                                                accountOwner?.getColorKey() ?: ""
+                                            )
+                                        }
+
+                                        chat.type.isConversation() -> {
+                                            Triple(
+                                                chatPhotoUrl,
+                                                chatName?.value?.toContactAlias(),
+                                                chatColorKey
+                                            )
+                                        }
+
+                                        else -> {
+                                            Triple(
+                                                messageCallback.senderPic,
+                                                messageCallback.senderAlias?.value?.toContactAlias(),
+                                                messageCallback.getColorKey()
+                                            )
+                                        }
+                                    }
+                                },
+                                accountOwner = { owner },
+                                memberTimezoneIdentifier = if (message.senderAlias != null) memberTimezones[message.senderAlias!!.value] else null
+                            )
+                        )
+                    }
                 } else {
-                    newList.add(
-                        MessageHolderViewState.Received(
-                            message,
-                            chat,
-                            tribeAdmin,
-                            background = when {
-                                isDeleted -> {
-                                    BubbleBackground.Gone(setSpacingEqual = false)
-                                }
+                    if (
+                        (sent && !message.isPaidInvoice) ||
+                        (!sent && message.isPaidInvoice)
+                    ) {
+                        newList.add(
+                            MessageHolderViewState.Sent(
+                                message,
+                                chat,
+                                tribeAdmin,
+                                background = when {
+                                    isDeleted -> {
+                                        BubbleBackground.Gone(setSpacingEqual = false)
+                                    }
+                                    message.type.isInvoicePayment() -> {
+                                        BubbleBackground.Gone(setSpacingEqual = false)
+                                    }
+                                    message.type.isGroupAction() -> {
+                                        BubbleBackground.Gone(setSpacingEqual = true)
+                                    }
+                                    else -> {
+                                        groupingDateAndBubbleBackground.second
+                                    }
+                                },
+                                invoiceLinesHolderViewState = invoiceLinesHolderViewState,
+                                highlightedText = null,
+                                messageSenderInfo = { messageCallback ->
+                                    when {
+                                        messageCallback.sender == chat.contactIds.firstOrNull() -> {
+                                            val accountOwner = contactRepository.accountOwner.value
 
-                                message.isFlagged -> {
-                                    BubbleBackground.Gone(setSpacingEqual = false)
-                                }
-
-                                message.type.isInvoicePayment() -> {
-                                    BubbleBackground.Gone(setSpacingEqual = false)
-                                }
-
-                                message.type.isGroupAction() -> {
-                                    BubbleBackground.Gone(setSpacingEqual = true)
-                                }
-
-                                else -> {
-                                    groupingDateAndBubbleBackground.second
-                                }
-                            },
-                            invoiceLinesHolderViewState = invoiceLinesHolderViewState,
-                            initialHolder = when {
-                                isDeleted || message.type.isGroupAction() -> {
-                                    InitialHolderViewState.None
-                                }
-
-                                else -> {
-                                    getInitialHolderViewStateForReceivedMessage(message, owner)
-                                }
-                            },
-                            highlightedText = null,
-                            messageSenderInfo = { messageCallback ->
-                                when {
-                                    messageCallback.sender == chat.contactIds.firstOrNull() -> {
-                                        val accountOwner = contactRepository.accountOwner.value
-
-                                        Triple(
-                                            accountOwner?.photoUrl,
-                                            accountOwner?.alias,
-                                            accountOwner?.getColorKey() ?: ""
-                                        )
+                                            Triple(
+                                                accountOwner?.photoUrl,
+                                                accountOwner?.alias,
+                                                accountOwner?.getColorKey() ?: ""
+                                            )
+                                        }
+                                        chat.type.isConversation() -> {
+                                            Triple(
+                                                chatPhotoUrl,
+                                                chatName?.value?.toContactAlias(),
+                                                chatColorKey
+                                            )
+                                        }
+                                        else -> {
+                                            Triple(
+                                                messageCallback.senderPic,
+                                                messageCallback.senderAlias?.value?.toContactAlias(),
+                                                messageCallback.getColorKey()
+                                            )
+                                        }
+                                    }
+                                },
+                                accountOwner = { owner },
+                                urlLinkPreviewsEnabled = areUrlLinkPreviewsEnabled(),
+                                previewProvider = { handleLinkPreview(it) },
+                                paidTextMessageContentProvider = { messageCallback ->
+                                    handlePaidTextMessageContent(messageCallback)
+                                },
+                                onBindDownloadMedia = {
+                                    repositoryMedia.downloadMediaIfApplicable(message, sent)
+                                },
+                                onBindThreadDownloadMedia = {
+                                    message.thread?.last()?.let { lastReplyMessage ->
+                                        repositoryMedia.downloadMediaIfApplicable(lastReplyMessage, sent)
+                                    }
+                                },
+                                memberTimezoneIdentifier = if (message.senderAlias != null) memberTimezones[message.senderAlias!!.value] else null
+                            )
+                        )
+                    } else {
+                        newList.add(
+                            MessageHolderViewState.Received(
+                                message,
+                                chat,
+                                tribeAdmin,
+                                background = when {
+                                    isDeleted -> {
+                                        BubbleBackground.Gone(setSpacingEqual = false)
                                     }
 
-                                    chat.type.isConversation() -> {
-                                        Triple(
-                                            chatPhotoUrl,
-                                            chatName?.value?.toContactAlias(),
-                                            chatColorKey
-                                        )
+                                    message.isFlagged -> {
+                                        BubbleBackground.Gone(setSpacingEqual = false)
+                                    }
+
+                                    message.type.isInvoicePayment() -> {
+                                        BubbleBackground.Gone(setSpacingEqual = false)
+                                    }
+
+                                    message.type.isGroupAction() -> {
+                                        BubbleBackground.Gone(setSpacingEqual = true)
                                     }
 
                                     else -> {
-                                        Triple(
-                                            messageCallback.senderPic,
-                                            messageCallback.senderAlias?.value?.toContactAlias(),
-                                            messageCallback.getColorKey()
-                                        )
+                                        groupingDateAndBubbleBackground.second
                                     }
-                                }
-                            },
-                            accountOwner = { owner },
-                            urlLinkPreviewsEnabled = areUrlLinkPreviewsEnabled(),
-                            previewProvider = { link -> handleLinkPreview(link) },
-                            paidTextMessageContentProvider = { messageCallback ->
-                                handlePaidTextMessageContent(messageCallback)
-                            },
-                            onBindDownloadMedia = {
-                                repositoryMedia.downloadMediaIfApplicable(message, sent)
-                            },
-                            onBindThreadDownloadMedia = {
-                                message.thread?.last()?.let { lastReplyMessage ->
-                                    repositoryMedia.downloadMediaIfApplicable(lastReplyMessage, sent)
-                                }
-                            },
-                            memberTimezoneIdentifier = if (message.senderAlias != null) memberTimezones[message.senderAlias!!.value] else null
+                                },
+                                invoiceLinesHolderViewState = invoiceLinesHolderViewState,
+                                initialHolder = when {
+                                    isDeleted || message.type.isGroupAction() -> {
+                                        InitialHolderViewState.None
+                                    }
+
+                                    else -> {
+                                        getInitialHolderViewStateForReceivedMessage(message, owner)
+                                    }
+                                },
+                                highlightedText = null,
+                                messageSenderInfo = { messageCallback ->
+                                    when {
+                                        messageCallback.sender == chat.contactIds.firstOrNull() -> {
+                                            val accountOwner = contactRepository.accountOwner.value
+
+                                            Triple(
+                                                accountOwner?.photoUrl,
+                                                accountOwner?.alias,
+                                                accountOwner?.getColorKey() ?: ""
+                                            )
+                                        }
+
+                                        chat.type.isConversation() -> {
+                                            Triple(
+                                                chatPhotoUrl,
+                                                chatName?.value?.toContactAlias(),
+                                                chatColorKey
+                                            )
+                                        }
+
+                                        else -> {
+                                            Triple(
+                                                messageCallback.senderPic,
+                                                messageCallback.senderAlias?.value?.toContactAlias(),
+                                                messageCallback.getColorKey()
+                                            )
+                                        }
+                                    }
+                                },
+                                accountOwner = { owner },
+                                urlLinkPreviewsEnabled = areUrlLinkPreviewsEnabled(),
+                                previewProvider = { link -> handleLinkPreview(link) },
+                                paidTextMessageContentProvider = { messageCallback ->
+                                    handlePaidTextMessageContent(messageCallback)
+                                },
+                                onBindDownloadMedia = {
+                                    repositoryMedia.downloadMediaIfApplicable(message, sent)
+                                },
+                                onBindThreadDownloadMedia = {
+                                    message.thread?.last()?.let { lastReplyMessage ->
+                                        repositoryMedia.downloadMediaIfApplicable(lastReplyMessage, sent)
+                                    }
+                                },
+                                memberTimezoneIdentifier = if (message.senderAlias != null) memberTimezones[message.senderAlias!!.value] else null
+                            )
                         )
-                    )
+                    }
                 }
 
                 if (message.isPaidInvoice) {

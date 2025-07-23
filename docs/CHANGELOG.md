@@ -1,7 +1,7 @@
 # ChangeLog
 
 ## Version 1.0.0-alpha63 (2025-07-23)
-- Improved images loading
+- Improves images loading
 
 ## Version 1.0.0-alpha62 (2025-07-23)
 - Fixes and improvements chat view layouts

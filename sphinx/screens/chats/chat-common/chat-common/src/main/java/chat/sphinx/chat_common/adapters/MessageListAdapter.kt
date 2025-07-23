@@ -922,10 +922,9 @@ internal class MessageListAdapter<ARGS : NavArgs>(
                                 layoutConstraintPaidImageOverlay.gone
                                 loadingImageProgressContainer.visible
                                 imageViewAttachmentImage.visible
+                                imageViewAttachmentImage.scaleType = ImageView.ScaleType.CENTER_CROP
 
-                                onStopSupervisor.scope.launch(viewModel.mainImmediate) {
-                                    imageViewAttachmentImage.scaleType = ImageView.ScaleType.CENTER_CROP
-
+                                onStopSupervisor.scope.launch(viewModel.default) {
                                     it.media?.localFile?.let {
                                         imageLoader.load(
                                             imageViewAttachmentImage,

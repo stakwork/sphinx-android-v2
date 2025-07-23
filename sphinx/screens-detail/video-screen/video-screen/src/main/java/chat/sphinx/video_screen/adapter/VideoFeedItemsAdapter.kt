@@ -227,7 +227,7 @@ internal class VideoFeedItemsAdapter (
 
                 // Image
                 f.thumbnailUrlToShow?.let { imageUrl ->
-                    onStopSupervisor.scope.launch(viewModelDispatcher.mainImmediate) {
+                    onStopSupervisor.scope.launch(viewModelDispatcher.default) {
                         imageLoader.load(
                             imageViewEpisodeImage,
                             imageUrl.value,

@@ -362,7 +362,7 @@ internal class PodcastEpisodesListAdapter(
 
                 // Image
                 podcastEpisode.imageUrlToShow?.value?.let { episodeImage ->
-                    lifecycleOwner.lifecycleScope.launch(viewModel.dispatchers.mainImmediate) {
+                    lifecycleOwner.lifecycleScope.launch(viewModel.dispatchers.default) {
                         disposable = imageLoader.load(
                             imageViewEpisodeImage,
                             episodeImage,

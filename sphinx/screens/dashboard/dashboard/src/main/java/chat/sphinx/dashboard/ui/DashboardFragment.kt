@@ -657,13 +657,19 @@ internal class DashboardFragment : MotionLayoutFragment<
             viewModel.accountOwnerStateFlow.collect { contactOwner ->
                 contactOwner?.let { owner ->
                     owner.photoUrl?.value?.let { url ->
-                        imageLoader.load(
-                            binding.layoutDashboardNavDrawer.navDrawerImageViewUserProfilePicture,
-                            url,
-                            ImageLoaderOptions.Builder()
-                                .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
-                                .build()
-                        )
+                        lifecycleScope.launch(viewModel.default) {
+                            imageLoader.load(
+                                binding.layoutDashboardNavDrawer.navDrawerImageViewUserProfilePicture,
+                                url,
+                                ImageLoaderOptions.Builder()
+                                    .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
+                                    .build()
+                            ).also {
+                                disposable = it
+                            }
+                        }.let { job ->
+                            imageJob = job
+                        }
                     } ?: binding.layoutDashboardNavDrawer
                         .navDrawerImageViewUserProfilePicture
                         .setImageDrawable(
@@ -786,13 +792,19 @@ internal class DashboardFragment : MotionLayoutFragment<
                             textViewContributorTitle.text = viewState.subtitle
 
                             viewState.imageUrl?.let { imageUrl ->
-                                imageLoader.load(
-                                    imageViewPodcastEpisode,
-                                    imageUrl,
-                                    ImageLoaderOptions.Builder()
-                                        .placeholderResId(R_common.drawable.ic_podcast_placeholder)
-                                        .build()
-                                )
+                                lifecycleScope.launch(viewModel.default) {
+                                    imageLoader.load(
+                                        imageViewPodcastEpisode,
+                                        imageUrl,
+                                        ImageLoaderOptions.Builder()
+                                            .placeholderResId(R_common.drawable.ic_podcast_placeholder)
+                                            .build()
+                                    ).also {
+                                        disposable = it
+                                    }
+                                }.let { job ->
+                                    imageJob = job
+                                }
                             }
 
                             imageViewForward30Button.goneIfFalse(!viewState.showLoading)
@@ -919,7 +931,7 @@ internal class DashboardFragment : MotionLayoutFragment<
 
                             viewState.photoUrl?.let { url ->
 
-                                lifecycleScope.launch {
+                                lifecycleScope.launch(viewModel.default) {
                                     imageLoader.load(
                                         imageViewProfilePicture,
                                         url,

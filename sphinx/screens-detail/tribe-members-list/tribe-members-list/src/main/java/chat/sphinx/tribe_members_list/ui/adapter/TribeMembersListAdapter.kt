@@ -229,7 +229,7 @@ internal class TribeMembersListAdapter(
                 if (!photoUrl.isNullOrEmpty()) {
                     imageViewMemberPicture.visible
 
-                    onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+                    onStopSupervisor.scope.launch(viewModel.default) {
                         imageLoader.load(
                             imageViewMemberPicture,
                             photoUrl,

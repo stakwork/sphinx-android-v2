@@ -1358,7 +1358,7 @@ abstract class ChatFragment<
                         is InitialHolderViewState.None -> {
                             textViewInitials.gone
                             imageViewChatPicture.visible
-                            lifecycleScope.launch(viewModel.mainImmediate) {
+                            lifecycleScope.launch(viewModel.default) {
                                 val disposable = imageLoader.load(
                                     imageViewChatPicture,
                                     R_common.drawable.ic_profile_avatar_circle,
@@ -1371,7 +1371,7 @@ abstract class ChatFragment<
                         is InitialHolderViewState.Url -> {
                             textViewInitials.gone
                             imageViewChatPicture.visible
-                            lifecycleScope.launch(viewModel.mainImmediate) {
+                            lifecycleScope.launch(viewModel.default) {
                                 val disposable = imageLoader.load(
                                     imageViewChatPicture,
                                     viewState.photoUrl.value,
@@ -1410,7 +1410,7 @@ abstract class ChatFragment<
                         }
 
                         if (url != null) {
-                            onStopSupervisor.scope.launch(viewModel.dispatchers.mainImmediate) {
+                            onStopSupervisor.scope.launch(viewModel.dispatchers.default) {
                                 imageLoader.load(
                                     includeEmptyChatHolderInitial.imageViewChatPicture,
                                     url.value,
@@ -1655,7 +1655,7 @@ abstract class ChatFragment<
                                     // will load almost immediately b/c it's a file, so
                                     // no need to launch separate coroutine.
                                     viewState.file?.let { nnFile ->
-                                        lifecycleScope.launch(viewModel.mainImmediate) {
+                                        lifecycleScope.launch(viewModel.default) {
                                             val disposable = imageLoader.load(imageViewAttachmentSendPreview, nnFile)
                                             attachmentSendViewStateDisposables.add(disposable)
                                         }.let { job ->
@@ -1751,7 +1751,7 @@ abstract class ChatFragment<
                             }
 
                             viewState.giphyData.retrieveImageUrlAndMessageMedia()?.let {
-                                lifecycleScope.launch(viewModel.mainImmediate) {
+                                lifecycleScope.launch(viewModel.default) {
                                     val disposable = imageLoader.load(imageViewAttachmentSendPreview, it.first)
                                     attachmentSendViewStateDisposables.add(disposable)
                                 }.let { job ->
@@ -1804,7 +1804,7 @@ abstract class ChatFragment<
                             )
 
                             viewState.media?.localFile?.let { nnLocalFile ->
-                                lifecycleScope.launch(viewModel.mainImmediate) {
+                                lifecycleScope.launch(viewModel.default) {
                                     val disposable = imageLoader.load(
                                         imageViewAttachmentFullscreen,
                                         nnLocalFile,

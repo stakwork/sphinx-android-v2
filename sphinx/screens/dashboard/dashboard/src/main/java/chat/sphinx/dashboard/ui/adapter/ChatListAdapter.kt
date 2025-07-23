@@ -256,7 +256,7 @@ internal class ChatListAdapter(
                         }
 
                         if (url != null) {
-                            onStopSupervisor.scope.launch(viewModel.dispatchers.mainImmediate) {
+                            onStopSupervisor.scope.launch(viewModel.dispatchers.default) {
                                 imageLoader.load(
                                     includeDashboardChatHolderInitial.imageViewChatPicture,
                                     url.value,

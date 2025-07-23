@@ -156,26 +156,31 @@ internal fun LayoutMessageHolderBinding.setView(
                 null
             }
 
-            val disposable: Disposable = if (file != null) {
-                imageLoader.load(imageView, file, options, object : OnImageLoadListener {
-                    override fun onSuccess() {
-                        super.onSuccess()
-                        loadingContainer.gone
-                        onRowLayoutListener?.onRowHeightChanged()
-                    }
-                }, media.mediaType.isGif)
+            if (file != null) {
+                lifecycleScope.launch(dispatchers.default) {
+                    imageLoader.load(imageView, file, options, object : OnImageLoadListener {
+                        override fun onSuccess() {
+                            super.onSuccess()
+                            loadingContainer.gone
+                            onRowLayoutListener?.onRowHeightChanged()
+                        }
+                    }, media.mediaType.isGif).also { disposables.add(it) }
+                }.let { job ->
+                    holderJobs.add(job)
+                }
             } else {
-                imageLoader.load(imageView, url, options, object : OnImageLoadListener {
-                    override fun onSuccess() {
-                        super.onSuccess()
-                        loadingContainer.gone
-                        onRowLayoutListener?.onRowHeightChanged()
-                    }
-                }, media?.mediaType?.isGif == true || url.contains("gif", ignoreCase = true))
+                lifecycleScope.launch(dispatchers.default) {
+                    imageLoader.load(imageView, url, options, object : OnImageLoadListener {
+                        override fun onSuccess() {
+                            super.onSuccess()
+                            loadingContainer.gone
+                            onRowLayoutListener?.onRowHeightChanged()
+                        }
+                    }, media?.mediaType?.isGif == true || url.contains("gif", ignoreCase = true)).also { disposables.add(it) }
+                }.let { job ->
+                    holderJobs.add(job)
+                }
             }
-
-            disposables.add(disposable)
-//            disposable.await()
         }
     }
 
@@ -272,7 +277,7 @@ internal fun LayoutMessageHolderBinding.setView(
                 userColorsHelper,
                 audioPlayerController,
                 loadImage = { imageView, url ->
-                    lifecycleScope.launch(dispatchers.mainImmediate) {
+                    lifecycleScope.launch(dispatchers.default) {
                         imageLoader.load(
                             imageView,
                             url,
@@ -280,8 +285,7 @@ internal fun LayoutMessageHolderBinding.setView(
                                 .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
                                 .transformation(Transformation.CircleCrop)
                                 .build()
-                        )
-                            .also { disposables.add(it) }
+                        ).also { disposables.add(it) }
                     }.let { job ->
                         holderJobs.add(job)
                     }
@@ -317,8 +321,7 @@ internal fun LayoutMessageHolderBinding.setView(
                 lifecycleScope,
                 userColorsHelper
             ) { imageView, url ->
-                lifecycleScope.launch(dispatchers.mainImmediate) {
-
+                lifecycleScope.launch(dispatchers.default) {
                     val disposable: Disposable = imageLoader.load(
                         imageView,
                         url,
@@ -327,9 +330,7 @@ internal fun LayoutMessageHolderBinding.setView(
                             .transformation(Transformation.CircleCrop)
                             .build()
                     )
-
                     disposables.add(disposable)
-//                    disposable.await()
                 }.let { job ->
                     holderJobs.add(job)
                 }
@@ -354,7 +355,7 @@ internal fun LayoutMessageHolderBinding.setView(
                 lifecycleScope,
                 userColorsHelper
             ) { imageView, url ->
-                lifecycleScope.launch(dispatchers.mainImmediate) {
+                lifecycleScope.launch(dispatchers.default) {
                     imageLoader.load(
                         imageView, 
                         url,
@@ -362,8 +363,7 @@ internal fun LayoutMessageHolderBinding.setView(
                             .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
                             .transformation(Transformation.CircleCrop)
                             .build()    
-                    )
-                        .also { disposables.add(it) }
+                    ).also { disposables.add(it) }
                 }.let { job ->
                     holderJobs.add(job)
                 }
@@ -413,14 +413,19 @@ internal fun LayoutMessageHolderBinding.setView(
                         null
                     }
 
-                    val disposable: Disposable = if (file != null) {
-                        imageLoader.load(imageView, file, options)
+                    if (file != null) {
+                        lifecycleScope.launch(dispatchers.default) {
+                            imageLoader.load(imageView, file, options).also { disposables.add(it) }
+                        }.let { job ->
+                            holderJobs.add(job)
+                        }
                     } else {
-                        imageLoader.load(imageView, url, options)
+                        lifecycleScope.launch(dispatchers.default) {
+                            imageLoader.load(imageView, url, options).also { disposables.add(it) }
+                        }.let { job ->
+                            holderJobs.add(job)
+                        }
                     }
-
-                    disposables.add(disposable)
-//                    disposable.await()
                 }.let { job ->
                     holderJobs.add(job)
                 }
@@ -1379,7 +1384,7 @@ internal fun LayoutMessageHolderBinding.setBubbleMessageLinkPreviewLayout(
 
                                 imageViewMessageLinkPreviewContactAvatar.clearColorFilter()
 
-                                launch {
+                                lifecycleScope.launch(dispatchers.default) {
                                     imageLoader.load(
                                         imageViewMessageLinkPreviewContactAvatar,
                                         nnPhotoUrl.value,
@@ -1453,7 +1458,7 @@ internal fun LayoutMessageHolderBinding.setBubbleMessageLinkPreviewLayout(
                             state.imageUrl?.let { url ->
                                 imageViewMessageLinkPreviewTribe.clearColorFilter()
 
-                                launch {
+                                lifecycleScope.launch(dispatchers.default) {
                                     imageLoader.load(
                                         imageViewMessageLinkPreviewTribe,
                                         url.value,
@@ -1524,7 +1529,7 @@ internal fun LayoutMessageHolderBinding.setBubbleMessageLinkPreviewLayout(
                             }
                             imageViewMessageLinkPreviewUrlFavicon.apply favIcon@ {
                                 state.favIconUrl?.let { url ->
-                                    launch {
+                                    lifecycleScope.launch(dispatchers.default) {
                                         imageLoader.load(
                                             imageView = this@favIcon,
                                             url = url.value,
@@ -1537,7 +1542,7 @@ internal fun LayoutMessageHolderBinding.setBubbleMessageLinkPreviewLayout(
                             }
                             imageViewMessageLinkPreviewUrlMainImage.apply main@ {
                                 state.imageUrl?.let { url ->
-                                    launch {
+                                    lifecycleScope.launch(dispatchers.default) {
                                         imageLoader.load(
                                             imageView = this@main,
                                             url = url.value,

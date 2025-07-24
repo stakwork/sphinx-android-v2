@@ -341,8 +341,8 @@ internal class AudioPlayerControllerImpl(
         fun releaseMediaPlayer() {
             if (currentAudio != null) {
                 dispatchStateJob?.cancel()
-                mediaPlayer.release()
             }
+            mediaPlayer.release()
         }
 
         private var dispatchStateJob: Job? = null
@@ -398,7 +398,10 @@ internal class AudioPlayerControllerImpl(
     }
 
     private val audioStateCache = AudioStateCache()
-    private val mediaPlayerHolder = MediaPlayerHolder()
+
+    private val mediaPlayerHolder: MediaPlayerHolder by lazy {
+        MediaPlayerHolder()
+    }
 
     //////////////////
     /// Controller ///

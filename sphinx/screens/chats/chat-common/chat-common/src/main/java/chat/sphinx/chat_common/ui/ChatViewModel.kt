@@ -2667,7 +2667,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
     override fun onCleared() {
         super.onCleared()
         (audioPlayerController as AudioPlayerControllerImpl).onCleared()
-        audioRecorderController?.clear()
+        audioRecorderController.clear()
     }
 }
 

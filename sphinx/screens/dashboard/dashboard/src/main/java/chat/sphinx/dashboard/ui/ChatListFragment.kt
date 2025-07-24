@@ -25,7 +25,6 @@ import chat.sphinx.dashboard.ui.adapter.DashboardFooterAdapter
 import chat.sphinx.dashboard.ui.viewstates.ChatFilter
 import chat.sphinx.dashboard.ui.viewstates.ChatListFooterButtonsViewState
 import chat.sphinx.dashboard.ui.viewstates.ChatListViewState
-import chat.sphinx.dashboard.ui.viewstates.ChatViewState
 import chat.sphinx.resources.SphinxToastUtils
 import chat.sphinx.resources.inputMethodManager
 import chat.sphinx.wrapper_chat.ChatType
@@ -36,9 +35,12 @@ import io.matthewnelson.android_feature_screens.util.gone
 import io.matthewnelson.android_feature_screens.util.goneIfFalse
 import io.matthewnelson.android_feature_screens.util.visible
 import io.matthewnelson.concept_views.viewstate.collect
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @Suppress("NOTHING_TO_INLINE")
@@ -73,20 +75,23 @@ internal class ChatListFragment : SideEffectFragment<
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        grapheneOsManager.optimizeViewContainer(this)
+        backPressHandler = BackPressHandler(binding.root.context)
 
-        setupSearch()
-        setupChats()
+        view.post {
+            setupSearch()
+            setupChats()
+            grapheneOsManager.optimizeViewContainer(this)
+        }
     }
 
     override fun onResume() {
         super.onResume()
 
-        BackPressHandler(binding.root.context)
-            .enableDoubleTapToClose(viewLifecycleOwner, SphinxToastUtils())
-            .addCallback(viewLifecycleOwner, requireActivity())
+        backPressHandler?.enableDoubleTapToClose(viewLifecycleOwner, SphinxToastUtils())
+            ?.addCallback(viewLifecycleOwner, requireActivity())
     }
 
+    private var backPressHandler: BackPressHandler? = null
     private inner class BackPressHandler(context: Context): CloseAppOnBackPress(context) {
         override fun handleOnBackPressed() {
             if (
@@ -102,7 +107,12 @@ internal class ChatListFragment : SideEffectFragment<
 
     private fun setupChats() {
         binding.layoutChatListChats.recyclerViewChats.apply {
+
             val linearLayoutManager = LinearLayoutManager(context)
+            layoutManager = linearLayoutManager
+            this.setHasFixedSize(false)
+            itemAnimator = null
+
             val chatListAdapter = ChatListAdapter(
                 this,
                 linearLayoutManager,
@@ -115,8 +125,6 @@ internal class ChatListFragment : SideEffectFragment<
 
             val chatListFooterAdapter = ChatListFooterAdapter(viewLifecycleOwner, onStopSupervisor, viewModel)
             val footerSpaceAdapter = DashboardFooterAdapter()
-            this.setHasFixedSize(false)
-            layoutManager = linearLayoutManager
 
             adapter = ConcatAdapter(
                 chatListAdapter,
@@ -124,38 +132,50 @@ internal class ChatListFragment : SideEffectFragment<
                 footerSpaceAdapter
             )
 
-            itemAnimator = null
+            addOnScrollListener(OptimizedScrollListener())
+        }
+    }
 
-            addOnScrollListener(object : RecyclerView.OnScrollListener() {
-                override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                    super.onScrolled(recyclerView, dx, dy)
+    private inner class OptimizedScrollListener : RecyclerView.OnScrollListener() {
+        private var lastScrollTime = 0L
 
-                    if (parentFragment is DashboardFragment) {
-                        val bottomOfScroll = !canScrollVertically(1)
-                        val topOfScroll = !canScrollVertically(-1)
-                        val scrollNotAvailable = (bottomOfScroll && topOfScroll)
-                        (parentFragment as DashboardFragment)?.shouldToggleNavBar(
-                            (dy <= 0 && !bottomOfScroll) || scrollNotAvailable
-                        )
-                    }
-                }
-            })
+        override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+            super.onScrolled(recyclerView, dx, dy)
+
+            // ✅ Throttle scroll calculations
+            val now = System.currentTimeMillis()
+            if (now - lastScrollTime < 16) return // Skip if less than one frame
+            lastScrollTime = now
+
+            // ✅ Cache calculations
+            val parentDashboard = parentFragment as? DashboardFragment ?: return
+
+            val bottomOfScroll = !recyclerView.canScrollVertically(1)
+            val topOfScroll = !recyclerView.canScrollVertically(-1)
+            val scrollNotAvailable = bottomOfScroll && topOfScroll
+
+            parentDashboard.shouldToggleNavBar((dy <= 0 && !bottomOfScroll) || scrollNotAvailable)
         }
     }
 
     private fun setupSearch() {
         binding.layoutSearchBar.apply {
+            var searchJob: Job? = null
+
             editTextDashboardSearch.addTextChangedListener { editable ->
                 buttonDashboardSearchClear.goneIfFalse(editable.toString().isNotEmpty())
 
-                onStopSupervisor.scope.launch(viewModel.mainImmediate) {
-                    viewModel.updateChatListFilter(
-                        if (editable.toString().isNotEmpty()) {
-                            ChatFilter.FilterBy(editable.toString())
-                        } else {
-                            ChatFilter.ClearFilter
-                        }
-                    )
+                searchJob?.cancel()
+                searchJob = onStopSupervisor.scope.launch(viewModel.default) {
+                    delay(300)
+
+                    val filter = if (editable.toString().isNotEmpty()) {
+                        ChatFilter.FilterBy(editable.toString())
+                    } else {
+                        ChatFilter.ClearFilter
+                    }
+
+                    viewModel.updateChatListFilter(filter)
                 }
             }
 
@@ -190,6 +210,7 @@ internal class ChatListFragment : SideEffectFragment<
 
     override fun onPause() {
         super.onPause()
+
         binding.searchBarClearFocus()
     }
 
@@ -229,8 +250,7 @@ internal class ChatListFragment : SideEffectFragment<
     }
 
     override fun subscribeToViewStateFlow() {
-        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
-
+        onStopSupervisor.scope.launch(viewModel.default) {
             val chatViewStateFlow = flow {
                 viewModel.chatViewStateContainer.collect { emit(it) }
             }
@@ -238,27 +258,34 @@ internal class ChatListFragment : SideEffectFragment<
             chatViewStateFlow.combine(viewModel.hasSingleContact) { chatViewState, isSingleContact ->
                 Pair(chatViewState, isSingleContact)
             }.collect { (chatViewState, isSingleContact) ->
-                when {
-                    chatViewState.list.isEmpty() -> {
-                        if (chatViewState.showProgressBar) {
-                            binding.progressBarChatList.visible
-                        } else {
-                            binding.progressBarChatList.gone
+                withContext(viewModel.mainImmediate) {
+                    when {
+                        chatViewState.list.isEmpty() -> {
+                            if (chatViewState.showProgressBar) {
+                                binding.progressBarChatList.visible
+                            } else {
+                                binding.progressBarChatList.gone
+                            }
+
+                            if (isSingleContact == true) {
+                                binding.progressBarChatList.gone
+                            }
                         }
 
-                        if (isSingleContact == true) {
+                        else -> {
                             binding.progressBarChatList.gone
-//                            binding.welcomeToSphinx.visible
+                            binding.welcomeToSphinx.gone
                         }
-                    }
-                    else -> {
-                        binding.progressBarChatList.gone
-                        binding.welcomeToSphinx.gone
                     }
                 }
             }
         }
 
         super.subscribeToViewStateFlow()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        backPressHandler = null
     }
 }

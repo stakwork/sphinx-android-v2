@@ -66,7 +66,9 @@ import io.matthewnelson.concept_views.viewstate.value
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
+import kotlin.coroutines.suspendCoroutine
 
 internal inline val ChatTribeFragmentArgs.chatId: ChatId
     get() = ChatId(argChatId)
@@ -282,7 +284,7 @@ class ChatTribeViewModel @Inject constructor(
     }
 
     override fun readMessages() {
-        viewModelScope.launch(mainImmediate) {
+        viewModelScope.launch {
             messageRepository.readMessages(chatId)
         }
     }
@@ -303,43 +305,49 @@ class ChatTribeViewModel @Inject constructor(
         get() = _feedDataStateFlow.asStateFlow()
 
     init {
-        viewModelScope.launch(mainImmediate) {
-            chatRepository.getChatById(chatId).firstOrNull()?.let { chat ->
-                moreOptionsMenuStateFlow.value =
-                    if (chat.isTribeOwnedByAccount(getOwner().nodePubKey) || !chat.privateTribe.isTrue()) {
-                        MoreMenuOptionsViewState.ShareTribeLinkAvailable
-                    } else {
-                        MoreMenuOptionsViewState.ShareTribeLinkDisable
+        viewModelScope.launch {
+            withContext(dispatchers.io) {
+                val chat = chatRepository.getChatById(chatId).firstOrNull()
+                val owner = getOwner()
+
+                chat?.let { nnChat ->
+                    withContext(dispatchers.mainImmediate) updateUI1@ {
+                        moreOptionsMenuStateFlow.value =
+                            if (nnChat.isTribeOwnedByAccount(owner.nodePubKey) || !nnChat.privateTribe.isTrue()) {
+                                MoreMenuOptionsViewState.ShareTribeLinkAvailable
+                            } else {
+                                MoreMenuOptionsViewState.ShareTribeLinkDisable
+                            }
                     }
 
-                chatRepository.updateTribeInfo(chat, isProductionEnvironment)?.let { tribeData ->
+                    chatRepository.updateTribeInfo(nnChat, isProductionEnvironment)?.let { tribeData ->
+                        withContext(dispatchers.mainImmediate) updateUI2@ {
+                            if (!args.argThreadUUID.isNullOrEmpty()) {
+                                _feedDataStateFlow.value = TribeFeedData.Result.NoFeed
+                            }
+                            else {
+                                _feedDataStateFlow.value = TribeFeedData.Result.FeedData(
+                                    nnChat.host ?: return@updateUI2,
+                                    tribeData.feed_url?.toFeedUrl(),
+                                    nnChat.uuid,
+                                    tribeData.feed_type?.toFeedType() ?: FeedType.Podcast,
+                                    tribeData.app_url?.toAppUrl(),
+                                    arrayOf() // needs to be fill
+                                )
+                            }
 
-                    if (!args.argThreadUUID.isNullOrEmpty()) {
+                            updatePinnedMessageState(tribeData.pin?.toMessageUUID(), nnChat.id)
+                        }
+                    } ?: run {
                         _feedDataStateFlow.value = TribeFeedData.Result.NoFeed
                     }
-                    else {
-                        _feedDataStateFlow.value = TribeFeedData.Result.FeedData(
-                            chat.host ?: return@let,
-                            tribeData.feed_url?.toFeedUrl(),
-                            chat.uuid,
-                            tribeData.feed_type?.toFeedType() ?: FeedType.Podcast,
-                            tribeData.app_url?.toAppUrl(),
-                            arrayOf() // needs to be fill
-                        )
-                    }
-
-                    updatePinnedMessageState(tribeData.pin?.toMessageUUID(), chat.id)
-
                 } ?: run {
                     _feedDataStateFlow.value = TribeFeedData.Result.NoFeed
                 }
-
-            } ?: run {
-                _feedDataStateFlow.value = TribeFeedData.Result.NoFeed
             }
         }
 
-        getAllLeaderboards()
+//        getAllLeaderboards()
     }
 
     override suspend fun processMemberRequest(

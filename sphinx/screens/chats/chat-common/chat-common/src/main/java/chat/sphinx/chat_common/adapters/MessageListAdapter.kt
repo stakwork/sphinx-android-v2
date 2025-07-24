@@ -50,7 +50,11 @@ import io.matthewnelson.android_feature_screens.util.gone
 import io.matthewnelson.android_feature_screens.util.goneIfFalse
 import io.matthewnelson.android_feature_screens.util.visible
 import io.matthewnelson.android_feature_viewmodel.util.OnStopSupervisor
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.launch
 
 internal class MessageListAdapter<ARGS : NavArgs>(
@@ -124,14 +128,11 @@ internal class MessageListAdapter<ARGS : NavArgs>(
 
         onStopSupervisor.scope.launch(viewModel.main) {
             viewModel.messageHolderViewStateFlow.collect { list ->
-                // Check if this is the initial load
                 if (differ.currentList.isEmpty()) {
-                    // Submit list and scroll after diff completes
                     differ.submitList(list) {
                         scrollToUnseenSeparatorOrBottom(list)
                     }
                 } else {
-                    // For updates, handle scroll position
                     scrollToPreviousPositionWithCallback {
                         differ.submitList(list)
                     }
@@ -149,14 +150,14 @@ internal class MessageListAdapter<ARGS : NavArgs>(
     }
 
     private fun scrollToUnseenSeparatorOrBottom(messageHolders: List<MessageHolderViewState>) {
-        for ((index, message) in messageHolders.withIndex()) {
-            (message as? MessageHolderViewState.Separator)?.let {
-                if (it.messageHolderType.isUnseenSeparatorHolder()) {
-                    (recyclerView.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(index, recyclerView.measuredHeight / 4)
-                    return
-                }
-            }
-        }
+//        for ((index, message) in messageHolders.withIndex()) {
+//            (message as? MessageHolderViewState.Separator)?.let {
+//                if (it.messageHolderType.isUnseenSeparatorHolder()) {
+//                    (recyclerView.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(index, recyclerView.measuredHeight / 4)
+//                    return
+//                }
+//            }
+//        }
 
         recyclerView.layoutManager?.scrollToPosition(
             messageHolders.size
@@ -381,6 +382,8 @@ internal class MessageListAdapter<ARGS : NavArgs>(
         private val disposables: ArrayList<Disposable> = ArrayList(4)
         private var currentViewState: MessageHolderViewState? = null
 
+        private val holderScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
         private val onSphinxInteractionListener: SphinxUrlSpan.OnInteractionListener
         init {
             binding.includeMessageHolderBubble.apply {
@@ -586,7 +589,7 @@ internal class MessageListAdapter<ARGS : NavArgs>(
         }
 
         private fun processMemberRequest(chatId: ChatId, messageUuid: MessageUUID, type: MessageType.GroupAction, senderAlias: SenderAlias?) {
-            onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+            holderScope.launch(viewModel.mainImmediate) {
                 binding.includeMessageTypeGroupActionHolder.includeMessageTypeGroupActionJoinRequest.apply {
                     layoutConstraintGroupActionJoinRequestProgressBarContainer.visible
 
@@ -605,7 +608,7 @@ internal class MessageListAdapter<ARGS : NavArgs>(
         }
 
         private fun deleteTribe() {
-            onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+            holderScope.launch(viewModel.mainImmediate) {
                 binding.includeMessageTypeGroupActionHolder.includeMessageTypeGroupActionMemberRemoval.apply {
                     layoutConstraintGroupActionMemberRemovalProgressBarContainer.visible
 
@@ -623,11 +626,12 @@ internal class MessageListAdapter<ARGS : NavArgs>(
         }
 
         fun bind(position: Int) {
+            cleanup()
+
             val viewState = differ.currentList.elementAtOrNull(position).also { currentViewState = it } ?: return
-            audioAttachmentJob?.cancel()
 
             binding.setView(
-                lifecycleOwner.lifecycleScope,
+                holderScope,
                 holderJobs,
                 disposables,
                 viewModel.dispatchers,
@@ -642,6 +646,18 @@ internal class MessageListAdapter<ARGS : NavArgs>(
             )
 
             observeAudioAttachmentState()
+        }
+
+        fun cleanup() {
+            holderJobs.forEach { it.cancel() }
+            holderJobs.clear()
+
+            disposables.forEach { it.dispose() }
+            disposables.clear()
+
+            audioAttachmentJob?.cancel()
+
+            holderScope.coroutineContext.cancelChildren()
         }
 
         private var audioAttachmentJob: Job? = null
@@ -659,7 +675,7 @@ internal class MessageListAdapter<ARGS : NavArgs>(
             currentViewState?.bubbleAudioAttachment?.let { audioAttachment ->
                 if (audioAttachment is LayoutState.Bubble.ContainerSecond.AudioAttachment.FileAvailable) {
                     audioAttachmentJob?.cancel()
-                    audioAttachmentJob = onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+                    audioAttachmentJob = holderScope.launch(viewModel.mainImmediate) {
                         viewModel.audioPlayerController.getAudioState(audioAttachment)?.collect { audioState ->
                             binding.includeMessageHolderBubble
                                 .includeMessageTypeAudioAttachment
@@ -671,7 +687,7 @@ internal class MessageListAdapter<ARGS : NavArgs>(
 
             currentViewState?.bubblePodcastClip?.let { podcastClipViewState ->
                 audioAttachmentJob?.cancel()
-                audioAttachmentJob = onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+                audioAttachmentJob = holderScope.launch(viewModel.mainImmediate) {
                     viewModel.audioPlayerController.getAudioState(podcastClipViewState)?.collect { audioState ->
                         binding.includeMessageHolderBubble
                             .includeMessageTypePodcastClip
@@ -694,6 +710,8 @@ internal class MessageListAdapter<ARGS : NavArgs>(
         private val holderJobs: ArrayList<Job> = ArrayList(15)
         private val disposables: ArrayList<Disposable> = ArrayList(4)
         private var currentViewState: MessageHolderViewState? = null
+
+        private val holderScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
         private val onSphinxInteractionListener: SphinxUrlSpan.OnInteractionListener
 
@@ -736,10 +754,12 @@ internal class MessageListAdapter<ARGS : NavArgs>(
         }
 
         fun bind(position: Int) {
+            cleanup()
+
             val viewState = differ.currentList.elementAtOrNull(position).also { currentViewState = it } ?: return
 
             binding.setView(
-                lifecycleOwner.lifecycleScope,
+                holderScope,
                 holderJobs,
                 disposables,
                 viewModel.dispatchers,
@@ -749,6 +769,16 @@ internal class MessageListAdapter<ARGS : NavArgs>(
                 userColorsHelper,
                 onSphinxInteractionListener
             )
+        }
+
+        fun cleanup() {
+            holderJobs.forEach { it.cancel() }
+            holderJobs.clear()
+
+            disposables.forEach { it.dispose() }
+            disposables.clear()
+
+            holderScope.coroutineContext.cancelChildren()
         }
 
         init {
@@ -762,9 +792,14 @@ internal class MessageListAdapter<ARGS : NavArgs>(
     ) : RecyclerView.ViewHolder(binding.root), DefaultLifecycleObserver {
         private var threadHeaderViewState: MessageHolderViewState.ThreadHeader? = null
 
+        private val holderJobs: ArrayList<Job> = ArrayList(15)
+        private val disposables: ArrayList<Disposable> = ArrayList(4)
+        private val holderScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
         private var audioAttachmentJob: Job? = null
 
         private val onSphinxInteractionListener: SphinxUrlSpan.OnInteractionListener
+
         override fun onStart(owner: LifecycleOwner) {
             super.onStart(owner)
 
@@ -831,7 +866,7 @@ internal class MessageListAdapter<ARGS : NavArgs>(
             threadHeaderViewState?.bubbleAudioAttachment?.let { audioAttachment ->
                 if (audioAttachment is LayoutState.Bubble.ContainerSecond.AudioAttachment.FileAvailable) {
                     audioAttachmentJob?.cancel()
-                    audioAttachmentJob = onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+                    audioAttachmentJob = holderScope.launch(viewModel.mainImmediate) {
                         viewModel.audioPlayerController.getAudioState(audioAttachment)
                             ?.collect { audioState ->
                                 binding.includeMessageTypeAudioAttachment.setAudioAttachmentLayoutForState(audioState)
@@ -842,200 +877,35 @@ internal class MessageListAdapter<ARGS : NavArgs>(
         }
 
         fun bind(position: Int) {
+            cleanup()
+
             val threadHeader = differ.currentList.getOrNull(position) as MessageHolderViewState.ThreadHeader
             threadHeaderViewState = threadHeader
 
-            binding.apply {
-                root.visible
-
-                val senderInfo: Triple<PhotoUrl?, ContactAlias?, String>? = if (threadHeader.message != null) {
-                    threadHeader.messageSenderInfo(threadHeader.message!!)
-                } else {
-                    null
-                }
-
-                textViewContactMessageHeaderName.text = senderInfo?.second?.value ?: ""
-                textViewThreadDate.text = threadHeader.timestamp
-
-                textViewThreadMessageContent.text = threadHeader.bubbleMessage?.text ?: ""
-                textViewThreadMessageContent.goneIfFalse(threadHeader.bubbleMessage?.text?.isNotEmpty() == true)
-
-                SphinxHighlightingTool.addMarkdowns(
-                    textViewThreadMessageContent,
-                    threadHeader.bubbleMessage?.highlightedTexts ?: emptyList(),
-                    threadHeader.bubbleMessage?.boldTexts ?: emptyList(),
-                    threadHeader.bubbleMessage?.markdownLinkTexts ?: emptyList(),
-                    onSphinxInteractionListener,
-                    textViewThreadMessageContent.resources,
-                    textViewThreadMessageContent.context
-                )
-
-                textViewThreadDate.post(Runnable {
-                    val linesCount: Int = textViewThreadDate.lineCount
-
-                    if (linesCount <= 12) {
-                        textViewShowMore.gone
-                    } else {
-                        if (threadHeader.isExpanded) {
-                            textViewThreadMessageContent.maxLines = Int.MAX_VALUE
-                            textViewShowMore.text =
-                                getString(R_common.string.episode_description_show_less)
-                        } else {
-                            textViewThreadMessageContent.maxLines = 12
-                            textViewShowMore.text =
-                                getString(R_common.string.episode_description_show_more)
-                        }
-                    }
-                })
-
-                onStopSupervisor.scope.launch(viewModel.mainImmediate) {
-
-                    binding.layoutContactInitialHolder.apply {
-                        senderInfo?.third?.let {
-                            textViewInitialsName.visible
-                            imageViewChatPicture.gone
-
-                            textViewInitialsName.apply {
-                                text = (senderInfo?.second?.value ?: "")?.getInitials()
-
-                                setBackgroundRandomColor(
-                                    R_common.drawable.chat_initials_circle,
-                                    Color.parseColor(
-                                        userColorsHelper.getHexCodeForKey(
-                                            it,
-                                            root.context.getRandomHexCode(),
-                                        )
-                                    ),
-                                )
-                            }
-                        }
-
-                        binding.constraintMediaThreadContainer.gone
-                        binding.includeMessageTypeFileAttachment.root.gone
-                        binding.includeMessageTypeVideoAttachment.root.gone
-                        binding.includeMessageTypeImageAttachment.root.gone
-
-                        binding.includeMessageTypeImageAttachment.apply {
-                            threadHeader.bubbleImageAttachment?.let {
-                                binding.constraintMediaThreadContainer.visible
-                                root.visible
-                                layoutConstraintPaidImageOverlay.gone
-                                loadingImageProgressContainer.visible
-                                imageViewAttachmentImage.visible
-                                imageViewAttachmentImage.scaleType = ImageView.ScaleType.CENTER_CROP
-
-                                onStopSupervisor.scope.launch(viewModel.default) {
-                                    it.media?.localFile?.let {
-                                        imageLoader.load(
-                                            imageViewAttachmentImage,
-                                            it,
-                                            ImageLoaderOptions.Builder().build()
-                                        )
-                                    } ?: it?.url?.let {
-                                        imageLoader.load(
-                                            imageViewAttachmentImage,
-                                            it,
-                                            ImageLoaderOptions.Builder().build()
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        binding.includeMessageTypeVideoAttachment.apply {
-                            (threadHeader.bubbleVideoAttachment as? LayoutState.Bubble.ContainerSecond.VideoAttachment.FileAvailable)?.let {
-                                VideoThumbnailUtil.loadThumbnail(it.file)?.let { thumbnail ->
-                                    binding.constraintMediaThreadContainer.visible
-                                    root.visible
-
-                                    imageViewAttachmentThumbnail.setImageBitmap(thumbnail)
-                                    imageViewAttachmentThumbnail.visible
-                                    layoutConstraintVideoPlayButton.visible
-                                }
-                            }
-                        }
-
-                        binding.includeMessageTypeFileAttachment.apply {
-                            (threadHeader.bubbleFileAttachment as? LayoutState.Bubble.ContainerSecond.FileAttachment.FileAvailable)?.let { fileAttachment ->
-                                binding.constraintMediaThreadContainer.visible
-                                root.visible
-                                progressBarAttachmentFileDownload.gone
-                                buttonAttachmentFileDownload.visible
-
-                                textViewAttachmentFileIcon.text =
-                                    if (fileAttachment.isPdf) {
-                                        getString(R_common.string.material_icon_name_file_pdf)
-                                    } else {
-                                        getString(R_common.string.material_icon_name_file_attachment)
-                                    }
-
-                                textViewAttachmentFileName.text =
-                                    fileAttachment.fileName?.value ?: "File.txt"
-
-                                textViewAttachmentFileSize.text =
-                                    if (fileAttachment.isPdf) {
-                                        if (fileAttachment.pageCount > 1) {
-                                            "${fileAttachment.pageCount} ${getString(
-                                                chat.sphinx.chat_common.R.string.pdf_pages
-                                            )}"
-                                        } else {
-                                            "${fileAttachment.pageCount} ${getString(
-                                                chat.sphinx.chat_common.R.string.pdf_page
-                                            )}"
-                                        }
-                                    } else {
-                                        fileAttachment.fileSize.asFormattedString()
-                                    }
-                            }
-                        }
-
-                        binding.includeMessageTypeAudioAttachment.apply {
-                            (threadHeader.bubbleAudioAttachment as? LayoutState.Bubble.ContainerSecond.AudioAttachment.FileAvailable)?.let { audioAttachment ->
-                                binding.constraintMediaThreadContainer.visible
-                                root.visible
-                                includeMessageTypeAudioAttachment.root.setBackgroundResource(R_common.drawable.background_thread_file_attachment)
-
-                                onStopSupervisor.scope.launch(viewModel.io) {
-                                    viewModel.audioPlayerController.getAudioState(audioAttachment)?.value?.let { state ->
-                                        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
-                                            setAudioAttachmentLayoutForState(state)
-                                        }
-                                    } ?: run {
-                                        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
-                                            setAudioAttachmentLayoutForState(
-                                                AudioMessageState(
-                                                    audioAttachment.messageId,
-                                                    null,
-                                                    null,
-                                                    null,
-                                                    AudioPlayState.Error,
-                                                    1L,
-                                                    0L,
-                                                )
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        senderInfo?.first?.let { photoUrl ->
-                            textViewInitialsName.gone
-                            imageViewChatPicture.visible
-
-                            imageLoader.load(
-                                layoutContactInitialHolder.imageViewChatPicture,
-                                photoUrl.value,
-                                ImageLoaderOptions.Builder()
-                                    .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
-                                    .transformation(Transformation.CircleCrop)
-                                    .build()
-                            )
-                        }
-                    }
-                }
-            }
+            binding.setView(
+                holderScope,
+                holderJobs,
+                disposables,
+                viewModel.dispatchers,
+                imageLoader,
+                viewModel.audioPlayerController,
+                threadHeader,
+                userColorsHelper,
+                onSphinxInteractionListener
+            )
             observeAudioAttachmentState()
+        }
+
+        fun cleanup() {
+            holderJobs.forEach { it.cancel() }
+            holderJobs.clear()
+
+            disposables.forEach { it.dispose() }
+            disposables.clear()
+
+            audioAttachmentJob?.cancel()
+
+            holderScope.coroutineContext.cancelChildren()
         }
 
         init {
@@ -1045,5 +915,26 @@ internal class MessageListAdapter<ARGS : NavArgs>(
 
     init {
         lifecycleOwner.lifecycle.addObserver(this)
+    }
+
+    override fun onViewRecycled(holder: RecyclerView.ViewHolder) {
+        super.onViewRecycled(holder)
+        when (holder) {
+            is MessageListAdapter<*>.MessageViewHolder -> holder.cleanup()
+            is MessageListAdapter<*>.ThreadHeaderViewHolder -> holder.cleanup()
+            is MessageListAdapter<*>.MessageOnlyTextViewHolder -> holder.cleanup()
+        }
+    }
+
+    override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) {
+        super.onDetachedFromRecyclerView(recyclerView)
+
+        for (i in 0 until itemCount) {
+            when (val holder = recyclerView.findViewHolderForAdapterPosition(i)) {
+                is MessageListAdapter<*>.MessageViewHolder -> holder.cleanup()
+            is MessageListAdapter<*>.ThreadHeaderViewHolder -> holder.cleanup()
+            is MessageListAdapter<*>.MessageOnlyTextViewHolder -> holder.cleanup()
+            }
+        }
     }
 }

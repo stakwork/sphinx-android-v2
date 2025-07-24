@@ -29,6 +29,7 @@ import coil.transform.CircleCropTransformation
 import coil.transform.RoundedCornersTransformation
 import coil.transition.CrossfadeTransition
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import okhttp3.CacheControl
@@ -268,6 +269,7 @@ class ImageLoaderAndroid(
                 add(GifDecoder.Factory())
                 add(SvgDecoder.Factory())
             }
+            .dispatcher(Dispatchers.IO.limitedParallelism(3))
             .respectCacheHeaders(false)
             .allowHardware(false)
             .crossfade(200)

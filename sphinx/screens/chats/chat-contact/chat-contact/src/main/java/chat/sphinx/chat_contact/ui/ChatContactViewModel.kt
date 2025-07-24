@@ -45,6 +45,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import io.matthewnelson.android_feature_navigation.util.navArgs
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
 import io.matthewnelson.concept_media_cache.MediaCacheHandler
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -56,6 +58,7 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 
 internal inline val ChatContactFragmentArgs.chatId: ChatId?
@@ -167,6 +170,20 @@ internal class ChatContactViewModel @Inject constructor(
         replay = 1
     )
 
+    init {
+        viewModelScope.launch(dispatchers.default) {
+            // Prime flows in parallel without blocking main thread
+            val initJobs = listOf(
+                async { contactSharedFlow.firstOrNull() },
+            )
+
+            // Wait for all to complete or timeout after reasonable time
+            withTimeoutOrNull(2000) {
+                initJobs.awaitAll()
+            }
+        }
+    }
+
     override suspend fun getChatInfo(): Triple<ChatName?, PhotoUrl?, String>? {
         contactSharedFlow.replayCache.firstOrNull()?.let { contact ->
             return Triple(
@@ -254,30 +271,10 @@ internal class ChatContactViewModel @Inject constructor(
         return initialHolder ?: InitialHolderViewState.None
     }
 
-    private suspend fun getContact(): Contact? {
-        var contact: Contact? = contactSharedFlow.replayCache.firstOrNull()
-            ?: contactSharedFlow.firstOrNull()
-
-        if (contact == null) {
-            try {
-                contactSharedFlow.collect {
-                    if (contact != null) {
-                        contact = it
-                        throw Exception()
-                    }
-                }
-            } catch (e: Exception) {
-            }
-            delay(25L)
-        }
-
-        return contact
-    }
-
     override fun readMessages() {
-        val idResolved: ChatId? = chatId ?: chatSharedFlow.replayCache.firstOrNull()?.id
-        if (idResolved != null) {
-            viewModelScope.launch(mainImmediate) {
+        viewModelScope.launch(io) {
+            val idResolved: ChatId? = chatId ?: chatSharedFlow.replayCache.firstOrNull()?.id
+            if (idResolved != null) {
                 messageRepository.readMessages(idResolved)
             }
         }

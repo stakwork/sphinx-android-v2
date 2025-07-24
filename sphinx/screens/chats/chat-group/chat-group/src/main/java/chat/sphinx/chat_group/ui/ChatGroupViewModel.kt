@@ -154,7 +154,7 @@ class ChatGroupViewModel @Inject constructor(
     }
 
     override fun readMessages() {
-        viewModelScope.launch(mainImmediate) {
+        viewModelScope.launch {
             messageRepository.readMessages(args.chatId)
         }
     }

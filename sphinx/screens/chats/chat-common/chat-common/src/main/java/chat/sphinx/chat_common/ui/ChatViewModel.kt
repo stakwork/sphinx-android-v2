@@ -1094,38 +1094,40 @@ abstract class ChatViewModel<ARGS : NavArgs>(
     }
 
     fun init() {
-        // Prime our states immediately so they're already
-        // updated by the time the Fragment's onStart is called
-        // where they're collected.
-        val setupChatFlowJob = viewModelScope.launch(mainImmediate) {
-            chatSharedFlow.firstOrNull()
-        }
-        val setupHeaderInitialHolderJob = viewModelScope.launch(mainImmediate) {
-            headerInitialHolderSharedFlow.firstOrNull()
-        }
-        val setupViewStateContainerJob = viewModelScope.launch(mainImmediate) {
-            viewStateContainer.viewStateFlow.firstOrNull()
-        }
+        initializeFlowStates()
+        setupAudioPlayerHandler()
+        collectConnectManagerErrorState()
+    }
 
-        viewModelScope.launch(mainImmediate) {
-            delay(500)
-            // cancel the setup jobs as the view has taken over observation
-            // and we don't want to continue collecting endlessly if any of
-            // them are still active. WhileSubscribed will take over.
-            setupChatFlowJob.cancel()
-            setupHeaderInitialHolderJob.cancel()
-            setupViewStateContainerJob.cancel()
-        }
+    private fun initializeFlowStates() {
+        // Use a single coroutine to initialize all flows
+        viewModelScope.launch(dispatchers.default) {
+            // Prime flows in parallel without blocking main thread
+            val initJobs = listOf(
+                async { chatSharedFlow.firstOrNull() },
+                async { headerInitialHolderSharedFlow.firstOrNull() },
+                async { viewStateContainer.viewStateFlow.firstOrNull() }
+            )
 
+            // Wait for all to complete or timeout after reasonable time
+            withTimeoutOrNull(2000) {
+                initJobs.awaitAll()
+            }
+        }
+    }
+
+    private fun setupAudioPlayerHandler() {
         audioPlayerController.streamSatsHandler = { messageUUID, podcastClip ->
             podcastClip?.let { nnPodcastClip ->
-                viewModelScope.launch(io) {
-                    shouldStreamSatsFor(nnPodcastClip, messageUUID)
+                viewModelScope.launch(dispatchers.io) {
+                    try {
+                        shouldStreamSatsFor(nnPodcastClip, messageUUID)
+                    } catch (e: Exception) {
+                        Log.e("ChatViewModel", "Failed to stream sats", e)
+                    }
                 }
             }
         }
-
-        collectConnectManagerErrorState()
     }
 
     private fun collectConnectManagerErrorState(){
@@ -2666,6 +2668,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
     override fun onCleared() {
         super.onCleared()
+
         (audioPlayerController as AudioPlayerControllerImpl).onCleared()
         audioRecorderController.clear()
     }

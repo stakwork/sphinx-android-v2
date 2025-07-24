@@ -2056,11 +2056,13 @@ abstract class ChatFragment<
 
     override fun onPause() {
         super.onPause()
+
         viewModel.readMessages()
     }
 
     override fun onStop() {
         super.onStop()
+
         viewModel.audioPlayerController.pauseMediaIfPlaying()
     }
 

@@ -3672,7 +3672,7 @@ abstract class SphinxRepository(
                         }
                     }
             )
-        }
+    }
 
     override fun getMessageById(messageId: MessageId): Flow<Message?> = flow {
         val queries = coreDB.getSphinxDatabaseQueries()
@@ -3930,36 +3930,30 @@ abstract class SphinxRepository(
     override suspend fun readMessages(chatId: ChatId) {
         readMessagesImpl(
             chatId = chatId,
-            queries = coreDB.getSphinxDatabaseQueries(),
-            executeNetworkRequest = true
+            queries = coreDB.getSphinxDatabaseQueries()
         )
     }
 
     private suspend fun readMessagesImpl(
         chatId: ChatId,
-        queries: SphinxDatabaseQueries,
-        executeNetworkRequest: Boolean
+        queries: SphinxDatabaseQueries
     ) {
         messageLock.withLock {
             withContext(io) {
                 queries.transaction {
                     queries.updateSeen(chatId)
-                }
-            }
-        }
 
-        val message = queries.messageGetMaxIdByChatId(chatId).executeAsOneOrNull()
-        val contact = queries.contactGetById(ContactId(chatId.value)).executeAsOneOrNull()
-        val chat = queries.chatGetById(chatId).executeAsOneOrNull()
+                    val message = queries.messageGetMaxIdByChatId(chatId).executeAsOneOrNull()
+                    val contact = queries.contactGetById(ContactId(chatId.value)).executeAsOneOrNull()
+                    val chat = queries.chatGetById(chatId).executeAsOneOrNull()
 
-        if (message != null) {
-            if (contact != null) {
-                contact.node_pub_key?.value?.let { pubKey ->
-                    connectManager.setReadMessage(pubKey, message.id.value)
-                }
-            } else {
-                chat?.uuid?.value?.let { pubKey ->
-                    connectManager.setReadMessage(pubKey, message.id.value)
+                    if (message != null) {
+                        contact?.node_pub_key?.value?.let { pubKey ->
+                            connectManager.setReadMessage(pubKey, message.id.value)
+                        } ?: chat?.uuid?.value?.let { pubKey ->
+                            connectManager.setReadMessage(pubKey, message.id.value)
+                        }
+                    }
                 }
             }
         }

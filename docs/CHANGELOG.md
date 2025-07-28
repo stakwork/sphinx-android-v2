@@ -1,5 +1,9 @@
 # ChangeLog
 
+## Version 1.0.0-alpha65 (2025-07-28)
+- Adds messages pagination
+- Improves chats loading performance
+
 ## Version 1.0.0-alpha64 (2025-07-24)
 - Improves chats loading performance
 

@@ -16,6 +16,8 @@ import androidx.recyclerview.widget.AsyncListDiffer
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.viewbinding.ViewBinding
+import by.kirich1409.viewbindingdelegate.viewBinding
 import chat.sphinx.chat_common.R
 import chat.sphinx.resources.R as R_common
 import chat.sphinx.chat_common.databinding.*
@@ -76,7 +78,8 @@ internal class MessageListAdapter<ARGS : NavArgs>(
     companion object {
         private const val VIEW_TYPE_MESSAGE = 0
         private const val VIEW_TYPE_THREAD_HEADER = 1
-        private const val VIEW_TYPE_ONLY_TEXT_MSG = 2
+        private const val VIEW_TYPE_ONLY_TEXT_SENT_MSG = 2
+        private const val VIEW_TYPE_ONLY_TEXT_RECEIVED_MSG = 3
     }
 
     interface OnRowLayoutListener {
@@ -116,6 +119,16 @@ internal class MessageListAdapter<ARGS : NavArgs>(
                             oldItem.isPinned                        == newItem.isPinned                      &&
                             oldItem.message?.thread?.size           == newItem.message?.thread?.size
                 }
+                oldItem is MessageHolderViewState.MessageOnlyTextHolderViewState.Received && newItem is MessageHolderViewState.MessageOnlyTextHolderViewState.Received -> {
+                            oldItem.background                      == newItem.background                   &&
+                            oldItem.message                         == newItem.message                      &&
+                            oldItem.invoiceLinesHolderViewState     == newItem.invoiceLinesHolderViewState
+                }
+                oldItem is MessageHolderViewState.MessageOnlyTextHolderViewState.Sent && newItem is MessageHolderViewState.MessageOnlyTextHolderViewState.Sent -> {
+                            oldItem.background                      == newItem.background                   &&
+                            oldItem.message                         == newItem.message                      &&
+                            oldItem.invoiceLinesHolderViewState     == newItem.invoiceLinesHolderViewState
+                }
                 else -> false
             }
         }
@@ -144,7 +157,8 @@ internal class MessageListAdapter<ARGS : NavArgs>(
     override fun getItemViewType(position: Int): Int {
         return when (differ.currentList.getOrNull(position)) {
             is MessageHolderViewState.ThreadHeader -> VIEW_TYPE_THREAD_HEADER
-            is MessageHolderViewState.MessageOnlyTextHolderViewState -> VIEW_TYPE_ONLY_TEXT_MSG
+            is MessageHolderViewState.MessageOnlyTextHolderViewState.Sent -> VIEW_TYPE_ONLY_TEXT_SENT_MSG
+            is MessageHolderViewState.MessageOnlyTextHolderViewState.Received -> VIEW_TYPE_ONLY_TEXT_RECEIVED_MSG
             else -> VIEW_TYPE_MESSAGE
         }
     }
@@ -309,13 +323,21 @@ internal class MessageListAdapter<ARGS : NavArgs>(
                 )
                 MessageViewHolder(binding)
             }
-            VIEW_TYPE_ONLY_TEXT_MSG -> {
-                val binding = LayoutOnlyTextMessageHolderBinding.inflate(
+            VIEW_TYPE_ONLY_TEXT_SENT_MSG -> {
+                val binding = LayoutOnlyTextSentMessageHolderBinding.inflate(
                     LayoutInflater.from(parent.context),
                     parent,
                     false
                 )
-                MessageOnlyTextViewHolder(binding)
+                MessageOnlyTextSentViewHolder(binding)
+            }
+            VIEW_TYPE_ONLY_TEXT_RECEIVED_MSG -> {
+                val binding = LayoutOnlyTextReceivedMessageHolderBinding.inflate(
+                    LayoutInflater.from(parent.context),
+                    parent,
+                    false
+                )
+                MessageOnlyTextReceivedViewHolder(binding)
             }
             VIEW_TYPE_THREAD_HEADER -> {
                 val binding = LayoutThreadMessageHeaderBinding.inflate(
@@ -334,7 +356,10 @@ internal class MessageListAdapter<ARGS : NavArgs>(
             is MessageListAdapter<*>.ThreadHeaderViewHolder -> {
                 holder.bind(position)
             }
-            is MessageListAdapter<*>.MessageOnlyTextViewHolder -> {
+            is MessageListAdapter<*>.MessageOnlyTextSentViewHolder -> {
+                holder.bind(position)
+            }
+            is MessageListAdapter<*>.MessageOnlyTextReceivedViewHolder -> {
                 holder.bind(position)
             }
             is MessageListAdapter<*>.MessageViewHolder -> {
@@ -378,8 +403,8 @@ internal class MessageListAdapter<ARGS : NavArgs>(
         private val binding: LayoutMessageHolderBinding
     ): RecyclerView.ViewHolder(binding.root), DefaultLifecycleObserver {
 
-        private val holderJobs: ArrayList<Job> = ArrayList(15)
-        private val disposables: ArrayList<Disposable> = ArrayList(4)
+        private val holderJobs: ArrayList<Job> = ArrayList(17)
+        private val disposables: ArrayList<Disposable> = ArrayList(12)
         private var currentViewState: MessageHolderViewState? = null
 
         private val holderScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -703,25 +728,42 @@ internal class MessageListAdapter<ARGS : NavArgs>(
 
     }
 
-    inner class MessageOnlyTextViewHolder(
-        private val binding: LayoutOnlyTextMessageHolderBinding
+    inner class MessageOnlyTextSentViewHolder(
+        binding: LayoutOnlyTextSentMessageHolderBinding
+    ) : MessageOnlyTextCommonViewHolder(
+        binding,
+        LayoutOnlyTextMessageHolderBubbleBinding.bind(
+            binding.root.findViewById(R.id.include_message_holder_bubble)
+        )
+    ), DefaultLifecycleObserver
+
+    inner class MessageOnlyTextReceivedViewHolder(
+        binding: LayoutOnlyTextReceivedMessageHolderBinding
+    ) : MessageOnlyTextCommonViewHolder(
+        binding,
+        LayoutOnlyTextMessageHolderBubbleBinding.bind(
+            binding.root.findViewById(R.id.include_message_holder_bubble)
+        )
+    ), DefaultLifecycleObserver
+
+    abstract inner class MessageOnlyTextCommonViewHolder(
+        val binding: ViewBinding,
+        private val bubbleHolder: LayoutOnlyTextMessageHolderBubbleBinding
     ) : RecyclerView.ViewHolder(binding.root), DefaultLifecycleObserver {
 
-        private val holderJobs: ArrayList<Job> = ArrayList(15)
-        private val disposables: ArrayList<Disposable> = ArrayList(4)
+        private val holderJobs: ArrayList<Job> = ArrayList(2)
+        private val disposables: ArrayList<Disposable> = ArrayList(1)
         private var currentViewState: MessageHolderViewState? = null
-
         private val holderScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
         private val onSphinxInteractionListener: SphinxUrlSpan.OnInteractionListener
 
         init {
-            binding.includeMessageHolderBubble.apply {
-
+            bubbleHolder.apply {
                 val selectedMessageLongClickListener = OnLongClickListener {
                     SelectedMessageViewState.SelectedMessage.instantiate(
                         messageHolderViewState = currentViewState,
-                        holderYPosTop = Px(binding.root.y + binding.includeMessageHolderBubble.root.y),
+                        holderYPosTop = Px(binding.root.y + bubbleHolder.root.y),
                         holderHeight = Px(binding.root.measuredHeight.toFloat()),
                         holderWidth = Px(binding.root.measuredWidth.toFloat()),
                         bubbleXPosStart = Px(root.x),
@@ -758,17 +800,29 @@ internal class MessageListAdapter<ARGS : NavArgs>(
 
             val viewState = differ.currentList.elementAtOrNull(position).also { currentViewState = it } ?: return
 
-            binding.setView(
-                holderScope,
-                holderJobs,
-                disposables,
-                viewModel.dispatchers,
-                imageLoader,
-                recyclerViewWidth,
-                viewState,
-                userColorsHelper,
-                onSphinxInteractionListener
-            )
+            (binding as? LayoutOnlyTextReceivedMessageHolderBinding)?.let {
+                binding.setView(
+                    holderScope,
+                    holderJobs,
+                    disposables,
+                    viewModel.dispatchers,
+                    imageLoader,
+                    recyclerViewWidth,
+                    viewState,
+                    userColorsHelper,
+                    onSphinxInteractionListener
+                )
+            } ?: (binding as? LayoutOnlyTextSentMessageHolderBinding)?.let {
+                binding.setView(
+                    holderScope,
+                    holderJobs,
+                    viewModel.dispatchers,
+                    recyclerViewWidth,
+                    viewState,
+                    userColorsHelper,
+                    onSphinxInteractionListener
+                )
+            }
         }
 
         fun cleanup() {
@@ -792,8 +846,8 @@ internal class MessageListAdapter<ARGS : NavArgs>(
     ) : RecyclerView.ViewHolder(binding.root), DefaultLifecycleObserver {
         private var threadHeaderViewState: MessageHolderViewState.ThreadHeader? = null
 
-        private val holderJobs: ArrayList<Job> = ArrayList(15)
-        private val disposables: ArrayList<Disposable> = ArrayList(4)
+        private val holderJobs: ArrayList<Job> = ArrayList(17)
+        private val disposables: ArrayList<Disposable> = ArrayList(12)
         private val holderScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
         private var audioAttachmentJob: Job? = null
@@ -922,7 +976,8 @@ internal class MessageListAdapter<ARGS : NavArgs>(
         when (holder) {
             is MessageListAdapter<*>.MessageViewHolder -> holder.cleanup()
             is MessageListAdapter<*>.ThreadHeaderViewHolder -> holder.cleanup()
-            is MessageListAdapter<*>.MessageOnlyTextViewHolder -> holder.cleanup()
+            is MessageListAdapter<*>.MessageOnlyTextSentViewHolder -> holder.cleanup()
+            is MessageListAdapter<*>.MessageOnlyTextReceivedViewHolder -> holder.cleanup()
         }
     }
 
@@ -933,7 +988,8 @@ internal class MessageListAdapter<ARGS : NavArgs>(
             when (val holder = recyclerView.findViewHolderForAdapterPosition(i)) {
                 is MessageListAdapter<*>.MessageViewHolder -> holder.cleanup()
             is MessageListAdapter<*>.ThreadHeaderViewHolder -> holder.cleanup()
-            is MessageListAdapter<*>.MessageOnlyTextViewHolder -> holder.cleanup()
+            is MessageListAdapter<*>.MessageOnlyTextSentViewHolder -> holder.cleanup()
+                is MessageListAdapter<*>.MessageOnlyTextReceivedViewHolder -> holder.cleanup()
             }
         }
     }

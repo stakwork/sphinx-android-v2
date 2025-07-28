@@ -603,7 +603,7 @@ class ChatTribeViewModel @Inject constructor(
     }
 
     override fun reloadPinnedMessage() {
-        viewModelScope.launch(mainImmediate) {
+        viewModelScope.launch(default) {
             getChat()?.let { nnChat ->
 
                 (pinedMessageDataViewState.value as? PinedMessageDataViewState.Data)?.let { viewState ->
@@ -628,41 +628,43 @@ class ChatTribeViewModel @Inject constructor(
         messageUUID?.let { uuid ->
             if (uuid.value.isNotEmpty()) {
                 messageRepository.getMessageByUUID(uuid).firstOrNull()?.let { message ->
-                    pinedMessageDataViewState.updateViewState(
-                        getPinnedMessageData(message)
-                    )
+                    val pinnedMsgData = getPinnedMessageData(message)
+
+                    viewModelScope.launch(mainImmediate) {
+                        pinedMessageDataViewState.updateViewState(pinnedMsgData)
+                    }
                     return
                 } ?: run {
                     messageRepository.fetchPinnedMessageByUUID(uuid, chatId)
                 }
             }
         }
-        pinedMessageDataViewState.updateViewState(
-            PinedMessageDataViewState.Idle
-        )
+        viewModelScope.launch(mainImmediate) {
+            pinedMessageDataViewState.updateViewState(
+                PinedMessageDataViewState.Idle
+            )
+        }
     }
 
     private suspend fun getPinnedMessageData(message: Message): PinedMessageDataViewState {
         var pinnedMessageData: PinedMessageDataViewState = PinedMessageDataViewState.Idle
 
-        viewModelScope.launch(mainImmediate) {
-            val owner = getOwner()
-            val isOwner = getChat().isTribeOwnedByAccount(getOwner().nodePubKey)
-            val messageContent = message.retrieveTextToShow()
-            val senderAlias = if (isOwner) owner.alias?.value else message.senderAlias?.value
-            val senderPic = if (isOwner) owner.photoUrl else message.senderPic
+        val owner = getOwner()
+        val isOwner = getChat().isTribeOwnedByAccount(getOwner().nodePubKey)
+        val messageContent = message.retrieveTextToShow()
+        val senderAlias = if (isOwner) owner.alias?.value else message.senderAlias?.value
+        val senderPic = if (isOwner) owner.photoUrl else message.senderPic
 
-            messageContent?.let {
-                pinnedMessageData = PinedMessageDataViewState.Data(
-                    message = message,
-                    messageContent = messageContent,
-                    isOwnTribe = isOwner,
-                    senderAlias = senderAlias ?: "Unknown",
-                    senderPic = senderPic,
-                    senderColorKey = message.getColorKey()
-                )
-            }
-        }.join()
+        messageContent?.let {
+            pinnedMessageData = PinedMessageDataViewState.Data(
+                message = message,
+                messageContent = messageContent,
+                isOwnTribe = isOwner,
+                senderAlias = senderAlias ?: "Unknown",
+                senderPic = senderPic,
+                senderColorKey = message.getColorKey()
+            )
+        }
 
         return pinnedMessageData
     }

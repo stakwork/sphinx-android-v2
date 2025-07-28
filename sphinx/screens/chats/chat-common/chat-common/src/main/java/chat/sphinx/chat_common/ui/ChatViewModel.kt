@@ -1181,6 +1181,10 @@ abstract class ChatViewModel<ARGS : NavArgs>(
     }
 
     var messagesLoadJob: Job? = null
+    private var currentMessageLimit = 100L
+    private val messageLimitFlow = MutableStateFlow(100L)
+    private var isLoadingMore = false
+
     fun screenInit() {
         if (messageHolderViewStateFlow.value.isNotEmpty()) {
             return
@@ -1191,6 +1195,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         }
 
         var isScrollDownButtonSetup = false
+
         messagesLoadJob = viewModelScope.launch(mainImmediate) {
             connectManagerRepository.getTagsByChatId(getChat().id)
 
@@ -1203,41 +1208,57 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                     messageHolderViewStateFlow.value = list
                     changeThreadHeaderState(true)
 
+                    scrollDownButtonCount.value = messages.size.toLong()
+
                     delay(50)
                     hideShimmeringView()
-                    scrollDownButtonCount.value = messages.size.toLong()
                 }
             } else {
-                messageRepository.getAllMessagesToShowByChatId(getChat().id, 100).firstOrNull()?.let { messages ->
-                    messageHolderViewStateFlow.value = getMessageHolderViewStateList(messages).toList()
-                    delay(50)
-                    hideShimmeringView()
-                }
-
-                delay(1000L)
-
-                messageRepository.getAllMessagesToShowByChatId(getChat().id, 500).distinctUntilChanged().collect { messages ->
-                    messageHolderViewStateFlow.value = getMessageHolderViewStateList(messages).toList()
-
-                    reloadPinnedMessage()
-
-                    if (!isScrollDownButtonSetup) {
-                        setupScrollDownButtonCount()
-                        isScrollDownButtonSetup = true
+                messageLimitFlow
+                    .flatMapLatest { limit ->
+                        messageRepository.getAllMessagesToShowByChatId(getChat().id, limit).distinctUntilChanged()
                     }
+                    .collect { messages ->
+                        messageHolderViewStateFlow.value = getMessageHolderViewStateList(messages).toList()
 
-                    val lastMessage = messages.lastOrNull()
-                    val showClockIcon = lastMessage?.let {
-                        it.status == MessageStatus.Pending &&
-                                System.currentTimeMillis() - it.date.time > 30_000
-                    } == true
+                        reloadPinnedMessage()
 
-                    updateClockIconState(showClockIcon)
-                }
+                        if (!isScrollDownButtonSetup) {
+                            setupScrollDownButtonCount()
+                            isScrollDownButtonSetup = true
+                        }
+
+                        val lastMessage = messages.lastOrNull()
+                        val showClockIcon = lastMessage?.let {
+                            it.status == MessageStatus.Pending &&
+                                    System.currentTimeMillis() - it.date.time > 30_000
+                        } == true
+
+                        updateClockIconState(showClockIcon)
+
+                        isLoadingMore = false
+
+                        delay(25)
+                        hideShimmeringView()
+                    }
             }
         }
         collectThread()
         collectUnseenMessagesNumber()
+    }
+
+    fun loadMoreMessages() {
+        if (isThreadChat()) return
+        if (isLoadingMore) return
+
+        isLoadingMore = true
+        currentMessageLimit += 100
+        messageLimitFlow.value = currentMessageLimit
+    }
+
+    fun resetMessageLimit() {
+        currentMessageLimit = 100
+        messageLimitFlow.value = currentMessageLimit
     }
 
     fun hideShimmeringView() {
@@ -1251,7 +1272,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         _clockIconState.value = showClockIcon
     }
 
-        private fun setupScrollDownButtonCount() {
+    private fun setupScrollDownButtonCount() {
         val unseenMessagesCount = scrollDownButtonCount.value ?: 0
         if (unseenMessagesCount > 0.toLong()) {
             scrollDownViewStateContainer.updateViewState(

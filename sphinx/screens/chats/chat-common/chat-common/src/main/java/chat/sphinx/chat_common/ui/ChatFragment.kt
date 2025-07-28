@@ -27,6 +27,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.core.widget.addTextChangedListener
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.LifecycleCoroutineScope
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavArgs
@@ -883,6 +884,7 @@ abstract class ChatFragment<
     private fun setupScrollDown(){
         scrollDownButtonBinding.root.setOnClickListener {
             forceScrollToBottom()
+            viewModel.updateScrollDownButton(false)
         }
     }
 
@@ -908,44 +910,54 @@ abstract class ChatFragment<
             adapter = ConcatAdapter(messageListAdapter, footerAdapter)
             itemAnimator = null
 
-            addOnScrollListener(object : RecyclerView.OnScrollListener() {
-                override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                    super.onScrolled(recyclerView, dx, dy)
-
-                    if (viewModel.isThreadChat()) {
-                        val firstVisiblePosition = linearLayoutManager.findFirstVisibleItemPosition()
-
-                        if (firstVisiblePosition > 0) {
-                            viewModel.changeThreadHeaderState(true)
-                        }
-
-                        if (firstVisiblePosition == 0) {
-                            viewModel.changeThreadHeaderState(false)
-                        }
-                    }
-                }
-
-                override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
-                    super.onScrollStateChanged(recyclerView, newState)
-
-                    if (!recyclerView.canScrollVertically(1) && newState == RecyclerView.SCROLL_STATE_IDLE) {
-                        lifecycleScope.launch(viewModel.mainImmediate) {
-                            viewModel.readMessages()
-                        }
-                    }
-
-                    if (recyclerView.canScrollVertically(1)) {
-                        viewModel.updateScrollDownButton(true)
-                    }
-                    else {
-                        viewModel.updateScrollDownButton(false)
-                    }
-                }
-            })
+            val chatScrollListener = ChatScrollListener(lifecycleScope, viewModel, linearLayoutManager)
+            addOnScrollListener(chatScrollListener)
         }
-//        viewModel.hideShimmeringView()
-//        Log.d("TimeTracker", "Chat messages were displayed in ${System.currentTimeMillis() - timeTrackerStart} milliseconds")
-//        viewModel.sendAppLog("- Chat messages were displayed in ${System.currentTimeMillis() - timeTrackerStart} milliseconds")
+    }
+
+    class ChatScrollListener<ARGS : NavArgs>(
+        private val lifecycleScope: LifecycleCoroutineScope,
+        private val viewModel: ChatViewModel<ARGS>,
+        private val layoutManager: LinearLayoutManager
+    ) : RecyclerView.OnScrollListener() {
+
+        private val threshold = 5 // Load more when 5 items from top
+
+        override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+            super.onScrolled(recyclerView, dx, dy)
+
+            val firstVisiblePosition = layoutManager.findFirstVisibleItemPosition()
+
+            if (viewModel.isThreadChat()) {
+                if (firstVisiblePosition > 0) {
+                    viewModel.changeThreadHeaderState(true)
+                }
+
+                if (firstVisiblePosition == 0) {
+                    viewModel.changeThreadHeaderState(false)
+                }
+            } else if (dy < 0) {
+                if (firstVisiblePosition < threshold) {
+                    viewModel.loadMoreMessages()
+                }
+            }
+        }
+
+        override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+            super.onScrollStateChanged(recyclerView, newState)
+
+            if (!recyclerView.canScrollVertically(1) && newState == RecyclerView.SCROLL_STATE_IDLE) {
+                lifecycleScope.launch(viewModel.mainImmediate) {
+                    viewModel.readMessages()
+                }
+            }
+
+            if (recyclerView.canScrollVertically(1)) {
+                viewModel.updateScrollDownButton(true)
+            } else {
+                viewModel.updateScrollDownButton(false)
+            }
+        }
     }
 
     protected fun scrollToBottom(

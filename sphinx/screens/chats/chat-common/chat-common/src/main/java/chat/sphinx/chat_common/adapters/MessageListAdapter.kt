@@ -211,7 +211,7 @@ internal class MessageListAdapter<ARGS : NavArgs>(
     }
 
     fun forceScrollToBottom() {
-        recyclerView.layoutManager?.smoothScrollToPosition(recyclerView, null, differ.currentList.size);
+        recyclerView.layoutManager?.scrollToPosition(differ.currentList.size)
     }
 
     fun highlightAndScrollToSearchResult(

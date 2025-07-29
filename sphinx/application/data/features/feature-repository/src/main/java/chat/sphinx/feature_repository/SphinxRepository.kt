@@ -345,6 +345,7 @@ abstract class SphinxRepository(
         setMnemonicWords(emptyList())
         connectionManagerState.value = null
         connectManagerErrorState.value = null
+        connectManager.resetMQTT()
 
         applicationScope.launch(io) {
             clearDatabase()

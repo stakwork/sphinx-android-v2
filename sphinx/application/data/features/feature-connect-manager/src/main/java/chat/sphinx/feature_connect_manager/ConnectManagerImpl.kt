@@ -873,6 +873,10 @@ class ConnectManagerImpl: ConnectManager()
             if (xPub != null) {
                 connectToMQTT(mixerIp!!, xPub, now, sig)
             }
+        } ?: run {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.InvalidMnemonicError)
+            }
         }
     }
 
@@ -2116,7 +2120,7 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
-    private fun resetMQTT() {
+    override fun resetMQTT() {
         if (mqttClient?.isConnected == true) {
             mqttClient?.disconnect()
         }

@@ -4,6 +4,7 @@ sealed class ConnectManagerError {
 
     object GenerateXPubError: ConnectManagerError()
     object GenerateMnemonicError: ConnectManagerError()
+    object InvalidMnemonicError: ConnectManagerError()
     object ProcessInviteError: ConnectManagerError()
     object SubscribeOwnerError: ConnectManagerError()
     object ParseInvite: ConnectManagerError()

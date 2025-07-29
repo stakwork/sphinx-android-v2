@@ -398,6 +398,11 @@ internal class OnBoardConnectingViewModel @Inject constructor(
                             app.getString(R_common.string.connect_manager_restore_connection_error))
                         )
                     }
+                    is ConnectManagerError.InvalidMnemonicError -> {
+                        submitSideEffect(OnBoardConnectingSideEffect.NotifyError(
+                            app.getString(R_common.string.connect_manager_restore_invalid_mnemonic_error))
+                        )
+                    }
                     else -> {}
                 }
 

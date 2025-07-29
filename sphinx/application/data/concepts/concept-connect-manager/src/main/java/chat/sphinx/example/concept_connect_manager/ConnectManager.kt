@@ -51,6 +51,7 @@ abstract class ConnectManager {
     abstract fun reconnectWithBackOff()
     abstract fun attemptReconnectOnResume()
     abstract fun retrieveLspIp(): String?
+    abstract fun resetMQTT()
 
     // Contact Management Methods
     abstract fun createContact(contact: NewContact)

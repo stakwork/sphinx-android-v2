@@ -1,5 +1,8 @@
 # ChangeLog
 
+## Version 1.0.0-alpha66 (2025-07-29)
+- Fixes invalid mnemonic restore issue
+
 ## Version 1.0.0-alpha65 (2025-07-28)
 - Adds messages pagination
 - Improves chats loading performance

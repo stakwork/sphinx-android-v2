@@ -102,8 +102,6 @@ internal class DashboardFragment : MotionLayoutFragment<
 
         grapheneOsManager.optimizeViewContainer(this)
 
-        viewModel.screenInit()
-
         findNavController().addOnDestinationChangedListener(CloseDrawerOnDestinationChange())
 
         setupViewPager()

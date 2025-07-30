@@ -1,5 +1,8 @@
 # ChangeLog
 
+## Version 1.0.0-alpha67 (2025-07-30)
+- Fixes dashboard tabs badges
+
 ## Version 1.0.0-alpha66 (2025-07-29)
 - Fixes invalid mnemonic restore issue
 

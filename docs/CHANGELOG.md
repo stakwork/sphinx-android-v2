@@ -1,5 +1,8 @@
 # ChangeLog
 
+## Version 1.0.0-alpha68 (2025-07-31)
+- Performance improvements
+
 ## Version 1.0.0-alpha67 (2025-07-30)
 - Fixes dashboard tabs badges
 

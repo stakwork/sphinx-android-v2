@@ -1,6 +1,5 @@
 package chat.sphinx.chat_common.ui.viewstate.messageholder
 
-import android.graphics.Color
 import android.widget.ImageView
 import chat.sphinx.chat_common.databinding.LayoutThreadMessageHeaderBinding
 import chat.sphinx.chat_common.ui.viewstate.audio.AudioMessageState
@@ -14,7 +13,6 @@ import chat.sphinx.concept_image_loader.Transformation
 import chat.sphinx.concept_user_colors_helper.UserColorsHelper
 import chat.sphinx.highlighting_tool.SphinxHighlightingTool
 import chat.sphinx.highlighting_tool.SphinxUrlSpan
-import chat.sphinx.resources.getRandomHexCode
 import chat.sphinx.resources.getString
 import chat.sphinx.resources.setBackgroundRandomColor
 import chat.sphinx.wrapper_common.PhotoUrl
@@ -40,6 +38,7 @@ internal fun LayoutThreadMessageHeaderBinding.setView(
     audioPlayerController: AudioPlayerController,
     threadHeader: MessageHolderViewState.ThreadHeader,
     userColorsHelper: UserColorsHelper,
+    colorCache: ColorCache,
     onSphinxInteractionListener: SphinxUrlSpan.OnInteractionListener? = null
 ) {
     apply {
@@ -86,23 +85,22 @@ internal fun LayoutThreadMessageHeaderBinding.setView(
         })
 
         layoutContactInitialHolder.apply {
-            senderInfo?.third?.let {
+            senderInfo?.third?.let { colorKey ->
                 textViewInitialsName.visible
                 imageViewChatPicture.gone
 
                 textViewInitialsName.apply {
                     text = (senderInfo.second?.value ?: "").getInitials()
 
-                    holderScope.launch(dispatchers.mainImmediate) {
-                        setBackgroundRandomColor(
-                            R_common.drawable.chat_initials_circle,
-                            Color.parseColor(
-                                userColorsHelper.getHexCodeForKey(
-                                    it,
-                                    root.context.getRandomHexCode(),
-                                )
-                            ),
-                        )
+                    holderScope.launch(dispatchers.default) {
+                        val color = colorCache.getColor(colorKey, root.context, holderScope, userColorsHelper)
+
+                        launch(dispatchers.mainImmediate) {
+                            setBackgroundRandomColor(
+                                R_common.drawable.chat_initials_circle,
+                                color,
+                            )
+                        }
                     }.let { job ->
                         holderJobs.add(job)
                     }

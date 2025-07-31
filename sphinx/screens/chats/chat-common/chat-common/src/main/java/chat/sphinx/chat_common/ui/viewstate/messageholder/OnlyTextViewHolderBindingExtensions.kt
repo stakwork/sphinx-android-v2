@@ -1,6 +1,5 @@
 package chat.sphinx.chat_common.ui.viewstate.messageholder
 
-import android.graphics.Color
 import android.view.View
 import android.widget.ImageView
 import android.widget.Space
@@ -18,7 +17,6 @@ import chat.sphinx.concept_user_colors_helper.UserColorsHelper
 import chat.sphinx.highlighting_tool.SphinxHighlightingTool
 import chat.sphinx.highlighting_tool.SphinxLinkify
 import chat.sphinx.highlighting_tool.SphinxUrlSpan
-import chat.sphinx.resources.getRandomHexCode
 import chat.sphinx.resources.getString
 import chat.sphinx.wrapper_view.Px
 import io.matthewnelson.android_feature_screens.util.gone
@@ -41,6 +39,7 @@ internal fun LayoutOnlyTextSentMessageHolderBinding.setView(
     recyclerViewWidth: Px,
     viewState: MessageHolderViewState,
     userColorsHelper: UserColorsHelper,
+    colorCache: ColorCache,
     onSphinxInteractionListener: SphinxUrlSpan.OnInteractionListener? = null
 ) {
     apply {
@@ -52,7 +51,8 @@ internal fun LayoutOnlyTextSentMessageHolderBinding.setView(
             holderJobs,
             dispatchers,
             holderScope,
-            userColorsHelper
+            userColorsHelper,
+            colorCache
         )
         setBubbleBackground(
             viewState, recyclerViewWidth
@@ -87,7 +87,8 @@ internal inline fun LayoutOnlyTextSentMessageHolderBinding.setStatusHeader(
     holderJobs: ArrayList<Job>,
     dispatchers: CoroutineDispatchers,
     holderScope: CoroutineScope,
-    userColorsHelper: UserColorsHelper
+    userColorsHelper: UserColorsHelper,
+    colorCache: ColorCache
 ) {
     includeMessageStatusHeader.apply {
         if (statusHeader == null) {
@@ -102,15 +103,14 @@ internal inline fun LayoutOnlyTextSentMessageHolderBinding.setStatusHeader(
                     } else {
                         visible
                         text = name
-                        holderScope.launch(dispatchers.mainImmediate) {
-                            textViewMessageStatusReceivedSenderName.setTextColor(
-                                Color.parseColor(
-                                    userColorsHelper.getHexCodeForKey(
-                                        statusHeader.colorKey,
-                                        root.context.getRandomHexCode()
-                                    )
+                        holderScope.launch(dispatchers.default) {
+                            val color = colorCache.getColor(statusHeader.colorKey, root.context, holderScope, userColorsHelper)
+
+                            launch(dispatchers.mainImmediate) {
+                                textViewMessageStatusReceivedSenderName.setTextColor(
+                                    color
                                 )
-                            )
+                            }
                         }.let { job ->
                             holderJobs.add(job)
                         }
@@ -285,24 +285,25 @@ internal fun LayoutOnlyTextReceivedMessageHolderBinding.setView(
     recyclerViewWidth: Px,
     viewState: MessageHolderViewState,
     userColorsHelper: UserColorsHelper,
+    colorCache: ColorCache,
     onSphinxInteractionListener: SphinxUrlSpan.OnInteractionListener? = null
 ) {
     apply {
-        holderScope.launch(dispatchers.mainImmediate) {
+        holderScope.launch(dispatchers.default) {
             val initialsColor = viewState.statusHeader?.colorKey?.let { key ->
-                Color.parseColor(
-                    userColorsHelper.getHexCodeForKey(key, root.context.getRandomHexCode())
-                )
+                colorCache.getColor(key, root.context, holderScope, userColorsHelper)
             }
 
-            viewState.initialHolder.setInitialHolder(
-                includeMessageHolderChatImageInitialHolder.textViewInitialsName,
-                includeMessageHolderChatImageInitialHolder.imageViewChatPicture,
-                includeMessageStatusHeader,
-                imageLoader,
-                initialsColor
-            )?.also {
-                disposables.add(it)
+            launch(dispatchers.mainImmediate) {
+                viewState.initialHolder.setInitialHolder(
+                    includeMessageHolderChatImageInitialHolder.textViewInitialsName,
+                    includeMessageHolderChatImageInitialHolder.imageViewChatPicture,
+                    includeMessageStatusHeader,
+                    imageLoader,
+                    initialsColor
+                )?.also {
+                    disposables.add(it)
+                }
             }
         }.let { job ->
             holderJobs.add(job)
@@ -315,7 +316,8 @@ internal fun LayoutOnlyTextReceivedMessageHolderBinding.setView(
             holderJobs,
             dispatchers,
             holderScope,
-            userColorsHelper
+            userColorsHelper,
+            colorCache
         )
         setBubbleBackground(
             viewState, recyclerViewWidth
@@ -350,7 +352,8 @@ internal inline fun LayoutOnlyTextReceivedMessageHolderBinding.setStatusHeader(
     holderJobs: ArrayList<Job>,
     dispatchers: CoroutineDispatchers,
     holderScope: CoroutineScope,
-    userColorsHelper: UserColorsHelper
+    userColorsHelper: UserColorsHelper,
+    colorCache: ColorCache
 ) {
     includeMessageStatusHeader.apply {
         if (statusHeader == null) {
@@ -369,15 +372,14 @@ internal inline fun LayoutOnlyTextReceivedMessageHolderBinding.setStatusHeader(
                     } else {
                         visible
                         text = name
-                        holderScope.launch(dispatchers.mainImmediate) {
-                            textViewMessageStatusReceivedSenderName.setTextColor(
-                                Color.parseColor(
-                                    userColorsHelper.getHexCodeForKey(
-                                        statusHeader.colorKey,
-                                        root.context.getRandomHexCode()
-                                    )
+                        holderScope.launch(dispatchers.default) {
+                            val color = colorCache.getColor(statusHeader.colorKey, root.context, holderScope, userColorsHelper)
+
+                            launch(dispatchers.mainImmediate) {
+                                textViewMessageStatusReceivedSenderName.setTextColor(
+                                    color
                                 )
-                            )
+                            }
                         }.let { job ->
                             holderJobs.add(job)
                         }

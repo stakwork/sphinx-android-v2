@@ -562,11 +562,11 @@ abstract class SphinxRepository(
     override fun getTagsByChatId(chatId: ChatId) {
         applicationScope.launch(io) {
             getSentConfirmedMessagesByChatId(chatId).collect { messages ->
-            if (messages.isNotEmpty()) {
-                val tags = messages.mapNotNull { it.tagMessage?.value }.distinct()
-                connectManager.getMessagesStatusByTags(tags)
+                if (messages.isNotEmpty()) {
+                    val tags = messages.mapNotNull { it.tagMessage?.value }.distinct()
+                    connectManager.getMessagesStatusByTags(tags)
+                }
             }
-        }
         }
     }
 

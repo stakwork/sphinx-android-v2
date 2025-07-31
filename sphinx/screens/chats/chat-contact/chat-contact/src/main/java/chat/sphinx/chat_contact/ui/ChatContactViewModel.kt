@@ -54,6 +54,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.shareIn
@@ -230,6 +231,7 @@ internal class ChatContactViewModel @Inject constructor(
         TODO("Not yet implemented")
     }
 
+    private var cachedInitialHolder: InitialHolderViewState? = null
     override suspend fun getInitialHolderViewStateForReceivedMessage(
         message: Message,
         owner: Contact
@@ -245,30 +247,25 @@ internal class ChatContactViewModel @Inject constructor(
             }
         }
 
-        headerInitialHolderSharedFlow.replayCache.firstOrNull()?.let { initialHolder ->
-            if (initialHolder !is InitialHolderViewState.None) {
-                return initialHolder
+        cachedInitialHolder?.let {
+            return it
+        }
+
+        cachedInitialHolder = getHeaderInitialHolderOnce()
+
+        return cachedInitialHolder  ?: InitialHolderViewState.None
+    }
+
+    private suspend fun getHeaderInitialHolderOnce(): InitialHolderViewState? {
+        headerInitialHolderSharedFlow.replayCache.firstOrNull()?.let { holder ->
+            if (holder !is InitialHolderViewState.None) {
+                return holder
             }
         }
 
-        headerInitialHolderSharedFlow.firstOrNull()?.let { initialHolder ->
-            if (initialHolder !is InitialHolderViewState.None) {
-                return initialHolder
-            }
-        }
-
-        var initialHolder: InitialHolderViewState? = null
-
-        try {
-            headerInitialHolderSharedFlow.collect {
-                initialHolder = it
-                throw Exception()
-            }
-        } catch (e: Exception) {
-        }
-        delay(25L)
-
-        return initialHolder ?: InitialHolderViewState.None
+        return withTimeoutOrNull(1000) {
+            headerInitialHolderSharedFlow.first { it !is InitialHolderViewState.None }
+        } ?: InitialHolderViewState.None
     }
 
     override fun readMessages() {

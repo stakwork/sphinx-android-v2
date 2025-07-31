@@ -666,8 +666,9 @@ internal class MessageListAdapter<ARGS : NavArgs>(
                 recyclerViewWidth,
                 viewState,
                 userColorsHelper,
+                viewModel.colorCache,
                 onSphinxInteractionListener,
-                onRowLayoutListener
+                onRowLayoutListener,
             )
 
             observeAudioAttachmentState()
@@ -810,7 +811,8 @@ internal class MessageListAdapter<ARGS : NavArgs>(
                     recyclerViewWidth,
                     viewState,
                     userColorsHelper,
-                    onSphinxInteractionListener
+                    viewModel.colorCache,
+                    onSphinxInteractionListener,
                 )
             } ?: (binding as? LayoutOnlyTextSentMessageHolderBinding)?.let {
                 binding.setView(
@@ -820,6 +822,7 @@ internal class MessageListAdapter<ARGS : NavArgs>(
                     recyclerViewWidth,
                     viewState,
                     userColorsHelper,
+                    viewModel.colorCache,
                     onSphinxInteractionListener
                 )
             }
@@ -945,6 +948,7 @@ internal class MessageListAdapter<ARGS : NavArgs>(
                 viewModel.audioPlayerController,
                 threadHeader,
                 userColorsHelper,
+                viewModel.colorCache,
                 onSphinxInteractionListener
             )
             observeAudioAttachmentState()

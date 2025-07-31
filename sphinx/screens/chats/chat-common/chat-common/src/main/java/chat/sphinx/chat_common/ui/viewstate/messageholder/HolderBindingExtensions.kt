@@ -1,6 +1,7 @@
 package chat.sphinx.chat_common.ui.viewstate.messageholder
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.graphics.Color
 import android.view.Gravity
 import android.view.View
@@ -22,9 +23,6 @@ import chat.sphinx.chat_common.databinding.LayoutMessageHolderBinding
 import chat.sphinx.chat_common.databinding.LayoutMessageStatusHeaderBinding
 import chat.sphinx.chat_common.databinding.LayoutMessageTypeAttachmentAudioBinding
 import chat.sphinx.chat_common.databinding.LayoutMessageTypePodcastClipBinding
-import chat.sphinx.chat_common.databinding.LayoutOnlyTextReceivedMessageHolderBinding
-import chat.sphinx.chat_common.databinding.LayoutOnlyTextSentMessageHolderBinding
-import chat.sphinx.chat_common.databinding.LayoutThreadMessageHeaderBinding
 import chat.sphinx.chat_common.model.FeedItemPreview
 import chat.sphinx.chat_common.model.NodeDescriptor
 import chat.sphinx.chat_common.model.TribeLink
@@ -57,17 +55,14 @@ import chat.sphinx.wrapper_chat.Chat
 import chat.sphinx.wrapper_chat.ChatType
 import chat.sphinx.wrapper_chat.isTribe
 import chat.sphinx.wrapper_common.DateTime
-import chat.sphinx.wrapper_common.PhotoUrl
 import chat.sphinx.wrapper_common.asFormattedString
 import chat.sphinx.wrapper_common.before
 import chat.sphinx.wrapper_common.lightning.asFormattedString
 import chat.sphinx.wrapper_common.util.getHHMMSSString
 import chat.sphinx.wrapper_common.util.getHHMMString
 import chat.sphinx.wrapper_common.util.getInitials
-import chat.sphinx.wrapper_contact.ContactAlias
 import chat.sphinx.wrapper_meme_server.headerKey
 import chat.sphinx.wrapper_meme_server.headerValue
-import chat.sphinx.wrapper_message.Message
 import chat.sphinx.wrapper_message.MessageType
 import chat.sphinx.wrapper_message.PurchaseStatus
 import chat.sphinx.wrapper_message.isExpiredInvoice
@@ -75,7 +70,6 @@ import chat.sphinx.wrapper_message.isPodcastBoost
 import chat.sphinx.wrapper_message.isSphinxCallLink
 import chat.sphinx.wrapper_message_media.MessageMedia
 import chat.sphinx.wrapper_message_media.isGif
-import chat.sphinx.wrapper_message_media.isImage
 import chat.sphinx.wrapper_view.Px
 import io.matthewnelson.android_feature_screens.util.gone
 import io.matthewnelson.android_feature_screens.util.goneIfFalse
@@ -83,7 +77,9 @@ import io.matthewnelson.android_feature_screens.util.goneIfTrue
 import io.matthewnelson.android_feature_screens.util.visible
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import java.io.File
 import chat.sphinx.resources.R as R_common
@@ -103,6 +99,7 @@ internal fun LayoutMessageHolderBinding.setView(
     recyclerViewWidth: Px,
     viewState: MessageHolderViewState,
     userColorsHelper: UserColorsHelper,
+    colorCache: ColorCache,
     onSphinxInteractionListener: SphinxUrlSpan.OnInteractionListener? = null,
     onRowLayoutListener: MessageListAdapter.OnRowLayoutListener? = null,
 ) {
@@ -170,21 +167,21 @@ internal fun LayoutMessageHolderBinding.setView(
     }
 
     apply {
-        holderScope.launch {
+        holderScope.launch(dispatchers.default) {
             val initialsColor = viewState.statusHeader?.colorKey?.let { key ->
-                Color.parseColor(
-                    userColorsHelper.getHexCodeForKey(key, root.context.getRandomHexCode())
-                )
+                colorCache.getColor(key, root.context, holderScope, userColorsHelper)
             }
 
-            viewState.initialHolder.setInitialHolder(
-                includeMessageHolderChatImageInitialHolder.textViewInitialsName,
-                includeMessageHolderChatImageInitialHolder.imageViewChatPicture,
-                includeMessageStatusHeader,
-                imageLoader,
-                initialsColor
-            )?.also {
-                disposables.add(it)
+            launch(dispatchers.mainImmediate) {
+                viewState.initialHolder.setInitialHolder(
+                    includeMessageHolderChatImageInitialHolder.textViewInitialsName,
+                    includeMessageHolderChatImageInitialHolder.imageViewChatPicture,
+                    includeMessageStatusHeader,
+                    imageLoader,
+                    initialsColor
+                )?.also {
+                    disposables.add(it)
+                }
             }
         }.let { job ->
             holderJobs.add(job)
@@ -200,13 +197,18 @@ internal fun LayoutMessageHolderBinding.setView(
             holderJobs,
             dispatchers,
             holderScope,
-            userColorsHelper
+            userColorsHelper,
+            colorCache
         )
         setInvoiceExpirationHeader(
             viewState.invoiceExpirationHeader
         )
         setBubbleBackground(
-            viewState, recyclerViewWidth
+            viewState,
+            recyclerViewWidth,
+            dispatchers,
+            holderJobs,
+            holderScope
         )
         setDeletedOrFlaggedMessageLayout(
             viewState.deletedOrFlaggedMessage
@@ -262,6 +264,7 @@ internal fun LayoutMessageHolderBinding.setView(
                     dispatchers,
                     holderScope,
                     userColorsHelper,
+                    colorCache,
                     audioPlayerController,
                     loadImage = { imageView, url ->
                         imageLoader.load(
@@ -307,7 +310,8 @@ internal fun LayoutMessageHolderBinding.setView(
                     holderJobs,
                     dispatchers,
                     holderScope,
-                    userColorsHelper
+                    userColorsHelper,
+                    colorCache
                 ) { imageView, url ->
                     imageLoader.load(
                         imageView,
@@ -339,7 +343,8 @@ internal fun LayoutMessageHolderBinding.setView(
                     holderJobs,
                     dispatchers,
                     holderScope,
-                    userColorsHelper
+                    userColorsHelper,
+                    colorCache
                 ) { imageView, url ->
                     imageLoader.load(
                         imageView,
@@ -358,6 +363,7 @@ internal fun LayoutMessageHolderBinding.setView(
                 dispatchers,
                 holderScope,
                 userColorsHelper,
+                colorCache
             ) { imageView, url, media ->
                 holderScope.launch(dispatchers.mainImmediate) {
                     val file: File? = media?.localFile
@@ -489,6 +495,7 @@ internal inline fun LayoutMessageHolderBinding.setBubbleDirectPaymentLayout(
     dispatchers: CoroutineDispatchers,
     holderScope: CoroutineScope,
     userColorsHelper: UserColorsHelper,
+    colorCache: ColorCache,
     loadImage: (ImageView, String) -> Unit
 ) {
     includeMessageHolderBubble.includeMessageTypeDirectPayment.apply {
@@ -514,16 +521,16 @@ internal inline fun LayoutMessageHolderBinding.setBubbleDirectPaymentLayout(
             if (directPayment.isTribe) {
                 imageViewRecipientPicture.gone
 
-                holderScope.launch(dispatchers.mainImmediate) {
-                    val initialsColor = Color.parseColor(
-                        userColorsHelper.getHexCodeForKey(directPayment.recipientColorKey, root.context.getRandomHexCode())
-                    )
+                holderScope.launch(dispatchers.default) {
+                    val initialsColor = colorCache.getColor(directPayment.recipientColorKey, root.context, holderScope, userColorsHelper)
 
-                    textViewRecipientInitials.text = (directPayment.recipientAlias?.value ?: getString(R_common.string.unknown)).getInitials()
-                    textViewRecipientInitials.setInitialsColor(
-                        initialsColor,
-                        R_common.drawable.chat_initials_circle
-                    )
+                    launch(dispatchers.mainImmediate) {
+                        textViewRecipientInitials.text = (directPayment.recipientAlias?.value ?: getString(R_common.string.unknown)).getInitials()
+                        textViewRecipientInitials.setInitialsColor(
+                            initialsColor,
+                            R_common.drawable.chat_initials_circle
+                        )
+                    }
                 }.let { job ->
                     holderJobs.add(job)
                 }
@@ -612,6 +619,9 @@ internal inline fun LayoutMessageHolderBinding.setBubbleInvoiceLayout(
 internal fun LayoutMessageHolderBinding.setBubbleBackground(
     viewState: MessageHolderViewState,
     recyclerWidth: Px,
+    dispatchers: CoroutineDispatchers,
+    holderJobs: ArrayList<Job>,
+    holderScope: CoroutineScope,
 ) {
     if (viewState.background is BubbleBackground.Gone) {
         includeMessageHolderBubble.root.gone
@@ -680,77 +690,83 @@ internal fun LayoutMessageHolderBinding.setBubbleBackground(
             root.context.resources.getDimensionPixelSize(R.dimen.message_type_boost_width)
         } ?: 0
 
-        var bubbleWidth: Int = when {
-            viewState.message?.shouldAdaptBubbleWidth == true -> {
+        holderScope.launch(dispatchers.default) {
+            var bubbleWidth: Int = when {
+                viewState.message?.shouldAdaptBubbleWidth == true -> {
 
-                val textWidth = viewState.bubbleMessage?.let { nnBubbleMessage ->
-                    (includeMessageHolderBubble.textViewMessageText.paint.measureText(
-                        nnBubbleMessage.text ?: getString(R_common.string.decryption_error)
-                    ) + (defaultMargins * 2)).toInt()
-                } ?: 0
+                    val textWidth = viewState.bubbleMessage?.let { nnBubbleMessage ->
+                        (includeMessageHolderBubble.textViewMessageText.paint.measureText(
+                            nnBubbleMessage.text ?: getString(R_common.string.decryption_error)
+                        ) + (defaultMargins * 2)).toInt()
+                    } ?: 0
 
-                val amountWidth = viewState.bubbleDirectPayment?.let { nnBubbleDirectPayment ->
-                    val paymentMargin = root.context.resources.getDimensionPixelSize(
-                        if (nnBubbleDirectPayment.isTribe) {
-                            R.dimen.tribe_payment_row_margin
-                        } else {
-                            R.dimen.payment_row_margin
-                        }
-                    )
+                    val amountWidth = viewState.bubbleDirectPayment?.let { nnBubbleDirectPayment ->
+                        val paymentMargin = root.context.resources.getDimensionPixelSize(
+                            if (nnBubbleDirectPayment.isTribe) {
+                                R.dimen.tribe_payment_row_margin
+                            } else {
+                                R.dimen.payment_row_margin
+                            }
+                        )
 
-                    (includeMessageHolderBubble.includeMessageTypeDirectPayment.textViewSatsAmountReceived.paint.measureText(
-                        nnBubbleDirectPayment.amount.asFormattedString()
-                    ) + paymentMargin).toInt()
-                } ?: 0
+                        (includeMessageHolderBubble.includeMessageTypeDirectPayment.textViewSatsAmountReceived.paint.measureText(
+                            nnBubbleDirectPayment.amount.asFormattedString()
+                        ) + paymentMargin).toInt()
+                    } ?: 0
 
-                val imageWidth = viewState.bubbleImageAttachment?.let {
+                    val imageWidth = viewState.bubbleImageAttachment?.let {
+                        (bubbleFixedWidth * 0.8F).toInt()
+                    } ?: 0
+
+                    textWidth
+                        .coerceAtLeast(amountWidth)
+                        .coerceAtLeast(imageWidth)
+                }
+                viewState.message?.isPodcastBoost == true -> {
+                    root.context.resources.getDimensionPixelSize(R.dimen.message_type_podcast_boost_width)
+                }
+                viewState.message?.isExpiredInvoice() == true -> {
+                    root.context.resources.getDimensionPixelSize(R.dimen.message_type_expired_invoice_width)
+                }
+                viewState.message?.isSphinxCallLink == true -> {
                     (bubbleFixedWidth * 0.8F).toInt()
-                } ?: 0
-
-                textWidth
-                    .coerceAtLeast(amountWidth)
-                    .coerceAtLeast(imageWidth)
-            }
-            viewState.message?.isPodcastBoost == true -> {
-                root.context.resources.getDimensionPixelSize(R.dimen.message_type_podcast_boost_width)
-            }
-            viewState.message?.isExpiredInvoice() == true -> {
-                root.context.resources.getDimensionPixelSize(R.dimen.message_type_expired_invoice_width)
-            }
-            viewState.message?.isSphinxCallLink == true -> {
-                (bubbleFixedWidth * 0.8F).toInt()
-            }
-            else -> {
-                bubbleFixedWidth
-            }
-        }
-
-        bubbleWidth = bubbleWidth
-            .coerceAtLeast(messageReactionsWidth)
-            .coerceAtMost(bubbleFixedWidth)
-
-        when (viewState) {
-            is MessageHolderViewState.Received, is MessageHolderViewState.MessageOnlyTextHolderViewState.Received -> {
-                spaceMessageHolderLeft.updateLayoutParams {
-                    width = defaultReceivedLeftMargin
                 }
-                spaceMessageHolderRight.updateLayoutParams {
-                    width = (holderWidth - defaultReceivedLeftMargin - bubbleWidth).toInt()
+                else -> {
+                    bubbleFixedWidth
                 }
             }
-            is MessageHolderViewState.Sent, is MessageHolderViewState.MessageOnlyTextHolderViewState.Sent -> {
-                spaceMessageHolderLeft.updateLayoutParams {
-                    width = (holderWidth - defaultSentRightMargin - bubbleWidth).toInt()
-                }
-                spaceMessageHolderRight.updateLayoutParams {
-                    width = defaultSentRightMargin
+
+            bubbleWidth = bubbleWidth
+                .coerceAtLeast(messageReactionsWidth)
+                .coerceAtMost(bubbleFixedWidth)
+
+            launch(dispatchers.mainImmediate) {
+                when (viewState) {
+                    is MessageHolderViewState.Received, is MessageHolderViewState.MessageOnlyTextHolderViewState.Received -> {
+                        spaceMessageHolderLeft.updateLayoutParams {
+                            width = defaultReceivedLeftMargin
+                        }
+                        spaceMessageHolderRight.updateLayoutParams {
+                            width = (holderWidth - defaultReceivedLeftMargin - bubbleWidth).toInt()
+                        }
+                    }
+                    is MessageHolderViewState.Sent, is MessageHolderViewState.MessageOnlyTextHolderViewState.Sent -> {
+                        spaceMessageHolderLeft.updateLayoutParams {
+                            width = (holderWidth - defaultSentRightMargin - bubbleWidth).toInt()
+                        }
+                        spaceMessageHolderRight.updateLayoutParams {
+                            width = defaultSentRightMargin
+                        }
+                    }
+                    is MessageHolderViewState.Separator -> { }
+
+                    is MessageHolderViewState.ThreadHeader -> { }
+
+                    else -> {}
                 }
             }
-            is MessageHolderViewState.Separator -> { }
-
-            is MessageHolderViewState.ThreadHeader -> { }
-
-            else -> {}
+        }.let { job ->
+            holderJobs.add(job)
         }
     }
 }
@@ -812,7 +828,8 @@ internal inline fun LayoutMessageHolderBinding.setStatusHeader(
     holderJobs: ArrayList<Job>,
     dispatchers: CoroutineDispatchers,
     holderScope: CoroutineScope,
-    userColorsHelper: UserColorsHelper
+    userColorsHelper: UserColorsHelper,
+    colorCache: ColorCache
 ) {
     includeMessageStatusHeader.apply {
         if (statusHeader == null) {
@@ -833,12 +850,7 @@ internal inline fun LayoutMessageHolderBinding.setStatusHeader(
                         text = name
                         holderScope.launch(dispatchers.mainImmediate) {
                             textViewMessageStatusReceivedSenderName.setTextColor(
-                                Color.parseColor(
-                                    userColorsHelper.getHexCodeForKey(
-                                        statusHeader.colorKey,
-                                        root.context.getRandomHexCode()
-                                    )
-                                )
+                                colorCache.getColor(statusHeader.colorKey, root.context, holderScope, userColorsHelper)
                             )
                         }.let { job ->
                             holderJobs.add(job)
@@ -1056,6 +1068,7 @@ internal inline suspend fun LayoutMessageHolderBinding.setBubbleThreadLayout(
     dispatchers: CoroutineDispatchers,
     holderScope: CoroutineScope,
     userColorsHelper: UserColorsHelper,
+    colorCache: ColorCache,
     audioPlayerController: AudioPlayerController,
     loadImage: suspend (ImageView, String) -> Unit,
     lastReplyImage: suspend (ImageView, ConstraintLayout, String, MessageMedia?) -> Unit
@@ -1080,6 +1093,7 @@ internal inline suspend fun LayoutMessageHolderBinding.setBubbleThreadLayout(
                 null,
                 thread.isSentMessage,
                 false,
+                colorCache,
                 loadImage
             )
 
@@ -1095,6 +1109,7 @@ internal inline suspend fun LayoutMessageHolderBinding.setBubbleThreadLayout(
                 null,
                 thread.isSentMessage,
                 false,
+                colorCache,
                 loadImage
             )
 
@@ -1110,6 +1125,7 @@ internal inline suspend fun LayoutMessageHolderBinding.setBubbleThreadLayout(
                 null,
                 thread.isSentMessage,
                 true,
+                colorCache,
                 loadImage
             )
 
@@ -2070,6 +2086,7 @@ internal inline fun LayoutMessageHolderBinding.setBubbleReactionBoosts(
     dispatchers: CoroutineDispatchers,
     holderScope: CoroutineScope,
     userColorsHelper: UserColorsHelper,
+    colorCache: ColorCache,
     loadImage: (ImageView, String) -> Unit,
 ) {
     includeMessageHolderBubble.includeMessageTypeBoost.apply {
@@ -2122,6 +2139,7 @@ internal inline fun LayoutMessageHolderBinding.setBubbleReactionBoosts(
                     dispatchers,
                     holderScope,
                     userColorsHelper,
+                    colorCache,
                     loadImage,
                 )
 
@@ -2133,6 +2151,7 @@ internal inline fun LayoutMessageHolderBinding.setBubbleReactionBoosts(
                     dispatchers,
                     holderScope,
                     userColorsHelper,
+                    colorCache,
                     loadImage,
                 )
 
@@ -2144,6 +2163,7 @@ internal inline fun LayoutMessageHolderBinding.setBubbleReactionBoosts(
                     dispatchers,
                     holderScope,
                     userColorsHelper,
+                    colorCache,
                     loadImage,
                 )
 
@@ -2168,6 +2188,7 @@ internal inline fun LayoutMessageHolderBinding.setReactionBoostSender(
     dispatchers: CoroutineDispatchers,
     holderScope: CoroutineScope,
     userColorsHelper: UserColorsHelper,
+    colorCache: ColorCache,
     loadImage: (ImageView, String) -> Unit,
 ) {
     container.let { imageHolderContainer ->
@@ -2182,15 +2203,15 @@ internal inline fun LayoutMessageHolderBinding.setReactionBoostSender(
                 textViewInitialsName.text = (boostSenderHolder.alias?.value ?: root.context.getString(R_common.string.unknown)).getInitials()
                 imageViewChatPicture.gone
 
-                holderScope.launch(dispatchers.mainImmediate) {
-                    textViewInitialsName.setBackgroundRandomColor(
-                        R_common.drawable.chat_initials_circle,
-                        Color.parseColor(
-                            userColorsHelper.getHexCodeForKey(
-                                boostSenderHolder.colorKey,
-                                root.context.getRandomHexCode(),
-                            )
-                        ))
+                holderScope.launch(dispatchers.default) {
+                    val color = colorCache.getColor(boostSenderHolder.colorKey, root.context, holderScope, userColorsHelper)
+
+                    launch(dispatchers.mainImmediate) {
+                        textViewInitialsName.setBackgroundRandomColor(
+                            R_common.drawable.chat_initials_circle,
+                            color
+                        )
+                    }
                 }.let { job ->
                     holderJobs.add(job)
                 }
@@ -2219,6 +2240,7 @@ internal suspend inline fun LayoutMessageHolderBinding.setReplyRow(
     repliesNumber: String? = null,
     isSentMessage: Boolean,
     isLastReply: Boolean = false,
+    colorCache: ColorCache,
     loadImage: suspend (ImageView, String) -> Unit,
 ) {
     container.let { replyContainer ->
@@ -2252,16 +2274,15 @@ internal suspend inline fun LayoutMessageHolderBinding.setReplyRow(
                 textViewInitialsName.text = text
                 imageViewChatPicture.gone
 
-                holderScope.launch(dispatchers.mainImmediate) {
-                    textViewInitialsName.setBackgroundRandomColor(
-                        R_common.drawable.chat_initials_circle,
-                        Color.parseColor(
-                            userColorsHelper.getHexCodeForKey(
-                                replyUserHolder.colorKey,
-                                root.context.getRandomHexCode(),
-                            )
+                holderScope.launch(dispatchers.default) {
+                    val color = colorCache.getColor(replyUserHolder.colorKey, root.context, holderScope, userColorsHelper)
+
+                    launch(dispatchers.mainImmediate) {
+                        textViewInitialsName.setBackgroundRandomColor(
+                            R_common.drawable.chat_initials_circle,
+                            color
                         )
-                    )
+                    }
                 }.let { job ->
                     holderJobs.add(job)
                 }
@@ -2513,6 +2534,7 @@ internal inline fun LayoutMessageHolderBinding.setBubbleReplyMessage(
     dispatchers: CoroutineDispatchers,
     holderScope: CoroutineScope,
     userColorsHelper: UserColorsHelper,
+    colorCache: ColorCache,
     loadImage: (ImageView, String, MessageMedia?) -> Unit
 ) {
     includeMessageHolderBubble.includeMessageReply.apply {
@@ -2555,16 +2577,15 @@ internal inline fun LayoutMessageHolderBinding.setBubbleReplyMessage(
 
             textViewReplySenderLabel.text = replyMessage.sender
 
-            holderScope.launch(dispatchers.mainImmediate) {
-                viewReplyBarLeading.setBackgroundRandomColor(
-                    null,
-                    Color.parseColor(
-                        userColorsHelper.getHexCodeForKey(
-                            replyMessage.colorKey,
-                            root.context.getRandomHexCode(),
-                        )
+            holderScope.launch(dispatchers.default) {
+                val color = colorCache.getColor(replyMessage.colorKey, root.context, holderScope, userColorsHelper)
+
+                launch(dispatchers.mainImmediate) {
+                    viewReplyBarLeading.setBackgroundRandomColor(
+                        null,
+                        color
                     )
-                )
+                }
             }.let { job ->
                 holderJobs.add(job)
             }
@@ -2579,6 +2600,43 @@ internal inline fun LayoutMessageHolderBinding.setBubbleReplyMessage(
                 textViewReplyMessageLabel.text = replyMessage.text
                 textViewReplyMessageLabel.goneIfFalse(replyMessage.text.isNotEmpty())
             }
+        }
+    }
+}
+
+class ColorCache(
+    private val dispatchers: CoroutineDispatchers
+) {
+    private val colorCache = mutableMapOf<String, Int>()
+    private val pendingRequests = mutableMapOf<String, Deferred<Int>>()
+
+    suspend fun getColor(
+        colorKey: String,
+        context: Context,
+        scope: CoroutineScope,
+        userColorsHelper: UserColorsHelper
+    ): Int {
+        // Return cached color if available
+        colorCache[colorKey]?.let { return it }
+
+        // Check if there's already a pending request for this key
+        pendingRequests[colorKey]?.let { return it.await() }
+
+        // Create new request
+        val deferred = scope.async(dispatchers.default) {
+            val hexCode = userColorsHelper.getHexCodeForKey(colorKey, context.getRandomHexCode())
+            val color = Color.parseColor(hexCode)
+
+            // Cache the result
+            colorCache[colorKey] = color
+
+            color
+        }
+
+        pendingRequests[colorKey] = deferred
+
+        return deferred.await().also {
+            pendingRequests.remove(colorKey)
         }
     }
 }

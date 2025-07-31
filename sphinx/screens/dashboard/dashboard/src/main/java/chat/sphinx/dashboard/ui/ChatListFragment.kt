@@ -109,10 +109,6 @@ internal class ChatListFragment : SideEffectFragment<
         binding.layoutChatListChats.recyclerViewChats.apply {
 
             val linearLayoutManager = LinearLayoutManager(context)
-            layoutManager = linearLayoutManager
-            this.setHasFixedSize(false)
-            itemAnimator = null
-
             val chatListAdapter = ChatListAdapter(
                 this,
                 linearLayoutManager,
@@ -126,11 +122,14 @@ internal class ChatListFragment : SideEffectFragment<
             val chatListFooterAdapter = ChatListFooterAdapter(viewLifecycleOwner, onStopSupervisor, viewModel)
             val footerSpaceAdapter = DashboardFooterAdapter()
 
+            layoutManager = linearLayoutManager
             adapter = ConcatAdapter(
                 chatListAdapter,
                 chatListFooterAdapter,
                 footerSpaceAdapter
             )
+            this.setHasFixedSize(false)
+            itemAnimator = null
 
             addOnScrollListener(OptimizedScrollListener())
         }

@@ -221,13 +221,16 @@ abstract class ChatFragment<
         val insetterActivity = (requireActivity() as InsetterActivity)
         setupMenu(insetterActivity)
         setupFooter(insetterActivity)
-        setupAttachmentPriceView()
-        setupSelectedMessage()
         setupHeader(insetterActivity)
         setupAttachmentSendPreview(insetterActivity)
         setupAttachmentFullscreen(insetterActivity)
-        setupScrollDown()
-        setupRecyclerView()
+
+        view.post {
+            setupAttachmentPriceView()
+            setupSelectedMessage()
+            setupScrollDown()
+            setupRecyclerView()
+        }
 
         viewModel.screenInit()
     }
@@ -240,9 +243,9 @@ abstract class ChatFragment<
 
     private fun handlePushNotification() {
         lifecycleScope.launch(viewModel.mainImmediate) {
-        val pubKey = activity?.intent?.extras?.getString("child") ?: activity?.intent?.extras?.getString("child")
-        val chatId = pubKey?.let { viewModel.getPubKeyByEncryptedChild(it) }
-        chatId?.let { _ ->
+            val pubKey = activity?.intent?.extras?.getString("child") ?: activity?.intent?.extras?.getString("child")
+            val chatId = pubKey?.let { viewModel.getPubKeyByEncryptedChild(it) }
+            chatId?.let { _ ->
                 viewModel.chatNavigator.popBackStack()
             }
         }
@@ -1527,6 +1530,7 @@ abstract class ChatFragment<
                                 viewState.recyclerViewWidth,
                                 viewState.messageHolderViewState,
                                 userColorsHelper,
+                                viewModel.colorCache
                             )
                             includeMessageStatusHeader.root.gone
                             includeMessageHolderChatImageInitialHolder.root.gone
@@ -1911,7 +1915,7 @@ abstract class ChatFragment<
                         searchHeaderBinding.root.gone
                         searchFooterBinding.root.gone
 
-                        (recyclerView.adapter as ConcatAdapter).adapters.firstOrNull()?.let { messagesListAdapter ->
+                        (recyclerView.adapter as? ConcatAdapter)?.adapters?.firstOrNull()?.let { messagesListAdapter ->
                             (messagesListAdapter as MessageListAdapter<*>).resetHighlighted()
                         }
 

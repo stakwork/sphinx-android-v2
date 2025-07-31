@@ -9,6 +9,8 @@ data class ImageLoaderOptions private constructor(
     val errorResId: Int?,
     val placeholderResId: Int?,
     val additionalHeaders: Map<String, String>,
+    val targetSize: Size? = null,
+    val sizeHint: ImageSizeHint? = null
 ) {
 
     class Builder {
@@ -17,6 +19,16 @@ data class ImageLoaderOptions private constructor(
         private var errorResId: Int? = null
         private var placeholderResId: Int? = null
         private val additionalHeaders: MutableMap<String, String> = LinkedHashMap(0)
+        private var targetSize: Size? = null
+        private var sizeHint: ImageSizeHint? = null
+
+        fun targetSize(width: Int, height: Int) = apply {
+            this.targetSize = Size(width, height)
+        }
+
+        fun sizeHint(hint: ImageSizeHint) = apply {
+            this.sizeHint = hint
+        }
 
         fun transformation(transformation: Transformation) = apply {
             this.transformation = transformation
@@ -50,6 +62,8 @@ data class ImageLoaderOptions private constructor(
             errorResId,
             placeholderResId,
             additionalHeaders,
+            targetSize,
+            sizeHint
         )
     }
 
@@ -91,3 +105,12 @@ sealed class Transition {
 
     object None: Transition()
 }
+
+enum class ImageSizeHint {
+    AUTO,
+    THUMBNAIL,
+    PROFILE_PICTURE,
+    CHAT_IMAGE
+}
+
+data class Size(val width: Int, val height: Int)

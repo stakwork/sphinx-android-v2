@@ -1,8 +1,10 @@
 package chat.sphinx.feature_image_loader_android
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.drawable.Animatable
 import android.os.Build
+import android.util.DisplayMetrics
 import android.widget.ImageView
 import androidx.annotation.ContentView
 import androidx.annotation.DrawableRes
@@ -13,6 +15,7 @@ import chat.sphinx.concept_network_client_cache.NetworkClientCache
 import chat.sphinx.feature_image_loader_android.transformations.BlurTransformation
 import chat.sphinx.feature_image_loader_android.transformations.GrayscaleTransformation
 import chat.sphinx.logger.SphinxLogger
+import chat.sphinx.logger.d
 import chat.sphinx.logger.e
 import coil.annotation.ExperimentalCoilApi
 import coil.decode.GifDecoder
@@ -21,10 +24,12 @@ import coil.decode.SvgDecoder
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import coil.request.CachePolicy
+import coil.request.ErrorResult
 import coil.request.ImageRequest
 import coil.request.ImageResult
 import coil.request.SuccessResult
 import coil.size.Scale
+import coil.size.Size
 import coil.transform.CircleCropTransformation
 import coil.transform.RoundedCornersTransformation
 import coil.transition.CrossfadeTransition
@@ -33,6 +38,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import okhttp3.CacheControl
+import okhttp3.ConnectionPool
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import java.io.File
@@ -109,10 +115,6 @@ class ImageLoaderAndroid(
         loaderLock.withLock {
             val request = buildRequest(imageView, any, options, listener, isGif)
 
-            // Future-proofing:
-            // Always retrieve the client, as Tor may be enabled but
-            // in a suspended state and we don't want to do any requests
-            // w/o a proxied client.
             val loader: coil.ImageLoader = retrieveLoader()
 
             return DisposableAndroid(loader.enqueue(request.build()))
@@ -133,6 +135,64 @@ class ImageLoaderAndroid(
         }
     }
 
+    private fun calculateOptimalSize(imageView: ImageView): Size {
+        val context = imageView.context
+        val displayMetrics = context.resources.displayMetrics
+
+        val viewWidth = when {
+            imageView.measuredWidth > 0 -> imageView.measuredWidth
+            imageView.width > 0 -> imageView.width
+            else -> 0
+        }
+
+        val viewHeight = when {
+            imageView.measuredHeight > 0 -> imageView.measuredHeight
+            imageView.height > 0 -> imageView.height
+            else -> 0
+        }
+
+        return when {
+            viewWidth > 0 && viewHeight > 0 -> {
+                Size(
+                    width = minOf(
+                        viewWidth,
+                        displayMetrics.widthPixels * 3 / 4
+                    ),
+                    height = minOf(
+                        viewHeight,
+                        displayMetrics.heightPixels / 2
+                    )
+                )
+            }
+
+            else -> {
+                val baseSize = when {
+                    displayMetrics.densityDpi >= DisplayMetrics.DENSITY_XXXHIGH -> 768  // ~480dpi
+                    displayMetrics.densityDpi >= DisplayMetrics.DENSITY_XXHIGH -> 640   // ~320dpi
+                    displayMetrics.densityDpi >= DisplayMetrics.DENSITY_XHIGH -> 512    // ~240dpi
+                    displayMetrics.densityDpi >= DisplayMetrics.DENSITY_HIGH -> 384     // ~160dpi
+                    else -> 256
+                }
+
+                Size(
+                    width = baseSize,
+                    height = (baseSize * 0.75f).toInt()
+                )
+            }
+        }
+    }
+
+    private fun calculateGifSize(imageView: ImageView): Size {
+        val optimal = calculateOptimalSize(imageView)
+
+        return Size(
+            width = minOf(optimal.width, 400),
+            height = minOf(optimal.height, 400)
+        )
+    }
+
+    data class Size(val width: Int, val height: Int)
+
     @OptIn(ExperimentalCoilApi::class)
     private fun buildRequest(
         imageView: ImageView,
@@ -148,14 +208,25 @@ class ImageLoaderAndroid(
             .networkCachePolicy(if (isPaused) CachePolicy.DISABLED else CachePolicy.ENABLED)
             .apply {
                 if (!isGif) {
+                    val optimalSize = calculateOptimalSize(imageView)
+
                     if (!isHighQualityMode) {
-                        size(512, 512)
+                        size(optimalSize.width, optimalSize.height)
+                        scale(Scale.FIT)
+                        bitmapConfig(Bitmap.Config.RGB_565)
+                    } else {
+                        size(
+                            minOf(optimalSize.width * 2, 1024),
+                            minOf(optimalSize.height * 2, 1024)
+                        )
                         scale(Scale.FIT)
                     }
 
-                    transformations(
-                        RoundedCornersTransformation(8f)
-                    )
+                    transformations(RoundedCornersTransformation(8f))
+                } else {
+                    val gifSize = calculateGifSize(imageView)
+                    size(gifSize.width, gifSize.height)
+                    scale(Scale.FIT)
                 }
             }
             .dispatcher(io)
@@ -165,6 +236,10 @@ class ImageLoaderAndroid(
                         super.onSuccess(request, result)
 
                         listener?.onSuccess()
+                    }
+                    override fun onError(request: ImageRequest, result: ErrorResult) {
+                        super.onError(request, result)
+                        LOG.d(TAG, "Image load failed: ${result.throwable.message}")
                     }
                 }
             )
@@ -244,13 +319,15 @@ class ImageLoaderAndroid(
         loader ?: coil.ImageLoader.Builder(appContext)
             .memoryCache(
                 MemoryCache.Builder(appContext)
-                    .maxSizePercent(0.15)
+                    .maxSizePercent(0.25)
+                    .strongReferencesEnabled(false)
                     .build()
             )
             .diskCache {
                 DiskCache.Builder()
                     .directory(appContext.cacheDir.resolve("image_cache"))
-                    .maxSizeBytes(50 * 1024 * 1024) // 50MB cache
+                    .maxSizeBytes(100 * 1024 * 1024)
+                    .cleanupDispatcher(Dispatchers.IO.limitedParallelism(1))
                     .build()
             }
             .okHttpClient(
@@ -259,6 +336,7 @@ class ImageLoaderAndroid(
                     .readTimeout(30, TimeUnit.SECONDS)
                     .writeTimeout(30, TimeUnit.SECONDS)
                     .retryOnConnectionFailure(true)
+                    .connectionPool(ConnectionPool(5, 5, TimeUnit.MINUTES))
                     .addInterceptor(createNetworkInterceptor())
                     .build()
             )
@@ -269,9 +347,9 @@ class ImageLoaderAndroid(
                 add(GifDecoder.Factory())
                 add(SvgDecoder.Factory())
             }
-            .dispatcher(Dispatchers.IO.limitedParallelism(3))
+            .dispatcher(Dispatchers.IO.limitedParallelism(5))
             .respectCacheHeaders(false)
-            .allowHardware(false)
+            .allowHardware(true)
             .crossfade(200)
             .build()
             .also { loader = it }
@@ -354,3 +432,4 @@ class ImageLoaderAndroid(
         loader?.memoryCache?.clear()
     }
 }
+

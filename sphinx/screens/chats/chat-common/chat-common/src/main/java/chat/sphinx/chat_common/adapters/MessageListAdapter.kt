@@ -404,7 +404,7 @@ internal class MessageListAdapter<ARGS : NavArgs>(
     ): RecyclerView.ViewHolder(binding.root), DefaultLifecycleObserver {
 
         private val holderJobs: ArrayList<Job> = ArrayList(17)
-        private val disposables: ArrayList<Disposable> = ArrayList(12)
+        private val disposables: ArrayList<Disposable> = ArrayList(6)
         private var currentViewState: MessageHolderViewState? = null
 
         private val holderScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -847,7 +847,7 @@ internal class MessageListAdapter<ARGS : NavArgs>(
         private var threadHeaderViewState: MessageHolderViewState.ThreadHeader? = null
 
         private val holderJobs: ArrayList<Job> = ArrayList(17)
-        private val disposables: ArrayList<Disposable> = ArrayList(12)
+        private val disposables: ArrayList<Disposable> = ArrayList(6)
         private val holderScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
         private var audioAttachmentJob: Job? = null

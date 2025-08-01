@@ -1,5 +1,8 @@
 # ChangeLog
 
+## Version 1.0.0-alpha69 (2025-08-01)
+- Fixes crash on chat view
+
 ## Version 1.0.0-alpha68 (2025-07-31)
 - Performance improvements
 

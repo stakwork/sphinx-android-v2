@@ -146,7 +146,7 @@ class ChatTribeViewModel @Inject constructor(
         emitAll(chatRepository.getChatById(chatId))
     }.distinctUntilChanged().shareIn(
         viewModelScope,
-        SharingStarted.WhileSubscribed(2_000),
+        SharingStarted.Lazily,
         replay = 1,
     )
 
@@ -154,7 +154,7 @@ class ChatTribeViewModel @Inject constructor(
         emitAll(chatRepository.getPodcastByChatId(chatId))
     }.distinctUntilChanged().shareIn(
         viewModelScope,
-        SharingStarted.WhileSubscribed(2_000),
+        SharingStarted.Lazily,
         replay = 1,
     )
 
@@ -225,7 +225,7 @@ class ChatTribeViewModel @Inject constructor(
         }
     }.distinctUntilChanged().shareIn(
         viewModelScope,
-        SharingStarted.WhileSubscribed(2_000),
+        SharingStarted.WhileSubscribed(5_000),
         replay = 1,
     )
 

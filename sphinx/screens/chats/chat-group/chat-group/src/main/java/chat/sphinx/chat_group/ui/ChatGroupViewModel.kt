@@ -104,7 +104,7 @@ class ChatGroupViewModel @Inject constructor(
         emitAll(chatRepository.getChatById(args.chatId))
     }.distinctUntilChanged().shareIn(
         viewModelScope,
-        SharingStarted.WhileSubscribed(2_000),
+        SharingStarted.Lazily,
         replay = 1
     )
 

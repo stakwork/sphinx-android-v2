@@ -128,7 +128,7 @@ internal class ChatContactViewModel @Inject constructor(
         emitAll(contactRepository.getContactById(contactId))
     }.distinctUntilChanged().shareIn(
         viewModelScope,
-        SharingStarted.WhileSubscribed(2_000),
+        SharingStarted.Lazily,
         replay = 1,
     )
 
@@ -141,7 +141,7 @@ internal class ChatContactViewModel @Inject constructor(
         }
     }.distinctUntilChanged().shareIn(
         viewModelScope,
-        SharingStarted.WhileSubscribed(2_000),
+        SharingStarted.Lazily,
         replay = 1
     )
 

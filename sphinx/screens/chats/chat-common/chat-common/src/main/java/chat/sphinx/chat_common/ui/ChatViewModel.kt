@@ -345,18 +345,27 @@ abstract class ChatViewModel<ARGS : NavArgs>(
     private fun getChatOrNull(): Chat? = chatCache.get()
 
     suspend fun getChat(): Chat {
-        chatCache.get()?.let { return it }
-
         chatSharedFlow.replayCache.firstOrNull()?.let { chat ->
-            chatCache.set(chat)
             return chat
         }
 
-        return withTimeoutOrNull(1000) {
-            chatSharedFlow.first { it != null }
-        }?.also { chat ->
-            chatCache.set(chat)
-        } ?: throw IllegalStateException("Chat not available within timeout")
+        chatSharedFlow.firstOrNull()?.let { chat ->
+            return chat
+        }
+
+        var chat: Chat? = null
+
+        try {
+            chatSharedFlow.collect {
+                if (it != null) {
+                    chat = it
+                    throw Exception()
+                }
+            }
+        } catch (e: Exception) {}
+        delay(25L)
+
+        return chat!!
     }
 
     private fun handleDisabledFooterState(chat: Chat) {

@@ -21,6 +21,7 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.LayoutRes
+import androidx.appcompat.content.res.AppCompatResources
 import androidx.constraintlayout.motion.widget.MotionLayout
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
@@ -1206,18 +1207,16 @@ abstract class ChatFragment<
 
                             imageViewChatHeaderMuted.apply {
                                 viewState.isMuted.let { muted ->
-                                    if (muted) {
-                                        imageLoader.load(
-                                            headerBinding.imageViewChatHeaderMuted,
-                                            R_common.drawable.ic_baseline_notifications_off_24
+                                    headerBinding.imageViewChatHeaderMuted.setImageDrawable(
+                                        AppCompatResources.getDrawable(requireContext(),
+                                            if (muted) {
+                                                R_common.drawable.ic_baseline_notifications_off_24
+                                            } else {
+                                                R_common.drawable.ic_baseline_notifications_24
+                                            }
                                         )
-                                    } else {
-                                        imageLoader.load(
-                                            headerBinding.imageViewChatHeaderMuted,
-                                            R_common.drawable.ic_baseline_notifications_24
-                                        )
-                                    }
-                                } ?: gone
+                                    )
+                                }
                             }
 
                             textViewChatHeaderConnectivity.apply {
@@ -1251,17 +1250,19 @@ abstract class ChatFragment<
                                     }
                                 }
                             }
-
-                            textViewChatHeaderClockIcon.apply {
-                                viewModel.clockIconState.collect { showClockIcon ->
-                                    if (showClockIcon) {
-                                        this.visible
-                                    } else {
-                                        this.gone
-                                    }
-                                }
-                            }
                         }
+                    }
+                }
+            }
+        }
+
+        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+            viewModel.clockIconState.collect { showClockIcon ->
+                headerBinding.textViewChatHeaderClockIcon.apply {
+                    if (showClockIcon) {
+                        this.visible
+                    } else {
+                        this.gone
                     }
                 }
             }

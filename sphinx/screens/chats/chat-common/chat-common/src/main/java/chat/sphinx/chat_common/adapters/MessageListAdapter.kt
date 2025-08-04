@@ -174,7 +174,7 @@ internal class MessageListAdapter<ARGS : NavArgs>(
 //        }
 
         recyclerView.layoutManager?.scrollToPosition(
-            messageHolders.size
+            messageHolders.size + 1
         )
     }
 

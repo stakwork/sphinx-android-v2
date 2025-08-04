@@ -285,7 +285,7 @@ abstract class SphinxRepository(
     }
 
     override fun connectAndSubscribeToMqtt(userState: String?, mixerIp: String?) {
-        applicationScope.launch(mainImmediate) {
+        applicationScope.launch(io) {
             val queries = coreDB.getSphinxDatabaseQueries()
             val mnemonic = walletDataHandler.retrieveWalletMnemonic()
             var owner: Contact? = accountOwner.value
@@ -334,7 +334,7 @@ abstract class SphinxRepository(
     }
 
     override fun createOwnerAccount() {
-        applicationScope.launch(mainImmediate) {
+        applicationScope.launch(io) {
             val mnemonic = walletDataHandler.retrieveWalletMnemonic()
             connectManager.createAccount(mnemonic?.value)
         }
@@ -354,7 +354,7 @@ abstract class SphinxRepository(
 
 
     override fun startRestoreProcess() {
-        applicationScope.launch(mainImmediate) {
+        applicationScope.launch(io) {
             var msgCounts: MsgsCounts? = null
 
             restoreProcessState.asStateFlow().collect { restoreProcessState ->
@@ -378,7 +378,7 @@ abstract class SphinxRepository(
     }
 
     override fun createContact(contact: NewContact) {
-        applicationScope.launch(mainImmediate) {
+        applicationScope.launch(io) {
             val queries = coreDB.getSphinxDatabaseQueries()
             queries.transaction {
                 createNewContact(contact, queries, this)
@@ -400,7 +400,7 @@ abstract class SphinxRepository(
     }
 
     override fun setOwnerDeviceId(deviceId: String) {
-        applicationScope.launch(mainImmediate) {
+        applicationScope.launch(io) {
             var pushKey: String? = authenticationStorage.getString(
                 REPOSITORY_PUSH_KEY,
                 null
@@ -586,7 +586,7 @@ abstract class SphinxRepository(
     }
 
     override fun requestNodes(nodeUrl: String) {
-        applicationScope.launch(mainImmediate) {
+        applicationScope.launch(io) {
             networkQueryContact.getNodes(nodeUrl).collect { loadResponse ->
                 when (loadResponse) {
                     is Response.Success -> {
@@ -703,7 +703,7 @@ abstract class SphinxRepository(
     override suspend fun getOwnerContact(): Contact? {
         var owner: Contact? = null
 
-        applicationScope.launch(mainImmediate) {
+        applicationScope.launch(io) {
             coreDB.getSphinxDatabaseQueries().contactGetOwner().executeAsOneOrNull()?.let {
                 owner = contactDboPresenterMapper.mapFrom(it)
             }
@@ -763,7 +763,7 @@ abstract class SphinxRepository(
 
     override fun showMnemonic(isRestore: Boolean) {
         if (!isRestore) {
-            applicationScope.launch(mainImmediate) {
+            applicationScope.launch(io) {
                 walletDataHandler.retrieveWalletMnemonic()?.let { words ->
                     connectionManagerState.value = OwnerRegistrationState.MnemonicWords(words.value)
                 }
@@ -782,7 +782,7 @@ abstract class SphinxRepository(
         routerUrl: String?,
         defaultTribe: String?
     ) {
-        applicationScope.launch(mainImmediate) {
+        applicationScope.launch(io) {
             val scid = routeHint.toLightningRouteHint()?.getScid()
 
             if (scid != null && accountOwner.value?.nodePubKey == null) {
@@ -806,7 +806,7 @@ abstract class SphinxRepository(
     }
 
     override fun onRestoreAccount(isProductionEnvironment: Boolean) {
-        applicationScope.launch(mainImmediate) {
+        applicationScope.launch(io) {
             networkQueryContact.getAccountConfig(isProductionEnvironment).collect { loadResponse ->
                 when (loadResponse) {
                     is Response.Success -> {
@@ -1134,7 +1134,7 @@ abstract class SphinxRepository(
     }
 
     override fun listenToOwnerCreation(callback: () -> Unit) {
-        applicationScope.launch(mainImmediate) {
+        applicationScope.launch(io) {
             accountOwner.filter { contact ->
                 contact != null && !contact.routeHint?.value.isNullOrEmpty()
             }
@@ -1679,7 +1679,7 @@ abstract class SphinxRepository(
         inviteCode: String,
         sats: Long
     ) {
-        applicationScope.launch(mainImmediate) {
+        applicationScope.launch(io) {
             val newInvitee = NewContact(
                 contactAlias = nickname.toContactAlias(),
                 lightningNodePubKey = null,
@@ -1707,7 +1707,7 @@ abstract class SphinxRepository(
     }
 
     override fun reconnectMqtt() {
-        applicationScope.launch(mainImmediate) {
+        applicationScope.launch(io) {
             delay(1000L)
             connectManager.reconnectWithBackOff()
         }
@@ -2910,7 +2910,7 @@ abstract class SphinxRepository(
         var response: Response<Any, ResponseError> = Response.Success(true)
         val memeServerHost = MediaHost.DEFAULT
 
-        applicationScope.launch(mainImmediate) {
+        applicationScope.launch(io) {
             try {
                 val token = memeServerTokenHandler.retrieveAuthenticationToken(memeServerHost)
                     ?: throw RuntimeException("MemeServerAuthenticationToken retrieval failure")
@@ -3228,7 +3228,7 @@ abstract class SphinxRepository(
         }
 
         if (updatedOwner != null) {
-            applicationScope.launch(mainImmediate) {
+            applicationScope.launch(io) {
                 contactLock.withLock {
                     queries.transaction {
                         upsertNewContact(updatedOwner, queries)

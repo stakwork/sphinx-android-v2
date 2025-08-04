@@ -1,5 +1,11 @@
 # ChangeLog
 
+## Version 1.0.0-alpha71 (2025-08-04)
+- Fixes performance issues on chat view
+- Fixes mute state issues on chats list
+- Fixes message preview issues on chats list
+- Improves thread handling
+
 ## Version 1.0.0-alpha70 (2025-08-01)
 - Fixes performance issues on chat view
 

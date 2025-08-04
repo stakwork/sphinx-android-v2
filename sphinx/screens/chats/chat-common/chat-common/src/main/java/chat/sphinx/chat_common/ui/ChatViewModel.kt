@@ -168,6 +168,8 @@ abstract class ChatViewModel<ARGS : NavArgs>(
     protected abstract val chatId: ChatId?
     protected abstract val contactId: ContactId?
 
+    private val activeDownloadJobs = mutableSetOf<Job>()
+
     val imageLoaderDefaults by lazy {
         ImageLoaderOptions.Builder()
             .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
@@ -778,11 +780,21 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                                 handlePaidTextMessageContent(messageCallback)
                             },
                             onBindDownloadMedia = {
-                                repositoryMedia.downloadMediaIfApplicable(message, sent)
+                                val job = repositoryMedia.downloadMediaIfApplicable(message, sent)
+                                activeDownloadJobs.add(job)
+
+                                job.invokeOnCompletion {
+                                    activeDownloadJobs.remove(job)
+                                }
                             },
                             onBindThreadDownloadMedia = {
                                 message.thread?.last()?.let { lastReplyMessage ->
-                                    repositoryMedia.downloadMediaIfApplicable(lastReplyMessage, sent)
+                                    val job = repositoryMedia.downloadMediaIfApplicable(lastReplyMessage, sent)
+                                    activeDownloadJobs.add(job)
+
+                                    job.invokeOnCompletion {
+                                        activeDownloadJobs.remove(job)
+                                    }
                                 }
                             },
                             memberTimezoneIdentifier = if (message.senderAlias != null) memberTimezones[message.senderAlias!!.value] else null
@@ -964,7 +976,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
     private suspend fun handleLinkPreview(link: MessageLinkPreview): LayoutState.Bubble.ContainerThird.LinkPreview? {
         var preview: LayoutState.Bubble.ContainerThird.LinkPreview? = null
 
-        viewModelScope.launch(mainImmediate) {
+        viewModelScope.launch(default) {
             // TODO: Implement
             @Exhaustive
             when (link) {
@@ -1108,7 +1120,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
     private suspend fun handlePaidTextMessageContent(message: Message): LayoutState.Bubble.ContainerThird.Message? {
         var messageLayoutState: LayoutState.Bubble.ContainerThird.Message? = null
 
-        viewModelScope.launch(mainImmediate) {
+        viewModelScope.launch(io) {
             message.retrievePaidTextAttachmentUrlAndMessageMedia()?.let { urlAndMedia ->
                 urlAndMedia.second?.host?.let { host ->
                     urlAndMedia.second?.mediaKeyDecrypted?.let { mediaKeyDecrypted ->
@@ -1504,7 +1516,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                 return
             }
 
-            toggleChatMutedJob = viewModelScope.launch(mainImmediate) {
+            toggleChatMutedJob = viewModelScope.launch(default) {
 
                 submitSideEffect(ChatSideEffect.ProduceHapticFeedback)
 
@@ -1515,18 +1527,22 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                 @Exhaustive
                 when (response) {
                     is Response.Error -> {
-                        submitSideEffect(
-                            ChatSideEffect.Notify(response.message)
-                        )
-                        delay(2_000)
+                        withContext(mainImmediate) {
+                            submitSideEffect(
+                                ChatSideEffect.Notify(response.message)
+                            )
+                        }
+                        delay(500)
                     }
                     is Response.Success -> {
                         if (response.value) {
-                            submitSideEffect(
-                                ChatSideEffect.Notify(
-                                    app.getString(R.string.chat_muted_message)
+                            withContext(mainImmediate) {
+                                submitSideEffect(
+                                    ChatSideEffect.Notify(
+                                        app.getString(R.string.chat_muted_message)
+                                    )
                                 )
-                            )
+                            }
                         }
                     }
                 }
@@ -1784,7 +1800,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
     fun boostMessage(messageUUID: MessageUUID?) {
         if (messageUUID == null) return
 
-        viewModelScope.launch(mainImmediate) {
+        viewModelScope.launch(default) {
             val chat = getChat()
             val response = messageRepository.boostMessage(
                 chatId = chat.id,
@@ -1868,7 +1884,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
     fun replyToMessage(message: Message?) {
         if (message != null) {
-            viewModelScope.launch(mainImmediate) {
+            viewModelScope.launch(default) {
                 val chat = getChat()
 
                 val senderAlias = when {
@@ -1883,23 +1899,27 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                     }
                 }
 
-                messageReplyViewStateContainer.updateViewState(
-                    MessageReplyViewState.ReplyingToMessage(
-                        message,
-                        senderAlias
+                withContext(mainImmediate) {
+                    messageReplyViewStateContainer.updateViewState(
+                        MessageReplyViewState.ReplyingToMessage(
+                            message,
+                            senderAlias
+                        )
                     )
-                )
+                }
             }
         } else {
-            messageReplyViewStateContainer.updateViewState(MessageReplyViewState.ReplyingDismissed)
+            viewModelScope.launch(mainImmediate) {
+                messageReplyViewStateContainer.updateViewState(MessageReplyViewState.ReplyingDismissed)
+            }
         }
     }
 
     fun resendMessage(message: Message) {
-        viewModelScope.launch(mainImmediate) {
-            val chat = getChat()
-            messageRepository.resendMessage(message, chat)
-        }
+//        viewModelScope.launch(io) {
+//            val chat = getChat()
+//            messageRepository.resendMessage(message, chat)
+//        }
     }
 
 //    fun flagMessage(message: Message) {
@@ -2170,9 +2190,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
     }
 
     suspend fun confirmToggleBlockContactState() {
-
         val alertConfirmCallback: () -> Unit = {
-
             contactId?.let { contactId ->
                 viewModelScope.launch(mainImmediate) {
                     contactRepository.getContactById(contactId).firstOrNull()?.let { contact ->
@@ -2258,7 +2276,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
     private fun joinCall(link: SphinxCallLink, audioOnly: Boolean) {
         if (link.isLiveKitLink) {
-            viewModelScope.launch(mainImmediate) {
+            viewModelScope.launch(io) {
                 val owner = getOwner()
 
                 networkQueryPeople.getLiveKitToken(
@@ -2270,25 +2288,27 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                         is LoadResponse.Loading -> {}
                         is Response.Error -> {}
                         is Response.Success -> {
-                            val appContext: Context = app.applicationContext
+                            withContext(mainImmediate) {
+                                val appContext: Context = app.applicationContext
 
-                            val intent = Intent(appContext, CallActivity::class.java).apply {
-                                putExtra(
-                                    CallActivity.KEY_ARGS,
-                                    CallActivity.BundleArgs(
-                                        url = loadResponse.value.serverUrl,
-                                        token = loadResponse.value.participantToken,
-                                        e2eeOn = false,
-                                        e2eeKey = "",
-                                        stressTest = StressTest.None,
-                                        videoEnabled = !audioOnly,
-                                        roomName = loadResponse.value.roomName
-                                    ),
-                                )
+                                val intent = Intent(appContext, CallActivity::class.java).apply {
+                                    putExtra(
+                                        CallActivity.KEY_ARGS,
+                                        CallActivity.BundleArgs(
+                                            url = loadResponse.value.serverUrl,
+                                            token = loadResponse.value.participantToken,
+                                            e2eeOn = false,
+                                            e2eeKey = "",
+                                            stressTest = StressTest.None,
+                                            videoEnabled = !audioOnly,
+                                            roomName = loadResponse.value.roomName
+                                        ),
+                                    )
+                                }
+                                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+
+                                appContext.startActivity(intent)
                             }
-                            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-
-                            appContext.startActivity(intent)
                         }
                     }
                 }
@@ -2377,7 +2397,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
     open fun handleContactTribeLinks(url: String?) {
         if (url != null) {
 
-            viewModelScope.launch(mainImmediate) {
+            viewModelScope.launch(io) {
 
                 url.toLightningNodePubKey()?.let { lightningNodePubKey ->
 
@@ -2435,17 +2455,29 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         }
     }
 
-    private suspend fun handleFeedItemLink(link: FeedItemLink) {
-        feedRepository.getFeedForLink(link).firstOrNull()?.let { feed ->
-            goToFeedDetailView(feed)
+    private fun handleFeedItemLink(link: FeedItemLink) {
+        viewModelScope.launch(io) {
+            feedRepository.getFeedForLink(link).firstOrNull()?.let { feed ->
+                viewModelScope.launch(mainImmediate) {
+                    goToFeedDetailView(feed)
+                }
+            }
         }
     }
 
-    private suspend fun handleTribeLink(tribeJoinLink: TribeJoinLink) {
-        chatRepository.getChatByUUID(ChatUUID(tribeJoinLink.tribePubkey)).firstOrNull()?.let { chat ->
-            chatNavigator.toChat(chat, null, null)
-        } ?: chatNavigator.toJoinTribeDetail(tribeJoinLink).also {
-            audioPlayerController.pauseMediaIfPlaying()
+    private fun handleTribeLink(tribeJoinLink: TribeJoinLink) {
+        viewModelScope.launch(io) {
+            chatRepository.getChatByUUID(ChatUUID(tribeJoinLink.tribePubkey)).firstOrNull()?.let { chat ->
+                viewModelScope.launch(mainImmediate) {
+                    chatNavigator.toChat(chat, null, null)
+                }
+            } ?: run {
+                viewModelScope.launch(mainImmediate) {
+                    chatNavigator.toJoinTribeDetail(tribeJoinLink).also {
+                        audioPlayerController.pauseMediaIfPlaying()
+                    }
+                }
+            }
         }
     }
 
@@ -2466,13 +2498,18 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         routeHint: LightningRouteHint?
     ) {
         contactRepository.getContactByPubKey(pubKey).firstOrNull()?.let { contact ->
-
             chatRepository.getConversationByContactId(contact.id).firstOrNull().let { chat ->
-                chatNavigator.toChat(chat, contact.id, null)
+                viewModelScope.launch(mainImmediate) {
+                    chatNavigator.toChat(chat, contact.id, null)
+                }
             }
 
-        } ?: chatNavigator.toAddContactDetail(pubKey, routeHint).also {
-            audioPlayerController.pauseMediaIfPlaying()
+        } ?: run {
+            viewModelScope.launch(mainImmediate) {
+                chatNavigator.toAddContactDetail(pubKey, routeHint).also {
+                    audioPlayerController.pauseMediaIfPlaying()
+                }
+            }
         }
     }
 
@@ -2772,6 +2809,9 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
         (audioPlayerController as AudioPlayerControllerImpl).onCleared()
         audioRecorderController.clear()
+
+        activeDownloadJobs.forEach { it.cancel() }
+        activeDownloadJobs.clear()
     }
 }
 

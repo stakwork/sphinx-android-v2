@@ -4370,107 +4370,17 @@ abstract class SphinxRepository(
         messageContentDecrypted: MessageContentDecrypted?,
         media: Triple<Password, MediaKey, AttachmentInfo>?,
     ) {
-        val queries = coreDB.getSphinxDatabaseQueries()
 
-//        networkQueryMessage.sendMessage(postMessageDto).collect { loadResponse ->
-//            @Exhaustive
-//            when (loadResponse) {
-//                is LoadResponse.Loading -> {
-//                }
-//                is Response.Error -> {
-//                    LOG.e(TAG, loadResponse.message, loadResponse.exception)
-//
-//                    messageLock.withLock {
-//                        provisionalMessageId?.let { provId ->
-//                            withContext(io) {
-//                                queries.messageUpdateStatus(MessageStatus.Failed, provId)
-//                            }
-//                        }
-//                    }
-//
-//                }
-//                is Response.Success -> {
-//
-//                    loadResponse.value.apply {
-//                        if (media != null) {
-//                            setMediaKeyDecrypted(media.first.value.joinToString(""))
-//                            setMediaLocalFile(media.third.file)
-//                        }
-//
-//                        if (messageContentDecrypted != null) {
-//                            setMessageContentDecrypted(messageContentDecrypted.value)
-//                        }
-//                    }
-//
-//                    chatLock.withLock {
-//                        messageLock.withLock {
-//                            contactLock.withLock {
-//                                withContext(io) {
-//                                    queries.transaction {
-//                                        // chat is returned only if this is the
-//                                        // first message sent to a new contact
-//                                        loadResponse.value.chat?.let { chatDto ->
-//                                            upsertChat(
-//                                                chatDto,
-//                                                moshi,
-//                                                chatSeenMap,
-//                                                queries,
-//                                                loadResponse.value.contact,
-//                                                accountOwner.value?.nodePubKey
-//                                            )
-//                                        }
-//
-//                                        loadResponse.value.contact?.let { contactDto ->
-//                                            upsertContact(contactDto, queries)
-//                                        }
-//
-//                                        upsertMessage(
-//                                            loadResponse.value,
-//                                            queries,
-//                                            media?.third?.fileName
-//                                        )
-//
-//                                        provisionalMessageId?.let { provId ->
-//                                            deleteMessageById(provId, queries)
-//                                        }
-//                                    }
-//                                }
-//                            }
-//                        }
-//                    }
-//                }
-//            }
-//        }
     }
 
     override fun resendMessage(message: Message, chat: Chat) {
-        applicationScope.launch(mainImmediate) {
-            val queries = coreDB.getSphinxDatabaseQueries()
-
-            val pricePerMessage = chat.pricePerMessage?.value ?: 0
-            val escrowAmount = chat.escrowAmount?.value ?: 0
-            val messagePrice = (pricePerMessage + escrowAmount).toSat() ?: Sat(0)
-
-            val contact: Contact? = if (chat.type.isConversation()) {
-                chat.contactIds.elementAtOrNull(1)?.let { contactId ->
-                    getContactById(contactId).firstOrNull()
-                }
-            } else {
-                null
-            }
-
-            val remoteTextMap: Map<String, String>? = getRemoteTextMap(
-                UnencryptedString(message.messageContentDecrypted?.value ?: ""),
-                contact,
-                chat
-            )
-
-            sendMessage(
-                message.id,
-                message.messageContentDecrypted,
-                null
-            )
-        }
+//        applicationScope.launch(mainImmediate) {
+//            sendMessage(
+//                message.id,
+//                message.messageContentDecrypted,
+//                null
+//            )
+//        }
     }
 
 //    override fun flagMessage(message: Message, chat: Chat) {
@@ -4845,13 +4755,10 @@ abstract class SphinxRepository(
                 null
             ).toJson(moshi)
 
-            chatLock.withLock {
-                messageLock.withLock {
-                    withContext(io) {
-
-                        queries.transaction {
-                            upsertNewMessage(newBoost, queries, null)
-                        }
+            messageLock.withLock {
+                withContext(io) {
+                    queries.transaction {
+                        upsertNewMessage(newBoost, queries, null)
                     }
 
                     queries.transaction {
@@ -7411,8 +7318,8 @@ abstract class SphinxRepository(
     override fun downloadMediaIfApplicable(
         message: Message,
         sent: Boolean
-    ) {
-        applicationScope.launch(mainImmediate) {
+    ) : Job {
+        return applicationScope.launch(io) {
             val messageId: MessageId = message.id
 
             val downloadLock: Mutex = downloadMessageMediaLockMap.withLock { map ->
@@ -7430,76 +7337,111 @@ abstract class SphinxRepository(
             }
 
             downloadLock.withLock {
-                val queries = coreDB.getSphinxDatabaseQueries()
-
-                //Getting media data from purchase accepted item if is paid content
-                val media = message.retrieveUrlAndMessageMedia()?.second
-                val host = media?.host
-                val url = media?.url
-
-                val localFile = message.messageMedia?.localFile
-
-                if (
-                    message != null &&
-                    media != null &&
-                    host != null &&
-                    url != null &&
-                    localFile == null &&
-                    !message.status.isDeleted() &&
-                    (!message.isPaidPendingMessage || sent)
-                ) {
-
-                    memeServerTokenHandler.retrieveAuthenticationToken(host)?.let { token ->
-                        memeInputStreamHandler.retrieveMediaInputStream(
-                            url.value,
-                            token,
-                            media.mediaKeyDecrypted,
-                        )?.let { streamAndFileName ->
-
-                            mediaCacheHandler.createFile(
-                                mediaType = message.messageMedia?.mediaType ?: media.mediaType,
-                                extension = streamAndFileName.second?.getExtension()
-                            )?.let { streamToFile ->
-
-                                streamAndFileName.first?.let { stream ->
-                                    mediaCacheHandler.copyTo(stream, streamToFile)
-                                    messageLock.withLock {
-                                        withContext(io) {
-                                            queries.transaction {
-
-                                                queries.messageMediaUpdateFile(
-                                                    streamToFile,
-                                                    streamAndFileName.second,
-                                                    messageId
-                                                )
-
-                                                // to proc table change so new file path is pushed to UI
-                                                queries.messageUpdateContentDecrypted(
-                                                    message.messageContentDecrypted,
-                                                    messageId
-                                                )
-                                            }
-                                        }
-                                    }
-
-                                    // hold downloadLock until table change propagates to UI
-                                    delay(200L)
-
-                                }
-                            }
-                        }
-                    }
+                try {
+                    downloadMediaInternal(message, sent, messageId)
+                } catch (e: Exception) {
+                    LOG.e("RepositoryMedia", "Download failed for message $messageId", e)
+                } finally {
+                    cleanupDownloadLock(messageId)
                 }
+            }
+        }
+    }
 
-                // remove lock from map if only subscriber
-                downloadMessageMediaLockMap.withLock { map ->
-                    map[messageId]?.let { pair ->
-                        if (pair.first <= 1) {
-                            map.remove(messageId)
-                        } else {
-                            map[messageId] = Pair(pair.first - 1, pair.second)
-                        }
-                    }
+    private fun shouldDownloadMedia(
+        message: Message,
+        sent: Boolean
+    ): Boolean {
+        val media = message.retrieveUrlAndMessageMedia()?.second
+        val host = media?.host
+        val url = media?.url
+
+        val localFile = message.messageMedia?.localFile
+
+        return (
+            media != null &&
+            host != null &&
+            url != null &&
+            localFile == null &&
+            !message.status.isDeleted() &&
+            (!message.isPaidPendingMessage || sent)
+        )
+    }
+
+    private suspend fun downloadMediaInternal(
+        message: Message,
+        sent: Boolean,
+        messageId: MessageId
+    ) {
+        val queries = coreDB.getSphinxDatabaseQueries()
+
+        val media = message.retrieveUrlAndMessageMedia()?.second
+        val host = media?.host
+        val url = media?.url
+
+        if (!shouldDownloadMedia(message, sent)) {
+            return
+        }
+
+        val authToken = memeServerTokenHandler.retrieveAuthenticationToken(host!!)
+            ?: return
+
+        val streamAndFileName = memeInputStreamHandler.retrieveMediaInputStream(
+            url!!.value,
+            authToken,
+            media.mediaKeyDecrypted,
+        ) ?: return
+
+        val targetFile = mediaCacheHandler.createFile(
+            mediaType = message.messageMedia?.mediaType ?: media.mediaType,
+            extension = streamAndFileName.second?.getExtension()
+        ) ?: return
+
+        streamAndFileName.first?.use { stream ->
+            mediaCacheHandler.copyTo(stream, targetFile)
+
+            updateMessageMediaInDatabase(
+                queries,
+                targetFile,
+                streamAndFileName.second,
+                messageId,
+                message.messageContentDecrypted
+            )
+        }
+    }
+
+    private suspend fun updateMessageMediaInDatabase(
+        queries: SphinxDatabaseQueries,
+        file: File,
+        fileName: FileName?,
+        messageId: MessageId,
+        messageContentDecrypted: MessageContentDecrypted?
+    ) {
+        messageLock.withLock {
+            queries.transaction {
+                queries.messageMediaUpdateFile(
+                    file,
+                    fileName,
+                    messageId
+                )
+
+                queries.messageUpdateContentDecrypted(
+                    messageContentDecrypted,
+                    messageId
+                )
+            }
+        }
+
+        delay(50L)
+    }
+
+    private fun cleanupDownloadLock(messageId: MessageId) {
+        downloadMessageMediaLockMap.withLock { map ->
+            map[messageId]?.let { pair ->
+                if (pair.first <= 1) {
+                    map.remove(messageId)
+                } else {
+                    map[messageId] = Pair(pair.first - 1, pair.second)
                 }
             }
         }

@@ -1814,7 +1814,7 @@ abstract class SphinxRepository(
         val amount = if (fromMe || isTribeBoost) msgAmount else realPaymentAmount
 
         val now = DateTime.nowUTC().toDateTime()
-        val messageDate = if (isTribe) messageComponents.date ?: now else messageComponents.timestamp ?: now
+        val messageDate = messageComponents.date ?: messageComponents.timestamp ?: now
 
         val newMessage = NewMessage(
             id = messageComponents.messageId,
@@ -3410,9 +3410,7 @@ abstract class SphinxRepository(
                 }
 
             } else {
-
                 messageDboPresenterMapper.mapFrom(messageDbo)
-
             }
         } ?: messageDboPresenterMapper.mapFrom(messageDbo)
 
@@ -4104,13 +4102,10 @@ abstract class SphinxRepository(
                         queries.messageGetLowestProvisionalMessageId().executeAsOneOrNull()
                     }
                     val provisionalId = MessageId((currentProvisionalId?.value ?: 0L) - 1)
+                    val dateTime = DateTime.nowUTC().toDateTime()
 
                     withContext(io) {
                         queries.transaction {
-
-                            // The following parms are set to null to make the upsert to work
-                            // type, message_content, message_decrypted, status
-
                             queries.messageUpsert(
                                 MessageStatus.Pending,
                                 Seen.True,
@@ -4134,13 +4129,21 @@ abstract class SphinxRepository(
                                 sendMessage.tribePaymentAmount ?: sendMessage.paidMessagePrice ?: messagePrice ,
                                 null,
                                 null,
-                                DateTime.nowUTC().toDateTime(),
+                                dateTime,
                                 null,
                                 null,
                                 message?.toMessageContentDecrypted() ?: sendMessage.text?.toMessageContentDecrypted(),
                                 null,
                                 false.toFlagged(),
                                 if (chat.timezoneEnabled?.isTrue() == true) chat.timezoneIdentifier?.value?.toRemoteTimezoneIdentifier() else null
+                            )
+
+                            updateChatNewLatestMessage(
+                                provisionalId,
+                                chatDbo.id,
+                                dateTime,
+                                latestMessageUpdatedTimeMap,
+                                queries
                             )
                         }
                         provisionalId

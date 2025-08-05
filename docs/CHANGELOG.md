@@ -1,5 +1,9 @@
 # ChangeLog
 
+## Version 1.0.0-alpha72 (2025-08-05)
+- Fixes attachments issues
+- Improves performance
+
 ## Version 1.0.0-alpha71 (2025-08-04)
 - Fixes performance issues on chat view
 - Fixes mute state issues on chats list

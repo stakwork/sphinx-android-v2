@@ -1307,7 +1307,8 @@ messageMediaUpsert {
     UPDATE messageMediaDbo
     SET media_key = :media_key,
         media_type = :media_type,
-        media_token = :media_token
+        media_token = :media_token,
+        media_key_decrypted = :media_key_decrypted
     WHERE id = :id;
 
     INSERT OR IGNORE INTO messageMediaDbo(

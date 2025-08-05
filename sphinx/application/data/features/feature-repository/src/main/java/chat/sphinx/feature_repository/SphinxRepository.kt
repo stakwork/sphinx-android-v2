@@ -1209,7 +1209,8 @@ abstract class SphinxRepository(
                     val contactsMap = queries.contactGetAllByPubKeys(contactPublicKeys).executeAsList().associateBy { it.node_pub_key?.value }
                     val tribesMap = queries.chatGetAllByUUIDS(tribeUUIDs).executeAsList().associateBy { it.uuid.value }
                     val messagesByUUIDMap = queries.messageGetMessagesByUUIDs(messageUUIDs).executeAsList().associateBy { it.uuid?.value }
-                    val messagesMediaByIDMap = queries.messageMediaGetAllById(messageIDs).executeAsList().associateBy { it.id.value }
+                    val messageProvisionalIds = messagesByUUIDMap.values.filter { it.id.isProvisionalMessage }.map { it.id }
+                    val messagesMediaByIDMap = queries.messageMediaGetAllById(messageIDs + messageProvisionalIds).executeAsList().associateBy { it.id.value }
 
                     messages.forEach {message ->
                         onMessage(
@@ -4106,6 +4107,19 @@ abstract class SphinxRepository(
 
                     withContext(io) {
                         queries.transaction {
+                            if (media != null) {
+                                queries.messageMediaUpsert(
+                                    null,
+                                    media.mediaType,
+                                    MediaToken.PROVISIONAL_TOKEN,
+                                    null,
+                                    provisionalId,
+                                    chat.id,
+                                    media.file,
+                                    sendMessage.attachmentInfo?.fileName
+                                )
+                            }
+
                             queries.messageUpsert(
                                 MessageStatus.Pending,
                                 Seen.True,
@@ -4205,9 +4219,9 @@ abstract class SphinxRepository(
                                     mediaKey,
                                     media.mediaType,
                                     mediaTokenValue?.toMediaToken() ?: MediaToken.PROVISIONAL_TOKEN,
+                                    MediaKeyDecrypted(password.value.copyOf().joinToString("")),
                                     provisionalMessageId ?: MessageId(Long.MIN_VALUE),
                                     chat?.id ?: ChatId(ChatId.NULL_CHAT_ID.toLong()),
-                                    MediaKeyDecrypted(password.value.copyOf().joinToString("")),
                                     media.file,
                                     sendMessage.attachmentInfo?.fileName
                                 )
@@ -4588,9 +4602,9 @@ abstract class SphinxRepository(
                     null,
                     MediaType.IMAGE.toMediaType(),
                    mediaTokenValue?.toMediaToken() ?: MediaToken.PROVISIONAL_TOKEN,
+                    null,
                     provisionalId,
                     ChatId(contact?.id?.value ?: ChatId.NULL_CHAT_ID.toLong()),
-                    null,
                     null,
                     null
                 )

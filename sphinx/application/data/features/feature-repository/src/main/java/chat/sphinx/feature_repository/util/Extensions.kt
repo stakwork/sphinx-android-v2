@@ -754,9 +754,9 @@ fun TransactionCallbacks.upsertNewMessage(
             (message.messageMedia?.mediaKey?.value ?: "").toMediaKey(),
             (message.messageMedia?.mediaType?.value ?: "").toMediaType(),
             MediaToken(mediaToken.value),
+            (message.messageMedia?.mediaKeyDecrypted?.value ?: "").toMediaKeyDecrypted(),
             MessageId(message.id.value),
             chatId,
-            (message.messageMedia?.mediaKeyDecrypted?.value ?: "").toMediaKeyDecrypted(),
             message.messageMedia?.localFile,
             fileName
         )
@@ -823,9 +823,9 @@ fun TransactionCallbacks.upsertMessage(
             (dto.media_key ?: "").toMediaKey(),
             (dto.media_type ?: "").toMediaType(),
             MediaToken(mediaToken),
+            dto.mediaKeyDecrypted?.toMediaKeyDecrypted(),
             MessageId(dto.id),
             chatId,
-            dto.mediaKeyDecrypted?.toMediaKeyDecrypted(),
             dto.mediaLocalFile,
             fileName
         )

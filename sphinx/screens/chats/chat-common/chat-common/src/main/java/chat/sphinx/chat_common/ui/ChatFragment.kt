@@ -233,6 +233,7 @@ abstract class ChatFragment<
             setupRecyclerView()
         }
 
+        viewModel.setRecyclerWidthProvider { recyclerView.measuredWidth }
         viewModel.screenInit()
     }
 

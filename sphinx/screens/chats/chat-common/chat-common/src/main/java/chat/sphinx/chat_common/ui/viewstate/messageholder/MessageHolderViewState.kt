@@ -84,6 +84,8 @@ internal sealed class MessageHolderViewState(
     private val onBindDownloadMedia: () -> Unit,
     private val onBindThreadDownloadMedia: () -> Unit,
     private val memberTimezoneIdentifier: String?,
+    val spaceLeft: Int? = null,
+    val spaceRight: Int? = null,
 ) {
 
     val isPinned: Boolean by lazy(LazyThreadSafetyMode.NONE) {
@@ -878,6 +880,8 @@ internal sealed class MessageHolderViewState(
         onBindDownloadMedia: () -> Unit,
         onBindThreadDownloadMedia: () -> Unit,
         memberTimezoneIdentifier: String?,
+        spaceLeft: Int,
+        spaceRight: Int,
     ) : MessageHolderViewState(
         message,
         chat,
@@ -895,7 +899,9 @@ internal sealed class MessageHolderViewState(
         paidTextMessageContentProvider,
         onBindDownloadMedia,
         onBindThreadDownloadMedia,
-        memberTimezoneIdentifier
+        memberTimezoneIdentifier,
+        spaceLeft,
+        spaceRight
     )
 
     class Received(
@@ -914,6 +920,8 @@ internal sealed class MessageHolderViewState(
         onBindDownloadMedia: () -> Unit,
         onBindThreadDownloadMedia: () -> Unit,
         memberTimezoneIdentifier: String?,
+        spaceLeft: Int,
+        spaceRight: Int,
     ) : MessageHolderViewState(
         message,
         chat,
@@ -931,7 +939,9 @@ internal sealed class MessageHolderViewState(
         paidTextMessageContentProvider,
         onBindDownloadMedia,
         onBindThreadDownloadMedia,
-        memberTimezoneIdentifier
+        memberTimezoneIdentifier,
+        spaceLeft,
+        spaceRight
     )
 
     class Separator(
@@ -1017,6 +1027,8 @@ internal sealed class MessageHolderViewState(
         messageSenderInfo: (Message) -> Triple<PhotoUrl?, ContactAlias?, String>?,
         accountOwner: () -> Contact,
         memberTimezoneIdentifier: String?,
+        spaceLeft: Int,
+        spaceRight: Int,
     ) : MessageHolderViewState(
         message,
         chat,
@@ -1034,7 +1046,9 @@ internal sealed class MessageHolderViewState(
         { null },
         {},
         {},
-        memberTimezoneIdentifier
+        memberTimezoneIdentifier,
+        spaceLeft,
+        spaceRight
     ) {
 
         class Sent(
@@ -1045,6 +1059,8 @@ internal sealed class MessageHolderViewState(
             messageSenderInfo: (Message) -> Triple<PhotoUrl?, ContactAlias?, String>,
             accountOwner: () -> Contact,
             memberTimezoneIdentifier: String?,
+            spaceLeft: Int,
+            spaceRight: Int,
         ) : MessageOnlyTextHolderViewState(
             message,
             MessageHolderType.OnlyTextMessage,
@@ -1054,7 +1070,9 @@ internal sealed class MessageHolderViewState(
             highlightedText,
             messageSenderInfo,
             accountOwner,
-            memberTimezoneIdentifier
+            memberTimezoneIdentifier,
+            spaceLeft,
+            spaceRight
         )
 
         class Received(
@@ -1066,6 +1084,8 @@ internal sealed class MessageHolderViewState(
             messageSenderInfo: (Message) -> Triple<PhotoUrl?, ContactAlias?, String>,
             accountOwner: () -> Contact,
             memberTimezoneIdentifier: String?,
+            spaceLeft: Int,
+            spaceRight: Int,
         ) : MessageOnlyTextHolderViewState(
             message,
             MessageHolderType.OnlyTextMessage,
@@ -1075,7 +1095,9 @@ internal sealed class MessageHolderViewState(
             highlightedText,
             messageSenderInfo,
             accountOwner,
-            memberTimezoneIdentifier
+            memberTimezoneIdentifier,
+            spaceLeft,
+            spaceRight
         )
     }
 

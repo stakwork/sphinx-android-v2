@@ -204,11 +204,7 @@ internal fun LayoutMessageHolderBinding.setView(
             viewState.invoiceExpirationHeader
         )
         setBubbleBackground(
-            viewState,
-            recyclerViewWidth,
-            dispatchers,
-            holderJobs,
-            holderScope
+            viewState
         )
         setDeletedOrFlaggedMessageLayout(
             viewState.deletedOrFlaggedMessage
@@ -617,11 +613,7 @@ internal inline fun LayoutMessageHolderBinding.setBubbleInvoiceLayout(
 // TODO: Refactor setting of spaces out of this extension function
 @MainThread
 internal fun LayoutMessageHolderBinding.setBubbleBackground(
-    viewState: MessageHolderViewState,
-    recyclerWidth: Px,
-    dispatchers: CoroutineDispatchers,
-    holderJobs: ArrayList<Job>,
-    holderScope: CoroutineScope,
+    viewState: MessageHolderViewState
 ) {
     if (viewState.background is BubbleBackground.Gone) {
         includeMessageHolderBubble.root.gone
@@ -668,107 +660,8 @@ internal fun LayoutMessageHolderBinding.setBubbleBackground(
         }
     }
 
-    val defaultMargins = root.context.resources
-        .getDimensionPixelSize(common_R.dimen.default_layout_margin)
-
-    if (viewState.background is BubbleBackground.Gone && viewState.background.setSpacingEqual) {
-
-        spaceMessageHolderLeft.updateLayoutParams { width = defaultMargins }
-        spaceMessageHolderRight.updateLayoutParams { width = defaultMargins }
-
-    } else {
-        val defaultReceivedLeftMargin = root.context.resources
-            .getDimensionPixelSize(R.dimen.message_holder_space_width_left)
-
-        val defaultSentRightMargin = root.context.resources
-            .getDimensionPixelSize(R.dimen.message_holder_space_width_right)
-
-        val holderWidth = recyclerWidth.value - (defaultMargins * 2)
-        val bubbleFixedWidth = (holderWidth - defaultReceivedLeftMargin - defaultSentRightMargin - (holderWidth * BubbleBackground.SPACE_WIDTH_MULTIPLE)).toInt()
-
-        val messageReactionsWidth = viewState.bubbleReactionBoosts?.let {
-            root.context.resources.getDimensionPixelSize(R.dimen.message_type_boost_width)
-        } ?: 0
-
-        holderScope.launch(dispatchers.default) {
-            var bubbleWidth: Int = when {
-                viewState.message?.shouldAdaptBubbleWidth == true -> {
-
-                    val textWidth = viewState.bubbleMessage?.let { nnBubbleMessage ->
-                        (includeMessageHolderBubble.textViewMessageText.paint.measureText(
-                            nnBubbleMessage.text ?: getString(R_common.string.decryption_error)
-                        ) + (defaultMargins * 2)).toInt()
-                    } ?: 0
-
-                    val amountWidth = viewState.bubbleDirectPayment?.let { nnBubbleDirectPayment ->
-                        val paymentMargin = root.context.resources.getDimensionPixelSize(
-                            if (nnBubbleDirectPayment.isTribe) {
-                                R.dimen.tribe_payment_row_margin
-                            } else {
-                                R.dimen.payment_row_margin
-                            }
-                        )
-
-                        (includeMessageHolderBubble.includeMessageTypeDirectPayment.textViewSatsAmountReceived.paint.measureText(
-                            nnBubbleDirectPayment.amount.asFormattedString()
-                        ) + paymentMargin).toInt()
-                    } ?: 0
-
-                    val imageWidth = viewState.bubbleImageAttachment?.let {
-                        (bubbleFixedWidth * 0.8F).toInt()
-                    } ?: 0
-
-                    textWidth
-                        .coerceAtLeast(amountWidth)
-                        .coerceAtLeast(imageWidth)
-                }
-                viewState.message?.isPodcastBoost == true -> {
-                    root.context.resources.getDimensionPixelSize(R.dimen.message_type_podcast_boost_width)
-                }
-                viewState.message?.isExpiredInvoice() == true -> {
-                    root.context.resources.getDimensionPixelSize(R.dimen.message_type_expired_invoice_width)
-                }
-                viewState.message?.isSphinxCallLink == true -> {
-                    (bubbleFixedWidth * 0.8F).toInt()
-                }
-                else -> {
-                    bubbleFixedWidth
-                }
-            }
-
-            bubbleWidth = bubbleWidth
-                .coerceAtLeast(messageReactionsWidth)
-                .coerceAtMost(bubbleFixedWidth)
-
-            launch(dispatchers.mainImmediate) {
-                when (viewState) {
-                    is MessageHolderViewState.Received, is MessageHolderViewState.MessageOnlyTextHolderViewState.Received -> {
-                        spaceMessageHolderLeft.updateLayoutParams {
-                            width = defaultReceivedLeftMargin
-                        }
-                        spaceMessageHolderRight.updateLayoutParams {
-                            width = (holderWidth - defaultReceivedLeftMargin - bubbleWidth).toInt()
-                        }
-                    }
-                    is MessageHolderViewState.Sent, is MessageHolderViewState.MessageOnlyTextHolderViewState.Sent -> {
-                        spaceMessageHolderLeft.updateLayoutParams {
-                            width = (holderWidth - defaultSentRightMargin - bubbleWidth).toInt()
-                        }
-                        spaceMessageHolderRight.updateLayoutParams {
-                            width = defaultSentRightMargin
-                        }
-                    }
-                    is MessageHolderViewState.Separator -> { }
-
-                    is MessageHolderViewState.ThreadHeader -> { }
-
-                    else -> {}
-                }
-            }
-        }.let { job ->
-            holderJobs.add(job)
-        }
-    }
+    spaceMessageHolderLeft.updateLayoutParams { width = viewState.spaceLeft ?: 0}
+    spaceMessageHolderRight.updateLayoutParams { width = viewState.spaceRight ?: 0 }
 }
 
 @MainThread

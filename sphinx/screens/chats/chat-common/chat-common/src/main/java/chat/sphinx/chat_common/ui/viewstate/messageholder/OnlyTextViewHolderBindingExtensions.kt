@@ -55,7 +55,7 @@ internal fun LayoutOnlyTextSentMessageHolderBinding.setView(
             colorCache
         )
         setBubbleBackground(
-            viewState, recyclerViewWidth
+            viewState
         )
         if (viewState.background !is BubbleBackground.Gone) {
             setBubbleMessageLayout(
@@ -182,8 +182,7 @@ internal inline fun LayoutOnlyTextSentMessageHolderBinding.setStatusHeader(
 
 @MainThread
 internal fun LayoutOnlyTextSentMessageHolderBinding.setBubbleBackground(
-    viewState: MessageHolderViewState,
-    recyclerWidth: Px,
+    viewState: MessageHolderViewState
 ) {
     if (viewState.background is BubbleBackground.Gone) {
         includeMessageHolderBubble.root.gone
@@ -216,53 +215,8 @@ internal fun LayoutOnlyTextSentMessageHolderBinding.setBubbleBackground(
         }
     }
 
-    val defaultMargins = root.context.resources
-        .getDimensionPixelSize(common_R.dimen.default_layout_margin)
-
-    if (viewState.background is BubbleBackground.Gone && viewState.background.setSpacingEqual) {
-
-        spaceMessageHolderLeft.updateLayoutParams { width = defaultMargins }
-        spaceMessageHolderRight.updateLayoutParams { width = defaultMargins }
-
-    } else {
-        val defaultReceivedLeftMargin = root.context.resources
-            .getDimensionPixelSize(R.dimen.message_holder_space_width_left)
-
-        val defaultSentRightMargin = root.context.resources
-            .getDimensionPixelSize(R.dimen.message_holder_space_width_right)
-
-        val holderWidth = recyclerWidth.value - (defaultMargins * 2)
-        val bubbleFixedWidth = (holderWidth - defaultReceivedLeftMargin - defaultSentRightMargin - (holderWidth * BubbleBackground.SPACE_WIDTH_MULTIPLE)).toInt()
-
-        var bubbleWidth: Int = when {
-            viewState.message?.shouldAdaptBubbleWidth == true -> {
-
-                val textWidth = viewState.bubbleMessage?.let { nnBubbleMessage ->
-                    (includeMessageHolderBubble.textViewMessageText.paint.measureText(
-                        nnBubbleMessage.text ?: getString(R_common.string.decryption_error)
-                    ) + (defaultMargins * 2)).toInt()
-                } ?: 0
-
-                val imageWidth = viewState.bubbleImageAttachment?.let {
-                    (bubbleFixedWidth * 0.8F).toInt()
-                } ?: 0
-
-                textWidth.coerceAtLeast(imageWidth)
-            }
-            else -> {
-                bubbleFixedWidth
-            }
-        }
-
-        bubbleWidth = bubbleWidth.coerceAtMost(bubbleFixedWidth)
-
-        spaceMessageHolderLeft.updateLayoutParams {
-            width = (holderWidth - defaultSentRightMargin - bubbleWidth).toInt()
-        }
-        spaceMessageHolderRight.updateLayoutParams {
-            width = defaultSentRightMargin
-        }
-    }
+    spaceMessageHolderLeft.updateLayoutParams { width = viewState.spaceLeft ?: 0 }
+    spaceMessageHolderRight.updateLayoutParams { width = viewState.spaceRight ?: 0 }
 }
 
 @MainThread
@@ -320,7 +274,7 @@ internal fun LayoutOnlyTextReceivedMessageHolderBinding.setView(
             colorCache
         )
         setBubbleBackground(
-            viewState, recyclerViewWidth
+            viewState
         )
         if (viewState.background !is BubbleBackground.Gone) {
             setBubbleMessageLayout(
@@ -451,8 +405,7 @@ internal inline fun LayoutOnlyTextReceivedMessageHolderBinding.setStatusHeader(
 
 @MainThread
 internal fun LayoutOnlyTextReceivedMessageHolderBinding.setBubbleBackground(
-    viewState: MessageHolderViewState,
-    recyclerWidth: Px,
+    viewState: MessageHolderViewState
 ) {
     if (viewState.background is BubbleBackground.Gone) {
         includeMessageHolderBubble.root.gone
@@ -484,140 +437,8 @@ internal fun LayoutOnlyTextReceivedMessageHolderBinding.setBubbleBackground(
         }
     }
 
-    val defaultMargins = root.context.resources
-        .getDimensionPixelSize(common_R.dimen.default_layout_margin)
-
-    if (viewState.background is BubbleBackground.Gone && viewState.background.setSpacingEqual) {
-
-        spaceMessageHolderLeft.updateLayoutParams { width = defaultMargins }
-        spaceMessageHolderRight.updateLayoutParams { width = defaultMargins }
-
-    } else {
-        val defaultReceivedLeftMargin = root.context.resources
-            .getDimensionPixelSize(R.dimen.message_holder_space_width_left)
-
-        val defaultSentRightMargin = root.context.resources
-            .getDimensionPixelSize(R.dimen.message_holder_space_width_right)
-
-        val holderWidth = recyclerWidth.value - (defaultMargins * 2)
-        val bubbleFixedWidth = (holderWidth - defaultReceivedLeftMargin - defaultSentRightMargin - (holderWidth * BubbleBackground.SPACE_WIDTH_MULTIPLE)).toInt()
-
-        var bubbleWidth: Int = when {
-            viewState.message?.shouldAdaptBubbleWidth == true -> {
-
-                val textWidth = viewState.bubbleMessage?.let { nnBubbleMessage ->
-                    (includeMessageHolderBubble.textViewMessageText.paint.measureText(
-                        nnBubbleMessage.text ?: getString(R_common.string.decryption_error)
-                    ) + (defaultMargins * 2)).toInt()
-                } ?: 0
-
-                val imageWidth = viewState.bubbleImageAttachment?.let {
-                    (bubbleFixedWidth * 0.8F).toInt()
-                } ?: 0
-
-                textWidth.coerceAtLeast(imageWidth)
-            }
-            else -> {
-                bubbleFixedWidth
-            }
-        }
-
-        bubbleWidth = bubbleWidth.coerceAtMost(bubbleFixedWidth)
-
-        spaceMessageHolderLeft.updateLayoutParams {
-            width = defaultReceivedLeftMargin
-        }
-        spaceMessageHolderRight.updateLayoutParams {
-            width = (holderWidth - defaultReceivedLeftMargin - bubbleWidth).toInt()
-        }
-    }
-}
-
-@MainThread
-internal fun LayoutOnlyTextMessageHolderBubbleBinding.setBubbleBackground(
-    viewState: MessageHolderViewState,
-    receivedBubbleArrow: View,
-    spaceMessageHolderLeft: Space,
-    spaceMessageHolderRight: Space,
-    recyclerWidth: Px,
-) {
-    if (viewState.background is BubbleBackground.Gone) {
-        root.gone
-        receivedBubbleArrow.gone
-    } else {
-        receivedBubbleArrow.goneIfFalse(viewState.showReceivedBubbleArrow)
-
-        root.apply {
-            visible
-
-            @DrawableRes
-            val resId: Int? = when (viewState.background) {
-                BubbleBackground.First.Grouped -> {
-                    R.drawable.background_message_bubble_received_first
-                }
-                BubbleBackground.First.Isolated,
-                BubbleBackground.Last -> {
-                    R.drawable.background_message_bubble_received_last
-                }
-                BubbleBackground.Middle -> {
-                    R.drawable.background_message_bubble_received_middle
-                }
-                else -> {
-                    null
-                }
-            }
-
-            resId?.let { setBackgroundResource(it) }
-        }
-    }
-
-    val defaultMargins = root.context.resources
-        .getDimensionPixelSize(common_R.dimen.default_layout_margin)
-
-    if (viewState.background is BubbleBackground.Gone && viewState.background.setSpacingEqual) {
-
-        spaceMessageHolderLeft.updateLayoutParams { width = defaultMargins }
-        spaceMessageHolderRight.updateLayoutParams { width = defaultMargins }
-
-    } else {
-        val defaultReceivedLeftMargin = root.context.resources
-            .getDimensionPixelSize(R.dimen.message_holder_space_width_left)
-
-        val defaultSentRightMargin = root.context.resources
-            .getDimensionPixelSize(R.dimen.message_holder_space_width_right)
-
-        val holderWidth = recyclerWidth.value - (defaultMargins * 2)
-        val bubbleFixedWidth = (holderWidth - defaultReceivedLeftMargin - defaultSentRightMargin - (holderWidth * BubbleBackground.SPACE_WIDTH_MULTIPLE)).toInt()
-
-        var bubbleWidth: Int = when {
-            viewState.message?.shouldAdaptBubbleWidth == true -> {
-
-                val textWidth = viewState.bubbleMessage?.let { nnBubbleMessage ->
-                    (textViewMessageText.paint.measureText(
-                        nnBubbleMessage.text ?: getString(R_common.string.decryption_error)
-                    ) + (defaultMargins * 2)).toInt()
-                } ?: 0
-
-                val imageWidth = viewState.bubbleImageAttachment?.let {
-                    (bubbleFixedWidth * 0.8F).toInt()
-                } ?: 0
-
-                textWidth.coerceAtLeast(imageWidth)
-            }
-            else -> {
-                bubbleFixedWidth
-            }
-        }
-
-        bubbleWidth = bubbleWidth.coerceAtMost(bubbleFixedWidth)
-
-        spaceMessageHolderLeft.updateLayoutParams {
-            width = defaultReceivedLeftMargin
-        }
-        spaceMessageHolderRight.updateLayoutParams {
-            width = (holderWidth - defaultReceivedLeftMargin - bubbleWidth).toInt()
-        }
-    }
+    spaceMessageHolderLeft.updateLayoutParams { width = viewState.spaceLeft ?: 0 }
+    spaceMessageHolderRight.updateLayoutParams { width = viewState.spaceRight ?: 0 }
 }
 
 @MainThread

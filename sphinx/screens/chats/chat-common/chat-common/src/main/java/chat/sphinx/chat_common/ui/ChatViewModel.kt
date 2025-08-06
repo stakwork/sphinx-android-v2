@@ -5,6 +5,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.Paint
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.pdf.PdfRenderer
@@ -14,11 +15,14 @@ import android.os.ParcelFileDescriptor
 import android.os.ParcelFileDescriptor.MODE_READ_ONLY
 import android.provider.MediaStore
 import android.provider.OpenableColumns
+import android.text.TextPaint
 import android.util.Log
 import android.webkit.MimeTypeMap
 import androidx.annotation.CallSuper
 import androidx.annotation.RequiresApi
+import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.inputmethod.InputConnectionCompat
+import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
@@ -77,6 +81,7 @@ import chat.sphinx.logger.SphinxLogger
 import chat.sphinx.logger.e
 import chat.sphinx.menu_bottom.ui.MenuBottomViewState
 import chat.sphinx.resources.getRandomHexCode
+import chat.sphinx.resources.getString
 import chat.sphinx.wrapper_chat.*
 import chat.sphinx.wrapper_common.*
 import chat.sphinx.wrapper_common.chat.ChatUUID
@@ -169,6 +174,29 @@ abstract class ChatViewModel<ARGS : NavArgs>(
     protected abstract val contactId: ContactId?
 
     private val activeDownloadJobs = mutableSetOf<Job>()
+
+    private val dims by lazy { MessageDimensions(app.applicationContext) }
+    private var recyclerWidthProvider: (() -> Int)? = null
+
+    fun setRecyclerWidthProvider(provider: () -> Int) {
+        recyclerWidthProvider = provider
+    }
+
+    private var textPaint: Paint = Paint().apply {
+        textSize = app.applicationContext.resources.getDimensionPixelSize(R.dimen.chat_message_text_size).toFloat()
+        typeface = ResourcesCompat.getFont(app.applicationContext, chat.sphinx.resources.R.font.roboto_regular)
+        isAntiAlias = true
+        textScaleX = 1.0f
+    }
+
+    private var amountPaint: Paint = Paint().apply {
+        textSize = app.applicationContext.resources.getDimensionPixelSize(R.dimen.chat_message_text_size).toFloat()
+        typeface = ResourcesCompat.getFont(app.applicationContext, chat.sphinx.resources.R.font.roboto_bold)
+        isAntiAlias = true
+        textScaleX = 1.0f
+    }
+
+    private var dimensionCache = mutableMapOf<String, Pair<Int, Int>>()
 
     val imageLoaderDefaults by lazy {
         ImageLoaderOptions.Builder()
@@ -639,7 +667,30 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
             val isDeleted = message.status.isDeleted()
 
+            val recyclerWidth = recyclerWidthProvider?.invoke() ?: run {
+                0
+            }
+
+            val cacheKey = generateCacheKey(
+                messageId = message.id.toString(),
+                messageText = message.retrieveTextToShow()?.replacingMarkdown(),
+                background = groupingDateAndBubbleBackground.second,
+                shouldAdaptBubbleWidth = message.shouldAdaptBubbleWidth,
+                recyclerWidth = recyclerWidth,
+                reactionsCount = message.reactions?.size ?: 0
+            )
+
             if (message.isOnlyTextMessage) {
+                val spaces = dimensionCache.getOrPut(cacheKey) {
+                    calculateOnlyTextMessageDimensions(
+                        message.retrieveTextToShow()?.replacingMarkdown(),
+                        !sent,
+                        groupingDateAndBubbleBackground.second,
+                        message.shouldAdaptBubbleWidth,
+                        recyclerWidth
+                    )
+                }
+
                 if (sent) {
                     newList.add(
                         MessageHolderViewState.MessageOnlyTextHolderViewState.Sent(
@@ -675,7 +726,9 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                                 }
                             },
                             accountOwner = { owner },
-                            memberTimezoneIdentifier = if (message.senderAlias != null) memberTimezones[message.senderAlias!!.value] else null
+                            memberTimezoneIdentifier = if (message.senderAlias != null) memberTimezones[message.senderAlias!!.value] else null,
+                            spaceLeft = spaces.first,
+                            spaceRight = spaces.second
                         )
                     )
                 } else {
@@ -716,34 +769,79 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                                 }
                             },
                             accountOwner = { owner },
-                            memberTimezoneIdentifier = if (message.senderAlias != null) memberTimezones[message.senderAlias!!.value] else null
+                            memberTimezoneIdentifier = if (message.senderAlias != null) memberTimezones[message.senderAlias!!.value] else null,
+                            spaceLeft = spaces.first,
+                            spaceRight = spaces.second
                         )
                     )
                 }
             } else {
-                if (
-                    (sent && !message.isPaidInvoice) ||
-                    (!sent && message.isPaidInvoice)
-                ) {
+                val sentDirectionBubble = ((sent && !message.isPaidInvoice) || (!sent && message.isPaidInvoice))
+
+                val background = if (sentDirectionBubble) {
+                    when {
+                        isDeleted -> {
+                            BubbleBackground.Gone(setSpacingEqual = false)
+                        }
+                        message.type.isInvoicePayment() -> {
+                            BubbleBackground.Gone(setSpacingEqual = false)
+                        }
+                        message.type.isGroupAction() -> {
+                            BubbleBackground.Gone(setSpacingEqual = true)
+                        }
+                        else -> {
+                            groupingDateAndBubbleBackground.second
+                        }
+                    }
+                } else {
+                    when {
+                        isDeleted -> {
+                            BubbleBackground.Gone(setSpacingEqual = false)
+                        }
+
+                        message.isFlagged -> {
+                            BubbleBackground.Gone(setSpacingEqual = false)
+                        }
+
+                        message.type.isInvoicePayment() -> {
+                            BubbleBackground.Gone(setSpacingEqual = false)
+                        }
+
+                        message.type.isGroupAction() -> {
+                            BubbleBackground.Gone(setSpacingEqual = true)
+                        }
+
+                        else -> {
+                            groupingDateAndBubbleBackground.second
+                        }
+                    }
+                }
+
+                val spaces = dimensionCache.getOrPut(cacheKey) {
+                    calculateMessageDimensions(
+                        message.retrieveTextToShow()?.replacingMarkdown(),
+                        if (message.isDirectPayment) message.amount.asFormattedString() else null,
+                        message.reactions?.size ?: 0,
+                        message.isDirectPayment,
+                        message.retrieveImageUrlAndMessageMedia() != null,
+                        message.isPodcastBoost,
+                        message.isExpiredInvoice(),
+                        message.isSphinxCallLink,
+                        !sentDirectionBubble,
+                        chat.isTribe(),
+                        background,
+                        message.shouldAdaptBubbleWidth,
+                        recyclerWidth
+                    )
+                }
+
+                if (sentDirectionBubble) {
                     newList.add(
                         MessageHolderViewState.Sent(
                             message,
                             chat,
                             tribeAdmin,
-                            background = when {
-                                isDeleted -> {
-                                    BubbleBackground.Gone(setSpacingEqual = false)
-                                }
-                                message.type.isInvoicePayment() -> {
-                                    BubbleBackground.Gone(setSpacingEqual = false)
-                                }
-                                message.type.isGroupAction() -> {
-                                    BubbleBackground.Gone(setSpacingEqual = true)
-                                }
-                                else -> {
-                                    groupingDateAndBubbleBackground.second
-                                }
-                            },
+                            background = background,
                             invoiceLinesHolderViewState = invoiceLinesHolderViewState,
                             highlightedText = null,
                             messageSenderInfo = { messageCallback ->
@@ -797,7 +895,9 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                                     }
                                 }
                             },
-                            memberTimezoneIdentifier = if (message.senderAlias != null) memberTimezones[message.senderAlias!!.value] else null
+                            memberTimezoneIdentifier = if (message.senderAlias != null) memberTimezones[message.senderAlias!!.value] else null,
+                            spaceLeft = spaces.first,
+                            spaceRight = spaces.second
                         )
                     )
                 } else {
@@ -806,27 +906,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                             message,
                             chat,
                             tribeAdmin,
-                            background = when {
-                                isDeleted -> {
-                                    BubbleBackground.Gone(setSpacingEqual = false)
-                                }
-
-                                message.isFlagged -> {
-                                    BubbleBackground.Gone(setSpacingEqual = false)
-                                }
-
-                                message.type.isInvoicePayment() -> {
-                                    BubbleBackground.Gone(setSpacingEqual = false)
-                                }
-
-                                message.type.isGroupAction() -> {
-                                    BubbleBackground.Gone(setSpacingEqual = true)
-                                }
-
-                                else -> {
-                                    groupingDateAndBubbleBackground.second
-                                }
-                            },
+                            background = background,
                             invoiceLinesHolderViewState = invoiceLinesHolderViewState,
                             initialHolder = when {
                                 isDeleted || message.type.isGroupAction() -> {
@@ -881,7 +961,9 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                                     repositoryMedia.downloadMediaIfApplicable(lastReplyMessage, sent)
                                 }
                             },
-                            memberTimezoneIdentifier = if (message.senderAlias != null) memberTimezones[message.senderAlias!!.value] else null
+                            memberTimezoneIdentifier = if (message.senderAlias != null) memberTimezones[message.senderAlias!!.value] else null,
+                            spaceLeft = spaces.first,
+                            spaceRight = spaces.second
                         )
                     )
                 }
@@ -898,6 +980,167 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         }
 
         return newList
+    }
+
+    private fun calculateOnlyTextMessageDimensions(
+        messageText: String?,
+        isReceived: Boolean,
+        background: BubbleBackground,
+        shouldAdaptBubbleWidth: Boolean,
+        recyclerWidth: Int
+    ): Pair<Int, Int> {
+
+        val context = app.applicationContext
+        val defaultMargins = dims.defaultMargin
+
+        if (background is BubbleBackground.Gone && background.setSpacingEqual) {
+            return Pair(defaultMargins, defaultMargins)
+        } else {
+            val defaultReceivedLeftMargin = dims.defaultReceivedLeftMargin
+            val defaultSentRightMargin = dims.defaultSentRightMargin
+
+            val holderWidth = recyclerWidth - (defaultMargins * 2)
+            val bubbleFixedWidth =
+                (holderWidth - defaultReceivedLeftMargin - defaultSentRightMargin - (holderWidth * BubbleBackground.SPACE_WIDTH_MULTIPLE)).toInt()
+
+            var bubbleWidth: Int = when {
+                shouldAdaptBubbleWidth -> {
+                    val text = messageText ?: context.getString(R_common.string.decryption_error)
+                    val textWidth = (textPaint.measureText(
+                        text
+                    ) + (defaultMargins * 2)).toInt()
+                    textWidth
+                }
+                else -> {
+                    bubbleFixedWidth
+                }
+            }
+
+            bubbleWidth = bubbleWidth.coerceAtMost(bubbleFixedWidth)
+
+            if (isReceived) {
+                return Pair(
+                    defaultReceivedLeftMargin,
+                    (holderWidth - defaultReceivedLeftMargin - bubbleWidth)
+                )
+            } else {
+                return Pair(
+                    (holderWidth - defaultSentRightMargin - bubbleWidth),
+                    defaultSentRightMargin
+                )
+            }
+
+        }
+    }
+
+    private fun calculateMessageDimensions(
+        messageText: String?,
+        amountText: String?,
+        reactionsCount: Int,
+        isDirectPayment: Boolean,
+        isImageAttachment: Boolean,
+        isPodcastBoost: Boolean,
+        isExpiredInvoice: Boolean,
+        isSphinxCallLink: Boolean,
+        isReceived: Boolean,
+        isTribe: Boolean,
+        background: BubbleBackground,
+        shouldAdaptBubbleWidth: Boolean,
+        recyclerWidth: Int
+    ): Pair<Int, Int> {
+
+        val context = app.applicationContext
+        val defaultMargins = dims.defaultMargin
+
+        if (background is BubbleBackground.Gone && background.setSpacingEqual) {
+            return Pair(defaultMargins, defaultMargins)
+        } else {
+            val defaultReceivedLeftMargin = dims.defaultReceivedLeftMargin
+            val defaultSentRightMargin = dims.defaultSentRightMargin
+
+            val holderWidth = recyclerWidth - (defaultMargins * 2)
+            val bubbleFixedWidth = (holderWidth - defaultReceivedLeftMargin - defaultSentRightMargin - (holderWidth * BubbleBackground.SPACE_WIDTH_MULTIPLE)).toInt()
+
+            val messageReactionsWidth = if (reactionsCount > 0) dims.boostWidth else 0
+
+            var bubbleWidth: Int = when {
+                shouldAdaptBubbleWidth == true -> {
+
+                    val text = messageText ?: context.getString(R_common.string.decryption_error)
+                    val textWidth = (textPaint.measureText(
+                        text
+                    ) + (defaultMargins * 2)).toInt()
+
+                    var amountWidth = 0
+
+                    if (isDirectPayment) {
+                        var paymentMargin = 0
+                        if (isTribe) {
+                            paymentMargin = dims.tribePaymentMargin
+                        } else {
+                            paymentMargin = dims.paymentMargin
+                        }
+
+                        amountText?.let {
+                            amountWidth = (amountPaint.measureText(
+                                it
+                            ) + paymentMargin).toInt()
+                        }
+                    }
+
+                    val imageWidth = if (isImageAttachment) (bubbleFixedWidth * 0.8F).toInt() else 0
+
+                    textWidth
+                        .coerceAtLeast(amountWidth)
+                        .coerceAtLeast(imageWidth)
+                }
+                isPodcastBoost -> {
+                    dims.podcastBoostWidth
+                }
+                isExpiredInvoice -> {
+                    dims.expiredInvoiceWidth
+                }
+                isSphinxCallLink -> {
+                    (bubbleFixedWidth * 0.8F).toInt()
+                }
+                else -> {
+                    bubbleFixedWidth
+                }
+            }
+
+            bubbleWidth = bubbleWidth
+                .coerceAtLeast(messageReactionsWidth)
+                .coerceAtMost(bubbleFixedWidth)
+
+            if (isReceived) {
+                return Pair(defaultReceivedLeftMargin, (holderWidth - defaultReceivedLeftMargin - bubbleWidth))
+            } else {
+                return Pair((holderWidth - defaultSentRightMargin - bubbleWidth), defaultSentRightMargin)
+            }
+        }
+    }
+
+    private fun generateCacheKey(
+        messageId: String,
+        messageText: String?,
+        background: BubbleBackground,
+        shouldAdaptBubbleWidth: Boolean,
+        recyclerWidth: Int,
+        reactionsCount: Int
+    ): String {
+        return buildString {
+            append(messageId)
+            append("_")
+            append(messageText?.hashCode() ?: "null")
+            append("_")
+            append(background.javaClass.simpleName)
+            append("_")
+            append(shouldAdaptBubbleWidth)
+            append("_")
+            append(recyclerWidth)
+            append("_")
+            append(reactionsCount)
+        }
     }
 
     private suspend fun getMessageHolderViewStateList(messages: List<Message>): List<MessageHolderViewState> {
@@ -2895,6 +3138,17 @@ inline fun Bitmap.toInputStream(): InputStream? {
     compress(Bitmap.CompressFormat.JPEG, 100, stream)
     val imageInByte: ByteArray = stream.toByteArray()
     return ByteArrayInputStream(imageInByte)
+}
+
+data class MessageDimensions(val context: Context) {
+    val defaultMargin = context.resources.getDimensionPixelSize(chat.sphinx.resources.R.dimen.default_layout_margin)
+    val defaultReceivedLeftMargin = context.resources.getDimensionPixelSize(R.dimen.message_holder_space_width_left)
+    val defaultSentRightMargin = context.resources.getDimensionPixelSize(R.dimen.message_holder_space_width_right)
+    val podcastBoostWidth = context.resources.getDimensionPixelSize(R.dimen.message_type_podcast_boost_width)
+    val expiredInvoiceWidth = context.resources.getDimensionPixelSize(R.dimen.message_type_expired_invoice_width)
+    val boostWidth = context.resources.getDimensionPixelSize(R.dimen.message_type_boost_width)
+    val tribePaymentMargin = context.resources.getDimensionPixelSize(R.dimen.tribe_payment_row_margin)
+    val paymentMargin = context.resources.getDimensionPixelSize(R.dimen.payment_row_margin)
 }
 
 

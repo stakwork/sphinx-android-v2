@@ -312,6 +312,7 @@ abstract class SphinxRepository(
                 owner?.nodePubKey?.value,
                 owner?.routeHint?.value,
                 userState,
+                null,
                 lastMessageIndex
             )
 
@@ -3938,22 +3939,28 @@ abstract class SphinxRepository(
         chatId: ChatId,
         queries: SphinxDatabaseQueries
     ) {
+        val messageData = withContext(io) {
+            val message = queries.messageGetMaxIdByChatId(chatId).executeAsOneOrNull()
+            val contact = queries.contactGetById(ContactId(chatId.value)).executeAsOneOrNull()
+            val chat = queries.chatGetById(chatId).executeAsOneOrNull()
+
+            Triple(message, contact, chat)
+        }
+
         messageLock.withLock {
             withContext(io) {
                 queries.transaction {
                     queries.updateSeen(chatId)
+                }
+            }
+        }
 
-                    val message = queries.messageGetMaxIdByChatId(chatId).executeAsOneOrNull()
-                    val contact = queries.contactGetById(ContactId(chatId.value)).executeAsOneOrNull()
-                    val chat = queries.chatGetById(chatId).executeAsOneOrNull()
-
-                    if (message != null) {
-                        contact?.node_pub_key?.value?.let { pubKey ->
-                            connectManager.setReadMessage(pubKey, message.id.value)
-                        } ?: chat?.uuid?.value?.let { pubKey ->
-                            connectManager.setReadMessage(pubKey, message.id.value)
-                        }
-                    }
+        withContext(io) {
+            messageData.first?.let { messageDbo ->
+                messageData.second?.node_pub_key?.value?.let { pubKey ->
+                    connectManager.setReadMessage(pubKey, messageDbo.id.value)
+                } ?: messageData.third?.uuid?.value?.let { pubKey ->
+                    connectManager.setReadMessage(pubKey, messageDbo.id.value)
                 }
             }
         }

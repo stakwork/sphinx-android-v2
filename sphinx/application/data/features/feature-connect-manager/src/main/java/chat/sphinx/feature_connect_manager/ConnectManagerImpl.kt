@@ -17,9 +17,14 @@ import chat.sphinx.wrapper_lightning.WalletMnemonic
 import chat.sphinx.wrapper_lightning.toWalletMnemonic
 import com.ensarsarajcic.kotlinx.serialization.msgpack.MsgPack
 import com.ensarsarajcic.kotlinx.serialization.msgpack.MsgPackDynamicSerializer
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okio.base64.encodeBase64
 import org.eclipse.paho.client.mqttv3.IMqttActionListener
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken
@@ -112,6 +117,8 @@ class ConnectManagerImpl: ConnectManager()
     private var isMqttConnected: Boolean = false
     private var isAppFirstInit: Boolean = true
 
+    private val userStateScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+
     companion object {
         const val TEST_V2_SERVER_IP = "75.101.247.127:1883"
         const val TEST_V2_TRIBES_SERVER = "75.101.247.127:8801"
@@ -133,6 +140,7 @@ class ConnectManagerImpl: ConnectManager()
 
     private val _ownerInfoStateFlow: MutableStateFlow<OwnerInfo> by lazy {
         MutableStateFlow(OwnerInfo(
+            null,
             null,
             null,
             null,
@@ -1041,6 +1049,7 @@ class ConnectManagerImpl: ConnectManager()
                 ownerInfo.pubkey,
                 ownerInfo.routeHint,
                 ownerInfoStateFlow.value.userState,
+                ownerInfoStateFlow.value.userStateByteArray,
                 ownerInfo.messageLastIndex
             )
 
@@ -2133,7 +2142,8 @@ class ConnectManagerImpl: ConnectManager()
                 storeUserStateOnSharedPreferences(it)
             }
 
-        } catch (e: Exception) { }
+        } catch (_: Exception) {
+        }
     }
 
     private fun storeUserStateOnSharedPreferences(newUserState: MutableMap<String, ByteArray>) {
@@ -2141,15 +2151,17 @@ class ConnectManagerImpl: ConnectManager()
         existingUserState.putAll(newUserState)
 
         val encodedString = encodeMapToBase64(existingUserState)
+        val bytesArray = MsgPack.encodeToByteArray(MsgPackDynamicSerializer, existingUserState)
 
-        // Update class var
         _ownerInfoStateFlow.value = ownerInfoStateFlow.value.copy(
-            userState = encodedString
+            userState = encodedString,
+            userStateByteArray = bytesArray
         )
 
-        // Update SharedPreferences
-        notifyListeners {
-            onUpdateUserState(encodedString)
+        userStateScope.launch(Dispatchers.IO) {
+            notifyListeners {
+                onUpdateUserState(encodedString)
+            }
         }
     }
 
@@ -2161,15 +2173,17 @@ class ConnectManagerImpl: ConnectManager()
         }
 
         val encodedString = encodeMapToBase64(existingUserState)
-
-        // Update class var
+        val bytesArray = MsgPack.encodeToByteArray(MsgPackDynamicSerializer, existingUserState)
+        
         _ownerInfoStateFlow.value = ownerInfoStateFlow.value.copy(
-            userState = encodedString
+            userState = encodedString,
+            userStateByteArray = bytesArray
         )
 
-        // Update SharedPreferences
-        notifyListeners {
-            onUpdateUserState(encodedString)
+        userStateScope.launch(Dispatchers.IO) {
+            notifyListeners {
+                onUpdateUserState(encodedString)
+            }
         }
     }
 
@@ -2182,22 +2196,87 @@ class ConnectManagerImpl: ConnectManager()
     }
 
     private fun getCurrentUserState(): ByteArray {
+        ownerInfoStateFlow.value.userStateByteArray?.let { bytes ->
+            return bytes
+        }
         val userStateMap = retrieveUserStateMap(ownerInfoStateFlow.value.userState)
-        Log.d("MQTT_MESSAGES", "getCurrentUserState $userStateMap")
-        return MsgPack.encodeToByteArray(MsgPackDynamicSerializer, userStateMap)
+        val bytesArray = MsgPack.encodeToByteArray(MsgPackDynamicSerializer, userStateMap)
+
+        _ownerInfoStateFlow.value = ownerInfoStateFlow.value.copy(
+            userStateByteArray = bytesArray
+        )
+
+        return bytesArray
+    }
+
+    private fun decodeBase64ToMap(encodedString: String): MutableMap<String, ByteArray> {
+        if (encodedString.isEmpty()) {
+            return mutableMapOf()
+        }
+
+        val decodedMap = mutableMapOf<String, ByteArray>()
+
+        try {
+            val jsonObject = JSONObject(encodedString)
+
+            jsonObject.keys().forEach { key ->
+                try {
+                    val encodedValue = jsonObject.getString(key)
+                    val decodedValue = Base64.decode(encodedValue, Base64.NO_WRAP)
+                    decodedMap[key] = decodedValue
+                } catch (e: Exception) {
+//                    Log.w("UserState", "Failed to decode key '$key': ${e.message}")
+                }
+            }
+        } catch (e: JSONException) {
+//            Log.e("UserState", "Failed to parse user state JSON", e)
+        }
+
+        return decodedMap
     }
 
     private fun encodeMapToBase64(map: MutableMap<String, ByteArray>): String {
-        val encodedMap = mutableMapOf<String, String>()
+        when {
+            map.isEmpty() -> return "{}"
+            map.size == 1 -> {
+                // Optimize for single entry
+                val (key, value) = map.entries.first()
+                return "{\"${escapeJsonString(key)}\":\"${Base64.encodeToString(value, Base64.NO_WRAP)}\"}"
+            }
+            else -> {
+                return buildString(capacity = estimateJsonSize(map)) {
+                    append("{")
+                    map.entries.forEachIndexed { index, (key, value) ->
+                        if (index > 0) append(",")
 
-        for ((key, value) in map) {
-            encodedMap[key] = Base64.encodeToString(value, Base64.NO_WRAP)
+                        append("\"")
+                        append(escapeJsonString(key))
+                        append("\":\"")
+                        append(Base64.encodeToString(value, Base64.NO_WRAP))
+                        append("\"")
+                    }
+                    append("}")
+                }
+            }
+        }
+    }
+
+    private fun estimateJsonSize(map: MutableMap<String, ByteArray>): Int {
+        return map.entries.sumOf { (key, value) ->
+            key.length + (value.size * 4 / 3) + 6
+        } + 10
+    }
+
+    private fun escapeJsonString(str: String): String {
+        if (str.none { it == '"' || it == '\\' || it < ' ' }) {
+            return str
         }
 
-        val result = (encodedMap as Map<*, *>?)?.let { JSONObject(it).toString() } ?: ""
-
-
-        return result
+        return str.replace("\\", "\\\\")
+            .replace("\"", "\\\"")
+            .replace("\n", "\\n")
+            .replace("\r", "\\r")
+            .replace("\t", "\\t")
     }
 
     private fun extractTagAndStatus(sentStatusJson: String?): Pair<String, Boolean>? {
@@ -2213,28 +2292,6 @@ class ConnectManagerImpl: ConnectManager()
             e.printStackTrace()
         }
         return null
-    }
-
-    private fun decodeBase64ToMap(encodedString: String): MutableMap<String, ByteArray> {
-        if (encodedString.isEmpty()) {
-            return mutableMapOf()
-        }
-
-        val decodedMap = mutableMapOf<String, ByteArray>()
-
-        try {
-            val jsonObject = JSONObject(encodedString)
-            val keys = jsonObject.keys()
-
-            while (keys.hasNext()) {
-                val key = keys.next()
-                val encodedValue = jsonObject.getString(key)
-                val decodedValue = Base64.decode(encodedValue, Base64.NO_WRAP)
-                decodedMap[key] = decodedValue
-            }
-        } catch (e: JSONException) { }
-
-        return decodedMap
     }
 
     private fun convertSatsToMillisats(sats: Long): ULong {

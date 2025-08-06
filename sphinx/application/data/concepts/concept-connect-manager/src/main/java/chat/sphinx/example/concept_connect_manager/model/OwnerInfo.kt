@@ -6,5 +6,6 @@ data class OwnerInfo(
     val pubkey: String?,
     val routeHint: String?,
     val userState: String?,
+    val userStateByteArray: ByteArray?,
     val messageLastIndex: Long?
 )

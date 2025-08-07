@@ -84,6 +84,7 @@ import chat.sphinx.menu_bottom.ui.BottomMenu
 import chat.sphinx.menu_bottom.ui.MenuBottomViewState
 import chat.sphinx.resources.*
 import chat.sphinx.wrapper_chat.getColorKey
+import chat.sphinx.wrapper_chat.isApproved
 import chat.sphinx.wrapper_chat.isConversation
 import chat.sphinx.wrapper_chat.isPending
 import chat.sphinx.wrapper_common.FileSize
@@ -108,6 +109,7 @@ import io.matthewnelson.android_feature_screens.util.visible
 import io.matthewnelson.android_feature_viewmodel.submitSideEffect
 import io.matthewnelson.android_feature_viewmodel.updateViewState
 import io.matthewnelson.concept_views.viewstate.collect
+import io.matthewnelson.concept_views.viewstate.value
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
@@ -1219,38 +1221,6 @@ abstract class ChatFragment<
                                     )
                                 }
                             }
-
-                            textViewChatHeaderConnectivity.apply {
-                                viewState.isChatAvailable.let { available ->
-                                    if (available) {
-                                        setTextColorExt(R_common.color.primaryGreen)
-                                        textViewChatHeaderLock.text = getString(R_common.string.material_icon_name_lock)
-                                        recyclerView.visible
-                                        inactiveContactPlaceHolder.root.gone
-                                    } else {
-                                        setTextColorExt(R_common.color.sphinxOrange)
-                                        textViewChatHeaderLock.text = getString(R_common.string.material_icon_name_lock_open)
-
-                                        // Inactive conversation placeholder
-                                        recyclerView.gone
-
-                                        inactiveContactPlaceHolder.apply {
-                                            root.visible
-
-                                            initialsHolderPlaceholder.textViewInitials.apply {
-                                                visible
-                                                text = viewState.chatHeaderName.getInitials()
-                                            }
-                                            textViewPlaceholderName.text = viewState.chatHeaderName
-                                            textViewPlaceholderInvited.text = root.context.getString(
-                                                R.string.chat_placeholder_invited,
-                                                viewState.createdAt ?: "-"
-                                            )
-                                        }
-
-                                    }
-                                }
-                            }
                         }
                     }
                 }
@@ -1407,40 +1377,69 @@ abstract class ChatFragment<
         onStopSupervisor.scope.launch(viewModel.mainImmediate) {
             viewModel.messageHolderViewStateFlow.collect { messages ->
                 val chat = viewModel.getChat()
+                val chatHeaderState = (viewModel.chatHeaderViewStateContainer.value as? ChatHeaderViewState.Initialized)
 
                 if (messages.isEmpty() && chat.type.isConversation() && !chat.status.isPending()) {
                     val url = chat.photoUrl
-
                     recyclerView.gone
-                    inactiveContactPlaceHolder.apply {
-                        root.visible
-                        initialsHolderPlaceholder.root.invisible
 
-                        textViewPlaceholderName.text = chat.name?.value
-                        textViewPlaceholderInvited.invisible
-                        textViewPlaceholderHint.text = getString(R.string.chat_placeholder_secure)
+                    if (chatHeaderState?.isChatAvailable == true) {
+                        inactiveContactPlaceHolder.apply {
+                            initialsHolderPlaceholder.root.invisible
 
-                        includeEmptyChatHolderInitial.apply {
-                            root.visible
-                            imageViewChatPicture.goneIfFalse(url != null)
-                            textViewInitials.goneIfFalse(url == null)
-                        }
+                            textViewPlaceholderName.text = chat.name?.value
+                            textViewPlaceholderInvited.invisible
+                            textViewPlaceholderHint.text = getString(R.string.chat_placeholder_secure)
 
-                        if (url != null) {
-                            onStopSupervisor.scope.launch(viewModel.dispatchers.default) {
-                                imageLoader.load(
-                                    includeEmptyChatHolderInitial.imageViewChatPicture,
-                                    url.value,
-                                    imageLoaderOptions
-                                )
+                            includeEmptyChatHolderInitial.apply {
+                                root.visible
+                                imageViewChatPicture.goneIfFalse(url != null)
+                                textViewInitials.goneIfFalse(url == null)
                             }
-                        } else {
-                            includeEmptyChatHolderInitial.textViewInitials.text =
-                                chat.name?.value?.getInitials() ?: ""
+
+                            headerBinding.textViewChatHeaderConnectivity.setTextColorExt(R_common.color.primaryGreen)
+
+                            if (url != null) {
+                                onStopSupervisor.scope.launch(viewModel.dispatchers.default) {
+                                    imageLoader.load(
+                                        includeEmptyChatHolderInitial.imageViewChatPicture,
+                                        url.value,
+                                        imageLoaderOptions
+                                    )
+                                }
+                            } else {
+                                includeEmptyChatHolderInitial.textViewInitials.text =
+                                    chat.name?.value?.getInitials() ?: ""
+                            }
+
+                            root.visible
+                        }
+                    } else {
+                        headerBinding.apply {
+                            textViewChatHeaderConnectivity.apply {
+                                setTextColorExt(R_common.color.sphinxOrange)
+                                textViewChatHeaderLock.text = getString(R_common.string.material_icon_name_lock_open)
+
+                                recyclerView.gone
+
+                                inactiveContactPlaceHolder.apply {
+                                    initialsHolderPlaceholder.textViewInitials.apply {
+                                        visible
+                                        text = chatHeaderState?.chatHeaderName?.getInitials() ?: ""
+                                    }
+                                    textViewPlaceholderName.text = chatHeaderState?.chatHeaderName ?: ""
+                                    textViewPlaceholderInvited.text = root.context.getString(
+                                        R.string.chat_placeholder_invited,
+                                        chatHeaderState?.createdAt ?: "-"
+                                    )
+                                    root.visible
+                                }
+                            }
                         }
                     }
                 } else {
                     recyclerView.visible
+
                     if (chat.type.isConversation() && chat.status.isPending()) {
                        inactiveContactPlaceHolder.root.visible
                     } else {
@@ -1449,31 +1448,6 @@ abstract class ChatFragment<
                 }
             }
         }
-
-//        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
-//            viewModel.checkRoute.collect { loadResponse ->
-//                headerBinding.textViewChatHeaderConnectivity.apply {
-//                    @Exhaustive
-//                    when (loadResponse) {
-//                        is LoadResponse.Loading -> {
-//                            setTextColorExt(R.color.washedOutReceivedText)
-//                        }
-//                        is Response.Error -> {
-//                            setTextColorExt(R.color.sphinxOrange)
-//                        }
-//                        is Response.Success -> {
-//                            val colorRes = if (loadResponse.value) {
-//                                R.color.primaryGreen
-//                            } else {
-//                                R.color.sphinxOrange
-//                            }
-//
-//                            setTextColorExt(colorRes)
-//                        }
-//                    }
-//                }
-//            }
-//        }
 
         onStopSupervisor.scope.launch(viewModel.mainImmediate) {
             viewModel.getSelectedMessageViewStateFlow().collect { viewState ->

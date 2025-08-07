@@ -1,5 +1,9 @@
 # ChangeLog
 
+## Version 1.0.0-alpha74 (2025-08-07)
+- Improves unseen messages logic calculation on chats list
+- Fixes and improvements on chat view
+
 ## Version 1.0.0-alpha73 (2025-08-06)
 - Improves messages rows layout
 - Improves user state storage and retrieval logic

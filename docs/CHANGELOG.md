@@ -1,5 +1,9 @@
 # ChangeLog
 
+## Version 1.0.0-alpha73 (2025-08-06)
+- Improves messages rows layout
+- Improves user state storage and retrieval logic
+
 ## Version 1.0.0-alpha72 (2025-08-05)
 - Fixes attachments issues
 - Improves performance

@@ -57,6 +57,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 internal class MessageListAdapter<ARGS : NavArgs>(
@@ -146,7 +147,7 @@ internal class MessageListAdapter<ARGS : NavArgs>(
                         scrollToUnseenSeparatorOrBottom(list)
                     }
                 } else {
-                    scrollToPreviousPositionWithCallback {
+                    scrollToPreviousPositionWithCallback(list.size) {
                         differ.submitList(list)
                     }
                 }
@@ -164,14 +165,14 @@ internal class MessageListAdapter<ARGS : NavArgs>(
     }
 
     private fun scrollToUnseenSeparatorOrBottom(messageHolders: List<MessageHolderViewState>) {
-//        for ((index, message) in messageHolders.withIndex()) {
-//            (message as? MessageHolderViewState.Separator)?.let {
-//                if (it.messageHolderType.isUnseenSeparatorHolder()) {
-//                    (recyclerView.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(index, recyclerView.measuredHeight / 4)
-//                    return
-//                }
-//            }
-//        }
+        for ((index, message) in messageHolders.withIndex()) {
+            (message as? MessageHolderViewState.Separator)?.let {
+                if (it.messageHolderType.isUnseenSeparatorHolder()) {
+                    (recyclerView.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(index, recyclerView.measuredHeight / 4)
+                    return
+                }
+            }
+        }
 
         recyclerView.layoutManager?.scrollToPosition(
             messageHolders.size + 1
@@ -203,7 +204,8 @@ internal class MessageListAdapter<ARGS : NavArgs>(
         }
     }
 
-    private fun scrollToPreviousPositionWithCallback(
+    private suspend fun scrollToPreviousPositionWithCallback(
+        newListSize: Int,
         callback: (() -> Unit)? = null,
     ) {
         val lastVisibleItemPositionBeforeDispatch = layoutManager.findLastVisibleItemPosition()
@@ -214,12 +216,18 @@ internal class MessageListAdapter<ARGS : NavArgs>(
             callback()
         }
 
-        // Use post to ensure the diff has been applied
+        delay(250L)
+
         recyclerView.post {
-            val listSizeAfterDispatch = differ.currentList.size
-            val targetPosition = listSizeAfterDispatch - diffToBottom
-            if (targetPosition >= 0) {
-                recyclerView.scrollToPosition(targetPosition)
+            if (diffToBottom <= 30) {
+                recyclerView.smoothScrollToPosition(
+                    newListSize - 1
+                )
+            } else {
+                val targetPosition = newListSize - diffToBottom
+                if (targetPosition >= 0) {
+                    recyclerView.scrollToPosition(targetPosition)
+                }
             }
         }
     }

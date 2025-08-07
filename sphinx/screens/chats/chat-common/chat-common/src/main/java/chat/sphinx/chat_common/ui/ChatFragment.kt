@@ -957,7 +957,7 @@ abstract class ChatFragment<
                 }
             }
 
-            if (recyclerView.canScrollVertically(1)) {
+            if (recyclerView.getItemsDistanceToBottom() > 3) {
                 viewModel.updateScrollDownButton(true)
             } else {
                 viewModel.updateScrollDownButton(false)
@@ -2143,4 +2143,13 @@ abstract class ChatFragment<
             }
         }
     }
+}
+
+fun RecyclerView.getItemsDistanceToBottom(): Int {
+    val layoutManager = layoutManager as? LinearLayoutManager ?: return 0
+
+    val lastVisiblePosition = layoutManager.findLastVisibleItemPosition()
+    val totalItems = adapter?.itemCount ?: 0
+
+    return (totalItems - 1) - lastVisiblePosition
 }

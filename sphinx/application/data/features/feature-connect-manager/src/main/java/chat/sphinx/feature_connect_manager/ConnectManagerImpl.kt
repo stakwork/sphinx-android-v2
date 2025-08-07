@@ -1517,9 +1517,10 @@ class ConnectManagerImpl: ConnectManager()
         provisionalId: Long,
         messageType: Int,
         amount: Long?,
+        date: Long,
         isTribe: Boolean
     ) {
-        val now = getTimestampInMilliseconds()
+        val now = date.toString()
 
         // Have to include al least 1 sat for tribe messages
         val nnAmount = when {

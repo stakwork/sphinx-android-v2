@@ -190,12 +190,13 @@ inline fun TransactionCallbacks.updateChatNewLatestMessage(
     chatId: ChatId,
     latestMessageUpdatedTimeMap: MutableMap<ChatId, DateTime>,
     queries: SphinxDatabaseQueries,
+    forceUpdateOnSend: Boolean = false
 ) {
     val dateTime = message.date
 
     if (
-        message.updateChatNewLatestMessage &&
-        (latestMessageUpdatedTimeMap[chatId]?.time ?: 0L) <= dateTime.time
+        (message.updateChatNewLatestMessage && (latestMessageUpdatedTimeMap[chatId]?.time ?: 0L) <= dateTime.time) ||
+        forceUpdateOnSend
     ){
         queries.chatUpdateLatestMessage(
             message.id,
@@ -206,7 +207,9 @@ inline fun TransactionCallbacks.updateChatNewLatestMessage(
             message.id,
             chatId,
         )
-        latestMessageUpdatedTimeMap[chatId] = dateTime
+        if (!forceUpdateOnSend) {
+            latestMessageUpdatedTimeMap[chatId] = dateTime
+        }
     }
 }
 
@@ -217,9 +220,10 @@ inline fun TransactionCallbacks.updateChatNewLatestMessage(
     dateTime: DateTime,
     latestMessageUpdatedTimeMap: MutableMap<ChatId, DateTime>,
     queries: SphinxDatabaseQueries,
+    forceUpdateOnSend: Boolean = false
 ) {
     if (
-        (latestMessageUpdatedTimeMap[chatId]?.time ?: 0L) <= dateTime.time
+        (latestMessageUpdatedTimeMap[chatId]?.time ?: 0L) <= dateTime.time || forceUpdateOnSend
     ){
         queries.chatUpdateLatestMessage(
             messageId,
@@ -230,7 +234,9 @@ inline fun TransactionCallbacks.updateChatNewLatestMessage(
             messageId,
             chatId,
         )
-        latestMessageUpdatedTimeMap[chatId] = dateTime
+        if (!forceUpdateOnSend) {
+            latestMessageUpdatedTimeMap[chatId] = dateTime
+        }
     }
 }
 
@@ -252,9 +258,10 @@ inline fun TransactionCallbacks.updateChatNewLatestMessage(
     chatId: ChatId,
     latestMessageUpdatedTimeMap: SynchronizedMap<ChatId, DateTime>,
     queries: SphinxDatabaseQueries,
+    forceUpdateOnSend: Boolean = false
 ) {
     latestMessageUpdatedTimeMap.withLock { map ->
-        updateChatNewLatestMessage(message, chatId, map, queries)
+        updateChatNewLatestMessage(message, chatId, map, queries, forceUpdateOnSend)
     }
 }
 
@@ -265,9 +272,10 @@ inline fun TransactionCallbacks.updateChatNewLatestMessage(
     dateTime: DateTime,
     latestMessageUpdatedTimeMap: SynchronizedMap<ChatId, DateTime>,
     queries: SphinxDatabaseQueries,
+    forceUpdateOnSend: Boolean = false
 ) {
     latestMessageUpdatedTimeMap.withLock { map ->
-        updateChatNewLatestMessage(messageId, chatId, dateTime, map, queries)
+        updateChatNewLatestMessage(messageId, chatId, dateTime, map, queries, forceUpdateOnSend)
     }
 }
 

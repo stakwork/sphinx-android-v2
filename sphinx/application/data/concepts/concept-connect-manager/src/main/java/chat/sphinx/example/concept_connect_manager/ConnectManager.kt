@@ -88,6 +88,7 @@ abstract class ConnectManager {
         provisionalId: Long,
         messageType: Int,
         amount: Long?,
+        date: Long,
         isTribe: Boolean = false
     )
     abstract fun deleteMessage(

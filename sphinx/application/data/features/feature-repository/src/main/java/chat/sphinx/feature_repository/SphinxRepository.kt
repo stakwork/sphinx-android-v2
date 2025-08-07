@@ -654,6 +654,7 @@ abstract class SphinxRepository(
                     provisionalId.value,
                     messageType,
                     null,
+                    DateTime.nowUTC().toDateTime().time,
                     true
                 )
             }
@@ -2001,6 +2002,7 @@ abstract class SphinxRepository(
         messageType: MessageType?,
         provisionalId: MessageId?,
         amount: Sat?,
+        date: Long,
         replyUUID: ReplyUUID?,
         threadUUID: ThreadUUID?,
         isTribe: Boolean,
@@ -2027,6 +2029,7 @@ abstract class SphinxRepository(
                 it,
                 messageType?.value ?: 0,
                 amount?.value,
+                date,
                 isTribe
             )
         }
@@ -2244,9 +2247,12 @@ abstract class SphinxRepository(
 
                 // Message Accepted
                 val mediaMessageAccepted = mediaMessage.copy(media_key = null, media_key_decrypted = null, local_file = null)
+                val dateTime = DateTime.nowUTC().toDateTime()
+
                 val messageAccepted = message.copy(
                     type = messageType,
-                    id = provisionalId
+                    id = provisionalId,
+                    date = dateTime,
                 ).let { convertMessageDboToNewMessage(it, mediaMessageAccepted) }
 
                 transaction.upsertNewMessage(messageAccepted, queries, null)
@@ -2255,7 +2261,8 @@ abstract class SphinxRepository(
                     messageAccepted,
                     message.chat_id,
                     latestMessageUpdatedTimeMap,
-                    queries
+                    queries,
+                    forceUpdateOnSend = true
                 )
 
                 val mediaKey = if (messageType is MessageType.Purchase.Accepted) {
@@ -2285,6 +2292,7 @@ abstract class SphinxRepository(
                         provisionalId.value,
                         messageType.value,
                         null,
+                        dateTime.time
                     )
                 }
             }
@@ -4168,6 +4176,8 @@ abstract class SphinxRepository(
                 )
             }
 
+            val dateTime = DateTime.nowUTC().toDateTime()
+
             val provisionalMessageId: MessageId? = chat?.let { chatDbo ->
                 // Build provisional message and insert
                 provisionalMessageLock.withLock {
@@ -4176,7 +4186,6 @@ abstract class SphinxRepository(
                         queries.messageGetLowestProvisionalMessageId().executeAsOneOrNull()
                     }
                     val provisionalId = MessageId((currentProvisionalId?.value ?: 0L) - 1)
-                    val dateTime = DateTime.nowUTC().toDateTime()
 
                     withContext(io) {
                         queries.transaction {
@@ -4230,7 +4239,8 @@ abstract class SphinxRepository(
                                 chatDbo.id,
                                 dateTime,
                                 latestMessageUpdatedTimeMap,
-                                queries
+                                queries,
+                                forceUpdateOnSend = true
                             )
                         }
                         provisionalId
@@ -4308,6 +4318,7 @@ abstract class SphinxRepository(
                                     messageType,
                                     provisionalMessageId,
                                     sendMessage.tribePaymentAmount ?: messagePrice,
+                                    dateTime.time,
                                     replyUUID,
                                     threadUUID,
                                     chat?.isTribe() ?: false,
@@ -4329,6 +4340,7 @@ abstract class SphinxRepository(
                         messageType,
                         provisionalMessageId,
                         sendMessage.tribePaymentAmount ?: messagePrice,
+                        dateTime.time,
                         replyUUID,
                         threadUUID,
                         chat?.isTribe() ?: false,
@@ -4620,6 +4632,7 @@ abstract class SphinxRepository(
                 queries.messageGetLowestProvisionalMessageId().executeAsOneOrNull()
             }
             val provisionalId = MessageId((currentProvisionalId?.value ?: 0L) - 1)
+            val dateTime = DateTime.nowUTC().toDateTime()
 
             val newPayment = NewMessage(
                 id = provisionalId,
@@ -4629,7 +4642,7 @@ abstract class SphinxRepository(
                 sender = owner.id,
                 receiver = null,
                 amount = Sat(sendPayment.amount),
-                date = DateTime.nowUTC().toDateTime(),
+                date = dateTime,
                 expirationDate = null,
                 messageContent = null,
                 status = MessageStatus.Pending,
@@ -4716,6 +4729,7 @@ abstract class SphinxRepository(
                     provisionalId.value,
                     MessageType.DIRECT_PAYMENT,
                     sendPayment.amount,
+                    dateTime.time
                 )
             }
 
@@ -4793,6 +4807,7 @@ abstract class SphinxRepository(
                 queries.messageGetLowestProvisionalMessageId().executeAsOneOrNull()
             }
             val provisionalId = MessageId((currentProvisionalId?.value ?: 0L) - 1)
+            val dateTime = DateTime.nowUTC().toDateTime()
 
             val newBoost = NewMessage(
                 id = provisionalId,
@@ -4802,7 +4817,7 @@ abstract class SphinxRepository(
                 sender = owner.id,
                 receiver = null,
                 amount = owner.tipAmount ?: Sat(20L),
-                date = DateTime.nowUTC().toDateTime(),
+                date = dateTime,
                 expirationDate = null,
                 messageContent = null,
                 status = MessageStatus.Confirmed,
@@ -4856,7 +4871,8 @@ abstract class SphinxRepository(
                             newBoost,
                             chatId,
                             latestMessageUpdatedTimeMap,
-                            queries
+                            queries,
+                            forceUpdateOnSend = true
                         )
                     }
                 }
@@ -4871,6 +4887,7 @@ abstract class SphinxRepository(
                     provisionalId.value,
                     MessageType.BOOST,
                     owner.tipAmount?.value ?: 20L,
+                    dateTime.time,
                     currentChat?.isTribe() ?: false
                 )
             }
@@ -5102,6 +5119,7 @@ abstract class SphinxRepository(
             val provisionalId = MessageId((currentProvisionalId?.value ?: 0L) - 1)
 
             val invoiceAndHash = connectManager.createInvoice(requestPayment.amount, requestPayment.memo ?: "")
+            val dateTime = DateTime.nowUTC().toDateTime()
 
             val newPaymentRequest = NewMessage(
                 id = provisionalId,
@@ -5113,7 +5131,7 @@ abstract class SphinxRepository(
                 amount = requestPayment.amount.toSat() ?: Sat(0),
                 paymentHash = invoiceAndHash?.second?.toLightningPaymentHash(),
                 paymentRequest = invoiceAndHash?.first?.toLightningPaymentRequestOrNull(),
-                date = DateTime.nowUTC().toDateTime(),
+                date = dateTime,
                 expirationDate = null,
                 messageContent = null,
                 status = MessageStatus.Pending,
@@ -5169,7 +5187,8 @@ abstract class SphinxRepository(
                             newPaymentRequest,
                             chatId,
                             latestMessageUpdatedTimeMap,
-                            queries
+                            queries,
+                            forceUpdateOnSend = true
                         )
                     }
                 }
@@ -5182,6 +5201,7 @@ abstract class SphinxRepository(
                     provisionalId.value,
                     MessageType.INVOICE,
                      null,
+                    dateTime.time,
                     false
                 )
             }
@@ -5221,6 +5241,7 @@ abstract class SphinxRepository(
                         queries.messageGetLowestProvisionalMessageId().executeAsOneOrNull()
                     }
                     val provisionalId = MessageId((currentProvisionalId?.value ?: 0L) - 1)
+                    val dateTime = DateTime.nowUTC().toDateTime()
 
                     val newPurchase = NewMessage(
                         id = provisionalId,
@@ -5230,7 +5251,7 @@ abstract class SphinxRepository(
                         sender = owner.id,
                         receiver = null,
                         amount = price,
-                        date = DateTime.nowUTC().toDateTime(),
+                        date = dateTime,
                         expirationDate = null,
                         messageContent = null,
                         status = MessageStatus.Confirmed,
@@ -5287,7 +5308,8 @@ abstract class SphinxRepository(
                                     newPurchase,
                                     message.chatId,
                                     latestMessageUpdatedTimeMap,
-                                    queries
+                                    queries,
+                                    forceUpdateOnSend = true
                                 )
                             }
                         }
@@ -5302,6 +5324,7 @@ abstract class SphinxRepository(
                             provisionalId.value,
                             MessageType.PURCHASE_PROCESSING,
                             price.value,
+                            dateTime.time,
                             currentChat?.isTribe() ?: false
                         )
                     }

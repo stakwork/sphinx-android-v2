@@ -212,22 +212,28 @@ internal class MessageListAdapter<ARGS : NavArgs>(
         val listSizeBeforeDispatch = differ.currentList.size
         val diffToBottom = listSizeBeforeDispatch - lastVisibleItemPositionBeforeDispatch
 
+        val layoutManager = recyclerView.layoutManager as LinearLayoutManager
+        val currentFirstVisible = layoutManager.findFirstVisibleItemPosition()
+        val currentFirstView = layoutManager.findViewByPosition(currentFirstVisible)
+        val currentOffset = currentFirstView?.top ?: 0
+        val currentListSize = itemCount
+
         if (callback != null) {
             callback()
         }
 
         delay(250L)
 
+        val newItemsAdded = newListSize - currentListSize
+        val newTargetPosition = currentFirstVisible + newItemsAdded
+
         recyclerView.post {
-            if (diffToBottom <= 30) {
+            if (diffToBottom <= 2) {
                 recyclerView.smoothScrollToPosition(
                     newListSize - 1
                 )
             } else {
-                val targetPosition = newListSize - diffToBottom
-                if (targetPosition >= 0) {
-                    recyclerView.scrollToPosition(targetPosition)
-                }
+                (recyclerView.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(newTargetPosition, currentOffset)
             }
         }
     }

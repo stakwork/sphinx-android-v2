@@ -35,6 +35,10 @@ interface MessageRepository {
         chatThreadUUID: ThreadUUID? = null
     ): Flow<List<Message>>
 
+    fun getAllMessagesCountByChatId(
+        chatId: ChatId
+    ): Flow<Long?>
+
     fun searchMessagesBy(chatId: ChatId, term: String): Flow<List<Message>>
 
     fun getMessageById(messageId: MessageId): Flow<Message?>

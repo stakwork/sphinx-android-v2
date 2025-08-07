@@ -257,6 +257,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
     private val latestThreadMessagesFlow: MutableStateFlow<List<Message>?> = MutableStateFlow(null)
     private val scrollDownButtonCount: MutableStateFlow<Long?> = MutableStateFlow(null)
+    private val totalMessagesCount: MutableStateFlow<Long?> = MutableStateFlow(null)
 
     private suspend fun getAccountBalance(): StateFlow<NodeBalance?> =
         lightningRepository.getAccountBalance()
@@ -344,7 +345,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
     }
 
     private fun collectThread() {
-        viewModelScope.launch(mainImmediate) {
+        viewModelScope.launch(io) {
             threadSharedFlow?.collect { messages ->
                 latestThreadMessagesFlow.value = messages
             }
@@ -352,10 +353,20 @@ abstract class ChatViewModel<ARGS : NavArgs>(
     }
 
     private fun collectUnseenMessagesNumber() {
-        viewModelScope.launch(mainImmediate) {
+        viewModelScope.launch(io) {
             if (!isThreadChat()) {
                 repositoryDashboard.getUnseenMessagesByChatId(getChat().id).collect { unseenMessagesCount ->
                     scrollDownButtonCount.value = unseenMessagesCount
+                }
+            }
+        }
+    }
+
+    private fun collectTotalMessagesCount() {
+        viewModelScope.launch(io) {
+            if (!isThreadChat()) {
+                messageRepository.getAllMessagesCountByChatId(getChat().id).collect { messagesCount ->
+                    totalMessagesCount.value = messagesCount
                 }
             }
         }
@@ -1580,9 +1591,11 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         }
         collectThread()
         collectUnseenMessagesNumber()
+        collectTotalMessagesCount()
     }
 
     fun loadMoreMessages() {
+        if (messageLimitFlow.value >= (totalMessagesCount.value ?: 0)) return
         if (isThreadChat()) return
         if (isLoadingMore) return
 

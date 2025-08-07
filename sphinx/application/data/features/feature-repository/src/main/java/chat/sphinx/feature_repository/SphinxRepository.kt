@@ -3576,6 +3576,18 @@ abstract class SphinxRepository(
         return message
     }
 
+    override fun getAllMessagesCountByChatId(
+        chatId: ChatId,
+    ): Flow<Long?> = flow {
+        emitAll(
+            coreDB.getSphinxDatabaseQueries()
+                .messageGetAllCountToShowByChatId(chatId)
+                .asFlow()
+                .mapToOneOrNull(io)
+                .map { it }
+        )
+    }
+
     override fun getAllMessagesToShowByChatId(
         chatId: ChatId,
         limit: Long,

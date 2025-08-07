@@ -102,11 +102,11 @@ internal sealed class MessageHolderViewState(
             }
 
 
-    val unsupportedMessageType: LayoutState.Bubble.ContainerThird.UnsupportedMessageType? by lazy(LazyThreadSafetyMode.NONE) {
+    val unsupportedMessageType: LayoutState.Bubble.ContainerThird.UnsupportedMessageType? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         null
     }
 
-    val messagesSeparator: LayoutState.Separator? by lazy(LazyThreadSafetyMode.NONE) {
+    val messagesSeparator: LayoutState.Separator? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message != null) {
             null
         } else {
@@ -117,7 +117,7 @@ internal sealed class MessageHolderViewState(
         }
     }
 
-    val statusHeader: LayoutState.MessageStatusHeader? by lazy(LazyThreadSafetyMode.NONE) {
+    val statusHeader: LayoutState.MessageStatusHeader? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null) {
             null
         } else {
@@ -159,7 +159,7 @@ internal sealed class MessageHolderViewState(
         }
     }
 
-    val invoiceExpirationHeader: LayoutState.InvoiceExpirationHeader? by lazy(LazyThreadSafetyMode.NONE) {
+    val invoiceExpirationHeader: LayoutState.InvoiceExpirationHeader? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null) {
             null
         } else {
@@ -177,7 +177,7 @@ internal sealed class MessageHolderViewState(
         }
     }
 
-    val deletedOrFlaggedMessage: LayoutState.DeletedOrFlaggedMessage? by lazy(LazyThreadSafetyMode.NONE) {
+    val deletedOrFlaggedMessage: LayoutState.DeletedOrFlaggedMessage? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null) {
             null
         } else {
@@ -194,7 +194,7 @@ internal sealed class MessageHolderViewState(
         }
     }
 
-    val invoicePayment: LayoutState.InvoicePayment? by lazy(LazyThreadSafetyMode.NONE) {
+    val invoicePayment: LayoutState.InvoicePayment? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null) {
             null
         } else {
@@ -210,7 +210,7 @@ internal sealed class MessageHolderViewState(
         }
     }
 
-    val bubbleDirectPayment: LayoutState.Bubble.ContainerSecond.DirectPayment? by lazy(LazyThreadSafetyMode.NONE) {
+    val bubbleDirectPayment: LayoutState.Bubble.ContainerSecond.DirectPayment? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null) {
             null
         } else {
@@ -232,7 +232,7 @@ internal sealed class MessageHolderViewState(
         }
     }
 
-    val bubbleInvoice: LayoutState.Bubble.ContainerSecond.Invoice? by lazy(LazyThreadSafetyMode.NONE) {
+    val bubbleInvoice: LayoutState.Bubble.ContainerSecond.Invoice? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null) {
             null
         } else {
@@ -255,7 +255,7 @@ internal sealed class MessageHolderViewState(
         }
     }
 
-    val bubbleMessage: LayoutState.Bubble.ContainerThird.Message? by  lazy(LazyThreadSafetyMode.NONE) {
+    val bubbleMessage: LayoutState.Bubble.ContainerThird.Message? by  lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null) {
             null
         } else {
@@ -291,7 +291,7 @@ internal sealed class MessageHolderViewState(
         }
     }
 
-    val bubbleThread: LayoutState.Bubble.ContainerThird.Thread? by lazy(LazyThreadSafetyMode.NONE) {
+    val bubbleThread: LayoutState.Bubble.ContainerThird.Thread? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null) {
             null
         } else {
@@ -380,7 +380,7 @@ internal sealed class MessageHolderViewState(
     }
 
 
-    val bubblePaidMessage: LayoutState.Bubble.ContainerThird.PaidMessage? by lazy(LazyThreadSafetyMode.NONE) {
+    val bubblePaidMessage: LayoutState.Bubble.ContainerThird.PaidMessage? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null || message.retrieveTextToShow() != null || !message.isPaidTextMessage) {
             null
         } else {
@@ -400,7 +400,7 @@ internal sealed class MessageHolderViewState(
         }
     }
 
-    val bubbleCallInvite: LayoutState.Bubble.ContainerSecond.CallInvite? by lazy(LazyThreadSafetyMode.NONE) {
+    val bubbleCallInvite: LayoutState.Bubble.ContainerSecond.CallInvite? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null) {
             null
         } else {
@@ -410,7 +410,7 @@ internal sealed class MessageHolderViewState(
         }
     }
 
-    val bubbleBotResponse: LayoutState.Bubble.ContainerSecond.BotResponse? by lazy(LazyThreadSafetyMode.NONE) {
+    val bubbleBotResponse: LayoutState.Bubble.ContainerSecond.BotResponse? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null) {
             null
         } else {
@@ -428,7 +428,7 @@ internal sealed class MessageHolderViewState(
         }
     }
 
-    val bubblePaidMessageReceivedDetails: LayoutState.Bubble.ContainerFourth.PaidMessageReceivedDetails? by lazy(LazyThreadSafetyMode.NONE) {
+    val bubblePaidMessageReceivedDetails: LayoutState.Bubble.ContainerFourth.PaidMessageReceivedDetails? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null || !message.isPaidMessage || this is Sent) {
             null
         } else {
@@ -448,7 +448,7 @@ internal sealed class MessageHolderViewState(
         }
     }
 
-    val bubblePaidMessageSentStatus: LayoutState.Bubble.ContainerSecond.PaidMessageSentStatus? by lazy(LazyThreadSafetyMode.NONE) {
+    val bubblePaidMessageSentStatus: LayoutState.Bubble.ContainerSecond.PaidMessageSentStatus? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null || !message.isPaidMessage || this !is Sent) {
             null
         } else {
@@ -461,7 +461,7 @@ internal sealed class MessageHolderViewState(
         }
     }
 
-    val bubbleAudioAttachment: LayoutState.Bubble.ContainerSecond.AudioAttachment? by lazy(LazyThreadSafetyMode.NONE) {
+    val bubbleAudioAttachment: LayoutState.Bubble.ContainerSecond.AudioAttachment? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null) {
             null
         } else {
@@ -469,7 +469,7 @@ internal sealed class MessageHolderViewState(
         }
     }
 
-    val bubblePodcastClip: LayoutState.Bubble.ContainerSecond.PodcastClip? by lazy(LazyThreadSafetyMode.NONE) {
+    val bubblePodcastClip: LayoutState.Bubble.ContainerSecond.PodcastClip? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null) {
             null
         } else {
@@ -483,7 +483,7 @@ internal sealed class MessageHolderViewState(
         }
     }
 
-    val bubbleImageAttachment: LayoutState.Bubble.ContainerSecond.ImageAttachment? by lazy(LazyThreadSafetyMode.NONE) {
+    val bubbleImageAttachment: LayoutState.Bubble.ContainerSecond.ImageAttachment? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null) {
             null
         } else {
@@ -491,7 +491,7 @@ internal sealed class MessageHolderViewState(
         }
     }
 
-    val bubbleVideoAttachment: LayoutState.Bubble.ContainerSecond.VideoAttachment? by lazy(LazyThreadSafetyMode.NONE) {
+    val bubbleVideoAttachment: LayoutState.Bubble.ContainerSecond.VideoAttachment? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null) {
             null
         } else {
@@ -500,7 +500,7 @@ internal sealed class MessageHolderViewState(
     }
 
 
-    val bubbleFileAttachment: LayoutState.Bubble.ContainerSecond.FileAttachment? by lazy(LazyThreadSafetyMode.NONE) {
+    val bubbleFileAttachment: LayoutState.Bubble.ContainerSecond.FileAttachment? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null){
             null
         } else {
@@ -508,7 +508,7 @@ internal sealed class MessageHolderViewState(
         }
     }
 
-    val bubblePodcastBoost: LayoutState.Bubble.ContainerSecond.PodcastBoost? by lazy(LazyThreadSafetyMode.NONE) {
+    val bubblePodcastBoost: LayoutState.Bubble.ContainerSecond.PodcastBoost? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null) {
             null
         } else {
@@ -608,7 +608,7 @@ internal sealed class MessageHolderViewState(
         }
     }
 
-    val groupActionIndicator: LayoutState.GroupActionIndicator? by lazy(LazyThreadSafetyMode.NONE) {
+    val groupActionIndicator: LayoutState.GroupActionIndicator? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null) {
             null
         } else {
@@ -660,7 +660,7 @@ internal sealed class MessageHolderViewState(
         }
     }
 
-    val selectionMenuItems: List<MenuItemState>? by lazy(LazyThreadSafetyMode.NONE) {
+    val selectionMenuItems: List<MenuItemState>? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (
             message != null &&
             (background is BubbleBackground.Gone         ||

@@ -1,5 +1,6 @@
 package chat.sphinx.dashboard.ui.adapter
 
+import android.annotation.SuppressLint
 import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.ViewGroup
@@ -54,11 +55,11 @@ internal class ChatListAdapter(
                 }
                 oldItem is DashboardChat.Inactive.Invite && newItem is DashboardChat.Inactive.Invite -> {
                     oldItem.invite?.id == newItem.invite?.id &&
-                            oldItem.contact.id == newItem.contact.id
+                    oldItem.contact.id == newItem.contact.id
                 }
                 oldItem is DashboardChat.Inactive.Conversation && newItem is DashboardChat.Inactive.Conversation -> {
                     oldItem.chatName == newItem.chatName &&
-                            oldItem.contact.id == newItem.contact.id
+                    oldItem.contact.id == newItem.contact.id
                 }
                 else -> false
             }
@@ -68,16 +69,18 @@ internal class ChatListAdapter(
             return when {
                 oldItem is DashboardChat.Active && newItem is DashboardChat.Active -> {
                     oldItem.chat.type == newItem.chat.type &&
-                            oldItem.chatName == newItem.chatName &&
-                            oldItem.chat.notify == newItem.chat.notify &&
-                            oldItem.chat.seen == newItem.chat.seen &&
-                            oldItem.chat.photoUrl == newItem.chat.photoUrl &&
-                            oldItem.chat.latestMessageId == newItem.chat.latestMessageId &&
-                            oldItem.message?.seen == newItem.message?.seen
+                    oldItem.chatName == newItem.chatName &&
+                    oldItem.chat.notify == newItem.chat.notify &&
+                    oldItem.chat.seen == newItem.chat.seen &&
+                    oldItem.chat.photoUrl == newItem.chat.photoUrl &&
+                    oldItem.chat.latestMessageId?.value == newItem.chat.latestMessageId?.value &&
+                    oldItem.message?.seen == newItem.message?.seen &&
+                    oldItem.unseenMessagesCount == newItem.unseenMessagesCount &&
+                    oldItem.unseenMentionsCount == newItem.unseenMentionsCount
                 }
                 oldItem is DashboardChat.Inactive.Invite && newItem is DashboardChat.Inactive.Invite -> {
                     oldItem.invite?.status == newItem.invite?.status &&
-                            oldItem.contact.status == newItem.contact.status
+                    oldItem.contact.status == newItem.contact.status
                 }
                 oldItem is DashboardChat.Inactive.Conversation && newItem is DashboardChat.Inactive.Conversation -> {
                     oldItem.chatName == newItem.chatName
@@ -150,8 +153,6 @@ internal class ChatListAdapter(
 
         private var disposable: Disposable? = null
         private var dChat: DashboardChat? = null
-        private var badgeJob: Job? = null
-        private var mentionsJob: Job? = null
 
         init {
             binding.layoutConstraintChatHolder.setOnClickListener {
@@ -207,8 +208,6 @@ internal class ChatListAdapter(
                 }
                 dChat = dashboardChat
                 disposable?.dispose()
-                badgeJob?.cancel()
-                mentionsJob?.cancel()
 
                 val isPending = dashboardChat is DashboardChat.Inactive.Conversation
 
@@ -403,67 +402,78 @@ internal class ChatListAdapter(
             }
         }
 
+        @SuppressLint("SetTextI18n")
         private fun handleUnseenMessageCount() {
             dChat?.let { nnDashboardChat ->
-                badgeJob = onStopSupervisor.scope.launch(viewModel.mainImmediate) {
-                    nnDashboardChat.unseenMessageFlow?.collect { unseen ->
+                binding.textViewDashboardChatHolderBadgeCount.apply {
+                    val unseen = nnDashboardChat.unseenMessagesCount
 
-                        binding.textViewDashboardChatHolderBadgeCount.apply {
-                            if (unseen != null && unseen > 0) {
-                                text = unseen.toString()
-                            }
-
-                            if (nnDashboardChat is DashboardChat.Active) {
-                                val chatIsMutedOrOnlyMentions = (nnDashboardChat.chat.isMuted() || nnDashboardChat.chat.isOnlyMentions())
-
-                                alpha = if (chatIsMutedOrOnlyMentions) 0.2f else 1.0f
-
-                                backgroundTintList = binding.getColorStateList(if (chatIsMutedOrOnlyMentions) {
-                                    R_common.color.washedOutReceivedText
-                                } else {
-                                    R_common.color.primaryBlue
-                                }
-                                )
-                            }
-
-                            goneIfFalse(nnDashboardChat.hasUnseenMessages())
-                        }
+                    if (unseen != null && unseen > 0) {
+                        text = unseen.toString()
                     }
+
+                    if (nnDashboardChat is DashboardChat.Active) {
+                        val chatIsMutedOrOnlyMentions = (nnDashboardChat.chat.isMuted() || nnDashboardChat.chat.isOnlyMentions())
+
+                        alpha = if (chatIsMutedOrOnlyMentions) 0.5f else 1.0f
+
+                        backgroundTintList = binding.getColorStateList(
+                            if (chatIsMutedOrOnlyMentions) {
+                                R_common.color.washedOutReceivedText
+                            } else {
+                                R_common.color.primaryBlue
+                            }
+                        )
+                    }
+
+                    goneIfFalse(nnDashboardChat.hasUnseenMessages())
                 }
             }
         }
 
         private fun handleUnseenMentionsCount() {
             dChat?.let { nnDashboardChat ->
-                mentionsJob = onStopSupervisor.scope.launch(viewModel.mainImmediate) {
-                    nnDashboardChat.unseenMentionsFlow?.collect { unseenMentions ->
+                binding.textViewDashboardChatHolderMentionsCount.apply {
+                    val unseenMentions = nnDashboardChat.unseenMentionsCount
 
-                        binding.textViewDashboardChatHolderMentionsCount.apply {
-                            if (unseenMentions != null && unseenMentions > 0) {
-                                text = "@ $unseenMentions"
-                            }
-                            goneIfFalse((unseenMentions ?: 0) > 0)
-                        }
+                    if (unseenMentions != null && unseenMentions > 0) {
+                        text = "@ $unseenMentions"
                     }
+
+                    if (nnDashboardChat is DashboardChat.Active) {
+                        val chatIsMuted = nnDashboardChat.chat.isMuted()
+
+                        alpha = if (chatIsMuted) 0.5f else 1.0f
+
+                        backgroundTintList = binding.getColorStateList(
+                            if (chatIsMuted) {
+                                R_common.color.washedOutReceivedText
+                            } else {
+                                R_common.color.primaryBlue
+                            }
+                        )
+                    }
+
+                    goneIfFalse(nnDashboardChat.hasUnseenMessages() && (unseenMentions ?: 0) > 0)
                 }
             }
         }
 
-        override fun onStart(owner: LifecycleOwner) {
-            super.onStart(owner)
-
-            badgeJob?.let {
-                if (!it.isActive) {
-                    handleUnseenMessageCount()
-                }
-            }
-
-            mentionsJob?.let {
-                if (!it.isActive) {
-                    handleUnseenMentionsCount()
-                }
-            }
-        }
+//        override fun onStart(owner: LifecycleOwner) {
+//            super.onStart(owner)
+//
+//            badgeJob?.let {
+//                if (!it.isActive) {
+//                    handleUnseenMessageCount()
+//                }
+//            }
+//
+//            mentionsJob?.let {
+//                if (!it.isActive) {
+//                    handleUnseenMentionsCount()
+//                }
+//            }
+//        }
 
         init {
             lifecycleOwner.lifecycle.addObserver(this)

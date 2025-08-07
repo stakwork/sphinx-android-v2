@@ -191,7 +191,6 @@ inline fun TransactionCallbacks.updateChatNewLatestMessage(
     latestMessageUpdatedTimeMap: MutableMap<ChatId, DateTime>,
     queries: SphinxDatabaseQueries,
 ) {
-
     val dateTime = message.date
 
     if (
@@ -772,7 +771,7 @@ fun TransactionCallbacks.upsertNewMessage(
         message.type,
         message.recipientAlias,
         message.recipientPic,
-        Push.False,
+        message.push,
         message.person,
         message.threadUUID,
         message.errorMessage,

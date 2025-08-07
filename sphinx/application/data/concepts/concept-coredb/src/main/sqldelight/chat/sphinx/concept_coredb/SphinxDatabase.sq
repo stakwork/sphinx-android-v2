@@ -1050,6 +1050,21 @@ AND messageDbo.seen = 0
 AND messageDbo.type NOT IN (10, 11, 33)
 AND chatDbo.type = :chatType;
 
+messageGetUnseenIncomingMessages:
+SELECT *
+FROM messageDbo
+WHERE messageDbo.sender != :ownerId
+AND messageDbo.seen = 0
+AND messageDbo.type NOT IN (10, 11, 33);
+
+messageGetUnseenIncomingMentions:
+SELECT *
+FROM messageDbo
+WHERE messageDbo.sender != :ownerId
+AND messageDbo.seen = 0
+AND push = 1
+AND messageDbo.type NOT IN (10, 11, 33);
+
 messageGetAmountSumForMessagesStartingWith:
 SELECT SUM(amount)
 FROM messageDbo

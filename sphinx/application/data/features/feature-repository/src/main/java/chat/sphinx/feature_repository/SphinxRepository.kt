@@ -1818,6 +1818,11 @@ abstract class SphinxRepository(
         val now = DateTime.nowUTC().toDateTime()
         val messageDate = messageComponents.date ?: messageComponents.timestamp ?: now
 
+        val ownerAlias = chatTribe?.my_alias?.value ?: owner?.alias?.value ?: ""
+        val hasMention = if (isTribe && !fromMe && ownerAlias.isNotEmpty() && msg.content?.isNotEmpty() == true) {
+            (msg.content?.contains("@$ownerAlias", ignoreCase = true) ?: false).toPush()
+        } else Push.False
+
         val newMessage = NewMessage(
             id = messageComponents.messageId,
             uuid = messageComponents.messageUuid,
@@ -1833,6 +1838,7 @@ abstract class SphinxRepository(
             messageContent = null,
             status = status,
             seen = Seen.False,
+            push = hasMention,
             senderAlias = senderAlias,
             senderPic = msgSender.photo_url?.toPhotoUrl(),
             originalMUID = null,
@@ -2530,6 +2536,66 @@ abstract class SphinxRepository(
                 )
                 .asFlow()
                 .mapToOneOrNull(io)
+                .distinctUntilChanged()
+        )
+    }
+
+    override fun getUnseenReceivedMessages(): Flow<List<Message>> = flow {
+        var ownerId: ContactId? = accountOwner.value?.id
+
+        if (ownerId == null) {
+            try {
+                accountOwner.collect { contact ->
+                    if (contact != null) {
+                        ownerId = contact.id
+                        throw Exception()
+                    }
+                }
+            } catch (e: Exception) {
+            }
+            delay(25L)
+        }
+
+        emitAll(
+            coreDB.getSphinxDatabaseQueries()
+                .messageGetUnseenIncomingMessages(ownerId!!)
+                .asFlow()
+                .mapToList(io)
+                .map { listMessageDbo ->
+                    listMessageDbo.map {
+                        messageDboPresenterMapper.mapFrom(it)
+                    }
+                }
+                .distinctUntilChanged()
+        )
+    }
+
+    override fun getUnseenReceivedMentions(): Flow<List<Message>?> = flow {
+        var ownerId: ContactId? = accountOwner.value?.id
+
+        if (ownerId == null) {
+            try {
+                accountOwner.collect { contact ->
+                    if (contact != null) {
+                        ownerId = contact.id
+                        throw Exception()
+                    }
+                }
+            } catch (e: Exception) {
+            }
+            delay(25L)
+        }
+
+        emitAll(
+            coreDB.getSphinxDatabaseQueries()
+                .messageGetUnseenIncomingMentions(ownerId!!)
+                .asFlow()
+                .mapToList(io)
+                .map { listMessageDbo ->
+                    listMessageDbo.map {
+                        messageDboPresenterMapper.mapFrom(it)
+                    }
+                }
                 .distinctUntilChanged()
         )
     }

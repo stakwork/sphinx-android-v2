@@ -37,6 +37,9 @@ interface RepositoryDashboard {
     fun getUnseenActiveConversationMessagesCount(): Flow<Long?>
     fun getUnseenTribeMessagesCount(): Flow<Long?>
 
+    fun getUnseenReceivedMessages(): Flow<List<Message>?>
+    fun getUnseenReceivedMentions(): Flow<List<Message>?>
+
     val accountOwner: StateFlow<Contact?>
     val getAllNotBlockedContacts: Flow<List<Contact>>
     val getAllInvites: Flow<List<Invite>>

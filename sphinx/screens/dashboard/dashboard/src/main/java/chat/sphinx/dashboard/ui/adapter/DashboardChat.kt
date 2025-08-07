@@ -54,9 +54,9 @@ sealed class DashboardChat {
 
     open val sortBy: Long? = null
 
-    abstract val unseenMessageFlow: Flow<Long?>?
+    abstract val unseenMessagesCount: Int?
 
-    abstract val unseenMentionsFlow: Flow<Long?>?
+    abstract val unseenMentionsCount: Int?
 
     abstract fun getDisplayTime(today00: DateTime): String
 
@@ -311,7 +311,7 @@ sealed class DashboardChat {
             override val chat: Chat,
             override val message: Message?,
             val contact: Contact,
-            override val unseenMessageFlow: Flow<Long?>,
+            override val unseenMessagesCount: Int,
             override val sortBy: Long
         ): Active() {
 
@@ -324,7 +324,7 @@ sealed class DashboardChat {
                 }
             }
 
-            override val unseenMentionsFlow: Flow<Long?>?
+            override val unseenMentionsCount: Int?
                 get() = null
 
             override val chatName: String?
@@ -354,8 +354,8 @@ sealed class DashboardChat {
             override val chat: Chat,
             override val message: Message?,
             override val owner: Contact?,
-            override val unseenMessageFlow: Flow<Long?>,
-            override val unseenMentionsFlow: Flow<Long?>,
+            override val unseenMessagesCount: Int,
+            override val unseenMentionsCount: Int,
             override val sortBy: Long
         ): Active() {
 
@@ -399,10 +399,10 @@ sealed class DashboardChat {
             override val photoUrl: PhotoUrl?
                 get() = contact.photoUrl
 
-            override val unseenMessageFlow: Flow<Long?>?
+            override val unseenMessagesCount: Int?
                 get() = null
 
-            override val unseenMentionsFlow: Flow<Long?>?
+            override val unseenMentionsCount: Int?
                 get() = null
 
             @ExperimentalStdlibApi
@@ -436,10 +436,10 @@ sealed class DashboardChat {
             override val photoUrl: PhotoUrl?
                 get() = contact.photoUrl
 
-            override val unseenMessageFlow: Flow<Long?>?
+            override val unseenMessagesCount: Int?
                 get() = null
 
-            override val unseenMentionsFlow: Flow<Long?>?
+            override val unseenMentionsCount: Int?
                 get() = null
 
             fun getChatName(context: Context): String {

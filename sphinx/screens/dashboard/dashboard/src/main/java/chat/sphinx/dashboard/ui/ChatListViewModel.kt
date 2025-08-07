@@ -22,7 +22,9 @@ import chat.sphinx.wrapper_chat.ChatStatus
 import chat.sphinx.wrapper_chat.ChatType
 import chat.sphinx.wrapper_chat.isConversation
 import chat.sphinx.wrapper_common.chat.ChatUUID
+import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_common.dashboard.ContactId
+import chat.sphinx.wrapper_common.isTrue
 import chat.sphinx.wrapper_common.time
 import chat.sphinx.wrapper_common.tribe.TribeJoinLink
 import chat.sphinx.wrapper_common.tribe.toTribeJoinLink
@@ -129,7 +131,14 @@ internal class ChatListViewModel @Inject constructor(
         if (args.isChatListTypeConversation) {
             viewModelScope.launch(mainImmediate) {
                 repositoryDashboard.getAllNotBlockedContacts.distinctUntilChanged().collect { contacts ->
-                    updateChatListContacts(contacts)
+
+                    val unseenMessages = repositoryDashboard.getUnseenReceivedMessages().firstOrNull()
+                    val unseenMessagesByChatId: Map<ChatId, List<Message>> = unseenMessages?.groupBy { it.chatId } ?: mapOf()
+
+                    updateChatListContacts(
+                        contacts,
+                        unseenMessagesByChatId
+                    )
                 }
             }
         }
@@ -150,6 +159,12 @@ internal class ChatListViewModel @Inject constructor(
             }
 
             allChats.collect { chats ->
+                val unseenMessages = repositoryDashboard.getUnseenReceivedMessages().firstOrNull()
+                val unseenMessagesByChatId: Map<ChatId, List<Message>> = unseenMessages?.groupBy { it.chatId } ?: mapOf()
+
+                val unseenMentions = repositoryDashboard.getUnseenReceivedMentions().firstOrNull()
+                val unseenMentionsByChatId: Map<ChatId, List<Message>> = unseenMentions?.groupBy { it.chatId } ?: mapOf()
+
                 chatsCollectionInitialized = true
                 val newList = ArrayList<DashboardChat>(chats.size)
                 val contactsAdded = mutableListOf<ContactId>()
@@ -168,6 +183,9 @@ internal class ChatListViewModel @Inject constructor(
                         val message: Message? = chat.latestMessageId?.let {
                             messagesMap[it]
                         }
+
+                        val chatUnseenMessages = if (!chat.seen.isTrue()) unseenMessagesByChatId[chat.id] else emptyList()
+                        val chatUnseenMentions = if (!chat.seen.isTrue()) unseenMentionsByChatId[chat.id] else emptyList()
 
                         if (chat.type.isConversation()) {
                             val contactId: ContactId = chat.contactIds.lastOrNull() ?: continue
@@ -201,7 +219,7 @@ internal class ChatListViewModel @Inject constructor(
                                         chat,
                                         message,
                                         contact,
-                                        repositoryDashboard.getUnseenMessagesByChatIdCache(chat.id),
+                                        chatUnseenMessages?.size ?: 0,
                                         chat.contentSeenAt?.time ?: message?.date?.time ?: chat.createdAt.time
                                     )
                                 )
@@ -212,8 +230,8 @@ internal class ChatListViewModel @Inject constructor(
                                     chat,
                                     message,
                                     accountOwnerStateFlow.value ?: getOwner(),
-                                    repositoryDashboard.getUnseenMessagesByChatIdCache(chat.id),
-                                    repositoryDashboard.getUnseenMentionsByChatIdCache(chat.id),
+                                    chatUnseenMessages?.size ?: 0,
+                                    chatUnseenMentions?.size ?: 0,
                                     chat.contentSeenAt?.time ?: message?.date?.time ?: chat.createdAt.time
                                 )
                             )
@@ -259,7 +277,10 @@ internal class ChatListViewModel @Inject constructor(
         }
     }
 
-    private suspend fun updateChatListContacts(contacts: List<Contact>) {
+    private suspend fun updateChatListContacts(
+        contacts: List<Contact>,
+        unseenMessagesByChatId: Map<ChatId, List<Message>>
+    ) {
         collectionLock.withLock {
             contactsCollectionInitialized = true
 
@@ -363,11 +384,14 @@ internal class ChatListViewModel @Inject constructor(
                         for (chat in currentChatViewState.originalList) {
                             if (chat is DashboardChat.Active.Conversation) {
                                 if (chat.contact.id == contact.id) {
+
+                                    val chatUnseenMessages = if (!chat.chat.seen.isTrue()) unseenMessagesByChatId[chat.chat.id] else emptyList()
+
                                     updatedContactChat = DashboardChat.Active.Conversation(
                                         chat.chat,
                                         chat.message,
                                         contact,
-                                        chat.unseenMessageFlow,
+                                        chatUnseenMessages?.size ?: 0,
                                         chat.chat.contentSeenAt?.time ?: chat.message?.date?.time ?: chat.chat.createdAt.time
                                     )
                                 }
@@ -381,11 +405,13 @@ internal class ChatListViewModel @Inject constructor(
                                     repositoryDashboard.getMessageById(it).firstOrNull()
                                 }
 
+                                val chatUnseenMessages = if (!contactChat.seen.isTrue()) unseenMessagesByChatId[contactChat.id] else emptyList()
+
                                 updatedContactChat = DashboardChat.Active.Conversation(
                                     contactChat,
                                     message,
                                     contact,
-                                    repositoryDashboard.getUnseenMessagesByChatId(contactChat.id),
+                                    chatUnseenMessages?.size ?: 0,
                                     contactChat.contentSeenAt?.time ?: message?.date?.time ?: contactChat.createdAt.time
                                 )
                             }

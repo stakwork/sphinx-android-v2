@@ -2,6 +2,7 @@ package chat.sphinx.wrapper_message
 
 import chat.sphinx.wrapper_common.DateTime
 import chat.sphinx.wrapper_common.PhotoUrl
+import chat.sphinx.wrapper_common.Push
 import chat.sphinx.wrapper_common.Seen
 import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_common.dashboard.ContactId
@@ -29,6 +30,7 @@ class NewMessage(
     override val messageContent: MessageContent? = null,
     override val status: MessageStatus,
     override val seen: Seen,
+    override val push: Push? = Push.False,
     override val senderAlias: SenderAlias? = null,
     override val senderPic: PhotoUrl? = null,
     override val originalMUID: MessageMUID? = null,
@@ -80,7 +82,7 @@ class NewMessage(
         return "NewMessage(id=$id, uuid=$uuid, chatId=$chatId, type=$type, sender=$sender, " +
                 "receiver=$receiver, amount=$amount, paymentHash=$paymentHash, " +
                 "paymentRequest=$paymentRequest, date=$date, expirationDate=$expirationDate, " +
-                "messageContent=$messageContent, status=$status, seen=$seen, " +
+                "messageContent=$messageContent, status=$status, seen=$seen, push=$push," +
                 "senderAlias=$senderAlias, senderPic=$senderPic, originalMUID=$originalMUID, " +
                 "replyUUID=$replyUUID, flagged=$flagged, recipientAlias=$recipientAlias, " +
                 "recipientPic=$recipientPic, person=$person, threadUUID=$threadUUID, " +

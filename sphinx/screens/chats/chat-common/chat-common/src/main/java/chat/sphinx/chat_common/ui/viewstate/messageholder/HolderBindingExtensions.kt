@@ -142,7 +142,7 @@ internal fun LayoutMessageHolderBinding.setView(
                 imageLoader.load(imageView, file, options, object : OnImageLoadListener {
                     override fun onSuccess() {
                         super.onSuccess()
-                        
+
                         loadingContainer.gone
                         onRowLayoutListener?.onRowHeightChanged()
                     }

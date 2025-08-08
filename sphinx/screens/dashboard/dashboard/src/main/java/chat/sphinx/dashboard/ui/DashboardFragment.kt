@@ -549,7 +549,6 @@ internal class DashboardFragment : MotionLayoutFragment<
         onStopSupervisor.scope.launch(viewModel.mainImmediate) {
             viewModel.networkStatusStateFlow.collect { networkStatus ->
                 binding.layoutDashboardHeader.let { dashboardHeader ->
-
                     when (networkStatus) {
                         is NetworkStatus.Loading -> {
                             showProgressBar()

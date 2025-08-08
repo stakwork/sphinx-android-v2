@@ -175,10 +175,10 @@
     <string name="connect_manager_generate_xpub_error">Error al generar clave pública extendida.</string>
     <string name="connect_manager_generate_mnemonic_error">Error al intentar generar mnemonics.</string>
     <string name="connect_manager_process_invite_error">Error al procesar invitación.</string>
-    <string name="connect_manager_mqtt_connect_error">Error al conectar con el servidor MQTT.</string>
+    <string name="connect_manager_mqtt_connect_error">Error al conectar con el servidor MQTT: %s</string>
     <string name="connect_manager_subscribe_owner_error">Error al suscribirse al owner topic.</string>
     <string name="connect_manager_mqtt_client_error">Error con el cliente MQTT.</string>
-    <string name="connect_manager_mqtt_init_error">Error durante la inicialización de MQTT.</string>
+    <string name="connect_manager_mqtt_init_error">Error durante la inicialización de MQTT: %s</string>
     <string name="connect_manager_send_message_error">Error al enviar mensaje.</string>
     <string name="connect_manager_delete_message_error">Error al eliminar mensaje.</string>
     <string name="connect_manager_join_tribe_error">Error al unirse a la tribu.</string>

@@ -160,27 +160,23 @@ internal class ChatListAdapter(
                     @Exhaustive
                     when (dashboardChat) {
                         is DashboardChat.Active.Conversation -> {
-                            lifecycleOwner.lifecycleScope.launch {
-                                viewModel.dashboardNavigator.toChatContact(
-                                    dashboardChat.chat.id,
-                                    dashboardChat.contact.id
-                                )
-                            }
+                            viewModel.navigateToChatContact(
+                                dashboardChat.contact.id,
+                                dashboardChat.chat.id
+                            )
                         }
                         is DashboardChat.Active.GroupOrTribe -> {
-                            lifecycleOwner.lifecycleScope.launch {
-                                if (dashboardChat.chat.type.isTribe()) {
-                                    viewModel.dashboardNavigator.toChatTribe(dashboardChat.chat.id)
-                                }
+                            if (dashboardChat.chat.type.isTribe()) {
+                                viewModel.navigateToChatTribe(
+                                    dashboardChat.chat.id
+                                )
                             }
                         }
                         is DashboardChat.Inactive.Conversation -> {
-                            lifecycleOwner.lifecycleScope.launch {
-                                viewModel.dashboardNavigator.toChatContact(
-                                    null,
-                                    dashboardChat.contact.id
-                                )
-                            }
+                            viewModel.navigateToChatContact(
+                                dashboardChat.contact.id,
+                                null
+                            )
                         }
                         is DashboardChat.Inactive.Invite -> {
                             dashboardChat.invite?.let { invite ->

@@ -5,6 +5,8 @@ import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import chat.sphinx.concept_repository_chat.ChatRepository
+import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
+import chat.sphinx.concept_repository_connect_manager.model.NetworkStatus
 import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.concept_repository_dashboard_android.RepositoryDashboardAndroid
 import chat.sphinx.concept_repository_message.MessageRepository
@@ -75,6 +77,7 @@ internal class ChatListViewModel @Inject constructor(
     private val chatRepository: ChatRepository,
     private val messageRepository: MessageRepository,
     private val contactRepository: ContactRepository,
+    private val connectManagerRepository: ConnectManagerRepository,
     private val tribesDiscoverCoordinator: ViewModelCoordinator<TribesDiscoverRequest, TribesDiscoverResponse>,
 ): SideEffectViewModel<
         Context,
@@ -126,6 +129,9 @@ internal class ChatListViewModel @Inject constructor(
     }
 
     fun isFirstLoad(): Boolean = !hasLoadedOnce
+
+    val networkStatusStateFlow: StateFlow<NetworkStatus>
+        get() = connectManagerRepository.networkStatus.asStateFlow()
 
     init {
         if (args.isChatListTypeConversation) {
@@ -252,6 +258,34 @@ internal class ChatListViewModel @Inject constructor(
                     discoverTribesVisible = args.argChatListType == ChatType.TRIBE,
                 )
             )
+        }
+    }
+
+    fun navigateToChatContact(
+        contactId: ContactId,
+        chatId: ChatId?
+    ) {
+        if (networkStatusStateFlow.value is NetworkStatus.Loading) {
+            return
+        }
+
+        viewModelScope.launch(mainImmediate) {
+            dashboardNavigator.toChatContact(
+                chatId,
+                contactId
+            )
+        }
+    }
+
+    fun navigateToChatTribe(
+        chatId: ChatId
+    ) {
+        if (networkStatusStateFlow.value is NetworkStatus.Loading) {
+            return
+        }
+
+        viewModelScope.launch(mainImmediate) {
+            dashboardNavigator.toChatTribe(chatId)
         }
     }
 

@@ -115,6 +115,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -1010,8 +1013,8 @@ abstract class ChatFragment<
     private val messageReplyViewStateDisposables: MutableList<Disposable> = ArrayList(1)
 
     private var headerInitialHolderLastViewState: InitialHolderViewState? = null
-    private val headerInitialHolderViewStateJobs: MutableList<Job> = ArrayList(1)
-    private val headerInitialHolderViewStateDisposables: MutableList<Disposable> = ArrayList(1)
+    private val headerInitialHolderViewStateJobs: MutableList<Job> = ArrayList(2)
+    private val headerInitialHolderViewStateDisposables: MutableList<Disposable> = ArrayList(2)
 
     private var attachmentSendLastViewState: AttachmentSendViewState? = null
     private val attachmentSendViewStateJobs: MutableList<Job> = ArrayList(1)
@@ -1196,35 +1199,35 @@ abstract class ChatFragment<
         }
 
         onStopSupervisor.scope.launch(viewModel.mainImmediate) {
-            viewModel.chatHeaderViewStateContainer.collect { viewState ->
-                @Exhaustive
-                when (viewState) {
-                    is ChatHeaderViewState.Idle -> {}
-                    is ChatHeaderViewState.Initialized -> {
-                        headerBinding.apply {
-                            textViewChatHeaderName.text = viewState.chatHeaderName.replacingMarkdown()
-                            textViewChatHeaderLock.goneIfFalse(viewState.showLock)
-
-                            Log.d("TimeTracker", "Chat contact/tribe name was displayed in ${System.currentTimeMillis() - timeTrackerStart} milliseconds")
-                            viewModel.sendAppLog("- Chat contact/tribe name was displayed in ${System.currentTimeMillis() - timeTrackerStart} milliseconds")
-
-                            imageViewChatHeaderMuted.apply {
-                                viewState.isMuted.let { muted ->
-                                    headerBinding.imageViewChatHeaderMuted.setImageDrawable(
-                                        AppCompatResources.getDrawable(requireContext(),
-                                            if (muted) {
-                                                R_common.drawable.ic_baseline_notifications_off_24
-                                            } else {
-                                                R_common.drawable.ic_baseline_notifications_24
-                                            }
-                                        )
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+//            viewModel.chatHeaderViewStateContainer.collect { viewState ->
+//                @Exhaustive
+//                when (viewState) {
+//                    is ChatHeaderViewState.Idle -> {}
+//                    is ChatHeaderViewState.Initialized -> {
+//                        headerBinding.apply {
+//                            textViewChatHeaderName.text = viewState.chatHeaderName.replacingMarkdown()
+//                            textViewChatHeaderLock.goneIfFalse(viewState.showLock)
+//
+//                            Log.d("TimeTracker", "Chat contact/tribe name was displayed in ${System.currentTimeMillis() - timeTrackerStart} milliseconds")
+//                            viewModel.sendAppLog("- Chat contact/tribe name was displayed in ${System.currentTimeMillis() - timeTrackerStart} milliseconds")
+//
+//                            imageViewChatHeaderMuted.apply {
+//                                viewState.isMuted.let { muted ->
+//                                    headerBinding.imageViewChatHeaderMuted.setImageDrawable(
+//                                        AppCompatResources.getDrawable(requireContext(),
+//                                            if (muted) {
+//                                                R_common.drawable.ic_baseline_notifications_off_24
+//                                            } else {
+//                                                R_common.drawable.ic_baseline_notifications_24
+//                                            }
+//                                        )
+//                                    )
+//                                }
+//                            }
+//                        }
+//                    }
+//                }
+//            }
         }
 
         onStopSupervisor.scope.launch(viewModel.mainImmediate) {
@@ -1301,6 +1304,12 @@ abstract class ChatFragment<
                                         ),
                                     )
                                 }
+
+                                includeEmptyChatHolderInitial.textViewInitials.text = viewState.initials
+                                initialsHolderPlaceholder.textViewInitials.text = viewState.initials
+
+                                includeEmptyChatHolderInitial.textViewInitials.visible
+                                includeEmptyChatHolderInitial.imageViewChatPicture.gone
                             }
 
                             if (viewState.isPending) {
@@ -1354,15 +1363,36 @@ abstract class ChatFragment<
                             }.let { job ->
                                 headerInitialHolderViewStateJobs.add(job)
                             }
+                            inactiveContactPlaceHolder.apply {
+                                includeEmptyChatHolderInitial.textViewInitials.gone
+                                includeEmptyChatHolderInitial.imageViewChatPicture.gone
+                            }
                         }
                         is InitialHolderViewState.Url -> {
                             textViewInitials.gone
                             imageViewChatPicture.visible
+
+                            inactiveContactPlaceHolder.apply {
+                                includeEmptyChatHolderInitial.textViewInitials.gone
+                                includeEmptyChatHolderInitial.imageViewChatPicture.visible
+                            }
+
                             lifecycleScope.launch(viewModel.default) {
                                 val disposable = imageLoader.load(
                                     imageViewChatPicture,
                                     viewState.photoUrl.value,
                                     viewModel.imageLoaderDefaults,
+                                )
+                                headerInitialHolderViewStateDisposables.add(disposable)
+                            }.let { job ->
+                                headerInitialHolderViewStateJobs.add(job)
+                            }
+
+                            lifecycleScope.launch(viewModel.default) {
+                                val disposable = imageLoader.load(
+                                    inactiveContactPlaceHolder.includeEmptyChatHolderInitial.imageViewChatPicture,
+                                    viewState.photoUrl.value,
+                                    imageLoaderOptions
                                 )
                                 headerInitialHolderViewStateDisposables.add(disposable)
                             }.let { job ->
@@ -1375,78 +1405,166 @@ abstract class ChatFragment<
         }
 
         onStopSupervisor.scope.launch(viewModel.mainImmediate) {
-            viewModel.messageHolderViewStateFlow.collect { messages ->
-                val chat = viewModel.getChat()
-                val chatHeaderState = (viewModel.chatHeaderViewStateContainer.value as? ChatHeaderViewState.Initialized)
+            combine(viewModel.messageHolderViewStateFlow, viewModel.chatHeaderViewStateContainer.viewStateFlow) { value1, value2 ->
+                Pair(value1, value2)
+            }.collect { result ->
+                val messages = result.first
+                val viewState = result.second
 
-                if (messages.isEmpty() && chat.type.isConversation() && !chat.status.isPending()) {
-                    val url = chat.photoUrl
-                    recyclerView.gone
+                @Exhaustive
+                when (viewState) {
+                    is ChatHeaderViewState.Idle -> {}
+                    is ChatHeaderViewState.Initialized -> {
+                        headerBinding.apply {
+                            textViewChatHeaderName.text = viewState.chatHeaderName.replacingMarkdown()
+                            textViewChatHeaderLock.goneIfFalse(viewState.showLock)
 
-                    if (chatHeaderState?.isChatAvailable == true) {
-                        inactiveContactPlaceHolder.apply {
-                            initialsHolderPlaceholder.root.invisible
+                            viewModel.sendAppLog("- Chat contact/tribe name was displayed in ${System.currentTimeMillis() - timeTrackerStart} milliseconds")
 
-                            textViewPlaceholderName.text = chat.name?.value
-                            textViewPlaceholderInvited.invisible
-                            textViewPlaceholderHint.text = getString(R.string.chat_placeholder_secure)
-
-                            includeEmptyChatHolderInitial.apply {
-                                root.visible
-                                imageViewChatPicture.goneIfFalse(url != null)
-                                textViewInitials.goneIfFalse(url == null)
-                            }
-
-                            headerBinding.textViewChatHeaderConnectivity.setTextColorExt(R_common.color.primaryGreen)
-
-                            if (url != null) {
-                                onStopSupervisor.scope.launch(viewModel.dispatchers.default) {
-                                    imageLoader.load(
-                                        includeEmptyChatHolderInitial.imageViewChatPicture,
-                                        url.value,
-                                        imageLoaderOptions
+                            imageViewChatHeaderMuted.apply {
+                                viewState.isMuted.let { muted ->
+                                    headerBinding.imageViewChatHeaderMuted.setImageDrawable(
+                                        AppCompatResources.getDrawable(requireContext(),
+                                            if (muted) {
+                                                R_common.drawable.ic_baseline_notifications_off_24
+                                            } else {
+                                                R_common.drawable.ic_baseline_notifications_24
+                                            }
+                                        )
                                     )
                                 }
-                            } else {
-                                includeEmptyChatHolderInitial.textViewInitials.text =
-                                    chat.name?.value?.getInitials() ?: ""
                             }
 
-                            root.visible
-                        }
-                    } else {
-                        headerBinding.apply {
-                            textViewChatHeaderConnectivity.apply {
-                                setTextColorExt(R_common.color.sphinxOrange)
-                                textViewChatHeaderLock.text = getString(R_common.string.material_icon_name_lock_open)
+                            val isChatAvailable = viewState.isChatAvailable
+                            headerBinding.textViewChatHeaderConnectivity.setTextColorExt(
+                                if (isChatAvailable) {
+                                    R_common.color.primaryGreen
+                                } else {
+                                    R_common.color.sphinxOrange
+                                }
+                            )
 
+                            textViewChatHeaderLock.text = if (isChatAvailable) getString(R_common.string.material_icon_name_lock) else getString(R_common.string.material_icon_name_lock_open)
+
+                            val isTribe = viewState.isTribe
+                            val isChatEmpty = messages.isEmpty()
+
+                            if (isChatEmpty && !isTribe) {
                                 recyclerView.gone
 
-                                inactiveContactPlaceHolder.apply {
-                                    initialsHolderPlaceholder.textViewInitials.apply {
-                                        visible
-                                        text = chatHeaderState?.chatHeaderName?.getInitials() ?: ""
+                                if (isChatAvailable) {
+                                    inactiveContactPlaceHolder.apply {
+                                        initialsHolderPlaceholder.root.invisible
+
+                                        textViewPlaceholderName.text = viewState.chatHeaderName
+                                        textViewPlaceholderInvited.invisible
+                                        textViewPlaceholderHint.text = getString(R.string.chat_placeholder_secure)
+
+                                        includeEmptyChatHolderInitial.apply {
+                                            root.visible
+                                        }
+
+                                        root.visible
                                     }
-                                    textViewPlaceholderName.text = chatHeaderState?.chatHeaderName ?: ""
-                                    textViewPlaceholderInvited.text = root.context.getString(
-                                        R.string.chat_placeholder_invited,
-                                        chatHeaderState?.createdAt ?: "-"
-                                    )
-                                    root.visible
+                                } else {
+                                    headerBinding.apply {
+                                        textViewChatHeaderConnectivity.apply {
+
+                                            recyclerView.gone
+
+                                            inactiveContactPlaceHolder.apply {
+                                                initialsHolderPlaceholder.textViewInitials.apply {
+                                                    visible
+                                                    text = viewState.chatHeaderName?.getInitials() ?: ""
+                                                }
+                                                textViewPlaceholderName.text = viewState.chatHeaderName ?: ""
+                                                textViewPlaceholderInvited.text = root.context.getString(
+                                                    R.string.chat_placeholder_invited,
+                                                    viewState.createdAt ?: "-"
+                                                )
+                                                root.visible
+                                            }
+                                        }
+                                    }
                                 }
+                            } else {
+                                recyclerView.visible
+                                inactiveContactPlaceHolder.root.gone
                             }
                         }
-                    }
-                } else {
-                    recyclerView.visible
-
-                    if (chat.type.isConversation() && chat.status.isPending()) {
-                       inactiveContactPlaceHolder.root.visible
-                    } else {
-                        inactiveContactPlaceHolder.root.gone
                     }
                 }
             }
+
+//            viewModel.messageHolderViewStateFlow.collect { messages ->
+//                val chat = viewModel.getChat()
+//                val chatHeaderState = (viewModel.chatHeaderViewStateContainer.value as? ChatHeaderViewState.Initialized)
+//                val isConversation = chat.type.isConversation()
+//
+//                if (messages.isEmpty() && !chat.status.isPending()) {
+//                    val url = chat.photoUrl
+//                    recyclerView.gone
+//
+//                    if (chatHeaderState?.isChatAvailable == true) {
+//                        inactiveContactPlaceHolder.apply {
+//                            initialsHolderPlaceholder.root.invisible
+//
+//                            textViewPlaceholderName.text = chat.name?.value
+//                            textViewPlaceholderInvited.invisible
+//                            textViewPlaceholderHint.text = getString(R.string.chat_placeholder_secure)
+//
+//                            includeEmptyChatHolderInitial.apply {
+//                                root.visible
+//                                imageViewChatPicture.goneIfFalse(url != null)
+//                                textViewInitials.goneIfFalse(url == null)
+//                            }
+//
+//                            if (url != null) {
+//                                onStopSupervisor.scope.launch(viewModel.dispatchers.default) {
+//                                    imageLoader.load(
+//                                        includeEmptyChatHolderInitial.imageViewChatPicture,
+//                                        url.value,
+//                                        imageLoaderOptions
+//                                    )
+//                                }
+//                            } else {
+//                                includeEmptyChatHolderInitial.textViewInitials.text =
+//                                    chat.name?.value?.getInitials() ?: ""
+//                            }
+//
+//                            root.visible
+//                        }
+//                    } else {
+//                        headerBinding.apply {
+//                            textViewChatHeaderConnectivity.apply {
+//
+//                                recyclerView.gone
+//
+//                                inactiveContactPlaceHolder.apply {
+//                                    initialsHolderPlaceholder.textViewInitials.apply {
+//                                        visible
+//                                        text = chatHeaderState?.chatHeaderName?.getInitials() ?: ""
+//                                    }
+//                                    textViewPlaceholderName.text = chatHeaderState?.chatHeaderName ?: ""
+//                                    textViewPlaceholderInvited.text = root.context.getString(
+//                                        R.string.chat_placeholder_invited,
+//                                        chatHeaderState?.createdAt ?: "-"
+//                                    )
+//                                    root.visible
+//                                }
+//                            }
+//                        }
+//                    }
+//                } else {
+//                    recyclerView.visible
+//
+//                    if (chat.type.isConversation() && chat.status.isPending()) {
+//                       inactiveContactPlaceHolder.root.visible
+//                    } else {
+//                        inactiveContactPlaceHolder.root.gone
+//                    }
+//                }
+//            }
         }
 
         onStopSupervisor.scope.launch(viewModel.mainImmediate) {

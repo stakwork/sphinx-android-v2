@@ -297,7 +297,8 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                                 chatHeaderName = contact.alias?.value ?: "",
                                 showLock = currentState.showLock || contact.isEncrypted(),
                                 isMuted = currentState.isMuted,
-                                isChatAvailable = getChat().status.isApproved() == true,
+                                isChatAvailable = currentState.isChatAvailable,
+                                isTribe = currentState.isTribe,
                                 createdAt = contact.createdAt.time.toFormattedDate(),
                                 colorKey = contact.getColorKey()
                             )
@@ -321,6 +322,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                         showLock = chat != null,
                         isMuted = chat?.notify?.isMuteChat() == true,
                         isChatAvailable = chat?.status?.isApproved() ?: false,
+                        isTribe = chat?.isTribe() ?: false,
                         createdAt = chat?.createdAt?.time?.toFormattedDate(),
                         colorKey = chat?.getColorKey() ?: chat?.getColorKey() ?: ""
                     )

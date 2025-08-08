@@ -1,5 +1,10 @@
 # ChangeLog
 
+## Version 1.0.0-alpha75 (2025-08-08)
+- Fixes images loading issues
+- Fixes empty chat placeholder view
+- Improves scroll behavior on chat view
+
 ## Version 1.0.0-alpha74 (2025-08-07)
 - Improves unseen messages logic calculation on chats list
 - Fixes and improvements on chat view

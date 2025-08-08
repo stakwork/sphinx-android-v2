@@ -46,6 +46,7 @@ abstract class ImageLoader<ImageView> {
 
 interface OnImageLoadListener {
     fun onSuccess() {}
+    fun onError() {}
 }
 
 /**

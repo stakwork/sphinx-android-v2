@@ -115,14 +115,6 @@ internal fun LayoutMessageHolderBinding.setView(
             val options: ImageLoaderOptions? = if (media != null) {
                 val builder = ImageLoaderOptions.Builder()
 
-                builder.errorResId(
-                    if (viewState is MessageHolderViewState.Sent) {
-                        R.drawable.sent_image_not_available
-                    } else {
-                        R.drawable.received_image_not_available
-                    }
-                )
-
                 if (file == null) {
                     media.host?.let { host ->
                         memeServerTokenHandler.retrieveAuthenticationToken(host)
@@ -150,16 +142,46 @@ internal fun LayoutMessageHolderBinding.setView(
                 imageLoader.load(imageView, file, options, object : OnImageLoadListener {
                     override fun onSuccess() {
                         super.onSuccess()
+                        
                         loadingContainer.gone
                         onRowLayoutListener?.onRowHeightChanged()
+                    }
+
+                    override fun onError() {
+                        super.onError()
+
+                        imageView.setImageDrawable(
+                            ContextCompat.getDrawable(root.context,
+                                if (viewState is MessageHolderViewState.Sent) {
+                                    R.drawable.sent_image_not_available
+                                } else {
+                                    R.drawable.received_image_not_available
+                                }
+                            )
+                        )
                     }
                 }, media.mediaType.isGif).also { disposables.add(it) }
             } else {
                 imageLoader.load(imageView, url, options, object : OnImageLoadListener {
                     override fun onSuccess() {
                         super.onSuccess()
+
                         loadingContainer.gone
                         onRowLayoutListener?.onRowHeightChanged()
+                    }
+
+                    override fun onError() {
+                        super.onError()
+
+                        imageView.setImageDrawable(
+                            ContextCompat.getDrawable(root.context,
+                                if (viewState is MessageHolderViewState.Sent) {
+                                    R.drawable.sent_image_not_available
+                                } else {
+                                    R.drawable.received_image_not_available
+                                }
+                            )
+                        )
                     }
                 }, media?.mediaType?.isGif == true || url.contains("gif", ignoreCase = true)).also { disposables.add(it) }
             }

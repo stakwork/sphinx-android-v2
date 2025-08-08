@@ -239,6 +239,8 @@ class ImageLoaderAndroid(
                     }
                     override fun onError(request: ImageRequest, result: ErrorResult) {
                         super.onError(request, result)
+
+                        listener?.onError()
                         LOG.d(TAG, "Image load failed: ${result.throwable.message}")
                     }
                 }
@@ -349,7 +351,7 @@ class ImageLoaderAndroid(
             }
             .dispatcher(Dispatchers.IO.limitedParallelism(5))
             .respectCacheHeaders(false)
-            .allowHardware(true)
+            .allowHardware(false)
             .crossfade(200)
             .build()
             .also { loader = it }

@@ -957,11 +957,21 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                                 handlePaidTextMessageContent(messageCallback)
                             },
                             onBindDownloadMedia = {
-                                repositoryMedia.downloadMediaIfApplicable(message, sent)
+                                val job = repositoryMedia.downloadMediaIfApplicable(message, sent)
+                                activeDownloadJobs.add(job)
+
+                                job.invokeOnCompletion {
+                                    activeDownloadJobs.remove(job)
+                                }
                             },
                             onBindThreadDownloadMedia = {
                                 message.thread?.last()?.let { lastReplyMessage ->
-                                    repositoryMedia.downloadMediaIfApplicable(lastReplyMessage, sent)
+                                    val job = repositoryMedia.downloadMediaIfApplicable(lastReplyMessage, sent)
+                                    activeDownloadJobs.add(job)
+
+                                    job.invokeOnCompletion {
+                                        activeDownloadJobs.remove(job)
+                                    }
                                 }
                             },
                             memberTimezoneIdentifier = if (message.senderAlias != null) memberTimezones[message.senderAlias!!.value] else null,

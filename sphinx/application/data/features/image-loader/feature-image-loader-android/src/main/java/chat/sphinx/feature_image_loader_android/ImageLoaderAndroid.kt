@@ -206,6 +206,7 @@ class ImageLoaderAndroid(
             .memoryCachePolicy(CachePolicy.ENABLED)
             .diskCachePolicy(CachePolicy.ENABLED)
             .networkCachePolicy(if (isPaused) CachePolicy.DISABLED else CachePolicy.ENABLED)
+            .allowHardware(false)
             .apply {
                 if (!isGif) {
                     val optimalSize = calculateOptimalSize(imageView)
@@ -232,6 +233,8 @@ class ImageLoaderAndroid(
             .dispatcher(io)
             .listener(
                 object: ImageRequest.Listener {
+                    private var errorCount = 0
+
                     override fun onSuccess(request: ImageRequest, result: SuccessResult) {
                         super.onSuccess(request, result)
 
@@ -239,9 +242,13 @@ class ImageLoaderAndroid(
                     }
                     override fun onError(request: ImageRequest, result: ErrorResult) {
                         super.onError(request, result)
+                        errorCount++
 
-                        listener?.onError()
                         LOG.d(TAG, "Image load failed: ${result.throwable.message}")
+
+                        if (errorCount >= 2) {
+                            listener?.onError()
+                        }
                     }
                 }
             )

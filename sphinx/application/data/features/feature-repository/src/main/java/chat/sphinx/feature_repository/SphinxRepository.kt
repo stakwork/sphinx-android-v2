@@ -3985,6 +3985,22 @@ abstract class SphinxRepository(
             .map { mapMessageDboAndDecryptContentIfNeeded(queries, it) }
     }
 
+    override suspend fun getAllMessagesByUUIDFlow(messageUUIDs: List<MessageUUID>): Flow<List<Message>> = flow {
+        val queries = coreDB.getSphinxDatabaseQueries()
+
+        emitAll(
+            queries.messageGetAllByUUID(messageUUIDs)
+                .asFlow()
+                .mapToList(io)
+                .map { listMessageDbo ->
+                    listMessageDbo.map {
+                        mapMessageDboAndDecryptContentIfNeeded(queries, it)
+                    }
+                }
+                .distinctUntilChanged()
+        )
+    }
+
     override suspend fun fetchPinnedMessageByUUID(
         messageUUID: MessageUUID,
         chatId: ChatId

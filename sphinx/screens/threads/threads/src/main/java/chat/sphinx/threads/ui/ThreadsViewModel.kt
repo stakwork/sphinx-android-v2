@@ -7,8 +7,10 @@ import android.os.ParcelFileDescriptor
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import chat.sphinx.chat_common.ui.viewstate.messageholder.ReplyUserHolder
+import chat.sphinx.concept_meme_server.MemeServerTokenHandler
 import chat.sphinx.concept_repository_chat.ChatRepository
 import chat.sphinx.concept_repository_contact.ContactRepository
+import chat.sphinx.concept_repository_media.RepositoryMedia
 import chat.sphinx.concept_repository_message.MessageRepository
 import chat.sphinx.highlighting_tool.boldTexts
 import chat.sphinx.highlighting_tool.highlightedTexts
@@ -44,6 +46,8 @@ import io.matthewnelson.android_feature_navigation.util.navArgs
 import io.matthewnelson.android_feature_viewmodel.SideEffectViewModel
 import io.matthewnelson.android_feature_viewmodel.updateViewState
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -57,6 +61,8 @@ internal class ThreadsViewModel @Inject constructor(
     private val messageRepository: MessageRepository,
     private val contactRepository: ContactRepository,
     private val chatRepository: ChatRepository,
+    val memeServerTokenHandler: MemeServerTokenHandler,
+    private val repositoryMedia: RepositoryMedia,
     dispatchers: CoroutineDispatchers,
     savedStateHandle: SavedStateHandle,
 ): SideEffectViewModel<
@@ -66,6 +72,8 @@ internal class ThreadsViewModel @Inject constructor(
         >(dispatchers, ThreadsViewState.Idle)
 {
     private val args: ThreadsFragmentArgs by savedStateHandle.navArgs()
+
+    private val activeDownloadJobs = mutableSetOf<Job>()
 
     private val _ownerStateFlow: MutableStateFlow<Contact?> by lazy {
         MutableStateFlow(null)
@@ -141,23 +149,38 @@ internal class ThreadsViewModel @Inject constructor(
 
     private fun updateThreads() {
         viewModelScope.launch(mainImmediate) {
-            messageRepository.getThreadUUIDMessagesByChatId(ChatId(args.argChatId)).collect { messages ->
+            messageRepository.getThreadUUIDMessagesByChatId(ChatId(args.argChatId))
+                .distinctUntilChanged()
+                .flatMapLatest { threadMessages ->
+                    val groupedMessagesByThread = threadMessages.groupBy { it.threadUUID }.filter {
+                        it.value.size > 1
+                    }
 
-                val threadItems = generateThreadItemsList(messages)
+                    val uuids = groupedMessagesByThread.keys.mapNotNull { it?.value?.toMessageUUID() }
 
-                updateViewState(ThreadsViewState.ThreadList(threadItems))
-            }
+                    if (uuids.isEmpty()) {
+                        flowOf(Triple(threadMessages, groupedMessagesByThread, emptyList()))
+                    } else {
+                        messageRepository.getAllMessagesByUUIDFlow(uuids)
+                            .distinctUntilChanged()
+                            .map { allMessages ->
+                                Triple(threadMessages, groupedMessagesByThread, allMessages)
+                            }
+                    }
+                }
+                .flowOn(Dispatchers.IO)
+                .collect { result ->
+                    val threadItems = generateThreadItemsList(result.second, result.third)
+
+                    updateViewState(ThreadsViewState.ThreadList(threadItems))
+                }
         }
     }
 
-    private suspend fun generateThreadItemsList(messages: List<Message>): List<ThreadItem> {
-        // Group messages by their ThreadUUID
-        val groupedMessagesByThread = messages.groupBy { it.threadUUID }.filter {
-            it.value.size > 1
-        }
-
-        // Fetch the header messages based on the message UUIDs
-        val headerMessages = messageRepository.getAllMessagesByUUID(groupedMessagesByThread.keys.mapNotNull { it?.value?.toMessageUUID() })
+    private suspend fun generateThreadItemsList(
+        groupedMessagesByThread: Map<ThreadUUID?, List<Message>>,
+        headerMessages: List<Message>
+    ): List<ThreadItem> {
         val headerMessagesMappedByUUID = headerMessages.associateBy { it.uuid?.value }
 
         // Generate a map of complete threads, where each thread includes its header message and its other messages
@@ -211,7 +234,7 @@ internal class ThreadsViewModel @Inject constructor(
         val repliesList = messagesForThread?.drop(1)?.distinctBy { it.senderAlias }
 
         val imageAttachment = originalMessage?.retrieveImageUrlAndMessageMedia()?.let { mediaData ->
-            Pair(mediaData.first, mediaData.second?.localFile)
+            Pair(mediaData.first, mediaData.second)
         }
         val videoAttachment: File? = originalMessage?.messageMedia?.let { nnMessageMedia ->
             if (nnMessageMedia.mediaType.isVideo) { nnMessageMedia.localFile } else null
@@ -266,7 +289,17 @@ internal class ThreadsViewModel @Inject constructor(
             imageAttachment = imageAttachment,
             videoAttachment = videoAttachment,
             fileAttachment = fileAttachment,
-            audioAttachment = audioAttachment
+            audioAttachment = audioAttachment,
+            onBindDownloadMedia = {
+                originalMessage?.let { nnMessage ->
+                    val job = repositoryMedia.downloadMediaIfApplicable(nnMessage, isSenderOwner)
+                    activeDownloadJobs.add(job)
+
+                    job.invokeOnCompletion {
+                        activeDownloadJobs.remove(job)
+                    }
+                }
+            }
         )
     }
 

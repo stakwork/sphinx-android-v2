@@ -46,6 +46,7 @@ dependencies {
     implementation project(path: ':sphinx:application:common:resources')
     implementation project(path: ':sphinx:screens:chats:chat-common:chat-common')
     implementation project(path: ':sphinx:screens:chats:chat-tribe:chat-tribe')
+    implementation project(path: ':sphinx:application:network:concepts:clients:concept-network-client-crypto')
 
     implementation deps.google.zxing
 

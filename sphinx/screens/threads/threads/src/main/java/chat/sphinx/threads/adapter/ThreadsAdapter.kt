@@ -5,6 +5,7 @@ import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.widget.ImageView
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.recyclerview.widget.DiffUtil
@@ -15,7 +16,10 @@ import chat.sphinx.chat_common.util.VideoThumbnailUtil
 import chat.sphinx.concept_image_loader.Disposable
 import chat.sphinx.concept_image_loader.ImageLoader
 import chat.sphinx.concept_image_loader.ImageLoaderOptions
+import chat.sphinx.concept_image_loader.OnImageLoadListener
 import chat.sphinx.concept_image_loader.Transformation
+import chat.sphinx.concept_network_client_crypto.CryptoHeader
+import chat.sphinx.concept_network_client_crypto.CryptoScheme
 import chat.sphinx.concept_user_colors_helper.UserColorsHelper
 import chat.sphinx.highlighting_tool.SphinxHighlightingTool
 import chat.sphinx.resources.databinding.LayoutChatImageSmallInitialHolderBinding
@@ -30,6 +34,9 @@ import chat.sphinx.threads.ui.ThreadsViewModel
 import chat.sphinx.threads.viewstate.ThreadsViewState
 import chat.sphinx.wrapper_common.asFormattedString
 import chat.sphinx.wrapper_common.util.getInitials
+import chat.sphinx.wrapper_meme_server.headerKey
+import chat.sphinx.wrapper_meme_server.headerValue
+import chat.sphinx.wrapper_message_media.isGif
 import chat.sphinx.wrapper_view.Px
 import io.matthewnelson.android_feature_screens.util.gone
 import io.matthewnelson.android_feature_screens.util.goneIfFalse
@@ -39,6 +46,7 @@ import io.matthewnelson.concept_views.viewstate.collect
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 
 internal class ThreadsAdapter(
     private val imageLoader: ImageLoader<ImageView>,
@@ -89,7 +97,11 @@ internal class ThreadsAdapter(
                 val new = newList[newItemPosition]
 
                 val same: Boolean =
-                    old.aliasAndColorKey  == new.aliasAndColorKey
+                    old.aliasAndColorKey  == new.aliasAndColorKey &&
+                    old.imageAttachment?.second?.localFile == new.imageAttachment?.second?.localFile &&
+                    old.usersCount == new.usersCount &&
+                    old.videoAttachment == new.videoAttachment &&
+                    old.fileAttachment?.fileName == new.fileAttachment?.fileName
 
                 if (sameList) {
                     sameList = same
@@ -163,9 +175,6 @@ internal class ThreadsAdapter(
             .transformation(Transformation.CircleCrop)
             .build()
     }
-    private val imageAttachmentLoader = ImageLoaderOptions.Builder()
-        .transformation(Transformation.RoundedCorners(Px(5f), Px(5f), Px(5f), Px(5f)))
-        .build()
 
     inner class MediaSectionViewHolder(
         private val binding: ThreadsListItemHolderBinding
@@ -262,29 +271,83 @@ internal class ThreadsAdapter(
                 // Image Attachment header
                 binding.includeMessageTypeImageAttachment.apply {
                     if (threadItem.imageAttachment != null) {
+                        threadItem.onBindDownloadMedia.invoke()
+
                         root.visible
                         layoutConstraintPaidImageOverlay.gone
 
                         loadingImageProgressContainer.visible
                         imageViewAttachmentImage.visible
 
+                        val media = threadItem.imageAttachment.second
+                        val file: File? = media?.localFile
+
                         onStopSupervisor.scope.launch(viewModel.mainImmediate) {
-                            if (threadItem.imageAttachment.second != null) {
-                                imageLoader.load(
-                                    imageViewAttachmentImage,
-                                    threadItem.imageAttachment.second!!,
-                                    imageAttachmentLoader
-                                ).also {
-                                    disposables.add(it)
+                            val options: ImageLoaderOptions? = if (media != null) {
+                                val builder = ImageLoaderOptions.Builder()
+                                builder.transformation(
+                                    Transformation.RoundedCorners(Px(5f), Px(5f), Px(5f), Px(5f))
+                                )
+
+                                if (file == null) {
+                                    media.host?.let { host ->
+                                        viewModel.memeServerTokenHandler.retrieveAuthenticationToken(host)
+                                            ?.let { token ->
+                                                builder.addHeader(token.headerKey, token.headerValue)
+
+                                                media.mediaKeyDecrypted?.value?.let { key ->
+                                                    val header = CryptoHeader.Decrypt.Builder()
+                                                        .setScheme(CryptoScheme.Decrypt.JNCryptor)
+                                                        .setPassword(key)
+                                                        .build()
+
+                                                    builder.addHeader(header.key, header.value)
+                                                }
+                                            }
+                                    }
                                 }
+
+                                builder.build()
                             } else {
-                                imageLoader.load(
-                                    imageViewAttachmentImage,
-                                    threadItem.imageAttachment.first,
-                                    imageAttachmentLoader
-                                ).also {
-                                    disposables.add(it)
-                                }
+                                null
+                            }
+
+                            if (file != null) {
+                                imageLoader.load(imageViewAttachmentImage, file, options, object : OnImageLoadListener {
+                                    override fun onSuccess() {
+                                        super.onSuccess()
+
+                                        loadingImageProgressContainer.gone
+                                    }
+
+                                    override fun onError() {
+                                        super.onError()
+
+                                        imageViewAttachmentImage.setImageDrawable(
+                                            ContextCompat.getDrawable(root.context,
+                                                chat.sphinx.chat_common.R.drawable.received_image_not_available
+                                            )
+                                        )
+                                    }
+                                }, media.mediaType.isGif).also { disposables.add(it) }
+                            } else {
+                                imageLoader.load(imageViewAttachmentImage, threadItem.imageAttachment.first, options, object : OnImageLoadListener {
+                                    override fun onSuccess() {
+                                        super.onSuccess()
+
+                                        loadingImageProgressContainer.gone
+                                    }
+
+                                    override fun onError() {
+                                        super.onError()
+
+                                        imageViewAttachmentImage.setImageDrawable(
+                                            ContextCompat.getDrawable(root.context,
+                                                chat.sphinx.chat_common.R.drawable.received_image_not_available
+                                            )
+                                        )
+                                    }
+                                }, media?.mediaType?.isGif == true || threadItem.imageAttachment.first.contains("gif", ignoreCase = true)).also { disposables.add(it) }
                             }
                         }
                     } else {
@@ -295,6 +358,8 @@ internal class ThreadsAdapter(
                 // Video Attachment header
                 binding.includeMessageTypeVideoAttachment.apply {
                 if (threadItem.videoAttachment != null) {
+                        threadItem.onBindDownloadMedia.invoke()
+
                         root.visible
 
                         val thumbnail = VideoThumbnailUtil.loadThumbnail(threadItem.videoAttachment)
@@ -313,6 +378,8 @@ internal class ThreadsAdapter(
                 // File Attachment header
                 binding.includeMessageTypeFileAttachment.apply {
                     if (threadItem.fileAttachment != null) {
+                        threadItem.onBindDownloadMedia.invoke()
+
                         root.visible
                         includeMessageTypeFileAttachment.root.setBackgroundResource(R_common.drawable.background_thread_file_attachment)
                         layoutConstraintAttachmentFileDownloadButtonGroup.gone
@@ -347,6 +414,8 @@ internal class ThreadsAdapter(
 
                 binding.includeMessageTypeAudioAttachment.apply {
                     if (threadItem.audioAttachment != null) {
+                        threadItem.onBindDownloadMedia.invoke()
+
                         root.visible
                         progressBarAttachmentAudioFileLoading.gone
                         textViewAttachmentPlayPauseButton.visible

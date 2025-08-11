@@ -5,6 +5,7 @@ import chat.sphinx.wrapper_common.FileSize
 import chat.sphinx.wrapper_common.PhotoUrl
 import chat.sphinx.wrapper_contact.ContactAlias
 import chat.sphinx.wrapper_message_media.FileName
+import chat.sphinx.wrapper_message_media.MessageMedia
 import java.io.File
 
 data class ThreadItem(
@@ -20,10 +21,11 @@ data class ThreadItem(
     val repliesAmount: String,
     val lastReplyDate: String?,
     val uuid: String,
-    val imageAttachment: Pair<String, File?>?,
+    val imageAttachment: Pair<String, MessageMedia?>?,
     val videoAttachment: File?,
     val fileAttachment: FileAttachment?,
-    val audioAttachment: Boolean?
+    val audioAttachment: Boolean?,
+    val onBindDownloadMedia: () -> Unit,
 )
 
 data class FileAttachment(

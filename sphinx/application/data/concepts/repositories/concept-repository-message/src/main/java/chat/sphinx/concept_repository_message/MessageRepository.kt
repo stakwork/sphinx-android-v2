@@ -64,6 +64,7 @@ interface MessageRepository {
     fun getThreadUUIDMessagesByUUID(chatId: ChatId, threadUUID: ThreadUUID): Flow<List<Message>>
 
     suspend fun getAllMessagesByUUID(messageUUIDs: List<MessageUUID>): List<Message>
+    suspend fun getAllMessagesByUUIDFlow(messageUUIDs: List<MessageUUID>): Flow<List<Message>>
 
     suspend fun fetchPinnedMessageByUUID(messageUUID: MessageUUID, chatId: ChatId)
 

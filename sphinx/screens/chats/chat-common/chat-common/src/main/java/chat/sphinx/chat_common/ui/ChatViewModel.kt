@@ -176,11 +176,6 @@ abstract class ChatViewModel<ARGS : NavArgs>(
     private val activeDownloadJobs = mutableSetOf<Job>()
 
     private val dims by lazy { MessageDimensions(app.applicationContext) }
-    private var recyclerWidthProvider: (() -> Int)? = null
-
-    fun setRecyclerWidthProvider(provider: () -> Int) {
-        recyclerWidthProvider = provider
-    }
 
     private var textPaint: Paint = Paint().apply {
         textSize = app.applicationContext.resources.getDimensionPixelSize(R.dimen.chat_message_text_size).toFloat()
@@ -197,6 +192,8 @@ abstract class ChatViewModel<ARGS : NavArgs>(
     }
 
     private var dimensionCache = mutableMapOf<String, Pair<Int, Int>>()
+
+    val recyclerWidth = app.applicationContext.getScreenWidth()
 
     val imageLoaderDefaults by lazy {
         ImageLoaderOptions.Builder()
@@ -680,16 +677,11 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
             val isDeleted = message.status.isDeleted()
 
-            val recyclerWidth = recyclerWidthProvider?.invoke() ?: run {
-                0
-            }
-
             val cacheKey = generateCacheKey(
                 messageId = message.id.toString(),
                 messageText = message.retrieveTextToShow()?.replacingMarkdown(),
                 background = groupingDateAndBubbleBackground.second,
                 shouldAdaptBubbleWidth = message.shouldAdaptBubbleWidth,
-                recyclerWidth = recyclerWidth,
                 reactionsCount = message.reactions?.size ?: 0
             )
 
@@ -699,8 +691,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                         message.retrieveTextToShow()?.replacingMarkdown(),
                         !sent,
                         groupingDateAndBubbleBackground.second,
-                        message.shouldAdaptBubbleWidth,
-                        recyclerWidth
+                        message.shouldAdaptBubbleWidth
                     )
                 }
 
@@ -843,8 +834,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                         !sentDirectionBubble,
                         chat.isTribe(),
                         background,
-                        message.shouldAdaptBubbleWidth,
-                        recyclerWidth
+                        message.shouldAdaptBubbleWidth
                     )
                 }
 
@@ -999,8 +989,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         messageText: String?,
         isReceived: Boolean,
         background: BubbleBackground,
-        shouldAdaptBubbleWidth: Boolean,
-        recyclerWidth: Int
+        shouldAdaptBubbleWidth: Boolean
     ): Pair<Int, Int> {
 
         val context = app.applicationContext
@@ -1058,8 +1047,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         isReceived: Boolean,
         isTribe: Boolean,
         background: BubbleBackground,
-        shouldAdaptBubbleWidth: Boolean,
-        recyclerWidth: Int
+        shouldAdaptBubbleWidth: Boolean
     ): Pair<Int, Int> {
 
         val context = app.applicationContext
@@ -1138,7 +1126,6 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         messageText: String?,
         background: BubbleBackground,
         shouldAdaptBubbleWidth: Boolean,
-        recyclerWidth: Int,
         reactionsCount: Int
     ): String {
         return buildString {
@@ -1521,7 +1508,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         if (chatId == null) {
             shimmerViewState.updateViewState(ShimmerViewState.Off)
         }
-        
+
         messagesLoadJob = viewModelScope.launch(Dispatchers.IO) {
             connectManagerRepository.getTagsByChatId(getChat().id)
 

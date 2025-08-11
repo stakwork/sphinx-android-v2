@@ -237,8 +237,6 @@ abstract class ChatFragment<
             setupScrollDown()
             setupRecyclerView()
         }
-
-        viewModel.setRecyclerWidthProvider { recyclerView.measuredWidth }
         viewModel.screenInit()
     }
 
@@ -2142,4 +2140,9 @@ fun RecyclerView.getItemsDistanceToBottom(): Int {
     val totalItems = adapter?.itemCount ?: 0
 
     return (totalItems - 1) - lastVisiblePosition
+}
+
+fun Context.getScreenWidth(): Int {
+    val displayMetrics = resources.displayMetrics
+    return displayMetrics.widthPixels
 }

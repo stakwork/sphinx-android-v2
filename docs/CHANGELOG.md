@@ -1,5 +1,9 @@
 # ChangeLog
 
+## Version 1.0.0-alpha77 (2025-08-11)
+- Fixes for images loading
+- Fixes and improvements on threads list images loading
+
 ## Version 1.0.0-alpha76 (2025-08-11)
 - Fixes and improvements on chat
 

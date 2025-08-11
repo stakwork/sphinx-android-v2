@@ -1521,9 +1521,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         if (chatId == null) {
             shimmerViewState.updateViewState(ShimmerViewState.Off)
         }
-
-        var isScrollDownButtonSetup = false
-
+        
         messagesLoadJob = viewModelScope.launch(Dispatchers.IO) {
             connectManagerRepository.getTagsByChatId(getChat().id)
 
@@ -1576,11 +1574,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                         withContext(Dispatchers.Main.immediate) {
                             messageHolderViewStateFlow.value = processedData.first
 
-                            if (!isScrollDownButtonSetup) {
-                                setupScrollDownButtonCount()
-                                isScrollDownButtonSetup = true
-                            }
-
+                            updateScrollDownButtonCount()
                             updateClockIconState(processedData.second)
 
                             isLoadingMore = false
@@ -1631,6 +1625,22 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         } else {
             scrollDownViewStateContainer.updateViewState(
                 ScrollDownViewState.Off
+            )
+        }
+    }
+
+    private fun updateScrollDownButtonCount() {
+        (scrollDownViewStateContainer.value as? ScrollDownViewState.On)?.let {
+            val unseenMessagesCount = scrollDownButtonCount.value ?: 0
+
+            scrollDownViewStateContainer.updateViewState(
+                ScrollDownViewState.On(
+                    if (unseenMessagesCount > 0) {
+                        unseenMessagesCount.toString()
+                    } else {
+                        null
+                    }
+                )
             )
         }
     }

@@ -101,8 +101,11 @@ internal class MessageListAdapter<ARGS : NavArgs>(
 
     // AsyncListDiffer setup
     private val diffCallback = object : DiffUtil.ItemCallback<MessageHolderViewState>() {
+
         override fun areItemsTheSame(oldItem: MessageHolderViewState, newItem: MessageHolderViewState): Boolean {
-            return oldItem.message?.id == newItem.message?.id
+            return oldItem.message?.id == newItem.message?.id &&
+                   oldItem.separatorDate == newItem.separatorDate &&
+                   oldItem.messageHolderType.value == newItem.messageHolderType.value
         }
 
         override fun areContentsTheSame(oldItem: MessageHolderViewState, newItem: MessageHolderViewState): Boolean {
@@ -208,6 +211,7 @@ internal class MessageListAdapter<ARGS : NavArgs>(
         newListSize: Int,
         callback: (() -> Unit)? = null,
     ) {
+        val firstItemBeforeUpdate = differ.currentList.first()
         val lastVisibleItemPositionBeforeDispatch = layoutManager.findLastVisibleItemPosition()
         val listSizeBeforeDispatch = differ.currentList.size
         val diffToBottom = listSizeBeforeDispatch - lastVisibleItemPositionBeforeDispatch
@@ -222,18 +226,29 @@ internal class MessageListAdapter<ARGS : NavArgs>(
             callback()
         }
 
-        delay(250L)
-
+        val firstItemAfterUpdate = differ.currentList.first()
+        val isLoadingMore = !diffCallback.areItemsTheSame(firstItemBeforeUpdate, firstItemAfterUpdate)
         val newItemsAdded = newListSize - currentListSize
-        val newTargetPosition = currentFirstVisible + newItemsAdded
+        val newTargetPosition = currentFirstVisible + (if (isLoadingMore) newItemsAdded else 0)
 
-        recyclerView.post {
-            if (diffToBottom <= 2) {
+
+        if (diffToBottom <= 1) {
+            delay(250L)
+
+            recyclerView.post {
                 recyclerView.smoothScrollToPosition(
                     newListSize - 1
                 )
-            } else {
-                (recyclerView.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(newTargetPosition, currentOffset)
+            }
+        } else {
+            if (!isLoadingMore) {
+                return
+            }
+            recyclerView.post {
+                (recyclerView.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(
+                    newTargetPosition,
+                    currentOffset
+                )
             }
         }
     }

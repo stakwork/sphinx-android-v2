@@ -71,7 +71,7 @@ internal sealed class MessageHolderViewState(
     val chat: Chat,
     private val tribeAdmin: Contact?,
     val messageHolderType: MessageHolderType,
-    private val separatorDate: DateTime?,
+    val separatorDate: DateTime?,
     val background: BubbleBackground,
     val invoiceLinesHolderViewState: InvoiceLinesHolderViewState,
     val initialHolder: InitialHolderViewState,

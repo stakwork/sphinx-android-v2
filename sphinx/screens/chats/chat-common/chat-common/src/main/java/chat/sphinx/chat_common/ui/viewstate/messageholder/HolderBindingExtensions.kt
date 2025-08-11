@@ -1969,6 +1969,9 @@ internal inline fun LayoutMessageHolderBinding.setBubbleFileAttachment(
 
                 textViewAttachmentFileSize.text = "-"
 
+                buttonAttachmentFileDownload.goneIfFalse(
+                    fileAttachment.pendingPayment
+                )
                 progressBarAttachmentFileDownload.goneIfFalse(
                     !fileAttachment.pendingPayment
                 )

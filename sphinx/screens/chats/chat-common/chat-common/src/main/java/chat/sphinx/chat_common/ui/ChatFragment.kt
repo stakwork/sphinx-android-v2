@@ -1199,38 +1199,6 @@ abstract class ChatFragment<
         }
 
         onStopSupervisor.scope.launch(viewModel.mainImmediate) {
-//            viewModel.chatHeaderViewStateContainer.collect { viewState ->
-//                @Exhaustive
-//                when (viewState) {
-//                    is ChatHeaderViewState.Idle -> {}
-//                    is ChatHeaderViewState.Initialized -> {
-//                        headerBinding.apply {
-//                            textViewChatHeaderName.text = viewState.chatHeaderName.replacingMarkdown()
-//                            textViewChatHeaderLock.goneIfFalse(viewState.showLock)
-//
-//                            Log.d("TimeTracker", "Chat contact/tribe name was displayed in ${System.currentTimeMillis() - timeTrackerStart} milliseconds")
-//                            viewModel.sendAppLog("- Chat contact/tribe name was displayed in ${System.currentTimeMillis() - timeTrackerStart} milliseconds")
-//
-//                            imageViewChatHeaderMuted.apply {
-//                                viewState.isMuted.let { muted ->
-//                                    headerBinding.imageViewChatHeaderMuted.setImageDrawable(
-//                                        AppCompatResources.getDrawable(requireContext(),
-//                                            if (muted) {
-//                                                R_common.drawable.ic_baseline_notifications_off_24
-//                                            } else {
-//                                                R_common.drawable.ic_baseline_notifications_24
-//                                            }
-//                                        )
-//                                    )
-//                                }
-//                            }
-//                        }
-//                    }
-//                }
-//            }
-        }
-
-        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
             viewModel.clockIconState.collect { showClockIcon ->
                 headerBinding.textViewChatHeaderClockIcon.apply {
                     if (showClockIcon) {
@@ -1495,76 +1463,6 @@ abstract class ChatFragment<
                     }
                 }
             }
-
-//            viewModel.messageHolderViewStateFlow.collect { messages ->
-//                val chat = viewModel.getChat()
-//                val chatHeaderState = (viewModel.chatHeaderViewStateContainer.value as? ChatHeaderViewState.Initialized)
-//                val isConversation = chat.type.isConversation()
-//
-//                if (messages.isEmpty() && !chat.status.isPending()) {
-//                    val url = chat.photoUrl
-//                    recyclerView.gone
-//
-//                    if (chatHeaderState?.isChatAvailable == true) {
-//                        inactiveContactPlaceHolder.apply {
-//                            initialsHolderPlaceholder.root.invisible
-//
-//                            textViewPlaceholderName.text = chat.name?.value
-//                            textViewPlaceholderInvited.invisible
-//                            textViewPlaceholderHint.text = getString(R.string.chat_placeholder_secure)
-//
-//                            includeEmptyChatHolderInitial.apply {
-//                                root.visible
-//                                imageViewChatPicture.goneIfFalse(url != null)
-//                                textViewInitials.goneIfFalse(url == null)
-//                            }
-//
-//                            if (url != null) {
-//                                onStopSupervisor.scope.launch(viewModel.dispatchers.default) {
-//                                    imageLoader.load(
-//                                        includeEmptyChatHolderInitial.imageViewChatPicture,
-//                                        url.value,
-//                                        imageLoaderOptions
-//                                    )
-//                                }
-//                            } else {
-//                                includeEmptyChatHolderInitial.textViewInitials.text =
-//                                    chat.name?.value?.getInitials() ?: ""
-//                            }
-//
-//                            root.visible
-//                        }
-//                    } else {
-//                        headerBinding.apply {
-//                            textViewChatHeaderConnectivity.apply {
-//
-//                                recyclerView.gone
-//
-//                                inactiveContactPlaceHolder.apply {
-//                                    initialsHolderPlaceholder.textViewInitials.apply {
-//                                        visible
-//                                        text = chatHeaderState?.chatHeaderName?.getInitials() ?: ""
-//                                    }
-//                                    textViewPlaceholderName.text = chatHeaderState?.chatHeaderName ?: ""
-//                                    textViewPlaceholderInvited.text = root.context.getString(
-//                                        R.string.chat_placeholder_invited,
-//                                        chatHeaderState?.createdAt ?: "-"
-//                                    )
-//                                    root.visible
-//                                }
-//                            }
-//                        }
-//                    }
-//                } else {
-//                    recyclerView.visible
-//
-//                    if (chat.type.isConversation() && chat.status.isPending()) {
-//                       inactiveContactPlaceHolder.root.visible
-//                    } else {
-//                        inactiveContactPlaceHolder.root.gone
-//                    }
-//                }
-//            }
         }
 
         onStopSupervisor.scope.launch(viewModel.mainImmediate) {

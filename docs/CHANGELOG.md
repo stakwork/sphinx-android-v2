@@ -1,5 +1,10 @@
 # ChangeLog
 
+## Version 1.0.0-alpha78 (2025-08-13)
+- Fixes for mentions count badge
+- Fixes for link previews stuck on loading
+- Libraries upgraded
+
 ## Version 1.0.0-alpha77 (2025-08-11)
 - Fixes for images loading
 - Fixes and improvements on threads list images loading

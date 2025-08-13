@@ -1821,7 +1821,7 @@ abstract class SphinxRepository(
 
         val ownerAlias = chatTribe?.my_alias?.value ?: owner?.alias?.value ?: ""
         val hasMention = if (isTribe && !fromMe && ownerAlias.isNotEmpty() && msg.content?.isNotEmpty() == true) {
-            (msg.content?.contains("@$ownerAlias", ignoreCase = true) ?: false).toPush()
+            (msg.content?.contains("@$ownerAlias ", ignoreCase = true) ?: false).toPush()
         } else Push.False
 
         val newMessage = NewMessage(

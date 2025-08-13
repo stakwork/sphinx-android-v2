@@ -1328,17 +1328,20 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                 }
                 is FeedItemPreview -> {}
                 is UnspecifiedUrl -> {
-
                     if (areUrlLinkPreviewsEnabled()) {
                         val htmlPreview = linkPreviewHandler.retrieveHtmlPreview(link.url)
 
-                        if (htmlPreview != null) {
-                            preview = LayoutState.Bubble.ContainerThird.LinkPreview.HttpUrlPreview(
+                        preview = if (htmlPreview != null) {
+                            LayoutState.Bubble.ContainerThird.LinkPreview.HttpUrlPreview(
                                 title = htmlPreview.title,
                                 domainHost = htmlPreview.domainHost,
                                 description = htmlPreview.description,
                                 imageUrl = htmlPreview.imageUrl,
                                 favIconUrl = htmlPreview.favIconUrl,
+                                url = link.url
+                            )
+                        } else {
+                            LayoutState.Bubble.ContainerThird.LinkPreview.NoAvailablePreview(
                                 url = link.url
                             )
                         }

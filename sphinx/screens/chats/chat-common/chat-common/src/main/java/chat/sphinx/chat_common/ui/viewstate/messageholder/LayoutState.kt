@@ -268,6 +268,10 @@ sealed class LayoutState private constructor() {
                     // Used only to anchor data for click listeners
                     val joinLink: TribeJoinLink,
                 ) : LinkPreview()
+
+                data class NoAvailablePreview(
+                    val url: String,
+                ) : LinkPreview()
             }
 
         }

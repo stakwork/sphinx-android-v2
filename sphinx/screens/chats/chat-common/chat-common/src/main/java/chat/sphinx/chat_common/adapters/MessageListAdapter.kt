@@ -11,6 +11,7 @@ import androidx.core.view.isVisible
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavArgs
 import androidx.recyclerview.widget.AsyncListDiffer
 import androidx.recyclerview.widget.DiffUtil
@@ -58,6 +59,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 
 internal class MessageListAdapter<ARGS : NavArgs>(
@@ -143,8 +145,9 @@ internal class MessageListAdapter<ARGS : NavArgs>(
     override fun onStart(owner: LifecycleOwner) {
         super.onStart(owner)
 
-        onStopSupervisor.scope.launch(viewModel.main) {
-            viewModel.messageHolderViewStateFlow.collect { list ->
+        onStopSupervisor.scope.launch {
+            viewModel.messageHolderViewStateFlow
+                .collect { list ->
                 if (differ.currentList.isEmpty()) {
                     differ.submitList(list) {
                         scrollToUnseenSeparatorOrBottom(list)

@@ -54,6 +54,7 @@
     <!-- Link Previews -->
     <string name="link_preview_add_contact_banner_label">友だちを追加</string>
     <string name="link_preview_see_tribe_banner_label">Tribeを見る</string>
+    <string name="link_preview_not_available">リンクプレビューが利用できません</string>
 
     <!-- Replies -->
     <string name="reply_message_media_content_description">元のメッセージのメディアコンテンツ</string>

@@ -46,6 +46,7 @@
     <string name="paywall_overlay_content_description_video_message_received">Bayaran para i-unlock ang Video</string>
     <string name="link_preview_add_contact_banner_label">Wala</string>
     <string name="link_preview_see_tribe_banner_label">Tingnan ang Tribo</string>
+    <string name="link_preview_not_available">Hindi available ang link preview</string>
     <string name="reply_message_media_content_description">Media content ng orihinal na mensahe</string>
     <string name="reply_message_close_button_content_description">Isara</string>
     <string name="share_audio_clip">"Ibahagi ang audio clip:"</string>

@@ -1235,13 +1235,14 @@ internal fun LayoutMessageHolderBinding.setBubbleMessageLinkPreviewLayout(
 ) {
     includeMessageHolderBubble.apply {
 
-    if (viewState.message?.thread?.isNotEmpty() == true) {
-        includeMessageLinkPreviewContact.root.gone
-        includeMessageLinkPreviewTribe.root.gone
-        includeMessageLinkPreviewUrl.root.gone
+        if (viewState.message?.thread?.isNotEmpty() == true) {
+            includeMessageLinkPreviewContact.root.gone
+            includeMessageLinkPreviewTribe.root.gone
+            includeMessageLinkPreviewUrl.root.gone
 
-        return
-    }
+            return
+        }
+
         val previewLink = viewState.messageLinkPreview
 
         val placeHolderAndTextColor = ContextCompat.getColor(
@@ -1400,56 +1401,67 @@ internal fun LayoutMessageHolderBinding.setBubbleMessageLinkPreviewLayout(
 
                     // reset view
                     layoutConstraintUrlLinkPreview.gone
+                    layoutConstraintUrlLinkPreviewNotAvailable.gone
                     textViewMessageLinkPreviewUrlDomain.gone
                     textViewMessageLinkPreviewUrlDescription.gone
                     textViewMessageLinkPreviewUrlTitle.gone
                     imageViewMessageLinkPreviewUrlFavicon.gone
                     imageViewMessageLinkPreviewUrlMainImage.gone
 
-
                     holderScope.launch(dispatchers.mainImmediate) {
                         progressBarLinkPreview.visible
 
-                        val state =
-                            viewState.retrieveLinkPreview() as? LayoutState.Bubble.ContainerThird.LinkPreview.HttpUrlPreview
-
-                        if (state != null) {
-                            textViewMessageLinkPreviewUrlDomain.apply domain@ {
-                                this@domain.text = state.domainHost.value
-                                this@domain.visible
-                            }
-                            textViewMessageLinkPreviewUrlDescription.apply desc@ {
-                                this@desc.text = state.description?.value
-                                this@desc.goneIfTrue(state.description == null)
-                            }
-                            textViewMessageLinkPreviewUrlTitle.apply title@ {
-                                this@title.text = state.title?.value
-                                this@title.goneIfTrue( state.title == null)
-                            }
-                            imageViewMessageLinkPreviewUrlFavicon.apply favIcon@ {
-                                state.favIconUrl?.let { url ->
-                                    imageLoader.load(
-                                        imageView = this@favIcon,
-                                        url = url.value,
-                                    ).also { disposables.add(it) }
-                                    this@favIcon.visible
+                        when (val state = viewState.retrieveLinkPreview()) {
+                            is LayoutState.Bubble.ContainerThird.LinkPreview.HttpUrlPreview -> {
+                                textViewMessageLinkPreviewUrlDomain.apply domain@ {
+                                    this@domain.text = state.domainHost.value
+                                    this@domain.visible
                                 }
-                            }
-                            imageViewMessageLinkPreviewUrlMainImage.apply main@ {
-                                state.imageUrl?.let { url ->
-                                    imageLoader.load(
-                                        imageView = this@main,
-                                        url = url.value,
-                                    ).also { disposables.add(it) }
-                                    this@main.visible
+                                textViewMessageLinkPreviewUrlDescription.apply desc@ {
+                                    this@desc.text = state.description?.value
+                                    this@desc.goneIfTrue(state.description == null)
                                 }
+                                textViewMessageLinkPreviewUrlTitle.apply title@ {
+                                    this@title.text = state.title?.value
+                                    this@title.goneIfTrue( state.title == null)
+                                }
+                                imageViewMessageLinkPreviewUrlFavicon.apply favIcon@ {
+                                    state.favIconUrl?.let { url ->
+                                        imageLoader.load(
+                                            imageView = this@favIcon,
+                                            url = url.value,
+                                        ).also { disposables.add(it) }
+                                        this@favIcon.visible
+                                    }
+                                }
+                                imageViewMessageLinkPreviewUrlMainImage.apply main@ {
+                                    state.imageUrl?.let { url ->
+                                        imageLoader.load(
+                                            imageView = this@main,
+                                            url = url.value,
+                                        ).also { disposables.add(it) }
+                                        this@main.visible
+                                    }
+                                }
+
+                                progressBarLinkPreview.gone
+                                layoutConstraintUrlLinkPreview.visible
                             }
+                            is LayoutState.Bubble.ContainerThird.LinkPreview.NoAvailablePreview -> {
+                                textViewMessageLinkPreviewUrlTitleNotAvailable.visible
 
-                            progressBarLinkPreview.gone
-                            layoutConstraintUrlLinkPreview.visible
+                                textViewMessageLinkPreviewUrlDomainNotAvailable.apply domain@ {
+                                    this@domain.text = state.url
+                                    this@domain.visible
+                                }
 
-                            onRowLayoutListener?.onRowHeightChanged()
+                                progressBarLinkPreview.gone
+                                layoutConstraintUrlLinkPreviewNotAvailable.visible
+                            }
+                            else -> {}
                         }
+
+                        onRowLayoutListener?.onRowHeightChanged()
                     }.let { job ->
                         holderJobs.add(job)
                     }

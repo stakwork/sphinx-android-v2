@@ -56,6 +56,7 @@
 
     <string name="link_preview_add_contact_banner_label">添加聯絡人</string>
     <string name="link_preview_see_tribe_banner_label">查看部落</string>
+    <string name="link_preview_not_available">連結預覽不可用</string>
 
     <string name="reply_message_media_content_description">原始訊息中的多媒體內容</string>
     <string name="reply_message_close_button_content_description">關閉</string>

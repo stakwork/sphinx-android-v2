@@ -12,9 +12,11 @@ import chat.sphinx.feature_link_preview.util.getFavIconUrl
 import chat.sphinx.feature_link_preview.util.getImageUrl
 import chat.sphinx.feature_link_preview.util.getTitle
 import chat.sphinx.wrapper_common.lightning.LightningNodePubKey
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -48,6 +50,24 @@ internal data class HtmlPreviewDataRetriever(val url: HttpUrl): LinkPreviewDataR
 
     @Suppress("BlockingMethodInNonBlockingContext")
     private suspend fun retrievePreview(
+        dispatchers: CoroutineDispatchers,
+        okHttpClient: OkHttpClient
+    ): HtmlPreviewData? {
+        return try {
+            val result = withTimeoutOrNull(5000) { // 5 seconds timeout
+                performPreviewRetrieval(dispatchers, okHttpClient)
+            }
+
+            result
+        } catch (e: TimeoutCancellationException) {
+            return null
+        } catch (e: Exception) {
+            return null
+        }
+    }
+
+    @Suppress("BlockingMethodInNonBlockingContext")
+    private suspend fun performPreviewRetrieval(
         dispatchers: CoroutineDispatchers,
         okHttpClient: OkHttpClient
     ): HtmlPreviewData? {

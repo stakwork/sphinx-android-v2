@@ -2097,6 +2097,9 @@ abstract class ChatViewModel<ARGS : NavArgs>(
     fun changeThreadHeaderState(isFullHeader: Boolean){
         if (isFullHeader) {
             (messageHolderViewStateFlow.value.getOrNull(0) as? MessageHolderViewState.ThreadHeader)?.let { viewState ->
+                if (threadHeaderViewState.value is ThreadHeaderViewState.FullHeader) {
+                    return
+                }
                 val threadHeader = ThreadHeaderViewState.FullHeader(
                     viewState.messageSenderInfo(viewState.message!!),
                     viewState.timestamp,
@@ -2109,8 +2112,10 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                 )
                 threadHeaderViewState.updateViewState(threadHeader)
             }
-        }
-        else {
+        } else {
+            if (threadHeaderViewState.value is ThreadHeaderViewState.BasicHeader) {
+                return
+            }
             threadHeaderViewState.updateViewState(ThreadHeaderViewState.BasicHeader)
         }
     }

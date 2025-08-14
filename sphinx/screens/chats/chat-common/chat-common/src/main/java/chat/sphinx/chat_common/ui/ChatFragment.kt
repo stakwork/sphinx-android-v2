@@ -935,14 +935,23 @@ abstract class ChatFragment<
             super.onScrolled(recyclerView, dx, dy)
 
             val firstVisiblePosition = layoutManager.findFirstVisibleItemPosition()
+            val yOffset = recyclerView.computeVerticalScrollOffset()
 
             if (viewModel.isThreadChat()) {
-                if (firstVisiblePosition > 0) {
-                    viewModel.changeThreadHeaderState(true)
-                }
-
                 if (firstVisiblePosition == 0) {
-                    viewModel.changeThreadHeaderState(false)
+                    layoutManager.findViewByPosition(firstVisiblePosition)?.let { view ->
+                        val dp30InPixels = (58 * recyclerView.resources.displayMetrics.density).toInt()
+                        val linePosition = view.height - dp30InPixels
+
+                        if (yOffset > linePosition) {
+                            viewModel.changeThreadHeaderState(true)
+                        } else {
+                            viewModel.changeThreadHeaderState(false)
+                        }
+
+                    } ?: false
+                } else {
+                    viewModel.changeThreadHeaderState(true)
                 }
             } else if (dy < 0) {
                 if (firstVisiblePosition < threshold) {

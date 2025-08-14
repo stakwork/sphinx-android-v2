@@ -6,7 +6,7 @@ import chat.sphinx.wrapper_message.PodcastClip
 import java.io.File
 
 
-internal data class AudioMessageState(
+data class AudioMessageState(
     val messageId: MessageId,
     val messageUUID: MessageUUID?,
     val file: File?,

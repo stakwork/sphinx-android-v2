@@ -1023,8 +1023,8 @@ internal class MessageListAdapter<ARGS : NavArgs>(
         for (i in 0 until itemCount) {
             when (val holder = recyclerView.findViewHolderForAdapterPosition(i)) {
                 is MessageListAdapter<*>.MessageViewHolder -> holder.cleanup()
-            is MessageListAdapter<*>.ThreadHeaderViewHolder -> holder.cleanup()
-            is MessageListAdapter<*>.MessageOnlyTextSentViewHolder -> holder.cleanup()
+                is MessageListAdapter<*>.ThreadHeaderViewHolder -> holder.cleanup()
+                is MessageListAdapter<*>.MessageOnlyTextSentViewHolder -> holder.cleanup()
                 is MessageListAdapter<*>.MessageOnlyTextReceivedViewHolder -> holder.cleanup()
             }
         }

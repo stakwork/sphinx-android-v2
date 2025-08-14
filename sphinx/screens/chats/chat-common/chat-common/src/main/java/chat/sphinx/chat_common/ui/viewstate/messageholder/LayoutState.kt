@@ -320,6 +320,21 @@ data class BoostSenderHolder(
     val colorKey: String,
 )
 
+data class ThreadHeader(
+    val senderName: String?,
+    val colorKey: String,
+    val photoUrl: String?,
+    val messageTimestamp: Long,
+    val remoteTimezoneIdentifier: String?
+)
+
+data class ThreadRepliesHolder(
+    val userCount: Int,
+    val repliesAmount: String?,
+    val lastReplyDate: String?,
+    val replyUsersHolders: List<ReplyUserHolder>
+)
+
 data class ReplyUserHolder(
     val photoUrl: PhotoUrl?,
     val alias: ContactAlias?,

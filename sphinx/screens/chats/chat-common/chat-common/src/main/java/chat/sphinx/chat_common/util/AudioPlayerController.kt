@@ -29,7 +29,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.File
 
-internal interface AudioPlayerController {
+interface AudioPlayerController {
     suspend fun getAudioState(
         audioAttachment: LayoutState.Bubble.ContainerSecond.AudioAttachment.FileAvailable
     ): StateFlow<AudioMessageState>?
@@ -47,7 +47,7 @@ internal interface AudioPlayerController {
     var streamSatsHandler: ((MessageUUID?, PodcastClip?) -> Unit)?
 }
 
-internal class AudioPlayerControllerImpl(
+class AudioPlayerControllerImpl(
     private val app: Application,
     private val viewModelScope: CoroutineScope,
     dispatchers: CoroutineDispatchers,

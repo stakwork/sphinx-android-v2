@@ -1758,7 +1758,6 @@ internal inline fun LayoutMessageHolderBinding.setBubbleAudioAttachment(
 internal inline fun LayoutMessageTypeAttachmentAudioBinding.setAudioAttachmentLayoutForState(
     state: AudioMessageState
 ) {
-
     seekBarAttachmentAudio.progress = state.progress.toInt()
     textViewAttachmentAudioRemainingDuration.text = state.remainingSeconds.getHHMMString()
 

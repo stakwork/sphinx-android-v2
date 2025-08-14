@@ -1,149 +1,77 @@
 package chat.sphinx.threads.adapter
 
-import android.graphics.Color
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
-import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
+import androidx.recyclerview.widget.AsyncListDiffer
 import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import chat.sphinx.chat_common.ui.viewstate.messageholder.ReplyUserHolder
+import chat.sphinx.chat_common.ui.viewstate.messageholder.LayoutState
 import chat.sphinx.highlighting_tool.SphinxUrlSpan
-import chat.sphinx.chat_common.util.VideoThumbnailUtil
 import chat.sphinx.concept_image_loader.Disposable
 import chat.sphinx.concept_image_loader.ImageLoader
-import chat.sphinx.concept_image_loader.ImageLoaderOptions
-import chat.sphinx.concept_image_loader.OnImageLoadListener
-import chat.sphinx.concept_image_loader.Transformation
-import chat.sphinx.concept_network_client_crypto.CryptoHeader
-import chat.sphinx.concept_network_client_crypto.CryptoScheme
 import chat.sphinx.concept_user_colors_helper.UserColorsHelper
-import chat.sphinx.highlighting_tool.SphinxHighlightingTool
-import chat.sphinx.resources.databinding.LayoutChatImageSmallInitialHolderBinding
-import chat.sphinx.resources.getRandomHexCode
-import chat.sphinx.resources.getString
-import chat.sphinx.resources.setBackgroundRandomColor
-import chat.sphinx.threads.R
-import chat.sphinx.resources.R as R_common
 import chat.sphinx.threads.databinding.ThreadsListItemHolderBinding
-import chat.sphinx.threads.model.ThreadItem
+import chat.sphinx.threads.model.ThreadItemViewState
 import chat.sphinx.threads.ui.ThreadsViewModel
 import chat.sphinx.threads.viewstate.ThreadsViewState
-import chat.sphinx.wrapper_common.asFormattedString
-import chat.sphinx.wrapper_common.util.getInitials
-import chat.sphinx.wrapper_meme_server.headerKey
-import chat.sphinx.wrapper_meme_server.headerValue
-import chat.sphinx.wrapper_message_media.isGif
-import chat.sphinx.wrapper_view.Px
-import io.matthewnelson.android_feature_screens.util.gone
-import io.matthewnelson.android_feature_screens.util.goneIfFalse
-import io.matthewnelson.android_feature_screens.util.visible
 import io.matthewnelson.android_feature_viewmodel.util.OnStopSupervisor
 import io.matthewnelson.concept_views.viewstate.collect
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.io.File
 
 internal class ThreadsAdapter(
+    private val recyclerView: RecyclerView,
+    private val layoutManager: LinearLayoutManager,
     private val imageLoader: ImageLoader<ImageView>,
     private val lifecycleOwner: LifecycleOwner,
     private val onStopSupervisor: OnStopSupervisor,
     private val viewModel: ThreadsViewModel,
     private val userColorsHelper: UserColorsHelper,
-    ): RecyclerView.Adapter<ThreadsAdapter.MediaSectionViewHolder>(), DefaultLifecycleObserver {
+) : RecyclerView.Adapter<RecyclerView.ViewHolder>(),
+    DefaultLifecycleObserver,
+    View.OnLayoutChangeListener
+{
 
-    private inner class Diff(
-        private val oldList: List<ThreadItem>,
-        private val newList: List<ThreadItem>,
-    ): DiffUtil.Callback() {
+    private val diffCallback = object : DiffUtil.ItemCallback<ThreadItemViewState>() {
 
-        override fun getOldListSize(): Int {
-            return oldList.size
+        override fun areItemsTheSame(oldItem: ThreadItemViewState, newItem: ThreadItemViewState): Boolean {
+            return oldItem.uuid == newItem.uuid
         }
 
-        override fun getNewListSize(): Int {
-            return newList.size
-        }
-
-        @Volatile
-        var sameList: Boolean = oldListSize == newListSize
-
-        override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-            return try {
-                val old = oldList[oldItemPosition]
-                val new = newList[newItemPosition]
-
-                val same: Boolean =
-                    old.uuid == new.uuid
-
-                if (sameList) {
-                    sameList = same
-                }
-
-                same
-            } catch (e: IndexOutOfBoundsException) {
-                sameList = false
-                false
-            }
-        }
-
-        override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-            return try {
-                val old = oldList[oldItemPosition]
-                val new = newList[newItemPosition]
-
-                val same: Boolean =
-                    old.aliasAndColorKey  == new.aliasAndColorKey &&
-                    old.imageAttachment?.second?.localFile == new.imageAttachment?.second?.localFile &&
-                    old.usersCount == new.usersCount &&
-                    old.videoAttachment == new.videoAttachment &&
-                    old.fileAttachment?.fileName == new.fileAttachment?.fileName
-
-                if (sameList) {
-                    sameList = same
-                }
-
-                same
-            } catch (e: IndexOutOfBoundsException) {
-                sameList = false
-                false
-            }
+        override fun areContentsTheSame(oldItem: ThreadItemViewState, newItem: ThreadItemViewState): Boolean {
+            return  oldItem.message  == newItem.message &&
+                    oldItem.uuid == newItem.uuid &&
+                    oldItem.usersCount == newItem.usersCount &&
+                    oldItem.repliesAmount == newItem.repliesAmount &&
+                    oldItem.lastReplyDate == newItem.lastReplyDate
         }
     }
 
-    private val threadsItems = ArrayList<ThreadItem>(listOf())
+    private val differ = AsyncListDiffer(this, diffCallback)
 
     override fun onStart(owner: LifecycleOwner) {
         super.onStart(owner)
 
         onStopSupervisor.scope.launch(viewModel.mainImmediate) {
             viewModel.viewStateContainer.collect { viewState ->
-
-                var list: List<ThreadItem> = if (viewState is ThreadsViewState.ThreadList) {
-                    viewState.threads
-                } else {
-                    listOf()
-                }
-
-                if (threadsItems.isEmpty()) {
-                    threadsItems.addAll(list)
-                    this@ThreadsAdapter.notifyDataSetChanged()
-                } else {
-
-                    val diff = Diff(threadsItems, list)
-
-                    withContext(viewModel.default) {
-                        DiffUtil.calculateDiff(diff)
-                    }.let { result ->
-
-                        if (!diff.sameList) {
-                            threadsItems.clear()
-                            threadsItems.addAll(list)
-                            result.dispatchUpdatesTo(this@ThreadsAdapter)
+                (viewState as? ThreadsViewState.ThreadList)?.let {
+                    if (differ.currentList.isEmpty()) {
+                        differ.submitList(viewState.threads) {
+                            forceScrollToTop()
+                        }
+                    } else {
+                        scrollToPreviousPositionWithCallback(viewState.threads.size) {
+                            differ.submitList(viewState.threads)
                         }
                     }
                 }
@@ -151,39 +79,104 @@ internal class ThreadsAdapter(
         }
     }
 
-    override fun getItemCount(): Int {
-        return threadsItems.size
+    private suspend fun scrollToPreviousPositionWithCallback(
+        newListSize: Int,
+        callback: (() -> Unit)? = null,
+    ) {
+        val firstItemBeforeUpdate = differ.currentList.first()
+        val lastVisibleItemPositionBeforeDispatch = layoutManager.findLastVisibleItemPosition()
+        val listSizeBeforeDispatch = differ.currentList.size
+        val diffToBottom = listSizeBeforeDispatch - lastVisibleItemPositionBeforeDispatch
+
+        val layoutManager = recyclerView.layoutManager as LinearLayoutManager
+        val currentFirstVisible = layoutManager.findFirstVisibleItemPosition()
+        val currentFirstView = layoutManager.findViewByPosition(currentFirstVisible)
+        val currentOffset = currentFirstView?.top ?: 0
+        val currentListSize = itemCount
+
+        if (callback != null) {
+            callback()
+        }
+
+        val firstItemAfterUpdate = differ.currentList.first()
+        val isLoadingMore = !diffCallback.areItemsTheSame(firstItemBeforeUpdate, firstItemAfterUpdate)
+        val newItemsAdded = newListSize - currentListSize
+        val newTargetPosition = currentFirstVisible + (if (isLoadingMore) newItemsAdded else 0)
+
+
+        if (diffToBottom <= 1) {
+            delay(250L)
+
+            recyclerView.post {
+                recyclerView.smoothScrollToPosition(
+                    newListSize - 1
+                )
+            }
+        } else {
+            if (!isLoadingMore) {
+                return
+            }
+            recyclerView.post {
+                (recyclerView.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(
+                    newTargetPosition,
+                    currentOffset
+                )
+            }
+        }
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ThreadsAdapter.MediaSectionViewHolder {
+    override fun getItemCount(): Int {
+        return differ.currentList.size
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ThreadsAdapter.ThreadsListViewHolder {
         val binding = ThreadsListItemHolderBinding.inflate(
             LayoutInflater.from(parent.context),
             parent,
             false
         )
 
-        return MediaSectionViewHolder(binding)
+        return ThreadsListViewHolder(binding)
     }
 
-    override fun onBindViewHolder(holder: ThreadsAdapter.MediaSectionViewHolder, position: Int) {
-        holder.bind(position)
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+        when (holder) {
+            is ThreadsListViewHolder -> {
+                holder.bind(position)
+            }
+        }
     }
 
-    private val imageLoaderOptions: ImageLoaderOptions by lazy {
-        ImageLoaderOptions.Builder()
-            .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
-            .transformation(Transformation.CircleCrop)
-            .build()
+    interface OnRowLayoutListener {
+        fun onRowHeightChanged()
     }
 
-    inner class MediaSectionViewHolder(
+    private val onRowLayoutListener: OnRowLayoutListener = object: OnRowLayoutListener {
+        override fun onRowHeightChanged() {
+            val firstVisibleItemPosition = (recyclerView.layoutManager as? LinearLayoutManager)?.findFirstVisibleItemPosition()
+            val isScrolledAtFirstRow = firstVisibleItemPosition == 0
+
+            if (isScrolledAtFirstRow) {
+                forceScrollToTop()
+            }
+        }
+    }
+
+    fun forceScrollToTop() {
+        recyclerView.layoutManager?.scrollToPosition(0)
+    }
+
+    inner class ThreadsListViewHolder(
         private val binding: ThreadsListItemHolderBinding
     ): RecyclerView.ViewHolder(binding.root), DefaultLifecycleObserver {
 
         private val holderJobs: ArrayList<Job> = ArrayList(2)
         private val disposables: ArrayList<Disposable> = ArrayList(2)
+        private var currentViewState: ThreadItemViewState? = null
 
-        private var item: ThreadItem? = null
+        private val holderScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
+        private var item: ThreadItemViewState? = null
 
         private val onSphinxInteractionListener: SphinxUrlSpan.OnInteractionListener
 
@@ -202,315 +195,109 @@ internal class ThreadsAdapter(
         }
 
         fun bind(position: Int) {
-            binding.apply {
+            cleanup()
 
-                val threadItem: ThreadItem = threadsItems.getOrNull(position) ?: let {
-                    item = null
-                    return
+            val viewState = differ.currentList.elementAtOrNull(position).also { currentViewState = it } ?: return
+
+            binding.setView(
+                holderScope,
+                holderJobs,
+                disposables,
+                viewModel.dispatchers,
+                viewModel.audioPlayerController,
+                imageLoader,
+                viewModel.memeServerTokenHandler,
+                viewState,
+                userColorsHelper,
+                onSphinxInteractionListener,
+                onRowLayoutListener,
+            )
+
+            observeAudioAttachmentState()
+        }
+
+        fun cleanup() {
+            holderJobs.forEach { it.cancel() }
+            holderJobs.clear()
+
+            disposables.forEach { it.dispose() }
+            disposables.clear()
+
+            audioAttachmentJob?.cancel()
+
+            holderScope.coroutineContext.cancelChildren()
+        }
+
+        private var audioAttachmentJob: Job? = null
+        override fun onStart(owner: LifecycleOwner) {
+            super.onStart(owner)
+
+            audioAttachmentJob?.let { job ->
+                if (!job.isActive) {
+                    observeAudioAttachmentState()
                 }
-                item = threadItem
+            }
+        }
 
-                // General Info
-                textViewContactHeaderName.text = threadItem.aliasAndColorKey.first?.value
-                textViewThreadDate.text = threadItem.date
-                textViewRepliesQuantity.text = threadItem.repliesAmount
-                textViewThreadTime.text = threadItem.lastReplyDate
-
-                textViewThreadMessageContent.text = threadItem.message
-                textViewThreadMessageContent.goneIfFalse(threadItem.message.isNotEmpty())
-
-                SphinxHighlightingTool.addMarkdowns(
-                    textViewThreadMessageContent,
-                    threadItem.highlightedTexts,
-                    threadItem.boldTexts,
-                    threadItem.markdownLinkTexts,
-                    onSphinxInteractionListener,
-                    textViewThreadMessageContent.resources,
-                    textViewThreadMessageContent.context
-                )
-
-                // User Profile Picture
-                layoutLayoutChatImageSmallInitialHolder.apply {
-                    textViewInitialsName.visible
-                    textViewInitialsName.text =
-                        (threadItem.aliasAndColorKey.first?.value ?: root.context.getString(R_common.string.unknown)).getInitials()
-                    imageViewChatPicture.gone
-
-                    onStopSupervisor.scope.launch(viewModel.mainImmediate) {
-                        textViewInitialsName.setBackgroundRandomColor(
-                            R_common.drawable.chat_initials_circle,
-                            Color.parseColor(
-                                threadItem.aliasAndColorKey.second?.let {
-                                    userColorsHelper.getHexCodeForKey(
-                                        it,
-                                        root.context.getRandomHexCode()
-                                    )
-                                }
-                            )
-                        )
-                    }.let { job ->
-                        holderJobs.add(job)
-
-                        threadItem.photoUrl?.let { photoUrl ->
-                            textViewInitialsName.gone
-                            imageViewChatPicture.visible
-
-                            onStopSupervisor.scope.launch(viewModel.mainImmediate) {
-                                imageLoader.load(
-                                    imageViewChatPicture,
-                                    photoUrl.value,
-                                    imageLoaderOptions
-                                ).also {
-                                    disposables.add(it)
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Image Attachment header
-                binding.includeMessageTypeImageAttachment.apply {
-                    if (threadItem.imageAttachment != null) {
-                        threadItem.onBindDownloadMedia.invoke()
-
-                        root.visible
-                        layoutConstraintPaidImageOverlay.gone
-
-                        loadingImageProgressContainer.visible
-                        imageViewAttachmentImage.visible
-
-                        val media = threadItem.imageAttachment.second
-                        val file: File? = media?.localFile
-
-                        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
-                            val options: ImageLoaderOptions? = if (media != null) {
-                                val builder = ImageLoaderOptions.Builder()
-                                builder.transformation(
-                                    Transformation.RoundedCorners(Px(5f), Px(5f), Px(5f), Px(5f))
-                                )
-
-                                if (file == null) {
-                                    media.host?.let { host ->
-                                        viewModel.memeServerTokenHandler.retrieveAuthenticationToken(host)
-                                            ?.let { token ->
-                                                builder.addHeader(token.headerKey, token.headerValue)
-
-                                                media.mediaKeyDecrypted?.value?.let { key ->
-                                                    val header = CryptoHeader.Decrypt.Builder()
-                                                        .setScheme(CryptoScheme.Decrypt.JNCryptor)
-                                                        .setPassword(key)
-                                                        .build()
-
-                                                    builder.addHeader(header.key, header.value)
-                                                }
-                                            }
-                                    }
-                                }
-
-                                builder.build()
-                            } else {
-                                null
-                            }
-
-                            if (file != null) {
-                                imageLoader.load(imageViewAttachmentImage, file, options, object : OnImageLoadListener {
-                                    override fun onSuccess() {
-                                        super.onSuccess()
-
-                                        loadingImageProgressContainer.gone
-                                    }
-
-                                    override fun onError() {
-                                        super.onError()
-
-                                        imageViewAttachmentImage.setImageDrawable(
-                                            ContextCompat.getDrawable(root.context,
-                                                chat.sphinx.chat_common.R.drawable.received_image_not_available
-                                            )
-                                        )
-                                    }
-                                }, media.mediaType.isGif).also { disposables.add(it) }
-                            } else {
-                                imageLoader.load(imageViewAttachmentImage, threadItem.imageAttachment.first, options, object : OnImageLoadListener {
-                                    override fun onSuccess() {
-                                        super.onSuccess()
-
-                                        loadingImageProgressContainer.gone
-                                    }
-
-                                    override fun onError() {
-                                        super.onError()
-
-                                        imageViewAttachmentImage.setImageDrawable(
-                                            ContextCompat.getDrawable(root.context,
-                                                chat.sphinx.chat_common.R.drawable.received_image_not_available
-                                            )
-                                        )
-                                    }
-                                }, media?.mediaType?.isGif == true || threadItem.imageAttachment.first.contains("gif", ignoreCase = true)).also { disposables.add(it) }
-                            }
-                        }
-                    } else {
-                        root.gone
-                    }
-                }
-
-                // Video Attachment header
-                binding.includeMessageTypeVideoAttachment.apply {
-                if (threadItem.videoAttachment != null) {
-                        threadItem.onBindDownloadMedia.invoke()
-
-                        root.visible
-
-                        val thumbnail = VideoThumbnailUtil.loadThumbnail(threadItem.videoAttachment)
-
-                        if (thumbnail != null) {
-                            imageViewAttachmentThumbnail.setImageBitmap(thumbnail)
-                            layoutConstraintVideoPlayButton.visible
-                        }
-
-                        imageViewAttachmentThumbnail.visible
-                    } else {
-                        root.gone
-                    }
-                }
-
-                // File Attachment header
-                binding.includeMessageTypeFileAttachment.apply {
-                    if (threadItem.fileAttachment != null) {
-                        threadItem.onBindDownloadMedia.invoke()
-
-                        root.visible
-                        includeMessageTypeFileAttachment.root.setBackgroundResource(R_common.drawable.background_thread_file_attachment)
-                        layoutConstraintAttachmentFileDownloadButtonGroup.gone
-
-                        progressBarAttachmentFileDownload.gone
-                        buttonAttachmentFileDownload.visible
-
-                        textViewAttachmentFileIcon.text = if (threadItem.fileAttachment.isPdf) {
-                            getString(R_common.string.material_icon_name_file_pdf)
-                        } else {
-                            getString(R_common.string.material_icon_name_file_attachment)
-                        }
-
-                        textViewAttachmentFileName.text =
-                            threadItem.fileAttachment.fileName?.value ?: "File.txt"
-
-                        textViewAttachmentFileSize.text = if (threadItem.fileAttachment.isPdf) {
-                            if (threadItem.fileAttachment.pageCount > 1) {
-                                "${threadItem.fileAttachment.pageCount} ${getString(chat.sphinx.chat_common.R.string.pdf_pages)}"
-                            } else {
-                                "${threadItem.fileAttachment.pageCount} ${getString(chat.sphinx.chat_common.R.string.pdf_page)}"
-                            }
-                        } else {
-                            threadItem.fileAttachment.fileSize.asFormattedString()
-                        }
-                    } else {
-                        root.gone
-                    }
-                }
-
-                // Audio Attachment header
-
-                binding.includeMessageTypeAudioAttachment.apply {
-                    if (threadItem.audioAttachment != null) {
-                        threadItem.onBindDownloadMedia.invoke()
-
-                        root.visible
-                        progressBarAttachmentAudioFileLoading.gone
-                        textViewAttachmentPlayPauseButton.visible
-                        textViewAttachmentAudioRemainingDuration.gone
-
-                        includeMessageTypeAudioAttachment.root.setBackgroundResource(R_common.drawable.background_thread_file_attachment)
-                    }
-                    else {
-                        root.gone
-                    }
-                }
-
-                // Replies pictures
-                val replyUsers = threadItem.usersReplies.orEmpty()
-
-                includeLayoutMessageRepliesGroup.apply {
-                    val replyImageHolders = listOf(
-                        Pair(layoutConstraintReplyImageHolder1, includeReplyImageHolder1),
-                        Pair(layoutConstraintReplyImageHolder2, includeReplyImageHolder2),
-                        Pair(layoutConstraintReplyImageHolder3, includeReplyImageHolder3),
-                        Pair(layoutConstraintReplyImageHolder4, includeReplyImageHolder4),
-                        Pair(layoutConstraintReplyImageHolder5, includeReplyImageHolder5),
-                        Pair(layoutConstraintReplyImageHolder6, includeReplyImageHolder6)
-                    )
-
-                    fun bindUserToImageHolder(
-                        user: ReplyUserHolder,
-                        includeReplyImageHolder: Pair<ConstraintLayout, LayoutChatImageSmallInitialHolderBinding>
-                    ) {
-                        includeReplyImageHolder.first.visible
-
-                        includeReplyImageHolder.second.apply {
-                            circularBorder.visible
-                            textViewInitialsName.visible
-                            textViewInitialsName.text =
-                                (user.alias?.value ?: root.context.getString(R_common.string.unknown)).getInitials()
-                            imageViewChatPicture.gone
-
-                            imageViewDefaultAlpha.gone
-                            textViewRepliesNumber.gone
-
-                            onStopSupervisor.scope.launch(viewModel.mainImmediate) {
-                                textViewInitialsName.setBackgroundRandomColor(
-                                    R_common.drawable.chat_initials_circle,
-                                    Color.parseColor(
-                                        userColorsHelper.getHexCodeForKey(
-                                            user.colorKey,
-                                            root.context.getRandomHexCode()
-                                        )
-                                    )
-                                )
-                            }.let { job ->
-                                holderJobs.add(job)
-
-                                user.photoUrl?.let { photoUrl ->
-                                    textViewInitialsName.gone
-                                    imageViewChatPicture.visible
-
-                                    onStopSupervisor.scope.launch(viewModel.mainImmediate) {
-                                        imageLoader.load(
-                                            imageViewChatPicture,
-                                            photoUrl.value,
-                                            imageLoaderOptions
-                                        ).also {
-                                            disposables.add(it)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    for (i in replyUsers.indices) {
-                        val user = replyUsers[i]
-                        val replyImageHolder = replyImageHolders[i]
-                        bindUserToImageHolder(user, replyImageHolder)
-                    }
-
-                    if (threadItem.usersCount > 6) {
-                        includeReplyImageHolder6.apply {
-                            imageViewDefaultAlpha.visible
-                            textViewRepliesNumber.visible
-                            textViewRepliesNumber.text = "+${threadItem.usersCount - 6}"
+        private fun observeAudioAttachmentState() {
+            currentViewState?.bubbleAudioAttachment?.let { audioAttachment ->
+                if (audioAttachment is LayoutState.Bubble.ContainerSecond.AudioAttachment.FileAvailable) {
+                    audioAttachmentJob?.cancel()
+                    audioAttachmentJob = holderScope.launch(viewModel.mainImmediate) {
+                        viewModel.audioPlayerController.getAudioState(audioAttachment)?.collect { audioState ->
+                            binding.setAudioAttachmentLayoutForState(audioState)
                         }
                     }
                 }
             }
-
         }
+
         init {
             lifecycleOwner.lifecycle.addObserver(this)
         }
     }
 
+    override fun onLayoutChange(
+        v: View?,
+        left: Int,
+        top: Int,
+        right: Int,
+        bottom: Int,
+        oldLeft: Int,
+        oldTop: Int,
+        oldRight: Int,
+        oldBottom: Int
+    ) {
+        if (bottom != oldBottom) {
+            val lastPosition = differ.currentList.size - 1
+            if (
+                recyclerView.scrollState == RecyclerView.SCROLL_STATE_IDLE  &&
+                layoutManager.findLastVisibleItemPosition() == lastPosition
+            ) {
+//                recyclerView.scrollToPosition(lastPosition)
+            }
+        }
+    }
+
     init {
         lifecycleOwner.lifecycle.addObserver(this)
+    }
+
+    override fun onViewRecycled(holder: RecyclerView.ViewHolder) {
+        super.onViewRecycled(holder)
+
+        when (holder) {
+            is ThreadsAdapter.ThreadsListViewHolder -> holder.cleanup()
+        }
+    }
+
+    override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) {
+        super.onDetachedFromRecyclerView(recyclerView)
+
+        for (i in 0 until itemCount) {
+            when (val holder = recyclerView.findViewHolderForAdapterPosition(i)) {
+                is ThreadsAdapter.ThreadsListViewHolder -> holder.cleanup()
+            }
+        }
     }
 }

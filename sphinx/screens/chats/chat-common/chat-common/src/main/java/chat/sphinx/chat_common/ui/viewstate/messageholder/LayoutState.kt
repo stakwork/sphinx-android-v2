@@ -324,8 +324,7 @@ data class ThreadHeader(
     val senderName: String?,
     val colorKey: String,
     val photoUrl: String?,
-    val messageTimestamp: Long,
-    val remoteTimezoneIdentifier: String?
+    val messageTimestamp: String
 )
 
 data class ThreadRepliesHolder(

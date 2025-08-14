@@ -198,7 +198,7 @@ internal inline fun ThreadsListItemHolderBinding.setOriginalMessage(
 ) {
     if (threadHeader != null) {
         textViewContactHeaderName.text = threadHeader.senderName
-        textViewThreadDate.text = threadHeader.remoteTimezoneIdentifier
+        textViewThreadDate.text = threadHeader.messageTimestamp
 
         // User Profile Picture
         layoutLayoutChatImageSmallInitialHolder.apply {
@@ -407,6 +407,9 @@ internal inline fun ThreadsListItemHolderBinding.setBubbleAudioAttachment(
     holderScope: CoroutineScope
 ) {
     includeMessageTypeAudioAttachment.apply {
+
+        root.setBackgroundResource(chat.sphinx.resources.R.drawable.background_thread_file_attachment)
+
         @Exhaustive
         when (audioAttachment) {
             null -> {
@@ -547,6 +550,9 @@ internal inline fun ThreadsListItemHolderBinding.setBubbleFileAttachment(
     fileAttachment: LayoutState.Bubble.ContainerSecond.FileAttachment?
 ) {
     includeMessageTypeFileAttachment.apply {
+
+        root.setBackgroundResource(chat.sphinx.resources.R.drawable.background_thread_file_attachment)
+        layoutConstraintAttachmentFileDownloadButtonGroup.gone
 
         @Exhaustive
         when (fileAttachment){

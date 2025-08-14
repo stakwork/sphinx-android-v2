@@ -15,6 +15,8 @@ import chat.sphinx.wrapper_chat.Chat
 import chat.sphinx.wrapper_chat.isTribe
 import chat.sphinx.wrapper_common.DateTime
 import chat.sphinx.wrapper_common.FileSize
+import chat.sphinx.wrapper_common.chatTimeFormat
+import chat.sphinx.wrapper_common.messageTimeFormat
 import chat.sphinx.wrapper_common.time
 import chat.sphinx.wrapper_common.timeAgo
 import chat.sphinx.wrapper_contact.Contact
@@ -47,15 +49,15 @@ class ThreadItemViewState(
         if (message == null) {
             null
         } else {
-            val messageTimestamp = message.date.time
+            var messageTimestamp = message.date.chatTimeFormat()
 
-            val timezoneString: String? = if (chat.isTribe()) {
+            if (chat.isTribe()) {
                 if (!((message.remoteTimezoneIdentifier?.value ?: memberTimezoneIdentifier).isNullOrEmpty())) {
                     (message.remoteTimezoneIdentifier?.value ?: memberTimezoneIdentifier)?.let {
-                        DateTime.getLocalTimeFor(it, message.date)
+                        messageTimestamp = "$messageTimestamp / ${DateTime.getLocalTimeFor(it, message.date)}"
                     }
-                } else null
-            } else null
+                }
+            }
 
             val ownerAlias = message.senderAlias?.value ?: owner?.alias?.value
             val ownerPhotoUrl = message.senderPic?.value ?: owner?.photoUrl?.value
@@ -64,8 +66,7 @@ class ThreadItemViewState(
                 if (sent) ownerAlias else message.senderAlias?.value,
                 message.getColorKey(),
                 if (sent) ownerPhotoUrl else message.senderPic?.value,
-                messageTimestamp,
-                timezoneString
+                messageTimestamp
             )
         }
     }

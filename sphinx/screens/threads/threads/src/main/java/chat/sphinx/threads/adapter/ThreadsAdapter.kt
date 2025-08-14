@@ -176,13 +176,11 @@ internal class ThreadsAdapter(
 
         private val holderScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
-        private var item: ThreadItemViewState? = null
-
         private val onSphinxInteractionListener: SphinxUrlSpan.OnInteractionListener
 
         init {
             binding.root.setOnClickListener {
-                item?.let { threadItem ->
+                currentViewState?.let { threadItem ->
                     viewModel.navigateToThreadDetail(threadItem.uuid)
                 }
             }
@@ -274,7 +272,7 @@ internal class ThreadsAdapter(
                 recyclerView.scrollState == RecyclerView.SCROLL_STATE_IDLE  &&
                 layoutManager.findLastVisibleItemPosition() == lastPosition
             ) {
-//                recyclerView.scrollToPosition(lastPosition)
+                recyclerView.scrollToPosition(lastPosition)
             }
         }
     }

@@ -320,7 +320,7 @@ data class BoostSenderHolder(
     val colorKey: String,
 )
 
-data class ThreadHeader(
+data class ThreadHeaderHolder(
     val senderName: String?,
     val colorKey: String,
     val photoUrl: String?,

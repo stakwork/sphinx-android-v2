@@ -635,7 +635,8 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                             }
                         },
                         accountOwner = { owner },
-                        message.date.chatTimeFormat()
+                        message.date.chatTimeFormat(),
+                        isExpanded = false
                     )
                 )
                 continue

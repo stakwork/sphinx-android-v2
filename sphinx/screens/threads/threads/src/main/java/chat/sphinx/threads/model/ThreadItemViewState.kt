@@ -5,7 +5,7 @@ import android.os.ParcelFileDescriptor
 import android.os.ParcelFileDescriptor.MODE_READ_ONLY
 import chat.sphinx.chat_common.ui.viewstate.messageholder.LayoutState
 import chat.sphinx.chat_common.ui.viewstate.messageholder.ReplyUserHolder
-import chat.sphinx.chat_common.ui.viewstate.messageholder.ThreadHeader
+import chat.sphinx.chat_common.ui.viewstate.messageholder.ThreadHeaderHolder
 import chat.sphinx.chat_common.ui.viewstate.messageholder.ThreadRepliesHolder
 import chat.sphinx.highlighting_tool.boldTexts
 import chat.sphinx.highlighting_tool.highlightedTexts
@@ -16,8 +16,6 @@ import chat.sphinx.wrapper_chat.isTribe
 import chat.sphinx.wrapper_common.DateTime
 import chat.sphinx.wrapper_common.FileSize
 import chat.sphinx.wrapper_common.chatTimeFormat
-import chat.sphinx.wrapper_common.messageTimeFormat
-import chat.sphinx.wrapper_common.time
 import chat.sphinx.wrapper_common.timeAgo
 import chat.sphinx.wrapper_contact.Contact
 import chat.sphinx.wrapper_contact.getColorKey
@@ -45,7 +43,7 @@ class ThreadItemViewState(
     private val memberTimezoneIdentifier: String?,
     val onBindDownloadMedia: () -> Unit,
 ) {
-    val threadHeader: ThreadHeader? by lazy(LazyThreadSafetyMode.PUBLICATION) {
+    val threadHeader: ThreadHeaderHolder? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null) {
             null
         } else {
@@ -62,7 +60,7 @@ class ThreadItemViewState(
             val ownerAlias = message.senderAlias?.value ?: owner?.alias?.value
             val ownerPhotoUrl = message.senderPic?.value ?: owner?.photoUrl?.value
 
-            ThreadHeader(
+            ThreadHeaderHolder(
                 if (sent) ownerAlias else message.senderAlias?.value,
                 message.getColorKey(),
                 if (sent) ownerPhotoUrl else message.senderPic?.value,

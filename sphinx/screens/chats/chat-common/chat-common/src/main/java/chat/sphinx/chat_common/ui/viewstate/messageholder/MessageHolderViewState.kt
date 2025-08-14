@@ -117,6 +117,34 @@ internal sealed class MessageHolderViewState(
         }
     }
 
+    val threadHeader: ThreadHeaderHolder? by lazy(LazyThreadSafetyMode.PUBLICATION) {
+        if (message == null) {
+            null
+        } else {
+            var messageTimestamp = message.date.chatTimeFormat()
+
+            if (chat.isTribe()) {
+                if (!((message.remoteTimezoneIdentifier?.value ?: memberTimezoneIdentifier).isNullOrEmpty())) {
+                    (message.remoteTimezoneIdentifier?.value ?: memberTimezoneIdentifier)?.let {
+                        messageTimestamp = "$messageTimestamp / ${DateTime.getLocalTimeFor(it, message.date)}"
+                    }
+                }
+            }
+
+            val owner = accountOwner()
+            val ownerAlias = message.senderAlias?.value ?: owner.alias?.value
+            val ownerPhotoUrl = message.senderPic?.value ?: owner.photoUrl?.value
+            val sent = message.sender == chat.contactIds.firstOrNull()
+
+            ThreadHeaderHolder(
+                if (sent) ownerAlias else message.senderAlias?.value,
+                message.getColorKey(),
+                if (sent) ownerPhotoUrl else message.senderPic?.value,
+                messageTimestamp
+            )
+        }
+    }
+
     val statusHeader: LayoutState.MessageStatusHeader? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null) {
             null

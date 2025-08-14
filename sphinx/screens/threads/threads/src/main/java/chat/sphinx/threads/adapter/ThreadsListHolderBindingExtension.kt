@@ -13,7 +13,7 @@ import chat.sphinx.chat_common.ui.viewstate.audio.AudioMessageState
 import chat.sphinx.chat_common.ui.viewstate.audio.AudioPlayState
 import chat.sphinx.chat_common.ui.viewstate.messageholder.LayoutState
 import chat.sphinx.chat_common.ui.viewstate.messageholder.ReplyUserHolder
-import chat.sphinx.chat_common.ui.viewstate.messageholder.ThreadHeader
+import chat.sphinx.chat_common.ui.viewstate.messageholder.ThreadHeaderHolder
 import chat.sphinx.chat_common.ui.viewstate.messageholder.ThreadRepliesHolder
 import chat.sphinx.chat_common.util.AudioPlayerController
 import chat.sphinx.chat_common.util.VideoThumbnailUtil
@@ -140,7 +140,7 @@ internal fun ThreadsListItemHolderBinding.setView(
     }
 
     apply {
-        setOriginalMessage(
+        setHeader(
             viewState.threadHeader,
             holderScope,
             holderJobs,
@@ -187,8 +187,8 @@ internal fun ThreadsListItemHolderBinding.setView(
 
 @SuppressLint("SetTextI18n")
 @Suppress("NOTHING_TO_INLINE")
-internal inline fun ThreadsListItemHolderBinding.setOriginalMessage(
-    threadHeader: ThreadHeader?,
+internal inline fun ThreadsListItemHolderBinding.setHeader(
+    threadHeader: ThreadHeaderHolder?,
     holderScope: CoroutineScope,
     holderJobs: ArrayList<Job>,
     disposables: ArrayList<Disposable>,

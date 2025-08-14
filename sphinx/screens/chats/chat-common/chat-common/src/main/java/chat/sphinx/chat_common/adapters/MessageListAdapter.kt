@@ -977,10 +977,10 @@ internal class MessageListAdapter<ARGS : NavArgs>(
                 disposables,
                 viewModel.dispatchers,
                 imageLoader,
+                viewModel.memeServerTokenHandler,
                 viewModel.audioPlayerController,
                 threadHeader,
                 userColorsHelper,
-                viewModel.colorCache,
                 onSphinxInteractionListener
             )
             observeAudioAttachmentState()

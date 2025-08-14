@@ -812,7 +812,7 @@ internal class ChatTribeFragment: ChatFragment<
 
                             if (!isThreadHeaderSet) {
                                 textViewThreadDate.text = viewState.date
-                                
+
                                 threadOriginalMessageBinding?.textViewThreadMessageContent?.let { textView ->
                                     viewState.message?.let { nnMessage ->
                                         textView.text = nnMessage

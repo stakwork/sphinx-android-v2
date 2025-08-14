@@ -977,7 +977,7 @@ internal inline fun LayoutMessageHolderBinding.setInvoicePaymentLayout(
 
 @MainThread
 @Suppress("NOTHING_TO_INLINE")
-internal inline suspend fun LayoutMessageHolderBinding.setBubbleThreadLayout(
+internal suspend inline fun LayoutMessageHolderBinding.setBubbleThreadLayout(
     thread: LayoutState.Bubble.ContainerThird.Thread?,
     holderJobs: ArrayList<Job>,
     dispatchers: CoroutineDispatchers,
@@ -1102,7 +1102,8 @@ internal inline suspend fun LayoutMessageHolderBinding.setBubbleThreadLayout(
                         dispatchers,
                         holderJobs,
                         holderScope,
-                        true)
+                        true
+                    )
                 }
                 is LayoutState.Bubble.ContainerSecond.FileAttachment -> {
                     constraintMediaThreadContainer.visible

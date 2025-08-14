@@ -116,14 +116,16 @@ internal class MessageListAdapter<ARGS : NavArgs>(
                             oldItem.background                      == newItem.background                   &&
                             oldItem.message                         == newItem.message                      &&
                             oldItem.invoiceLinesHolderViewState     == newItem.invoiceLinesHolderViewState  &&
-                            oldItem.message?.thread?.size           == newItem.message?.thread?.size
+                            oldItem.message?.thread?.size           == newItem.message?.thread?.size        &&
+                            oldItem.message?.thread?.first()        == newItem.message?.thread?.first()
                 }
                 oldItem is MessageHolderViewState.Sent && newItem is MessageHolderViewState.Sent -> {
                             oldItem.background                      == newItem.background                    &&
                             oldItem.message                         == newItem.message                       &&
                             oldItem.invoiceLinesHolderViewState     == newItem.invoiceLinesHolderViewState   &&
                             oldItem.isPinned                        == newItem.isPinned                      &&
-                            oldItem.message?.thread?.size           == newItem.message?.thread?.size
+                            oldItem.message?.thread?.size           == newItem.message?.thread?.size         &&
+                            oldItem.message?.thread?.first()        == newItem.message?.thread?.first()
                 }
                 oldItem is MessageHolderViewState.MessageOnlyTextHolderViewState.Received && newItem is MessageHolderViewState.MessageOnlyTextHolderViewState.Received -> {
                             oldItem.background                      == newItem.background                   &&

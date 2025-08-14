@@ -890,7 +890,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                                 }
                             },
                             onBindThreadDownloadMedia = {
-                                message.thread?.last()?.let { lastReplyMessage ->
+                                message.thread?.first()?.let { lastReplyMessage ->
                                     val job = repositoryMedia.downloadMediaIfApplicable(lastReplyMessage, sent)
                                     activeDownloadJobs.add(job)
 
@@ -966,7 +966,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                                 }
                             },
                             onBindThreadDownloadMedia = {
-                                message.thread?.last()?.let { lastReplyMessage ->
+                                message.thread?.first()?.let { lastReplyMessage ->
                                     val job = repositoryMedia.downloadMediaIfApplicable(lastReplyMessage, sent)
                                     activeDownloadJobs.add(job)
 

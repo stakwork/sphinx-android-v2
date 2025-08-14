@@ -617,7 +617,6 @@ internal inline fun ThreadsListItemHolderBinding.setBubbleMessageLayout(
         if (message == null) {
             gone
         } else {
-            maxLines = if (message.isThread) 2 else Integer.MAX_VALUE
             visible
             text = message.text ?: getString(chat.sphinx.resources.R.string.decryption_error)
 
@@ -627,14 +626,12 @@ internal inline fun ThreadsListItemHolderBinding.setBubbleMessageLayout(
             )
             setTextColor(textColor)
 
-            if (onSphinxInteractionListener != null) {
-                SphinxLinkify.addLinks(
-                    this,
-                    SphinxLinkify.ALL,
-                    root.context,
-                    onSphinxInteractionListener
-                )
-            }
+            SphinxLinkify.addLinks(
+                this,
+                SphinxLinkify.ALL,
+                root.context,
+                onSphinxInteractionListener
+            )
 
             SphinxHighlightingTool.addMarkdowns(
                 this,

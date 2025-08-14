@@ -176,8 +176,6 @@ internal class ThreadsAdapter(
 
         private val holderScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
-        private val onSphinxInteractionListener: SphinxUrlSpan.OnInteractionListener
-
         init {
             binding.root.setOnClickListener {
                 currentViewState?.let { threadItem ->
@@ -185,9 +183,9 @@ internal class ThreadsAdapter(
                 }
             }
 
-            onSphinxInteractionListener = object: SphinxUrlSpan.OnInteractionListener(null) {
-                override fun onClick(url: String?) {
-//                    viewModel.handleContactTribeLinks(url)
+            binding.textViewThreadMessageContent.setOnClickListener {
+                currentViewState?.let { threadItem ->
+                    viewModel.navigateToThreadDetail(threadItem.uuid)
                 }
             }
         }
@@ -207,7 +205,7 @@ internal class ThreadsAdapter(
                 viewModel.memeServerTokenHandler,
                 viewState,
                 userColorsHelper,
-                onSphinxInteractionListener,
+                null,
                 onRowLayoutListener,
             )
 

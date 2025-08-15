@@ -795,7 +795,7 @@ internal class ChatTribeFragment: ChatFragment<
 
                             binding.includeChatTribeHeader.root.gone
                             binding.includeChatPinedMessageHeader.root.gone
-                            threadOriginalMessageBinding?.root?.gone
+                            threadOriginalMessageBinding.root.gone
 
                             layoutConstraintThreadContactName.gone
                             textViewHeader.visible
@@ -806,15 +806,15 @@ internal class ChatTribeFragment: ChatFragment<
                             binding.includeChatTribeHeader.root.gone
                             binding.includeChatPinedMessageHeader.root.gone
 
-                            threadOriginalMessageBinding?.root?.visible
+                            threadOriginalMessageBinding.root.visible
 
                             layoutConstraintThreadContactName.visible
                             textViewHeader.gone
 
-                            if (!isThreadHeaderSet) {
+                            if (viewState.isFirstTimeShowing) {
                                 textViewThreadDate.text = viewState.date
 
-                                threadOriginalMessageBinding?.textViewThreadMessageContent?.let { textView ->
+                                threadOriginalMessageBinding.textViewThreadMessageContent.let { textView ->
                                     viewState.message?.let { nnMessage ->
                                         textView.text = nnMessage
 
@@ -848,7 +848,7 @@ internal class ChatTribeFragment: ChatFragment<
                                     textViewInitialsName.apply {
                                         text = (senderInfo.second?.value ?: "").getInitials()
 
-                                        if (!isThreadHeaderSet) {
+                                        if (viewState.isFirstTimeShowing) {
                                             setBackgroundRandomColor(
                                                 R_common.drawable.chat_initials_circle,
                                                 Color.parseColor(
@@ -864,7 +864,7 @@ internal class ChatTribeFragment: ChatFragment<
                                             textViewInitialsName.gone
                                             imageViewChatPicture.visible
 
-                                            if (!isThreadHeaderSet) {
+                                            if (viewState.isFirstTimeShowing) {
                                                 imageLoader.load(
                                                     layoutContactInitialHolder.imageViewChatPicture,
                                                     photoUrl.value,
@@ -879,14 +879,14 @@ internal class ChatTribeFragment: ChatFragment<
                                 }
                             }
 
-                            threadOriginalMessageBinding?.apply {
+                            threadOriginalMessageBinding.apply {
                                 layoutConstraintMediaContainer.gone
 
                                 viewState.imageAttachment?.let { imageAttachment ->
                                     layoutConstraintMediaContainer.visible
                                     imageViewThreadCardView.visible
 
-                                    if (!isThreadHeaderSet) {
+                                    if (viewState.isFirstTimeShowing) {
                                         onStopSupervisor.scope.launch(viewModel.mainImmediate) {
                                             imageAttachment.media?.localFile?.let {
                                                 imageLoader.load(
@@ -909,7 +909,7 @@ internal class ChatTribeFragment: ChatFragment<
                                     layoutConstraintMediaContainer.visible
                                     imageViewThreadCardView.visible
 
-                                    if (!isThreadHeaderSet) {
+                                    if (viewState.isFirstTimeShowing) {
                                         (videoAttachment as? LayoutState.Bubble.ContainerSecond.VideoAttachment.FileAvailable)?.let {
                                             VideoThumbnailUtil.loadThumbnail(it.file)
                                                 ?.let { thumbnail ->
@@ -927,15 +927,15 @@ internal class ChatTribeFragment: ChatFragment<
                                     textViewAttachmentFileIcon.text = getString(R_common.string.material_icon_name_file_pdf)
 
                                     (fileAttachment as? LayoutState.Bubble.ContainerSecond.FileAttachment.FileAvailable)?.let {
-                                        threadOriginalMessageBinding?.textViewThreadMessageContent?.text = it.fileName?.value ?: "Unnamed File"
+                                        threadOriginalMessageBinding.textViewThreadMessageContent.text = it.fileName?.value ?: "File"
                                     }
                                 }
 
-                                viewState.audioAttachment?.let { audioAttachment ->
+                                viewState.audioAttachment?.let {
                                     layoutConstraintMediaContainer.visible
                                     textViewAttachmentFileIcon.visible
                                     textViewAttachmentFileIcon.text = getString(R_common.string.material_icon_name_volume_up)
-                                    threadOriginalMessageBinding?.textViewThreadMessageContent?.text = "Audio Clip"
+                                    threadOriginalMessageBinding.textViewThreadMessageContent.text = "Audio Clip"
                                 }
                             }
                             isThreadHeaderSet = true

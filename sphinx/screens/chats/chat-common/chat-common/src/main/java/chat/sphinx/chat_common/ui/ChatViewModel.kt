@@ -241,7 +241,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
     val threadHeaderViewState: ViewStateContainer<ThreadHeaderViewState> by lazy {
         ViewStateContainer(
             if (isThreadChat()) {
-                ThreadHeaderViewState.BasicHeader
+                ThreadHeaderViewState.BasicHeader(false)
             } else {
                 ThreadHeaderViewState.Idle
             }
@@ -2100,6 +2100,8 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                 if (threadHeaderViewState.value is ThreadHeaderViewState.FullHeader) {
                     return
                 }
+                val isFullHeaderInitialized = (threadHeaderViewState.value as? ThreadHeaderViewState.BasicHeader)?.isFullHeaderInitialized ?: false
+
                 val threadHeader = ThreadHeaderViewState.FullHeader(
                     viewState.messageSenderInfo(viewState.message!!),
                     viewState.timestamp,
@@ -2108,7 +2110,8 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                     viewState.bubbleImageAttachment,
                     viewState.bubbleVideoAttachment,
                     viewState.bubbleFileAttachment,
-                    viewState.bubbleAudioAttachment
+                    viewState.bubbleAudioAttachment,
+                    !isFullHeaderInitialized // TRUE
                 )
                 threadHeaderViewState.updateViewState(threadHeader)
             }
@@ -2116,7 +2119,15 @@ abstract class ChatViewModel<ARGS : NavArgs>(
             if (threadHeaderViewState.value is ThreadHeaderViewState.BasicHeader) {
                 return
             }
-            threadHeaderViewState.updateViewState(ThreadHeaderViewState.BasicHeader)
+            val isFullHeaderInitialized = (threadHeaderViewState.value as? ThreadHeaderViewState.FullHeader)?.let {
+                true
+            } ?: false
+
+            threadHeaderViewState.updateViewState(
+                ThreadHeaderViewState.BasicHeader(
+                    isFullHeaderInitialized
+                )
+            )
         }
     }
 

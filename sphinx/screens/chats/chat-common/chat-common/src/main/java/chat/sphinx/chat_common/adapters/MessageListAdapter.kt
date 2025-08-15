@@ -173,18 +173,22 @@ internal class MessageListAdapter<ARGS : NavArgs>(
     }
 
     private fun scrollToUnseenSeparatorOrBottom(messageHolders: List<MessageHolderViewState>) {
-        for ((index, message) in messageHolders.withIndex()) {
-            (message as? MessageHolderViewState.Separator)?.let {
-                if (it.messageHolderType.isUnseenSeparatorHolder()) {
-                    (recyclerView.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(index, recyclerView.measuredHeight / 4)
-                    return
+        viewModel.viewModelScope.launch(viewModel.mainImmediate) {
+            delay(500L)
+
+            for ((index, message) in messageHolders.withIndex()) {
+                (message as? MessageHolderViewState.Separator)?.let {
+                    if (it.messageHolderType.isUnseenSeparatorHolder()) {
+                        (recyclerView.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(index, recyclerView.measuredHeight / 4)
+                        return@launch
+                    }
                 }
             }
-        }
 
-        recyclerView.layoutManager?.scrollToPosition(
-            messageHolders.size + 1
-        )
+            recyclerView.layoutManager?.scrollToPosition(
+                messageHolders.size + 1
+            )
+        }
     }
 
     fun scrollToBottomIfNeeded(

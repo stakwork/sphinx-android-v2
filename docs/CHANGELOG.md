@@ -1,5 +1,10 @@
 # ChangeLog
 
+## Version 1.0.0-alpha79 (2025-08-15)
+- Threads issues fixed
+- Threads performance improved
+- Unused views hidden from Profile and Contact details view
+
 ## Version 1.0.0-alpha78 (2025-08-13)
 - Fixes for mentions count badge
 - Fixes for link previews stuck on loading

@@ -65,14 +65,14 @@ import kotlinx.coroutines.launch
 internal class MessageListAdapter<ARGS : NavArgs>(
     private val recyclerView: RecyclerView,
     private val headerBinding: LayoutChatHeaderBinding,
+    private val threadHeaderBinding: LayoutThreadHeaderBinding?,
     private val headerPinBinding: LayoutChatPinedMessageHeaderBinding?,
     private val layoutManager: LinearLayoutManager,
     private val lifecycleOwner: LifecycleOwner,
     private val onStopSupervisor: OnStopSupervisor,
     private val viewModel: ChatViewModel<ARGS>,
     private val imageLoader: ImageLoader<ImageView>,
-    private val userColorsHelper: UserColorsHelper,
-    private val isThreadChat: Boolean
+    private val userColorsHelper: UserColorsHelper
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>(),
     DefaultLifecycleObserver,
     View.OnLayoutChangeListener
@@ -432,6 +432,17 @@ internal class MessageListAdapter<ARGS : NavArgs>(
             } ?: Px(0f)
         }
 
+    private val threadHeaderHeight: Px
+        get() {
+            return threadHeaderBinding?.let {
+                if (threadHeaderBinding.root.isVisible) {
+                    Px(threadHeaderBinding.root.measuredHeight.toFloat())
+                } else {
+                    Px(0f)
+                }
+            } ?: Px(0f)
+        }
+
     @SuppressLint("ClickableViewAccessibility")
     inner class MessageViewHolder(
         private val binding: LayoutMessageHolderBinding
@@ -467,6 +478,7 @@ internal class MessageListAdapter<ARGS : NavArgs>(
                         bubbleWidth = Px(root.measuredWidth.toFloat()),
                         bubbleHeight = Px(root.measuredHeight.toFloat()),
                         headerHeight = headerHeight,
+                        threadHeaderHeight = threadHeaderHeight,
                         recyclerViewWidth = recyclerViewWidth,
                         screenHeight = screenHeight,
                         pinedHeaderHeight = pinedMessageHeader
@@ -805,6 +817,7 @@ internal class MessageListAdapter<ARGS : NavArgs>(
                         bubbleWidth = Px(root.measuredWidth.toFloat()),
                         bubbleHeight = Px(root.measuredHeight.toFloat()),
                         headerHeight = headerHeight,
+                        threadHeaderHeight = threadHeaderHeight,
                         recyclerViewWidth = recyclerViewWidth,
                         screenHeight = screenHeight,
                         pinedHeaderHeight = pinedMessageHeader

@@ -150,6 +150,7 @@ abstract class ChatFragment<
     protected abstract val moreMenuBinding: LayoutMenuBottomBinding
     protected abstract val recyclerView: RecyclerView
     protected abstract val pinHeaderBinding: LayoutChatPinedMessageHeaderBinding?
+    protected abstract val threadHeader: LayoutThreadHeaderBinding?
     protected abstract val threadOriginalMessageBinding: LayoutThreadOriginalMessageBinding?
     protected abstract val scrollDownButtonBinding: LayoutScrollDownButtonBinding
     protected abstract val shimmerBinding: LayoutShimmerContainerBinding
@@ -901,14 +902,14 @@ abstract class ChatFragment<
         val messageListAdapter = MessageListAdapter(
             recyclerView,
             headerBinding,
+            threadHeader,
             pinHeaderBinding,
             linearLayoutManager,
             viewLifecycleOwner,
             onStopSupervisor,
             viewModel,
             imageLoader,
-            userColorsHelper,
-            isThreadChat = viewModel.isThreadChat()
+            userColorsHelper
         )
         val footerAdapter = MessageListFooterAdapter()
 

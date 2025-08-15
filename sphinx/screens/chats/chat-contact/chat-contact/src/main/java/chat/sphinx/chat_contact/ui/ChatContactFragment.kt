@@ -92,6 +92,9 @@ internal class ChatContactFragment : ChatFragment<
     override val pinHeaderBinding: LayoutChatPinedMessageHeaderBinding?
         get() = null
 
+    override val threadHeader: LayoutThreadHeaderBinding?
+        get() = null
+
     override val threadOriginalMessageBinding: LayoutThreadOriginalMessageBinding?
         get() = null
 

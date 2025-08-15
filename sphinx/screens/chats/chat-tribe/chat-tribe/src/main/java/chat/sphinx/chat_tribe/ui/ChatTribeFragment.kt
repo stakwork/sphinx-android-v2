@@ -144,10 +144,10 @@ internal class ChatTribeFragment: ChatFragment<
         get() = binding.includeChatTribeAttachmentFullscreen
     private val mentionMembersPopup: LayoutChatTribeMemberMentionPopupBinding
         get() = binding.includeChatTribeMembersMentionPopup
-    override val pinHeaderBinding: LayoutChatPinedMessageHeaderBinding?
+    override val pinHeaderBinding: LayoutChatPinedMessageHeaderBinding
         get() = binding.includeChatPinedMessageHeader
 
-    override val threadOriginalMessageBinding: LayoutThreadOriginalMessageBinding?
+    override val threadOriginalMessageBinding: LayoutThreadOriginalMessageBinding
         get() = binding.includeLayoutThreadOriginalMessage
 
     private val layoutChatPinPopupBinding: LayoutChatPinPopupBinding
@@ -156,7 +156,8 @@ internal class ChatTribeFragment: ChatFragment<
         get() = binding.includeLayoutBottomPinned
     private val webView: WebView
         get() = tribeAppBinding.includeLayoutTribeAppDetails.webView
-    private val threadHeader: LayoutThreadHeaderBinding
+
+    override val threadHeader: LayoutThreadHeaderBinding
         get() = binding.includeLayoutThreadHeader
 
     override val menuEnablePayments: Boolean

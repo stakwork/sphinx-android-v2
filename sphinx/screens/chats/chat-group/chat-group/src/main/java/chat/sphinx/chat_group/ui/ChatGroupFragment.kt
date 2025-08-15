@@ -88,6 +88,9 @@ internal class ChatGroupFragment: ChatFragment<
     override val pinHeaderBinding: LayoutChatPinedMessageHeaderBinding?
         get() = null
 
+    override val threadHeader: LayoutThreadHeaderBinding?
+        get() = null
+
     override val threadOriginalMessageBinding: LayoutThreadOriginalMessageBinding?
         get() = null
 

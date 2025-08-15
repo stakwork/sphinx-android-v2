@@ -232,7 +232,7 @@ abstract class ContactFragment<
                 headerBinding.apply {
                     textViewDetailScreenHeaderNavBack.gone
 
-                    textViewDetailScreenSubscribe.visible
+//                    textViewDetailScreenSubscribe.visible
 
                     textViewDetailScreenSubscribe.text = if (sideEffect.subscribed) {
                         getString(R.string.edit_contact_header_subscribed_button)

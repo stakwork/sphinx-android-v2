@@ -21,6 +21,7 @@
                 android:background="@color/body"
                 android:layout_marginTop="@dimen/profile_form_container_margin_top"
                 android:elevation="8dp"
+                android:visibility="gone"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="parent">
@@ -135,6 +136,7 @@
                 android:layout_height="128dp"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
+                android:visibility="gone"
                 app:layout_constraintTop_toBottomOf="@+id/layout_constraint_profile_advanced_container_standard_pin_form">
 
                 <androidx.constraintlayout.widget.ConstraintLayout

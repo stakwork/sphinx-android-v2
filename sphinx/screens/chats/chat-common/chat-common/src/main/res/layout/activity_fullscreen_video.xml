@@ -26,4 +26,19 @@
 
     </RelativeLayout>
 
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/text_view_nav_back"
+        android:layout_width="@dimen/default_header_navigation_xy"
+        android:layout_height="wrap_content"
+        android:fontFamily="@font/material_icons_regular"
+        android:gravity="center"
+        android:padding="15dp"
+        android:text="@string/material_icon_name_nav_back"
+        android:textColor="@android:color/white"
+        android:textSize="@dimen/default_text_size_back_arrow"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+
 </FrameLayout>

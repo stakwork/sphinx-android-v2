@@ -56,6 +56,8 @@ dependencies {
     api project(path: ':sphinx:application:common:resources')
     api project(path: ':sphinx:application:common:keyboard-inset-fragment')
     api project(path: ':sphinx:application:common:wrappers:wrapper-common')
+
+    implementation project(path: ':sphinx:activity:insetter-activity')
     implementation project(path: ':sphinx:application:common:highlighting-tool')
 
     api project(path: ':sphinx:application:data:concepts:concept-image-loader')
@@ -80,6 +82,8 @@ dependencies {
     implementation project(path: ':sphinx:screens-detail:join-tribe:join-tribe')
 
     api project(path: ':sphinx:screens-detail:camera:camera-view-model-coordinator')
+
+    implementation deps.chrisbanes.insetter
 
     api deps.androidx.recyclerView
     implementation deps.google.hilt

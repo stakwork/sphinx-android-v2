@@ -224,6 +224,7 @@ interface ConnectManagerListener {
     fun onMessages(messages: List<MqttMessage>, isRestore: Boolean)
 
     fun onMessageTagAndUuid(tag: String?, msgUUID: String, provisionalId: Long)
+    fun onMessagePaymentHash(paymentHash: String, provisionalId: Long)
     fun onMessagesCounts(msgsCounts: String)
     fun onSentStatus(sentStatus: String)
     fun onMessageTagList(tags: String)

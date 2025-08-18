@@ -78,11 +78,6 @@ internal class TransactionsViewModel @Inject constructor(
         }
     }
 
-    private suspend fun getLastMessageDate(): Long? {
-        val lastMsgDate = messageRepository.getLastMessage().firstOrNull()?.date?.value?.time
-        lastMessageDate = lastMsgDate ?: 0L
-        return lastMsgDate
-    }
     init {
         viewModelScope.launch(mainImmediate) {
             loadTransactions(
@@ -92,7 +87,7 @@ internal class TransactionsViewModel @Inject constructor(
         collectTransactions()
     }
 
-    suspend fun loadMoreTransactions() {
+    fun loadMoreTransactions() {
         if (loading) {
             return
         }
@@ -170,8 +165,8 @@ internal class TransactionsViewModel @Inject constructor(
                     }
                 }
                 transaction.isOutgoingWithReceiver(owner.id) -> {
-                    transaction.getSenderId()?.let { senderId ->
-                        contactIdsMap[transaction.id] = senderId
+                    transaction.getReceiverId()?.let { receiverId ->
+                        contactIdsMap[transaction.id] = receiverId
                     }
                 }
                 transaction.isOutgoingMessageBoost(owner.id) -> {

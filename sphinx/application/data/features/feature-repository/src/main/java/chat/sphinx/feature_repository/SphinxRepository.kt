@@ -1251,7 +1251,8 @@ abstract class SphinxRepository(
         msgUuid: String,
         msgTimestamp: Long?,
         message: Msg,
-        tag: String?
+        tag: String?,
+        paymentHash: String?
     ): MessageComponents? {
 
         if (msgIndex.isEmpty()) return null
@@ -1266,7 +1267,7 @@ abstract class SphinxRepository(
             timestamp = msgTimestamp?.toDateTime(),
             date = message.date?.toDateTime(),
             paymentRequest = paymentRequest,
-            paymentHash = paymentRequest?.let { connectManager.retrievePaymentHash(it.value)?.toLightningPaymentHash() },
+            paymentHash = paymentRequest?.let { connectManager.retrievePaymentHash(it.value)?.toLightningPaymentHash() } ?: paymentHash?.toLightningPaymentHash(),
             bolt11 = paymentRequest?.let { Bolt11.decode(it) },
             msgTag = tag?.toTagMessage()
         )
@@ -1375,7 +1376,8 @@ abstract class SphinxRepository(
                             mqttMessage.msgUuid,
                             mqttMessage.msgTimestamp,
                             message,
-                            mqttMessage.tag
+                            mqttMessage.tag,
+                            mqttMessage.paymentHash
                         ) ?: return
 
                         upsertMqttMessage(
@@ -1434,6 +1436,16 @@ abstract class SphinxRepository(
             // messageUpdateTagAndUUID also updates the Status to CONFIRMED
             messageLock.withLock {
                 queries.messageUpdateTagAndUUID(tagMessage, MessageUUID(msgUUID), MessageId(provisionalId))
+            }
+        }
+    }
+
+    override fun onMessagePaymentHash(paymentHash: String, provisionalId: Long) {
+        applicationScope.launch(io) {
+            val queries = coreDB.getSphinxDatabaseQueries()
+
+            messageLock.withLock {
+                queries.messageUpdatePaymentHash(LightningPaymentHash(paymentHash), MessageId(provisionalId))
             }
         }
     }
@@ -2570,9 +2582,16 @@ abstract class SphinxRepository(
                 .asFlow()
                 .mapToList(io)
                 .map { listMessageDbo ->
-                    listMessageDbo.map {
-                        messageDboPresenterMapper.mapFrom(it)
+                    try {
+                        listMessageDbo.map {
+                            messageDboPresenterMapper.mapFrom(it)
+                        }
+                    } catch (e: Exception) {
+                        emptyList<Message>()
                     }
+                }
+                .catch { _ ->
+                    emit(emptyList())
                 }
                 .distinctUntilChanged()
         )
@@ -2600,9 +2619,16 @@ abstract class SphinxRepository(
                 .asFlow()
                 .mapToList(io)
                 .map { listMessageDbo ->
-                    listMessageDbo.map {
-                        messageDboPresenterMapper.mapFrom(it)
+                    try {
+                        listMessageDbo.map {
+                            messageDboPresenterMapper.mapFrom(it)
+                        }
+                    } catch (e: Exception) {
+                        emptyList<Message>()
                     }
+                }
+                .catch { _ ->
+                    emit(emptyList())
                 }
                 .distinctUntilChanged()
         )

@@ -11,5 +11,6 @@ data class MqttMessage(
     val amount: Long?,
     val fromMe: Boolean?,
     val tag: String?,
-    val date: Long?
+    val date: Long?,
+    val paymentHash: String?
 )

@@ -1184,6 +1184,11 @@ UPDATE messageDbo
 SET uuid = :newUuid
 WHERE uuid = ?;
 
+messageUpdatePaymentHash:
+UPDATE messageDbo
+SET payment_hash = :payment_hash
+WHERE id = ?;
+
 messageUpdateSeenByChatIdAndId:
 UPDATE messageDbo
 SET seen = 1

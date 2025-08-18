@@ -719,7 +719,8 @@ class ConnectManagerImpl: ConnectManager()
                 msg.msat?.let { convertMillisatsToSats(it) },
                 msg.fromMe,
                 msg.tag,
-                msg.timestamp?.toLong()
+                msg.timestamp?.toLong(),
+                msg.paymentHash
             )
         }
 
@@ -1546,6 +1547,12 @@ class ConnectManagerImpl: ConnectManager()
             handleRunReturn(message)
 
             message.msgs.firstOrNull()?.let { sentMessage ->
+                sentMessage.paymentHash?.let { paymentHash ->
+                    notifyListeners {
+                        onMessagePaymentHash(paymentHash, provisionalId)
+                    }
+                }
+
                 sentMessage.uuid?.let { msgUuid ->
                     notifyListeners {
                         onMessageTagAndUuid(sentMessage.tag, msgUuid, provisionalId)

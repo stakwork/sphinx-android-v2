@@ -58,5 +58,6 @@ dependencies {
 
     implementation deps.androidx.concurrent.futures
     implementation deps.google.hilt
+    implementation project(':sphinx:activity:call-activity')
     kapt kaptDeps.google.hilt
 }

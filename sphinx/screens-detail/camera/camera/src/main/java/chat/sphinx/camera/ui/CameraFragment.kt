@@ -4,7 +4,6 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
-import android.hardware.camera2.*
 import android.os.Bundle
 import android.view.*
 import android.widget.ImageView
@@ -50,6 +49,7 @@ import java.util.concurrent.Executors
 import javax.inject.Inject
 
 
+
 @AndroidEntryPoint
 internal class CameraFragment: SideEffectDetailFragment<
         FragmentActivity,
@@ -82,8 +82,9 @@ internal class CameraFragment: SideEffectDetailFragment<
     private lateinit var imageCapture: ImageCapture
     private lateinit var videoCapture: VideoCapture<Recorder>
 
-    private var activeRecording: ActiveRecording? = null
+    private var recording: Recording? = null
     private lateinit var recordingState: VideoRecordEvent
+
 
     private val mainThreadExecutor by lazy { ContextCompat.getMainExecutor(requireContext()) }
     private lateinit var cameraExecutor: ExecutorService
@@ -309,7 +310,7 @@ internal class CameraFragment: SideEffectDetailFragment<
             }
             binding.includeCameraFooter.imageViewCameraFooterShutter.setOnLongClickListener { view ->
                 lifecycleScope.launch(viewModel.mainImmediate) {
-                    if (activeRecording == null || recordingState is VideoRecordEvent.Finalize) {
+                    if (recording == null || recordingState is VideoRecordEvent.Finalize) {
                         startRecording()
                     }
                 }
@@ -320,9 +321,9 @@ internal class CameraFragment: SideEffectDetailFragment<
             binding.includeCameraFooter.imageViewCameraFooterShutter.setOnTouchListener { view, motionEvent ->
                 if (motionEvent.action == MotionEvent.ACTION_UP) {
                     lifecycleScope.launch(viewModel.io) {
-                        if (activeRecording != null && recordingState !is VideoRecordEvent.Finalize) {
-                            activeRecording?.stop()
-                            activeRecording = null
+                        if (recording != null && recordingState !is VideoRecordEvent.Finalize) {
+                            recording?.stop()
+                            recording = null
                             delay(200L)
                         }
                     }
@@ -396,18 +397,15 @@ internal class CameraFragment: SideEffectDetailFragment<
     @SuppressLint("MissingPermission")
     private fun startRecording() {
         // create MediaStoreOutputOptions for our recorder: resulting our recording!
-        val fileOutputOptions = FileOutputOptions.Builder(
-            viewModel.createFile(VIDEO_EXTENSION, false)
-        ).build()
+        val fileOutputOptions = FileOutputOptions
+            .Builder(viewModel.createFile(VIDEO_EXTENSION, false))
+            .build()
 
-        // configure Recorder and Start recording to the mediaStoreOutput.
-        activeRecording = videoCapture.output.prepareRecording(requireActivity(), fileOutputOptions)
-            .withEventListener(
-                mainThreadExecutor,
-                captureListener
-            )
+        val pending = videoCapture.output
+            .prepareRecording(requireActivity(), fileOutputOptions)
             .withAudioEnabled()
-            .start()
+
+        recording = pending.start(mainThreadExecutor, captureListener)
     }
 
     override suspend fun onSideEffectCollect(sideEffect: CameraSideEffect) {

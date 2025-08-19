@@ -1109,6 +1109,12 @@ SELECT *
 FROM messageDbo
 WHERE payment_hash IN :payment_hashes;
 
+messageGetGenericPaymentMessages:
+SELECT *
+FROM messageDbo
+WHERE amount > 3
+AND type != 2;
+
 messagesSearchByTerm:
 SELECT *
 FROM messageDbo

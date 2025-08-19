@@ -52,6 +52,7 @@ interface MessageRepository {
     fun getDeletedMessages(): Flow<List<Message>>
 
     fun getMessagesByPaymentHashes(paymentHashes: List<LightningPaymentHash>): Flow<List<Message?>>
+    fun getGenericPaymentMessages(): Flow<List<Message?>>
 
     fun getMaxIdMessage(): Flow<Long?>
     fun getLastMessage(): Flow<Message?>

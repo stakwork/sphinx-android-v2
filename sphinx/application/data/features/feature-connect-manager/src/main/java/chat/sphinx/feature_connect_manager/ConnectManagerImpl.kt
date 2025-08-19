@@ -8,6 +8,7 @@ import chat.sphinx.example.concept_connect_manager.model.OwnerInfo
 import chat.sphinx.example.concept_connect_manager.model.RestoreProgress
 import chat.sphinx.example.concept_connect_manager.model.RestoreState
 import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
+import chat.sphinx.example.wrapper_mqtt.MessageTag
 import chat.sphinx.example.wrapper_mqtt.MsgsCounts
 import chat.sphinx.example.wrapper_mqtt.NewInvite
 import chat.sphinx.wrapper_common.lightning.toLightningNodePubKey
@@ -711,7 +712,7 @@ class ConnectManagerImpl: ConnectManager()
             chat.sphinx.wrapper_common.message.MqttMessage(
                 msg.message.orEmpty(),
                 msg.sender.orEmpty(),
-                msg.type?.toInt() ?: 0,
+                if (msg.type != null) msg.type!!.toInt() else 100,
                 msg.uuid.orEmpty(),
                 msg.index.orEmpty(),
                 msg.timestamp?.toLong(),
@@ -1908,7 +1909,7 @@ class ConnectManagerImpl: ConnectManager()
                 ownerSeed!!,
                 now,
                 getCurrentUserState(),
-                lastMsgDate.plus(1000).toULong(),
+                lastMsgDate.toULong(),
                 limit.toUInt(),
                 scid?.toULong(),
                 remoteOnly ?: false,

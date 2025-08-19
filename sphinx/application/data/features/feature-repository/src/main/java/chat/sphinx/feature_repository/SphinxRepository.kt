@@ -168,6 +168,7 @@ import java.io.InputStream
 import java.security.SecureRandom
 import java.util.*
 import kotlin.coroutines.CoroutineContext
+import kotlin.math.abs
 import kotlin.math.max
 
 
@@ -1310,6 +1311,7 @@ abstract class SphinxRepository(
         try {
             val messageType = mqttMessage.msgType.toMessageType()
 
+
             val messageSender: MsgSender? = msgSenderCache.getOrPut(mqttMessage.msgSender) {
                 mqttMessage.msgSender.toMsgSenderNull(moshi)
             }
@@ -1621,17 +1623,31 @@ abstract class SphinxRepository(
                 getMessagesByPaymentHashes(it).firstOrNull()
             }
 
-            // Combine all retrieved messages from DB
-            val combinedMessages: List<Message?> = paymentsReceivedMsgs.orEmpty() + paymentsSentMsgs.orEmpty()
+            val genericPaymentMessage = getGenericPaymentMessages().firstOrNull()
 
-            // Generate TransactionDto from the combinedMessages list or from the raw payments data
+            val combinedMessages: List<Message?> = paymentsReceivedMsgs.orEmpty() + paymentsSentMsgs.orEmpty() + genericPaymentMessage.orEmpty()
+
             val transactionDtoList = paymentsJson?.map { payment ->
                 // Try to find corresponding DB message first
+                val amountThreshold = 3 // msats
+                val timestampThreshold = 3000L // seconds
+
+                val transactionAmount = (payment.amt_msat ?: 0) / 1000
+                val transactionTimestamp = payment.ts ?: 0
+
                 val dbMessage = combinedMessages.firstOrNull {
-                    it?.id?.value == payment.msg_idx || it?.paymentHash?.value == payment.rhash
+                    it?.id?.value == payment.msg_idx ||
+                    it?.paymentHash?.value == payment.rhash ||
+                    (
+                        (transactionAmount > amountThreshold) &&
+                        (transactionAmount == (it?.amount?.value ?: 0L)) &&
+                        (abs(transactionTimestamp - (it?.date?.time ?: 0L)) <= timestampThreshold)
+                    )
                 }
 
                 dbMessage?.takeIf { it.type !is MessageType.Invoice }?.let { message ->
+
+                    val isIncoming = message.sender.value != 0L
                     // If found in DB, build TransactionDto using DB information
                     TransactionDto(
                         id = message.id.value,
@@ -1639,11 +1655,11 @@ abstract class SphinxRepository(
                         type = message.type.value,
                         sender = message.sender.value,
                         sender_alias = message.senderAlias?.value,
-                        receiver = message.receiver?.value,
+                        receiver = if (isIncoming) 0 else null,
                         amount = message.amount.value,
                         payment_hash = message.paymentHash?.value,
                         payment_request = message.paymentRequest?.value,
-                        date = message.date,
+                        ts = payment.ts ?: message.date.time,
                         reply_uuid = message.replyUUID?.value,
                         error_message = message.errorMessage?.value,
                         message_content = message.messageContentDecrypted?.value
@@ -1656,13 +1672,13 @@ abstract class SphinxRepository(
                         id = payment.msg_idx ?: 0L,
                         chat_id = null,
                         type = MessageType.DirectPayment.value,
-                        sender = if ((isIncoming)) -1 else 0,
+                        sender = if (isIncoming) -1 else 0,
                         sender_alias = null,
-                        receiver = if ((isIncoming)) 0 else -1,
+                        receiver = if (isIncoming) 0 else null,
                         amount = payment.amt_msat?.milliSatsToSats()?.value ?: 0L,
                         payment_hash = payment.rhash,
                         payment_request = null,
-                        date = payment.ts?.toDateTime(),
+                        ts = payment.ts,
                         reply_uuid = null,
                         error_message = payment.error,
                         message_content = null
@@ -1671,7 +1687,7 @@ abstract class SphinxRepository(
             }.orEmpty()
 
             // Sort the transactions by date and set the result to the state
-            transactionDtoState.value = transactionDtoList.sortedByDescending { it.date?.value }.distinct()
+            transactionDtoState.value = transactionDtoList.sortedByDescending { it.ts }.distinct()
         }
     }
 
@@ -1842,7 +1858,7 @@ abstract class SphinxRepository(
             chatId = ChatId(chatId),
             type = msgType,
             sender = if (fromMe) ContactId(0) else contact?.id ?: ContactId(chatId) ,
-            receiver = ContactId(0),
+            receiver = if (fromMe) ContactId(0) else ContactId(-1),
             amount = messageComponents.bolt11?.getSatsAmount() ?: existingMessage?.amount ?: amount ?: Sat(0L),
             paymentRequest = existingMessage?.payment_request ?: messageComponents.paymentRequest,
             paymentHash = existingMessage?.payment_hash ?: msg.paymentHash?.toLightningPaymentHash() ?: messageComponents.paymentHash,
@@ -3868,6 +3884,21 @@ abstract class SphinxRepository(
         emitAll(
             coreDB.getSphinxDatabaseQueries()
                 .messageGetByPaymentHashes(paymentHashes)
+                .asFlow()
+                .mapToList(io)
+                .map { listMessageDbo ->
+                    listMessageDbo.map {
+                        messageDboPresenterMapper.mapFrom(it)
+                    }
+                }
+                .distinctUntilChanged()
+        )
+    }
+
+    override fun getGenericPaymentMessages(): Flow<List<Message?>> = flow {
+        emitAll(
+            coreDB.getSphinxDatabaseQueries()
+                .messageGetGenericPaymentMessages()
                 .asFlow()
                 .mapToList(io)
                 .map { listMessageDbo ->

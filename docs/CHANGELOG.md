@@ -1,5 +1,10 @@
 # ChangeLog
 
+## Version 1.0.0-alpha80 (2025-08-19)
+- Fixes transactions list issues
+- Fixes crash on camera
+- Fixes video player
+
 ## Version 1.0.0-alpha79 (2025-08-15)
 - Threads issues fixed
 - Threads performance improved

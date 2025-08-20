@@ -531,7 +531,8 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         val chatInfo: Triple<ChatName?, PhotoUrl?, String>?,
         val owner: Contact,
         val tribeAdmin: Contact?,
-        val initialHolders: Map<Long, InitialHolderViewState>
+        val initialHolders: Map<Long, InitialHolderViewState>,
+        val memberTimezones: Map<String, String>
     )
 
     private fun processMessagesWithData(
@@ -542,9 +543,9 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         val chatName = preComputedData.chatInfo?.first
         val chatPhotoUrl = preComputedData.chatInfo?.second
         val chatColorKey = preComputedData.chatInfo?.third ?: app.getRandomHexCode()
-        val memberTimezones: MutableMap<String, String> = mutableMapOf()
         val owner = preComputedData.owner
         val tribeAdmin = preComputedData.tribeAdmin
+        val memberTimezones = preComputedData.memberTimezones
 
         var unseenSeparatorAdded = false
 
@@ -555,16 +556,6 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         var openReceivedPaidInvoicesCount = 0
 
         val messagesList = filterAndSortMessagesIfNecessary(chat, messages)
-
-        if (chat.type.isTribe()) {
-            messages.forEach { message ->
-                val alias = message.senderAlias?.value
-                val tz = message.remoteTimezoneIdentifier?.value
-                if (!alias.isNullOrEmpty() && !tz.isNullOrEmpty()) {
-                    memberTimezones[alias] = tz
-                }
-            }
-        }
 
         for ((index, message) in messagesList.withIndex()) {
 
@@ -1173,11 +1164,44 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                 preComputeInitialHolders(messages, owner, chat)
             }
 
+            val memberTimezones: MutableMap<String, String> = mutableMapOf()
+            val missingMemberTimezones: MutableList<SenderAlias> = mutableListOf()
+
+            if (chat.type.isTribe()) {
+                messages.forEach { message ->
+                    val alias = message.senderAlias?.value
+                    val tz = message.remoteTimezoneIdentifier?.value
+                    if (!alias.isNullOrEmpty() && !tz.isNullOrEmpty()) {
+                        memberTimezones[alias] = tz
+                        missingMemberTimezones.remove(alias.toSenderAlias())
+                    } else if (!alias.isNullOrEmpty() && !missingMemberTimezones.contains(alias.toSenderAlias())) {
+                        alias.toSenderAlias()?.let {
+                            missingMemberTimezones.add(it)
+                        }
+                    }
+                }
+            }
+
+            val missingAliasesMessages = messageRepository.getRemoteTimezoneForAliases(
+                chat.id,
+                missingMemberTimezones
+            ).firstOrNull()
+
+            missingAliasesMessages?.forEach { message ->
+                val alias = message.senderAlias?.value
+                val tz = message.remoteTimezoneIdentifier?.value
+
+                if (!alias.isNullOrEmpty() && !tz.isNullOrEmpty() && !memberTimezones.contains(alias)) {
+                    memberTimezones[alias] = tz
+                }
+            }
+
             PreComputedData(
                 chatInfo = chatInfoDeferred.await(),
                 owner = owner,
                 tribeAdmin = tribeAdminDeferred.await(),
-                initialHolders = initialHoldersJob.await()
+                initialHolders = initialHoldersJob.await(),
+                memberTimezones = memberTimezones
             )
         }
 

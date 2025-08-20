@@ -39,6 +39,11 @@ interface MessageRepository {
         chatId: ChatId
     ): Flow<Long?>
 
+    fun getRemoteTimezoneForAliases(
+        chatId: ChatId,
+        aliases: List<SenderAlias>
+    ): Flow<List<Message>>
+
     fun searchMessagesBy(chatId: ChatId, term: String): Flow<List<Message>>
 
     fun getMessageById(messageId: MessageId): Flow<Message?>

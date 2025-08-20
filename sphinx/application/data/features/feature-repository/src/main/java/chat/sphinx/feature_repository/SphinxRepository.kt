@@ -3630,6 +3630,26 @@ abstract class SphinxRepository(
         )
     }
 
+    override fun getRemoteTimezoneForAliases(
+        chatId: ChatId,
+        aliases: List<SenderAlias>
+    ): Flow<List<Message>> = flow {
+        val queries = coreDB.getSphinxDatabaseQueries()
+
+        emitAll(
+            coreDB.getSphinxDatabaseQueries()
+                .messageGetRemoteTimezoneForAliases(aliases, chatId)
+                .asFlow()
+                .mapToList(io)
+                .map { listMessageDbo ->
+                    listMessageDbo.map {
+                        mapMessageDboAndDecryptContentIfNeeded(queries, it)
+                    }
+                }
+                .distinctUntilChanged()
+        )
+    }
+
     override fun getAllMessagesToShowByChatId(
         chatId: ChatId,
         limit: Long,

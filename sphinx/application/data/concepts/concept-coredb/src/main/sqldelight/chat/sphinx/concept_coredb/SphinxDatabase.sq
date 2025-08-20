@@ -1207,6 +1207,19 @@ SET remote_timezone_identifier = :remote_timezone_identifier
 WHERE chat_id = ?
 AND id = ?;
 
+messageGetRemoteTimezoneForAliases:
+SELECT m.*
+FROM messageDbo m
+INNER JOIN (
+    SELECT sender_alias, MAX(id) max_id
+    FROM messageDbo
+    WHERE sender_alias IN :aliases
+    AND remote_timezone_identifier IS NOT NULL
+    AND chat_id = :chat_id
+    GROUP BY sender_alias
+) latest ON m.sender_alias = latest.sender_alias AND m.id = latest.max_id
+WHERE m.chat_id = :chat_id;
+
 messageUpsert {
     UPDATE messageDbo
     SET status = :status,

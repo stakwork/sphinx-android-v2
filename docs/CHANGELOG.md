@@ -1,5 +1,8 @@
 # ChangeLog
 
+## Version 1.0.0-alpha82 (2025-08-20)
+- Fixes missing tribe members timezones 
+
 ## Version 1.0.0-alpha81 (2025-08-20)
 - Fixes scroll initial position on chat view
 

@@ -185,9 +185,11 @@ internal class MessageListAdapter<ARGS : NavArgs>(
                 }
             }
 
-            recyclerView.layoutManager?.scrollToPosition(
-                messageHolders.size + 1
-            )
+            if (messageHolders.isNotEmpty()) {
+                recyclerView.layoutManager?.scrollToPosition(
+                    messageHolders.size
+                )
+            }
         }
     }
 

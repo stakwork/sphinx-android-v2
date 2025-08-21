@@ -27,6 +27,8 @@ import chat.sphinx.threads.viewstate.ThreadsViewState
 import dagger.hilt.android.AndroidEntryPoint
 import io.matthewnelson.android_feature_screens.ui.sideeffect.SideEffectFragment
 import io.matthewnelson.android_feature_screens.util.gone
+import io.matthewnelson.android_feature_screens.util.visible
+import io.matthewnelson.concept_views.viewstate.collect
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -66,7 +68,6 @@ internal class ThreadsFragment: SideEffectFragment<
 
         (requireActivity() as InsetterActivity)
             .addStatusBarPadding(binding.layoutConstraintThreads)
-
     }
 
     private inner class BackPressHandler(
@@ -128,10 +129,25 @@ internal class ThreadsFragment: SideEffectFragment<
     }
 
     override suspend fun onViewStateFlowCollect(viewState: ThreadsViewState) {
-        @Exhaustive
-        when (viewState) {
-            is ThreadsViewState.Idle -> {}
-            is ThreadsViewState.ThreadList -> {}
+        binding.apply {
+            @Exhaustive
+            when (viewState) {
+                is ThreadsViewState.Idle -> {
+                    progressBarThreadsList.visible
+                    recyclerViewThreadsElementList.gone
+                    textViewThreadsNoFound.gone
+                }
+                is ThreadsViewState.NoThreadsFound -> {
+                    progressBarThreadsList.gone
+                    recyclerViewThreadsElementList.gone
+                    textViewThreadsNoFound.visible
+                }
+                is ThreadsViewState.ThreadList -> {
+                    progressBarThreadsList.gone
+                    recyclerViewThreadsElementList.visible
+                    textViewThreadsNoFound.gone
+                }
+            }
         }
     }
 

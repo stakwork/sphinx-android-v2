@@ -1519,6 +1519,8 @@ class ConnectManagerImpl: ConnectManager()
         provisionalId: Long,
         messageType: Int,
         amount: Long?,
+        myAlias: String?,
+        myPhotoUrl: String?,
         date: Long,
         isTribe: Boolean
     ) {
@@ -1530,7 +1532,11 @@ class ConnectManagerImpl: ConnectManager()
             isTribe -> amount ?: 1L
             else -> amount ?: 0L
         }
-        val myAlias = if (isTribe) (ownerInfoStateFlow.value.alias ?: "").replace(" ", "_") else (ownerInfoStateFlow.value.alias ?: "")
+
+        val alias = myAlias ?: (ownerInfoStateFlow.value.alias ?: "")
+        val fixedAlias = if (isTribe) alias.replace(" ", "_") else alias
+
+        val fixedPhotoUrl = myPhotoUrl ?: (ownerInfoStateFlow.value.picture ?: "")
 
         try {
             val message = send(
@@ -1540,8 +1546,8 @@ class ConnectManagerImpl: ConnectManager()
                 messageType.toUByte(),
                 sphinxMessage,
                 getCurrentUserState(),
-                myAlias,
-                ownerInfoStateFlow.value.picture ?: "",
+                fixedAlias,
+                fixedPhotoUrl,
                 convertSatsToMillisats(nnAmount),
                 isTribe
             )
@@ -1572,13 +1578,18 @@ class ConnectManagerImpl: ConnectManager()
     override fun deleteMessage(
         sphinxMessage: String,
         contactPubKey: String,
+        myAlias: String?,
+        myPhotoUrl: String?,
         isTribe: Boolean
     ) {
         val now = getTimestampInMilliseconds()
 
         // Have to include al least 1 sat for tribe messages
         val nnAmount = if (isTribe) 1L else 0L
-        val myAlias = if (isTribe) (ownerInfoStateFlow.value.alias ?: "").replace(" ", "_") else (ownerInfoStateFlow.value.alias ?: "")
+        val alias = myAlias ?: (ownerInfoStateFlow.value.alias ?: "")
+        val fixedAlias = if (isTribe) alias.replace(" ", "_") else alias
+
+        val fixedPhotoUrl = myPhotoUrl ?: (ownerInfoStateFlow.value.picture ?: "")
 
         try {
             val message = send(
@@ -1588,8 +1599,8 @@ class ConnectManagerImpl: ConnectManager()
                 17.toUByte(), // Fix this hardcoded value
                 sphinxMessage,
                 getCurrentUserState(),
-                myAlias,
-                ownerInfoStateFlow.value.picture ?: "",
+                fixedAlias,
+                fixedPhotoUrl,
                 convertSatsToMillisats(nnAmount),
                 isTribe
             )

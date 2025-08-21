@@ -234,7 +234,7 @@ internal class TribeDetailFragment : SideEffectFragment<
                     addAliasFilter()
                     return@setOnFocusChangeListener
                 }
-                viewModel.updateProfileAlias(editTextProfileAliasValue.text.toString())
+                viewModel.updateMyAlias(editTextProfileAliasValue.text.toString())
             }
 
             editTextProfileAliasValue.setOnEditorActionListener(object : OnEditorActionListener {

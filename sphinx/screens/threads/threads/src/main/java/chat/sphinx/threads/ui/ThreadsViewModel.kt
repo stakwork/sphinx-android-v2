@@ -163,7 +163,11 @@ internal class ThreadsViewModel @Inject constructor(
                 .collect { result ->
                     val threadItems = generateThreadItemsList(result.second, result.third)
 
-                    updateViewState(ThreadsViewState.ThreadList(threadItems))
+                    if (threadItems.isNotEmpty()) {
+                        updateViewState(ThreadsViewState.ThreadList(threadItems))
+                    } else {
+                        updateViewState(ThreadsViewState.NoThreadsFound)
+                    }
                 }
         }
     }

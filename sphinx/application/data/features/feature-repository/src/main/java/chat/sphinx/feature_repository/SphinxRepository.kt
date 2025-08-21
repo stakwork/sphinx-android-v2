@@ -64,6 +64,7 @@ import chat.sphinx.example.wrapper_mqtt.TribeMembersResponse.Companion.toTribeMe
 import chat.sphinx.example.wrapper_mqtt.toLspChannelInfo
 import chat.sphinx.feature_repository.mappers.action_track.*
 import chat.sphinx.feature_repository.mappers.chat.ChatDboPresenterMapper
+import chat.sphinx.feature_repository.mappers.chat.toChat
 import chat.sphinx.feature_repository.mappers.contact.ContactDboPresenterMapper
 import chat.sphinx.feature_repository.mappers.contact.toContact
 import chat.sphinx.feature_repository.mappers.feed.*
@@ -655,6 +656,8 @@ abstract class SphinxRepository(
                     provisionalId.value,
                     messageType,
                     null,
+                    tribe.myAlias?.value,
+                    tribe.myPhotoUrl?.value,
                     DateTime.nowUTC().toDateTime().time,
                     true
                 )
@@ -2033,6 +2036,8 @@ abstract class SphinxRepository(
         date: Long,
         replyUUID: ReplyUUID?,
         threadUUID: ThreadUUID?,
+        myAlias: SenderAlias?,
+        myPhotoUrl: PhotoUrl?,
         isTribe: Boolean,
         memberPubKey: LightningNodePubKey?,
         metadata: String?
@@ -2057,9 +2062,83 @@ abstract class SphinxRepository(
                 it,
                 messageType?.value ?: 0,
                 amount?.value,
+                myAlias?.value,
+                myPhotoUrl?.value,
                 date,
                 isTribe
             )
+        }
+    }
+
+    override suspend fun updateChatMyAlias(
+        chatId: ChatId,
+        chatAlias: ChatAlias
+    ) {
+        val queries = coreDB.getSphinxDatabaseQueries()
+
+        try {
+            chatLock.withLock {
+                queries.chatUpdateMyAlias(
+                    my_alias = chatAlias,
+                    id = chatId
+                )
+            }
+        } catch (ex: Exception) {
+            LOG.e(TAG, ex.printStackTrace().toString(), ex)
+        }
+    }
+
+    override suspend fun updateChatMyPhotoUrl(
+        chatId: ChatId,
+        file: File
+    ): Response<String, ResponseError> = withContext(io) {
+        val memeServerHost = MediaHost.DEFAULT
+
+        try {
+            val token = memeServerTokenHandler.retrieveAuthenticationToken(memeServerHost)
+                ?: return@withContext Response.Error(
+                    ResponseError("MemeServerAuthenticationToken retrieval failure")
+                )
+
+            val networkResponse = networkQueryMemeServer.uploadAttachment(
+                authenticationToken = token,
+                mediaType = MediaType.Image("${MediaType.IMAGE}/${file.extension}"),
+                stream = object : InputStreamProvider() {
+                    override fun newInputStream(): InputStream = file.inputStream()
+                },
+                fileName = file.name,
+                contentLength = file.length(),
+                memeServerHost = memeServerHost,
+            )
+
+            @Exhaustive
+            when (networkResponse) {
+                is Response.Error -> {
+                    Response.Error(ResponseError("Failed to upload attachment: ${networkResponse.exception?.message}"))
+                }
+                is Response.Success -> {
+                    val imageUrl = "https://${memeServerHost.value}/public/${networkResponse.value.muid}"
+
+                    try {
+                        val queries = coreDB.getSphinxDatabaseQueries()
+                        chatLock.withLock {
+                            queries.chatUpdateMyPhotoUrl(
+                                my_photo_url = imageUrl.toPhotoUrl(),
+                                id = chatId
+                            )
+                        }
+
+                        Response.Success(imageUrl)
+
+                    } catch (dbException: Exception) {
+                        LOG.e(TAG, "Database update failed", dbException)
+                        Response.Error(ResponseError("Failed to update database: ${dbException.message}"))
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            LOG.e(TAG, "Photo upload failed", e)
+            Response.Error(ResponseError("Upload failed: ${e.message}"))
         }
     }
 
@@ -2262,6 +2341,10 @@ abstract class SphinxRepository(
                 queries.contactGetById(ContactId(chatId.value)).executeAsOneOrNull()?.toContact()
             }
 
+            val currentChat: Chat? = message?.chat_id?.let { chatId ->
+                queries.chatGetById(chatId).executeAsOneOrNull()?.toChat()
+            }
+
             val messageType = if (message?.amount?.value == paidAmount.value) {
                 MessageType.Purchase.Accepted
             } else {
@@ -2316,9 +2399,11 @@ abstract class SphinxRepository(
                 contact.let { _ ->
                     connectManager.sendMessage(
                         newPurchaseMessage,
-                        contact.nodePubKey?.value ?: "",
+                        contact.nodePubKey?.value ?: currentChat?.uuid?.value ?: "",
                         provisionalId.value,
                         messageType.value,
+                        null,
+                        null,
                         null,
                         dateTime.time
                     )
@@ -4426,6 +4511,8 @@ abstract class SphinxRepository(
                                     dateTime.time,
                                     replyUUID,
                                     threadUUID,
+                                    sendMessage.senderAlias ?: chat?.myAlias?.value?.toSenderAlias(),
+                                    chat?.myPhotoUrl,
                                     chat?.isTribe() ?: false,
                                     sendMessage.memberPubKey,
                                     metadata
@@ -4448,6 +4535,8 @@ abstract class SphinxRepository(
                         dateTime.time,
                         replyUUID,
                         threadUUID,
+                        sendMessage.senderAlias ?: chat?.myAlias?.value?.toSenderAlias(),
+                        chat?.myPhotoUrl,
                         chat?.isTribe() ?: false,
                         sendMessage.memberPubKey,
                         metadata
@@ -4671,6 +4760,8 @@ abstract class SphinxRepository(
                 connectManager.deleteMessage(
                     newMessage,
                     contactPubKey,
+                    chatTribe?.myAlias?.value,
+                    chatTribe?.myPhotoUrl?.value,
                     isTribe
                 )
             }
@@ -4834,6 +4925,8 @@ abstract class SphinxRepository(
                     provisionalId.value,
                     MessageType.DIRECT_PAYMENT,
                     sendPayment.amount,
+                    null,
+                    null,
                     dateTime.time
                 )
             }
@@ -4992,6 +5085,8 @@ abstract class SphinxRepository(
                     provisionalId.value,
                     MessageType.BOOST,
                     owner.tipAmount?.value ?: 20L,
+                    currentChat?.myAlias?.value,
+                    currentChat?.myPhotoUrl?.value,
                     dateTime.time,
                     currentChat?.isTribe() ?: false
                 )
@@ -5306,6 +5401,8 @@ abstract class SphinxRepository(
                     provisionalId.value,
                     MessageType.INVOICE,
                      null,
+                    null,
+                    null,
                     dateTime.time,
                     false
                 )
@@ -5429,6 +5526,8 @@ abstract class SphinxRepository(
                             provisionalId.value,
                             MessageType.PURCHASE_PROCESSING,
                             price.value,
+                            currentChat?.myAlias?.value,
+                            currentChat?.myPhotoUrl?.value,
                             dateTime.time,
                             currentChat?.isTribe() ?: false
                         )
@@ -6991,83 +7090,16 @@ abstract class SphinxRepository(
                 } else {
                     val tribe = getChatById(chatId).firstOrNull()
                     if (tribe != null) {
-                        val updatedTribeJson = createTribe.toNewCreateTribe(ownerAlias, imgUrl, tribe.uuid.value).toJson()
+                        val updatedTribeJson = createTribe.toNewCreateTribe(
+                            ownerAlias,
+                            imgUrl,
+                            tribe.uuid.value
+                        ).toJson()
+
                         tribe.ownerPubKey?.value?.let { connectManager.editTribe(updatedTribeJson) }
                     }
                 }
             } catch (e: Exception) { }
-        }
-    }
-
-    override suspend fun updateTribe(
-        chatId: ChatId,
-        createTribe: CreateTribe
-    ) {
-
-        var response: Response<Any, ResponseError> =
-            Response.Error(ResponseError(("Failed to exit tribe")))
-        val memeServerHost = MediaHost.DEFAULT
-
-        applicationScope.launch(mainImmediate) {
-            try {
-                val imgUrl: String? = (createTribe.img?.let { imgFile ->
-                    val token =
-                        memeServerTokenHandler.retrieveAuthenticationToken(memeServerHost)
-                            ?: throw RuntimeException("MemeServerAuthenticationToken retrieval failure")
-
-                    val networkResponse = networkQueryMemeServer.uploadAttachment(
-                        authenticationToken = token,
-                        mediaType = MediaType.Image("${MediaType.IMAGE}/${imgFile.extension}"),
-                        stream = object : InputStreamProvider() {
-                            override fun newInputStream(): InputStream = imgFile.inputStream()
-                        },
-                        fileName = imgFile.name,
-                        contentLength = imgFile.length(),
-                        memeServerHost = memeServerHost,
-                    )
-                    @Exhaustive
-                    when (networkResponse) {
-                        is Response.Error -> {
-                            LOG.e(TAG, "Failed to upload image: ", networkResponse.exception)
-                            response = networkResponse
-                            null
-                        }
-                        is Response.Success -> {
-                            "https://${memeServerHost.value}/public/${networkResponse.value.muid}"
-                        }
-                    }
-                }) ?: createTribe.imgUrl
-
-                val tribe = getChatById(chatId).firstOrNull()
-                // create the tribe json
-                if (tribe != null) {
-                    connectManager.editTribe("")
-                }
-
-//                val queries = coreDB.getSphinxDatabaseQueries()
-//
-//                chatLock.withLock {
-//                    messageLock.withLock {
-//                        withContext(io) {
-//                            queries.transaction {
-//                                upsertChat(
-//                                    loadResponse.value,
-//                                    moshi,
-//                                    chatSeenMap,
-//                                    queries,
-//                                    null,
-//                                    accountOwner.value?.nodePubKey
-//                                )
-//                            }
-//                        }
-//                    }
-//                }
-
-            } catch (e: Exception) {
-                response = Response.Error(
-                    ResponseError("Failed to update Chat Profile", e)
-                )
-            }
         }
     }
 

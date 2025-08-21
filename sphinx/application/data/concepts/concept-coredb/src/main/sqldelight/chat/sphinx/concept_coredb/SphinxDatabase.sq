@@ -398,6 +398,16 @@ SET price_per_message = :price_per_message,
     second_brain_url = :second_brain_url
 WHERE id = ?;
 
+chatUpdateMyAlias:
+UPDATE chatDbo
+SET my_alias = :my_alias
+WHERE id = ?;
+
+chatUpdateMyPhotoUrl:
+UPDATE chatDbo
+SET my_photo_url = :my_photo_url
+WHERE id = ?;
+
 chatUpdateSeenByLastMessage:
 UPDATE chatDbo
 SET seen = 1

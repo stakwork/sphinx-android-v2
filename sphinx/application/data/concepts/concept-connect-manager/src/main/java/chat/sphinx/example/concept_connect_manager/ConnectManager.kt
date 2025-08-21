@@ -88,12 +88,16 @@ abstract class ConnectManager {
         provisionalId: Long,
         messageType: Int,
         amount: Long?,
+        myAlias: String?,
+        myPhotoUrl: String?,
         date: Long,
         isTribe: Boolean = false
     )
     abstract fun deleteMessage(
         sphinxMessage: String,
         contactPubKey: String,
+        myAlias: String?,
+        myPhotoUrl: String?,
         isTribe: Boolean
     )
     abstract fun deleteContactMessages(

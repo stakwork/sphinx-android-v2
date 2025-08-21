@@ -1,5 +1,10 @@
 # ChangeLog
 
+## Version 1.0.0-alpha83 (2025-08-21)
+- Improves loading threads list layout
+- Setting alias and picture for tribes implemented
+- Fixes sending tribe messages with custom alias and profile picture
+
 ## Version 1.0.0-alpha82 (2025-08-20)
 - Fixes missing tribe members timezones 
 

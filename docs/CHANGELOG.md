@@ -1,5 +1,8 @@
 # ChangeLog
 
+## Version 1.0.0-alpha84 (2025-09-01)
+- Fixes invoices qr code format issues
+
 ## Version 1.0.0-alpha83 (2025-08-21)
 - Improves loading threads list layout
 - Setting alias and picture for tribes implemented

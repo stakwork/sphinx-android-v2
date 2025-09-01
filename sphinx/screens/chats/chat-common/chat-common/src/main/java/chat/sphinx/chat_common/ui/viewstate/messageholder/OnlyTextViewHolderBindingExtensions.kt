@@ -143,10 +143,9 @@ internal inline fun LayoutOnlyTextSentMessageHolderBinding.setStatusHeader(
 
                 textViewMessageStatusSentBoltIcon.setTextColor(boltColor)
 
-                if (statusHeader.errorMessage?.isNotEmpty() == true) {
-                    textViewMessageStatusSentFailedText.text = statusHeader.errorMessage
-                }
-
+//                if (statusHeader.errorMessage?.isNotEmpty() == true) {
+//                    textViewMessageStatusSentFailedText.text = statusHeader.errorMessage
+//                }
             } else {
                 textViewMessageStatusReceivedTimestamp.text = statusHeader.timestamp
                 textViewMessageStatusReceivedLockIcon.goneIfFalse(statusHeader.showLockIcon)
@@ -366,9 +365,9 @@ internal inline fun LayoutOnlyTextReceivedMessageHolderBinding.setStatusHeader(
 
                 textViewMessageStatusSentBoltIcon.setTextColor(boltColor)
 
-                if (statusHeader.errorMessage?.isNotEmpty() == true) {
-                    textViewMessageStatusSentFailedText.text = statusHeader.errorMessage
-                }
+//                if (statusHeader.errorMessage?.isNotEmpty() == true) {
+//                    textViewMessageStatusSentFailedText.text = statusHeader.errorMessage
+//                }
 
             } else {
                 textViewMessageStatusReceivedTimestamp.text = statusHeader.timestamp

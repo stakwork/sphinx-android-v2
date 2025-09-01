@@ -1,5 +1,8 @@
 # ChangeLog
 
+## Version 1.0.0-alpha85 (2025-09-01)
+- Fixes crash on tribe members list
+
 ## Version 1.0.0-alpha84 (2025-09-01)
 - Fixes invoices qr code format issues
 

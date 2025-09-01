@@ -122,7 +122,7 @@ internal class TribeMembersListAdapter(
                                 DiffUtil.calculateDiff(diff)
                             }.let {
                                 if (!diff.sameList) {
-                                    tribeMembers.removeLast()
+                                    tribeMembers.removeAt(tribeMembers.lastIndex)
                                     tribeMembers.addAll(viewState.list)
                                 }
                             }

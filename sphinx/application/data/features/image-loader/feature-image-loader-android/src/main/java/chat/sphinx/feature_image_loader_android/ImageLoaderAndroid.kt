@@ -2,7 +2,11 @@ package chat.sphinx.feature_image_loader_android
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Matrix
 import android.graphics.drawable.Animatable
+import android.graphics.drawable.BitmapDrawable
+import android.media.ExifInterface
 import android.os.Build
 import android.util.DisplayMetrics
 import android.widget.ImageView
@@ -18,15 +22,20 @@ import chat.sphinx.logger.SphinxLogger
 import chat.sphinx.logger.d
 import chat.sphinx.logger.e
 import coil.annotation.ExperimentalCoilApi
+import coil.decode.DataSource
+import coil.decode.DecodeResult
+import coil.decode.Decoder
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.decode.SvgDecoder
 import coil.disk.DiskCache
+import coil.fetch.SourceResult
 import coil.memory.MemoryCache
 import coil.request.CachePolicy
 import coil.request.ErrorResult
 import coil.request.ImageRequest
 import coil.request.ImageResult
+import coil.request.Options
 import coil.request.SuccessResult
 import coil.size.Scale
 import coil.size.Size
@@ -37,10 +46,13 @@ import io.matthewnelson.concept_coroutines.CoroutineDispatchers
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import okhttp3.CacheControl
 import okhttp3.ConnectionPool
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
+import okio.BufferedSource
+import java.io.ByteArrayInputStream
 import java.io.File
 import java.util.concurrent.TimeUnit
 
@@ -355,6 +367,7 @@ class ImageLoaderAndroid(
                 }
                 add(GifDecoder.Factory())
                 add(SvgDecoder.Factory())
+                add(ExifAwareDecoderFactory())
             }
             .dispatcher(Dispatchers.IO.limitedParallelism(5))
             .respectCacheHeaders(false)
@@ -439,6 +452,54 @@ class ImageLoaderAndroid(
 
     override fun trimMemory() {
         loader?.memoryCache?.clear()
+    }
+}
+
+// Custom decoder that handles EXIF rotation
+class ExifAwareDecoderFactory : Decoder.Factory {
+    override fun create(result: SourceResult, options: Options, imageLoader: coil.ImageLoader): Decoder? {
+        // Only handle local files, not URLs
+        return if (result.source.source().peek().inputStream().use { it.available() > 0 } &&
+            result.dataSource == DataSource.DISK) {
+            ExifAwareDecoder(result.source.source())
+        } else {
+            null
+        }
+    }
+}
+
+class ExifAwareDecoder(private val source: BufferedSource) : Decoder {
+    override suspend fun decode(): DecodeResult = withContext(Dispatchers.IO) {
+        val bytes = source.readByteArray()
+
+        // Get EXIF orientation
+        val exif = ExifInterface(ByteArrayInputStream(bytes))
+        val orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+
+        // Decode bitmap
+        var bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+
+        // Apply rotation if needed
+        if (orientation != ExifInterface.ORIENTATION_NORMAL) {
+            val rotationDegrees = when (orientation) {
+                ExifInterface.ORIENTATION_ROTATE_90 -> 90f
+                ExifInterface.ORIENTATION_ROTATE_180 -> 180f
+                ExifInterface.ORIENTATION_ROTATE_270 -> 270f
+                else -> 0f
+            }
+
+            if (rotationDegrees != 0f) {
+                val matrix = Matrix().apply { postRotate(rotationDegrees) }
+                val rotatedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+                bitmap.recycle()
+                bitmap = rotatedBitmap
+            }
+        }
+
+        DecodeResult(
+            drawable = BitmapDrawable(null, bitmap),
+            isSampled = false
+        )
     }
 }
 

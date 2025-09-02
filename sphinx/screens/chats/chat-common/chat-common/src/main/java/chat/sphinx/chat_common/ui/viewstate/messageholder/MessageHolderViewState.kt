@@ -40,6 +40,7 @@ inline val Message.shouldAdaptBubbleWidth: Boolean
             !isSphinxCallLink &&
             podcastClip == null &&
             replyUUID == null &&
+            giphyData == null &&
             !isCopyLinkAllowed &&
             (thread == null || thread!!.isEmpty()) &&
             !status.isDeleted() &&
@@ -51,6 +52,7 @@ inline val Message.isOnlyTextMessage: Boolean
             !isSphinxCallLink &&
             podcastClip == null &&
             replyUUID == null &&
+            giphyData == null &&
             !isCopyLinkAllowed &&
             (thread == null || thread!!.isEmpty()) &&
             !status.isDeleted() &&

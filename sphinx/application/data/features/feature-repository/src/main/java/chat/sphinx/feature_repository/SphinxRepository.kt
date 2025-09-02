@@ -1192,6 +1192,7 @@ abstract class SphinxRepository(
         messages: List<MqttMessage>,
         isRestore: Boolean
     ) {
+
         applicationScope.launch(default) {
             val contactPublicKeys = messages.mapNotNull {
                 if (it.fromMe == true) {

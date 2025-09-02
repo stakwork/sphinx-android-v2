@@ -4,8 +4,11 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Color
+import android.graphics.Matrix
 import android.graphics.pdf.PdfRenderer
+import android.media.ExifInterface
 import android.os.Bundle
 import android.os.ParcelFileDescriptor
 import android.text.Editable
@@ -110,6 +113,7 @@ import io.matthewnelson.android_feature_viewmodel.submitSideEffect
 import io.matthewnelson.android_feature_viewmodel.updateViewState
 import io.matthewnelson.concept_views.viewstate.collect
 import io.matthewnelson.concept_views.viewstate.value
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
@@ -119,6 +123,8 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 import javax.inject.Inject
 
 abstract class ChatFragment<
@@ -1672,8 +1678,7 @@ abstract class ChatFragment<
                                     // no need to launch separate coroutine.
                                     viewState.file?.let { nnFile ->
                                         lifecycleScope.launch(viewModel.default) {
-                                            val disposable = imageLoader.load(imageViewAttachmentSendPreview, nnFile)
-                                            attachmentSendViewStateDisposables.add(disposable)
+                                            loadImageWithCorrectOrientation(imageViewAttachmentSendPreview, nnFile)
                                         }.let { job ->
                                             attachmentSendViewStateJobs.add(job)
                                         }
@@ -1821,12 +1826,16 @@ abstract class ChatFragment<
 
                             viewState.media?.localFile?.let { nnLocalFile ->
                                 lifecycleScope.launch(viewModel.default) {
-                                    val disposable = imageLoader.load(
-                                        imageViewAttachmentFullscreen,
-                                        nnLocalFile,
-                                        isGif = viewState.media.mediaType.isGif
-                                    )
-                                    fullScreenViewStateDisposables.add(disposable)
+                                    if (viewState.media.mediaType.isGif) {
+                                        val disposable = imageLoader.load(
+                                            imageViewAttachmentFullscreen,
+                                            nnLocalFile,
+                                            isGif = viewState.media.mediaType.isGif
+                                        )
+                                        fullScreenViewStateDisposables.add(disposable)
+                                    } else {
+                                        loadImageWithCorrectOrientation(imageViewAttachmentFullscreen, nnLocalFile)
+                                    }
                                 }.let { job ->
                                     fullScreenViewStateJobs.add(job)
                                 }
@@ -2020,6 +2029,40 @@ abstract class ChatFragment<
                 }
             }
         }
+    }
+
+    private fun loadImageWithCorrectOrientation(imageView: ImageView, imageFile: File) {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val bitmap = BitmapFactory.decodeFile(imageFile.absolutePath)
+
+                val exif = ExifInterface(imageFile.absolutePath)
+                val orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+
+                val rotatedBitmap = when (orientation) {
+                    ExifInterface.ORIENTATION_ROTATE_90 -> rotateBitmap(bitmap, 90f)
+                    ExifInterface.ORIENTATION_ROTATE_180 -> rotateBitmap(bitmap, 180f)
+                    ExifInterface.ORIENTATION_ROTATE_270 -> rotateBitmap(bitmap, 270f)
+                    else -> bitmap
+                }
+
+                withContext(Dispatchers.Main) {
+                    imageView.setImageBitmap(rotatedBitmap)
+                }
+
+                if (rotatedBitmap != bitmap) {
+                    bitmap.recycle()
+                }
+
+            } catch (e: Exception) {
+                Log.e("IMAGE_ROTATION", "Failed to load image with rotation: ${e.message}")
+            }
+        }
+    }
+
+    private fun rotateBitmap(bitmap: Bitmap, degrees: Float): Bitmap {
+        val matrix = Matrix().apply { postRotate(degrees) }
+        return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
     }
 
     var searchTextListener: TextWatcher = object : TextWatcher {

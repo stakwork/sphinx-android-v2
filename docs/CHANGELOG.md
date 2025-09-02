@@ -1,5 +1,10 @@
 # ChangeLog
 
+## Version 1.0.0-alpha86 (2025-09-02)
+- Fixes crash on chat video recording
+- Fixes ratio issues on camera pictures
+- Fixes issue for Giphy images not rendering on chat
+
 ## Version 1.0.0-alpha85 (2025-09-01)
 - Fixes crash on tribe members list
 

@@ -1,5 +1,8 @@
 # ChangeLog
 
+## Version 1.0.0-alpha87 (2025-09-04)
+- Improves chat media download process
+
 ## Version 1.0.0-alpha86 (2025-09-02)
 - Fixes crash on chat video recording
 - Fixes ratio issues on camera pictures

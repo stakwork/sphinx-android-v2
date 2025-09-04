@@ -96,6 +96,8 @@ internal class OnBoardConnectFragment: SideEffectFragment<
                 )
 
                 hideKeyboardFrom(buttonSubmit.context, buttonSubmit)
+
+                binding.editTextCodeInput.setText("")
             }
 
             layoutConstrainSkipContainer.setOnClickListener {

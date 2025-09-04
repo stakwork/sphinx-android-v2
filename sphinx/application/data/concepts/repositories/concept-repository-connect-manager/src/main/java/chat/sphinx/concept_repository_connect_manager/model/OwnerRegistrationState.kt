@@ -10,9 +10,14 @@ sealed class OwnerRegistrationState {
         val routerUrl: String?,
         val defaultTribe: String?
     ) : OwnerRegistrationState()
+
     data class MnemonicWords(val words: String): OwnerRegistrationState()
+
     data class SignedChallenge(val authToken: String): OwnerRegistrationState()
+
     data class NewInviteCode(val inviteCode: String): OwnerRegistrationState()
+
     object GetNodes: OwnerRegistrationState()
+
     data class StoreRouterPubKey(val nodes: String): OwnerRegistrationState()
 }

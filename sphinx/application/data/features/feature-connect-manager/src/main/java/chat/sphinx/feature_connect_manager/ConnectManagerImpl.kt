@@ -290,7 +290,6 @@ class ConnectManagerImpl: ConnectManager()
     private fun subscribeOwnerMQTT() {
         try {
             mqttClient?.let { client ->
-
                 notifyListeners {
                     showMnemonic(isRestoreAccount())
                 }

@@ -7,28 +7,20 @@ import android.content.SharedPreferences
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import chat.sphinx.concept_network_query_contact.NetworkQueryContact
-import chat.sphinx.concept_network_query_invite.NetworkQueryInvite
 import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
 import chat.sphinx.concept_repository_connect_manager.model.OwnerRegistrationState
-import chat.sphinx.concept_signer_manager.CheckAdminCallback
 import chat.sphinx.concept_signer_manager.SignerManager
 import chat.sphinx.concept_wallet.WalletDataHandler
 import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
 import chat.sphinx.key_restore.KeyRestore
 import chat.sphinx.key_restore.KeyRestoreResponse
-import chat.sphinx.kotlin_response.LoadResponse
 import chat.sphinx.kotlin_response.Response
-import chat.sphinx.onboard_common.OnBoardStepHandler
 import chat.sphinx.onboard_common.model.RedemptionCode
 import chat.sphinx.onboard_connecting.navigation.OnBoardConnectingNavigator
 import chat.sphinx.wrapper_invite.InviteString
 import chat.sphinx.wrapper_invite.toValidInviteStringOrNull
-import chat.sphinx.wrapper_relay.toRelayUrl
-import chat.sphinx.wrapper_rsa.RsaPrivateKey
-import chat.sphinx.wrapper_rsa.RsaPublicKey
 import com.squareup.moshi.Moshi
 import dagger.hilt.android.lifecycle.HiltViewModel
-import io.matthewnelson.android_feature_navigation.util.navArgs
 import io.matthewnelson.android_feature_viewmodel.MotionLayoutViewModel
 import io.matthewnelson.android_feature_viewmodel.submitSideEffect
 import io.matthewnelson.android_feature_viewmodel.updateViewState
@@ -37,29 +29,9 @@ import io.matthewnelson.crypto_common.annotations.RawPasswordAccess
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import javax.annotation.meta.Exhaustive
 import javax.inject.Inject
 import chat.sphinx.resources.R as R_common
 
-internal inline val OnBoardConnectingFragmentArgs.restoreCode: RedemptionCode.AccountRestoration?
-    get() {
-        argCode?.let {
-            val redemptionCode = RedemptionCode.decode(it)
-
-            if (redemptionCode is RedemptionCode.AccountRestoration) {
-                return redemptionCode
-            }
-        }
-        return null
-    }
-
-internal inline val OnBoardConnectingFragmentArgs.inviteCode: InviteString?
-    get() {
-        argCode?.let {
-            return it.toValidInviteStringOrNull()
-        }
-        return null
-    }
 
 @HiltViewModel
 internal class OnBoardConnectingViewModel @Inject constructor(
@@ -68,10 +40,8 @@ internal class OnBoardConnectingViewModel @Inject constructor(
     val navigator: OnBoardConnectingNavigator,
     private val keyRestore: KeyRestore,
     private val walletDataHandler: WalletDataHandler,
-    private val networkQueryInvite: NetworkQueryInvite,
     private val networkQueryContact: NetworkQueryContact,
     private val connectManagerRepository: ConnectManagerRepository,
-    private val onBoardStepHandler: OnBoardStepHandler,
     val moshi: Moshi,
     private val app: Application
     ): MotionLayoutViewModel<
@@ -82,7 +52,6 @@ internal class OnBoardConnectingViewModel @Inject constructor(
         >(dispatchers, OnBoardConnectingViewState.Connecting)
 {
 
-    private val args: OnBoardConnectingFragmentArgs by handle.navArgs()
     private lateinit var signerManager: SignerManager
 
     private val userStateSharedPreferences: SharedPreferences =
@@ -90,6 +59,8 @@ internal class OnBoardConnectingViewModel @Inject constructor(
 
     private val serverSettingsSharedPreferences: SharedPreferences =
         app.getSharedPreferences(SERVER_SETTINGS_SHARED_PREFERENCES, Context.MODE_PRIVATE)
+
+    private var timerJob: Job? = null
 
     companion object {
         const val USER_STATE_SHARED_PREFERENCES = "user_state_settings"
@@ -110,8 +81,44 @@ internal class OnBoardConnectingViewModel @Inject constructor(
 
         viewModelScope.launch(mainImmediate) {
             delay(500L)
+            startTimer()
             connectManagerRepository.createOwnerAccount()
         }
+    }
+
+    private fun startTimer() {
+        timerJob?.cancel()
+
+        timerJob = viewModelScope.launch {
+            delay(10_000)
+            onTimerFinished()
+        }
+    }
+
+    private fun onTimerFinished() {
+        val connectionManagerState = connectManagerRepository.connectionManagerState.value
+
+        if (connectionManagerState !is OwnerRegistrationState.MnemonicWords && connectionManagerState !is OwnerRegistrationState.OwnerRegistered) {
+            viewModelScope.launch(mainImmediate) {
+                submitSideEffect(
+                    OnBoardConnectingSideEffect.NotifyError(
+                        app.getString(R_common.string.connect_manager_subscribe_owner_error)
+                    )
+                )
+
+                connectManagerRepository.resetAccount()
+
+                delay(1500L)
+                navigator.popBackStack()
+            }
+        }
+
+        cancelTimer()
+    }
+
+    private fun cancelTimer() {
+        timerJob?.cancel()
+        timerJob = null
     }
 
     fun setSignerManager(signerManager: SignerManager) {
@@ -207,6 +214,8 @@ internal class OnBoardConnectingViewModel @Inject constructor(
                     }
                     else -> {}
                 }
+
+                cancelTimer()
             }
         }
     }
@@ -282,6 +291,7 @@ internal class OnBoardConnectingViewModel @Inject constructor(
             }
         }
     }
+
     override suspend fun onMotionSceneCompletion(value: Any) {
         return
     }
@@ -319,6 +329,8 @@ internal class OnBoardConnectingViewModel @Inject constructor(
                             } else {
                                 navigator.toOnBoardNameScreen()
                             }
+
+                            cancelTimer()
                         }
                     }
                     else -> {}
@@ -414,6 +426,11 @@ internal class OnBoardConnectingViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        timerJob?.cancel()
     }
 
 }

@@ -244,8 +244,6 @@ internal class MessageListAdapter<ARGS : NavArgs>(
 
 
         if (diffToBottom <= 1) {
-            delay(250L)
-
             recyclerView.post {
                 recyclerView.smoothScrollToPosition(
                     newListSize - 1

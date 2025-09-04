@@ -160,6 +160,7 @@ import io.matthewnelson.crypto_common.annotations.UnencryptedDataAccess
 import io.matthewnelson.crypto_common.clazzes.*
 import io.matthewnelson.feature_authentication_core.AuthenticationCoreManager
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -168,9 +169,14 @@ import java.io.File
 import java.io.InputStream
 import java.security.SecureRandom
 import java.util.*
-import kotlin.coroutines.CoroutineContext
 import kotlin.math.abs
 import kotlin.math.max
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import java.util.concurrent.ConcurrentHashMap
+import kotlin.coroutines.CoroutineContext
 
 
 abstract class SphinxRepository(
@@ -280,6 +286,8 @@ abstract class SphinxRepository(
     override val createProjectTimestamps: MutableStateFlow<MutableMap<String, Long>> by lazy {
         MutableStateFlow(mutableMapOf())
     }
+
+    private val downloadDispatcher = Dispatchers.IO.limitedParallelism(2)
 
     init {
         connectManager.addListener(this)
@@ -7565,38 +7573,25 @@ abstract class SphinxRepository(
 //        return response ?: Response.Error(ResponseError(("Failed to delete subscription")))
 //    }
 
-    private val downloadMessageMediaLockMap = SynchronizedMap<MessageId, Pair<Int, Mutex>>()
+//    private val activeDownloads = ConcurrentHashMap<MessageId, Job>()
+    private val priorityDownloadManager by lazy {
+        PriorityDownloadManager(
+            applicationScope = applicationScope,
+            downloadDispatcher = downloadDispatcher,
+            LOG = LOG,
+            downloadMediaInternal = ::downloadMediaInternal
+        )
+    }
+
+    override suspend fun cancelDownloadsForChat(chatId: ChatId) {
+        priorityDownloadManager.cancelDownloadsForChat(chatId)
+    }
+
     override fun downloadMediaIfApplicable(
         message: Message,
         sent: Boolean
     ) : Job {
-        return applicationScope.launch(io) {
-            val messageId: MessageId = message.id
-
-            val downloadLock: Mutex = downloadMessageMediaLockMap.withLock { map ->
-                val localLock: Pair<Int, Mutex>? = map[messageId]
-
-                if (localLock != null) {
-                    map[messageId] = Pair(localLock.first + 1, localLock.second)
-                    localLock.second
-                } else {
-                    Pair(1, Mutex()).let { pair ->
-                        map[messageId] = pair
-                        pair.second
-                    }
-                }
-            }
-
-            downloadLock.withLock {
-                try {
-                    downloadMediaInternal(message, sent, messageId)
-                } catch (e: Exception) {
-                    LOG.e("RepositoryMedia", "Download failed for message $messageId", e)
-                } finally {
-                    cleanupDownloadLock(messageId)
-                }
-            }
-        }
+        return priorityDownloadManager.queueDownload(message, sent)
     }
 
     private fun shouldDownloadMedia(
@@ -7624,42 +7619,55 @@ abstract class SphinxRepository(
         sent: Boolean,
         messageId: MessageId
     ) {
-        val queries = coreDB.getSphinxDatabaseQueries()
+        LOG.d("MediaRepository Download", "Download started")
 
-        val media = message.retrieveUrlAndMessageMedia()?.second
-        val host = media?.host
-        val url = media?.url
+        withTimeout(60_000) {
+            val media = message.retrieveUrlAndMessageMedia()?.second
+            val host = media?.host
+            val url = media?.url
 
-        if (!shouldDownloadMedia(message, sent)) {
-            return
-        }
+            if (!shouldDownloadMedia(message, sent)) {
+                return@withTimeout
+            }
 
-        val authToken = memeServerTokenHandler.retrieveAuthenticationToken(host!!)
-            ?: return
+            val authToken = memeServerTokenHandler.retrieveAuthenticationToken(host!!)
+                ?: return@withTimeout
 
-        val streamAndFileName = memeInputStreamHandler.retrieveMediaInputStream(
-            url!!.value,
-            authToken,
-            media.mediaKeyDecrypted,
-        ) ?: return
+            ensureActive()
 
-        val targetFile = mediaCacheHandler.createFile(
-            mediaType = message.messageMedia?.mediaType ?: media.mediaType,
-            extension = streamAndFileName.second?.getExtension()
-        ) ?: return
+            val streamAndFileName = memeInputStreamHandler.retrieveMediaInputStream(
+                url!!.value,
+                authToken,
+                media.mediaKeyDecrypted,
+            ) ?: return@withTimeout
 
-        streamAndFileName.first?.use { stream ->
-            mediaCacheHandler.copyTo(stream, targetFile)
+            ensureActive()
 
-            updateMessageMediaInDatabase(
-                queries,
-                targetFile,
-                streamAndFileName.second,
-                messageId,
-                message.messageContentDecrypted
-            )
+            val targetFile = mediaCacheHandler.createFile(
+                mediaType = message.messageMedia?.mediaType ?: media.mediaType,
+                extension = streamAndFileName.second?.getExtension()
+            ) ?: return@withTimeout
+
+            streamAndFileName.first?.use { stream ->
+
+                mediaCacheHandler.copyToWithCancellation(stream, targetFile)
+
+                withContext(Dispatchers.IO) {
+                    val queries = coreDB.getSphinxDatabaseQueries()
+
+                    updateMessageMediaInDatabase(
+                        queries,
+                        targetFile,
+                        streamAndFileName.second,
+                        messageId,
+                        message.messageContentDecrypted
+                    )
+                }
+            }
         }
     }
+
+    private val messageLocks = ConcurrentHashMap<MessageId, Mutex>()
 
     private suspend fun updateMessageMediaInDatabase(
         queries: SphinxDatabaseQueries,
@@ -7668,34 +7676,17 @@ abstract class SphinxRepository(
         messageId: MessageId,
         messageContentDecrypted: MessageContentDecrypted?
     ) {
-        messageLock.withLock {
+        val messageSpecificLock = messageLocks.computeIfAbsent(messageId) { Mutex() }
+
+        messageSpecificLock.withLock {
             queries.transaction {
-                queries.messageMediaUpdateFile(
-                    file,
-                    fileName,
-                    messageId
-                )
-
-                queries.messageUpdateContentDecrypted(
-                    messageContentDecrypted,
-                    messageId
-                )
+                queries.messageMediaUpdateFile(file, fileName, messageId)
+                queries.messageUpdateContentDecrypted(messageContentDecrypted, messageId)
             }
         }
 
+        messageLocks.remove(messageId)
         delay(50L)
-    }
-
-    private fun cleanupDownloadLock(messageId: MessageId) {
-        downloadMessageMediaLockMap.withLock { map ->
-            map[messageId]?.let { pair ->
-                if (pair.first <= 1) {
-                    map.remove(messageId)
-                } else {
-                    map[messageId] = Pair(pair.first - 1, pair.second)
-                }
-            }
-        }
     }
 
     private val feedItemLock = Mutex()
@@ -8990,3 +8981,92 @@ inline fun ByteArray.toHex(): String =
         }
         hex.toString()
     }
+
+class PriorityDownloadManager(
+    private val applicationScope: CoroutineScope,
+    private val downloadDispatcher: CoroutineContext,
+    private val LOG: SphinxLogger,
+    private val downloadMediaInternal: suspend (Message, Boolean, MessageId) -> Unit
+) {
+    private val semaphore = Semaphore(2)
+
+    private val downloadQueue = mutableListOf<DownloadRequest>()
+    private val queueMutex = Mutex()
+
+    private val downloadSignal = Channel<Unit>(Channel.UNLIMITED)
+
+    data class DownloadRequest(
+        val messageId: MessageId,
+        val message: Message,
+        val sent: Boolean,
+        val timestamp: Long = System.currentTimeMillis(),
+        val deferred: CompletableDeferred<Unit> = CompletableDeferred()
+    )
+
+    init {
+        repeat(2) { workerId ->
+            applicationScope.launch(downloadDispatcher) {
+                processDownloads(workerId)
+            }
+        }
+    }
+
+    private suspend fun processDownloads(workerId: Int) {
+        for (signal in downloadSignal) {
+            val request = getNextDownload() ?: continue
+
+            semaphore.withPermit {
+                try {
+                    LOG.d("DOWNLOAD", "Worker $workerId downloading NEWEST: ${request.messageId}")
+                    downloadMediaInternal(request.message, request.sent, request.messageId)
+                    request.deferred.complete(Unit)
+                } catch (e: Exception) {
+                    LOG.e("DOWNLOAD", "Download failed: ${request.messageId}", e)
+                    request.deferred.completeExceptionally(e)
+                }
+            }
+        }
+    }
+
+    private suspend fun getNextDownload(): DownloadRequest? {
+        return queueMutex.withLock {
+            downloadQueue.removeFirstOrNull()
+        }
+    }
+
+    fun queueDownload(message: Message, sent: Boolean): Job {
+        return applicationScope.launch {
+            val request = DownloadRequest(message.id, message, sent)
+
+            queueMutex.withLock {
+                downloadQueue.removeAll { it.messageId == message.id }
+                downloadQueue.add(0, request)
+
+                LOG.d("DOWNLOAD", "Added to FRONT of queue: ${message.id} (queue size: ${downloadQueue.size})")
+            }
+
+            downloadSignal.send(Unit)
+            request.deferred.await()
+        }
+    }
+
+    suspend fun cancelDownloadsForChat(chatId: ChatId) {
+        queueMutex.withLock {
+            val toCancel = downloadQueue.filter { it.message.chatId == chatId }
+            toCancel.forEach { request ->
+                request.deferred.cancel()
+                downloadQueue.remove(request)
+            }
+        }
+    }
+
+    suspend fun cancelDownload(messageId: MessageId) {
+        queueMutex.withLock {
+            val request = downloadQueue.find { it.messageId == messageId }
+            if (request != null) {
+                request.deferred.cancel()
+                downloadQueue.remove(request)
+            }
+        }
+    }
+}

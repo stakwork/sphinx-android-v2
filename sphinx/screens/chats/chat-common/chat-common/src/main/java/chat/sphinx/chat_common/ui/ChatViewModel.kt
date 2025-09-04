@@ -1209,7 +1209,6 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         return withContext(Dispatchers.Default) {
             processMessagesWithData(messages, chat, preComputedData)
         }
-
     }
 
     private fun filterAndSortMessagesIfNecessary(
@@ -1547,32 +1546,37 @@ abstract class ChatViewModel<ARGS : NavArgs>(
             shimmerViewState.updateViewState(ShimmerViewState.Off)
         }
 
-        messagesLoadJob = viewModelScope.launch(Dispatchers.IO) {
-            connectManagerRepository.getTagsByChatId(getChat().id)
+        if (messagesLoadJob?.isActive == true) {
+            return
+        }
 
+        messagesLoadJob = viewModelScope.launch(Dispatchers.IO) {
             if (isThreadChat()) {
                 messageRepository.getAllMessagesToShowByChatId(getChat().id, 0, getThreadUUID())
                     .distinctUntilChanged()
                     .flowOn(Dispatchers.IO)
                     .collect { messages ->
-                        val processedData = withContext(Dispatchers.Default) {
-                            val originalMessage = messageRepository.getMessageByUUID(
-                                MessageUUID(getThreadUUID()?.value!!)
-                            ).firstOrNull()
+                        viewModelScope.launch {
+                            val processedData = withContext(Dispatchers.Default) {
+                                val originalMessage = messageRepository.getMessageByUUID(
+                                    MessageUUID(getThreadUUID()?.value!!)
+                                ).firstOrNull()
 
-                            val completeThread = listOf(originalMessage) + messages.reversed()
-                            val list = getMessageHolderViewStateList(completeThread.filterNotNull()).toList()
+                                val completeThread = listOf(originalMessage) + messages.reversed()
+                                val list =
+                                    getMessageHolderViewStateList(completeThread.filterNotNull()).toList()
 
-                            Triple(list, messages.size.toLong(), originalMessage != null)
-                        }
+                                Triple(list, messages.size.toLong(), originalMessage != null)
+                            }
 
-                        withContext(Dispatchers.Main.immediate) {
-                            messageHolderViewStateFlow.value = processedData.first
-                            changeThreadHeaderState(processedData.third)
-                            scrollDownButtonCount.value = processedData.second
+                            withContext(Dispatchers.Main.immediate) {
+                                messageHolderViewStateFlow.value = processedData.first
+                                changeThreadHeaderState(processedData.third)
+                                scrollDownButtonCount.value = processedData.second
 
-                            delay(25)
-                            hideShimmeringView()
+                                delay(25)
+                                hideShimmeringView()
+                            }
                         }
                     }
             } else {
@@ -1582,30 +1586,32 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                     }
                     .flowOn(Dispatchers.IO)
                     .collect { messages ->
-                        val processedData = withContext(Dispatchers.Default) {
-                            val list = getMessageHolderViewStateList(messages).toList()
+                        viewModelScope.launch {
+                            val processedData = withContext(Dispatchers.Default) {
+                                val list = getMessageHolderViewStateList(messages).toList()
 
-                            reloadPinnedMessage()
+                                reloadPinnedMessage()
 
-                            val lastMessage = messages.lastOrNull()
-                            val showClockIcon = lastMessage?.let {
-                                it.status == MessageStatus.Pending &&
-                                        System.currentTimeMillis() - it.date.time > 30_000
-                            } == true
+                                val lastMessage = messages.lastOrNull()
+                                val showClockIcon = lastMessage?.let {
+                                    it.status == MessageStatus.Pending &&
+                                            System.currentTimeMillis() - it.date.time > 30_000
+                                } == true
 
-                            Pair(list, showClockIcon)
-                        }
+                                Pair(list, showClockIcon)
+                            }
 
-                        withContext(Dispatchers.Main.immediate) {
-                            messageHolderViewStateFlow.value = processedData.first
+                            withContext(Dispatchers.Main.immediate) {
+                                messageHolderViewStateFlow.value = processedData.first
 
-                            updateScrollDownButtonCount()
-                            updateClockIconState(processedData.second)
+                                updateScrollDownButtonCount()
+                                updateClockIconState(processedData.second)
 
-                            isLoadingMore = false
+                                isLoadingMore = false
 
-                            delay(25)
-                            hideShimmeringView()
+                                delay(25)
+                                hideShimmeringView()
+                            }
                         }
                     }
             }
@@ -1613,6 +1619,10 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         collectThread()
         collectUnseenMessagesNumber()
         collectTotalMessagesCount()
+
+        viewModelScope.launch(Dispatchers.IO) {
+            connectManagerRepository.getTagsByChatId(getChat().id)
+        }
     }
 
     fun loadMoreMessages() {
@@ -3112,6 +3122,12 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
         activeDownloadJobs.forEach { it.cancel() }
         activeDownloadJobs.clear()
+
+        viewModelScope.launch {
+            chatId?.let {
+                repositoryMedia.cancelDownloadsForChat(it)
+            }
+        }
     }
 }
 

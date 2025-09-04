@@ -1430,6 +1430,18 @@ CREATE INDEX idx_message_chat_date ON messageDbo(chat_id, date DESC);
 CREATE INDEX idx_message_sender_chat_type ON messageDbo(sender, chat_id, type);
 CREATE INDEX idx_message_id ON messageDbo(id);
 CREATE INDEX idx_message_muid_original_muid ON messageDbo(muid, original_muid);
+CREATE INDEX IF NOT EXISTS idx_message_status ON messageDbo(status);
+CREATE INDEX IF NOT EXISTS idx_message_status_date ON messageDbo(status, date DESC);
+CREATE INDEX IF NOT EXISTS idx_message_thread_date ON messageDbo(thread_uuid, date ASC);
+CREATE INDEX IF NOT EXISTS idx_message_sender_date ON messageDbo(sender, date DESC);
+CREATE INDEX IF NOT EXISTS idx_message_chat_latest ON messageDbo(chat_id, date DESC, type);
+CREATE INDEX IF NOT EXISTS idx_message_chat_id_date_id ON messageDbo(chat_id, date DESC, id);
+CREATE INDEX IF NOT EXISTS idx_message_chat_seen ON messageDbo(chat_id, seen);
+CREATE INDEX IF NOT EXISTS idx_message_chat_seen_date ON messageDbo(chat_id, seen, date DESC);
+
+CREATE INDEX IF NOT EXISTS idx_message_media_message_id ON messageMediaDbo(id);
+CREATE INDEX IF NOT EXISTS idx_message_media_type ON messageMediaDbo(media_type);
+CREATE INDEX IF NOT EXISTS idx_message_media_chat_type ON messageMediaDbo(chat_id, media_type);
 
 messageMediaDeleteAll:
 DELETE FROM messageMediaDbo;

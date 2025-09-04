@@ -27,6 +27,7 @@
     <string name="side_effect_wrong_pin">誤ったPINが入力されました</string>
     <string name="side_effect_backup_keys_failed">鍵のバックアップに失敗しました。</string>
     <string name="profile_qr_code_header_name">公開鍵</string>
+    <string name="mnemonic_words_header_name">記憶術の単語</string>
     <string name="bottom_menu_profile_pic_header_text">プロフィール写真</string>
     <string name="failed_to_process_image">画像の処理に失敗しました</string>
     <string name="image_uploaded_successfully">画像が正常にアップロードされました</string>

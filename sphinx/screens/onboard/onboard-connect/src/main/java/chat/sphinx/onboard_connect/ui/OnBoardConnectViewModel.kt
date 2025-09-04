@@ -182,7 +182,6 @@ internal class OnBoardConnectViewModel @Inject constructor(
                 validateCode(code)
 
                 if (submitButtonViewStateContainer.value is OnBoardConnectSubmitButtonViewState.Enabled) {
-
                     if (redemptionCode is RedemptionCode.Glyph) {
                         signerManager.setSeedFromGlyph(
                             redemptionCode.mqtt,
@@ -194,6 +193,9 @@ internal class OnBoardConnectViewModel @Inject constructor(
                     if (redemptionCode is RedemptionCode.NewInvite) {
                         connectManagerRepository.setInviteCode(code)
                         presentLoginModal()
+                    }
+                    if (redemptionCode is RedemptionCode.MnemonicRestoration) {
+                        continueToConnectingScreen(code)
                     }
                     else {
                         viewModelScope.launch(mainImmediate) {

@@ -412,7 +412,7 @@ internal class ProfileViewModel @Inject constructor(
                                 }
                                 is AuthenticationResponse.Success.Key -> {
                                     walletDataHandler.retrieveWalletMnemonic()?.let { mnemonic ->
-                                        submitSideEffect(ProfileSideEffect.CopyBackupToClipboard(mnemonic.value))
+                                        navigator.toQRCodeDetail(mnemonic.value, app.getString(R.string.mnemonic_words_header_name))
                                     }
                                 }
                             }

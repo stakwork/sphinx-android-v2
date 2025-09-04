@@ -27,6 +27,7 @@
     <string name="side_effect_wrong_pin">PIN incorrecto</string>
     <string name="side_effect_backup_keys_failed">Guardado de claves fallido</string>
     <string name="profile_qr_code_header_name">CLAVE PÚBLICA</string>
+    <string name="mnemonic_words_header_name">PALABRAS DE SEGURIDAD</string>
     <string name="bottom_menu_profile_pic_header_text">Foto de Perfil</string>
     <string name="failed_to_process_image">No se ha podido procesar la imagen</string>
     <string name="image_uploaded_successfully">Imagen cargada con éxito</string>

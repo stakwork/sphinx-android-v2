@@ -1,5 +1,9 @@
 # ChangeLog
 
+## Version 1.0.0-alpha89 (2025-09-05)
+- Improves chat loading performance 
+- Improves restore process
+
 ## Version 1.0.0-alpha88 (2025-09-05)
 - Adds QR code for keys backup on Profile
 - Adds QR code scanner on Restore User form

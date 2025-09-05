@@ -195,7 +195,7 @@ internal class OnBoardConnectingViewModel @Inject constructor(
                         delay(100L)
 
                         if (isRestore) {
-                            navigator.toOnBoardDesktopScreen()
+                            navigator.toOnBoardReadyScreen()
                         } else {
                             navigator.toOnBoardNameScreen()
                         }
@@ -325,7 +325,7 @@ internal class OnBoardConnectingViewModel @Inject constructor(
                             delay(100L)
 
                             if (connectionState.isRestoreAccount) {
-                                navigator.toOnBoardDesktopScreen()
+                                navigator.toOnBoardReadyScreen()
                             } else {
                                 navigator.toOnBoardNameScreen()
                             }

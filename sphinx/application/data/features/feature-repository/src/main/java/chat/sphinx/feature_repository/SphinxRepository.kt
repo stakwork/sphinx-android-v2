@@ -7573,25 +7573,53 @@ abstract class SphinxRepository(
 //        return response ?: Response.Error(ResponseError(("Failed to delete subscription")))
 //    }
 
-//    private val activeDownloads = ConcurrentHashMap<MessageId, Job>()
-    private val priorityDownloadManager by lazy {
-        PriorityDownloadManager(
-            applicationScope = applicationScope,
-            downloadDispatcher = downloadDispatcher,
-            LOG = LOG,
-            downloadMediaInternal = ::downloadMediaInternal
-        )
-    }
-
-    override suspend fun cancelDownloadsForChat(chatId: ChatId) {
-        priorityDownloadManager.cancelDownloadsForChat(chatId)
-    }
+    private val downloadMessageMediaLockMap = SynchronizedMap<MessageId, Pair<Int, Mutex>>()
 
     override fun downloadMediaIfApplicable(
         message: Message,
         sent: Boolean
     ) : Job {
-        return priorityDownloadManager.queueDownload(message, sent)
+        return applicationScope.launch(downloadDispatcher) {
+            val messageId: MessageId = message.id
+
+            val downloadLock: Mutex = downloadMessageMediaLockMap.withLock { map ->
+                val localLock: Pair<Int, Mutex>? = map[messageId]
+
+                if (localLock != null) {
+                    map[messageId] = Pair(localLock.first + 1, localLock.second)
+                    localLock.second
+                } else {
+                    Pair(1, Mutex()).let { pair ->
+                        map[messageId] = pair
+                        pair.second
+                    }
+                }
+            }
+
+            downloadLock.withLock {
+                LOG.d("RepositoryMedia", "Download started")
+
+                try {
+                    downloadMediaInternal(message, sent, messageId)
+                } catch (e: Exception) {
+                    LOG.e("RepositoryMedia", "Download failed for message $messageId", e)
+                } finally {
+                    cleanupDownloadLock(messageId)
+                }
+            }
+        }
+    }
+
+    private fun cleanupDownloadLock(messageId: MessageId) {
+        downloadMessageMediaLockMap.withLock { map ->
+            map[messageId]?.let { pair ->
+                if (pair.first <= 1) {
+                    map.remove(messageId)
+                } else {
+                    map[messageId] = Pair(pair.first - 1, pair.second)
+                }
+            }
+        }
     }
 
     private fun shouldDownloadMedia(
@@ -7619,8 +7647,6 @@ abstract class SphinxRepository(
         sent: Boolean,
         messageId: MessageId
     ) {
-        LOG.d("MediaRepository Download", "Download started")
-
         withTimeout(60_000) {
             val media = message.retrieveUrlAndMessageMedia()?.second
             val host = media?.host
@@ -8981,92 +9007,3 @@ inline fun ByteArray.toHex(): String =
         }
         hex.toString()
     }
-
-class PriorityDownloadManager(
-    private val applicationScope: CoroutineScope,
-    private val downloadDispatcher: CoroutineContext,
-    private val LOG: SphinxLogger,
-    private val downloadMediaInternal: suspend (Message, Boolean, MessageId) -> Unit
-) {
-    private val semaphore = Semaphore(2)
-
-    private val downloadQueue = mutableListOf<DownloadRequest>()
-    private val queueMutex = Mutex()
-
-    private val downloadSignal = Channel<Unit>(Channel.UNLIMITED)
-
-    data class DownloadRequest(
-        val messageId: MessageId,
-        val message: Message,
-        val sent: Boolean,
-        val timestamp: Long = System.currentTimeMillis(),
-        val deferred: CompletableDeferred<Unit> = CompletableDeferred()
-    )
-
-    init {
-        repeat(2) { workerId ->
-            applicationScope.launch(downloadDispatcher) {
-                processDownloads(workerId)
-            }
-        }
-    }
-
-    private suspend fun processDownloads(workerId: Int) {
-        for (signal in downloadSignal) {
-            val request = getNextDownload() ?: continue
-
-            semaphore.withPermit {
-                try {
-                    LOG.d("DOWNLOAD", "Worker $workerId downloading NEWEST: ${request.messageId}")
-                    downloadMediaInternal(request.message, request.sent, request.messageId)
-                    request.deferred.complete(Unit)
-                } catch (e: Exception) {
-                    LOG.e("DOWNLOAD", "Download failed: ${request.messageId}", e)
-                    request.deferred.completeExceptionally(e)
-                }
-            }
-        }
-    }
-
-    private suspend fun getNextDownload(): DownloadRequest? {
-        return queueMutex.withLock {
-            downloadQueue.removeFirstOrNull()
-        }
-    }
-
-    fun queueDownload(message: Message, sent: Boolean): Job {
-        return applicationScope.launch {
-            val request = DownloadRequest(message.id, message, sent)
-
-            queueMutex.withLock {
-                downloadQueue.removeAll { it.messageId == message.id }
-                downloadQueue.add(0, request)
-
-                LOG.d("DOWNLOAD", "Added to FRONT of queue: ${message.id} (queue size: ${downloadQueue.size})")
-            }
-
-            downloadSignal.send(Unit)
-            request.deferred.await()
-        }
-    }
-
-    suspend fun cancelDownloadsForChat(chatId: ChatId) {
-        queueMutex.withLock {
-            val toCancel = downloadQueue.filter { it.message.chatId == chatId }
-            toCancel.forEach { request ->
-                request.deferred.cancel()
-                downloadQueue.remove(request)
-            }
-        }
-    }
-
-    suspend fun cancelDownload(messageId: MessageId) {
-        queueMutex.withLock {
-            val request = downloadQueue.find { it.messageId == messageId }
-            if (request != null) {
-                request.deferred.cancel()
-                downloadQueue.remove(request)
-            }
-        }
-    }
-}

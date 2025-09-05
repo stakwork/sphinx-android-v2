@@ -24,8 +24,6 @@ interface RepositoryMedia {
         downloadCompleteCallback: (downloadedFile: File) -> Unit
     )
 
-    suspend fun cancelDownloadsForChat(chatId: ChatId)
-
     suspend fun getStorageDataInfo(): Flow<StorageData>
     fun getAllMessageMediaByChatId(chatId: ChatId): Flow<List<MessageMedia>>
     fun getAllDownloadedMedia(): Flow<List<MessageMedia>>

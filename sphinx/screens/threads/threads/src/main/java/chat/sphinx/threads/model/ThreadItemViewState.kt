@@ -26,6 +26,7 @@ import chat.sphinx.wrapper_message.isPaidPendingMessage
 import chat.sphinx.wrapper_message.retrieveImageUrlAndMessageMedia
 import chat.sphinx.wrapper_message.retrieveTextToShow
 import chat.sphinx.wrapper_message_media.isAudio
+import chat.sphinx.wrapper_message_media.isImage
 import chat.sphinx.wrapper_message_media.isPdf
 import chat.sphinx.wrapper_message_media.isUnknown
 import chat.sphinx.wrapper_message_media.isVideo
@@ -156,21 +157,28 @@ class ThreadItemViewState(
     private fun getImageAttachment(
         message: Message
     ): LayoutState.Bubble.ContainerSecond.ImageAttachment? {
-        val pendingPayment = !sent && message.isPaidPendingMessage
+        return message.messageMedia?.let { nnMessageMedia ->
+            if (nnMessageMedia.mediaType.isImage) {
+                val pendingPayment = !sent && message.isPaidPendingMessage
+                val imageUrlAndMedia = message.retrieveImageUrlAndMessageMedia()
 
-        if (!pendingPayment) {
-            onBindDownloadMedia.invoke()
-        }
+                if (!pendingPayment && imageUrlAndMedia?.second?.localFile == null) {
+                    onBindDownloadMedia.invoke()
+                }
 
-        val isThread = message.thread?.isNotEmpty() ?: false
+                val isThread = message.thread?.isNotEmpty() ?: false
 
-        return message.retrieveImageUrlAndMessageMedia()?.let { mediaData ->
-            LayoutState.Bubble.ContainerSecond.ImageAttachment(
-                mediaData.first,
-                mediaData.second,
-                pendingPayment,
-                isThread
-            )
+                message.retrieveImageUrlAndMessageMedia()?.let { mediaData ->
+                    LayoutState.Bubble.ContainerSecond.ImageAttachment(
+                        mediaData.first,
+                        mediaData.second,
+                        pendingPayment,
+                        isThread
+                    )
+                }
+            } else {
+                null
+            }
         }
     }
 
@@ -203,9 +211,7 @@ class ThreadItemViewState(
     ): LayoutState.Bubble.ContainerSecond.FileAttachment? {
         return message.messageMedia?.let { nnMessageMedia ->
             if (nnMessageMedia.mediaType.isPdf || nnMessageMedia.mediaType.isUnknown) {
-
                 nnMessageMedia.localFile?.let { nnFile ->
-
                     val pageCount = if (nnMessageMedia.mediaType.isPdf) {
                         val fileDescriptor = ParcelFileDescriptor.open(nnFile, MODE_READ_ONLY)
                         val renderer = PdfRenderer(fileDescriptor)

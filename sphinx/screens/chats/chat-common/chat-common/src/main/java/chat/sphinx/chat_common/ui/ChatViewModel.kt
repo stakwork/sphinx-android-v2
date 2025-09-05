@@ -32,6 +32,7 @@ import chat.sphinx.camera_view_model_coordinator.request.CameraRequest
 import chat.sphinx.camera_view_model_coordinator.response.CameraResponse
 import chat.sphinx.chat_common.BuildConfig
 import chat.sphinx.chat_common.R
+import chat.sphinx.chat_common.adapters.MessageListAdapter
 import chat.sphinx.resources.R as R_common
 import chat.sphinx.chat_common.model.*
 import chat.sphinx.chat_common.navigation.ChatNavigator
@@ -78,6 +79,7 @@ import chat.sphinx.highlighting_tool.markDownLinkTexts
 import chat.sphinx.highlighting_tool.replacingMarkdown
 import chat.sphinx.kotlin_response.*
 import chat.sphinx.logger.SphinxLogger
+import chat.sphinx.logger.d
 import chat.sphinx.logger.e
 import chat.sphinx.menu_bottom.ui.MenuBottomViewState
 import chat.sphinx.resources.getRandomHexCode
@@ -264,6 +266,12 @@ abstract class ChatViewModel<ARGS : NavArgs>(
     protected abstract val threadSharedFlow: SharedFlow<List<Message>>?
 
     abstract val headerInitialHolderSharedFlow: SharedFlow<InitialHolderViewState>
+
+    private val _visibleRange = MutableStateFlow(IntRange.EMPTY)
+
+    fun updateVisibleRange(range: IntRange) {
+        _visibleRange.value = range
+    }
 
     protected abstract suspend fun getChatInfo(): Triple<ChatName?, PhotoUrl?, String>?
 
@@ -559,6 +567,8 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
         for ((index, message) in messagesList.withIndex()) {
 
+//            Log.d("MediaRepository Download", "Index $itemIndex")
+
             val previousMessage: Message? = if (index > 0) messagesList[index - 1] else null
             val nextMessage: Message? = if (index < messagesList.size - 1) messagesList[index + 1] else null
 
@@ -596,6 +606,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                         chat,
                         tribeAdmin,
                         InitialHolderViewState.None,
+                        index = newList.size,
                         messageSenderInfo = { messageCallback ->
                             when {
                                 messageCallback.sender == chat.contactIds.firstOrNull() -> {
@@ -641,6 +652,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                         chat,
                         tribeAdmin,
                         BubbleBackground.Gone(setSpacingEqual = true),
+                        index = newList.size,
                         invoiceLinesHolderViewState,
                         InitialHolderViewState.None,
                         accountOwner = { owner }
@@ -660,6 +672,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                         chat,
                         tribeAdmin,
                         BubbleBackground.Gone(setSpacingEqual = true),
+                        index = newList.size,
                         invoiceLinesHolderViewState,
                         InitialHolderViewState.None,
                         accountOwner = { owner }
@@ -694,6 +707,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                             chat,
                             background = groupingDateAndBubbleBackground.second,
                             highlightedText = null,
+                            index = newList.size,
                             messageSenderInfo = { messageCallback ->
                                 when {
                                     messageCallback.sender == chat.contactIds.firstOrNull() -> {
@@ -735,6 +749,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                             background = groupingDateAndBubbleBackground.second,
                             initialHolder = preComputedData.initialHolders[message.id.value] ?: InitialHolderViewState.None,
                             highlightedText = null,
+                            index = newList.size,
                             messageSenderInfo = { messageCallback ->
                                 when {
                                     messageCallback.sender == chat.contactIds.firstOrNull() -> {
@@ -839,6 +854,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                             background = background,
                             invoiceLinesHolderViewState = invoiceLinesHolderViewState,
                             highlightedText = null,
+                            index = newList.size,
                             messageSenderInfo = { messageCallback ->
                                 when {
                                     messageCallback.sender == chat.contactIds.firstOrNull() -> {
@@ -872,12 +888,18 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                             paidTextMessageContentProvider = { messageCallback ->
                                 handlePaidTextMessageContent(messageCallback)
                             },
-                            onBindDownloadMedia = {
-                                val job = repositoryMedia.downloadMediaIfApplicable(message, sent)
-                                activeDownloadJobs.add(job)
+                            onBindDownloadMedia = { itemIndex ->
+                                viewModelScope.launch() {
+                                    delay(500L)
 
-                                job.invokeOnCompletion {
-                                    activeDownloadJobs.remove(job)
+                                    if (itemIndex in _visibleRange.value) {
+                                        val job = repositoryMedia.downloadMediaIfApplicable(message, sent)
+                                        activeDownloadJobs.add(job)
+
+                                        job.invokeOnCompletion {
+                                            activeDownloadJobs.remove(job)
+                                        }
+                                    }
                                 }
                             },
                             onBindThreadDownloadMedia = {
@@ -913,6 +935,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                                 }
                             },
                             highlightedText = null,
+                            index = newList.size,
                             messageSenderInfo = { messageCallback ->
                                 when {
                                     messageCallback.sender == chat.contactIds.firstOrNull() -> {
@@ -948,12 +971,18 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                             paidTextMessageContentProvider = { messageCallback ->
                                 handlePaidTextMessageContent(messageCallback)
                             },
-                            onBindDownloadMedia = {
-                                val job = repositoryMedia.downloadMediaIfApplicable(message, sent)
-                                activeDownloadJobs.add(job)
+                            onBindDownloadMedia = { itemIndex ->
+                                viewModelScope.launch() {
+                                    delay(500L)
 
-                                job.invokeOnCompletion {
-                                    activeDownloadJobs.remove(job)
+                                    if (itemIndex in _visibleRange.value) {
+                                        val job = repositoryMedia.downloadMediaIfApplicable(message, sent)
+                                        activeDownloadJobs.add(job)
+
+                                        job.invokeOnCompletion {
+                                            activeDownloadJobs.remove(job)
+                                        }
+                                    }
                                 }
                             },
                             onBindThreadDownloadMedia = {
@@ -3122,12 +3151,6 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
         activeDownloadJobs.forEach { it.cancel() }
         activeDownloadJobs.clear()
-
-        viewModelScope.launch {
-            chatId?.let {
-                repositoryMedia.cancelDownloadsForChat(it)
-            }
-        }
     }
 }
 

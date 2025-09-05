@@ -78,12 +78,13 @@ internal sealed class MessageHolderViewState(
     val invoiceLinesHolderViewState: InvoiceLinesHolderViewState,
     val initialHolder: InitialHolderViewState,
     var highlightedText: String?,
+    var index: Int,
     private val messageSenderInfo: (Message) -> Triple<PhotoUrl?, ContactAlias?, String>?,
     private val accountOwner: () -> Contact,
     private val urlLinkPreviewsEnabled: Boolean,
     private val previewProvider: suspend (link: MessageLinkPreview) -> LayoutState.Bubble.ContainerThird.LinkPreview?,
     private val paidTextAttachmentContentProvider: suspend (message: Message) -> LayoutState.Bubble.ContainerThird.Message?,
-    private val onBindDownloadMedia: () -> Unit,
+    private val onBindDownloadMedia: (index: Int) -> Unit,
     private val onBindThreadDownloadMedia: () -> Unit,
     private val memberTimezoneIdentifier: String?,
     val spaceLeft: Int? = null,
@@ -759,24 +760,32 @@ internal sealed class MessageHolderViewState(
         message: Message,
         isThread: Boolean = false
     ): LayoutState.Bubble.ContainerSecond.ImageAttachment? {
-        val pendingPayment = this is Received && message.isPaidPendingMessage
+        return message.messageMedia?.let { nnMessageMedia ->
+            if (nnMessageMedia.mediaType.isImage) {
+                val pendingPayment = this is Received && message.isPaidPendingMessage
+                val imageUrlAndMedia = message.retrieveImageUrlAndMessageMedia()
 
-        if (!pendingPayment) {
-            if (isThread) {
-                onBindThreadDownloadMedia.invoke()
+                if (!pendingPayment && imageUrlAndMedia?.second?.localFile == null) {
+                    if (isThread) {
+                        onBindThreadDownloadMedia.invoke()
+                    } else {
+                        onBindDownloadMedia.invoke(index)
+                    }
+                }
+
+                val isMessageThread = message.thread?.isNotEmpty() ?: false
+
+                message.retrieveImageUrlAndMessageMedia()?.let { mediaData ->
+                    LayoutState.Bubble.ContainerSecond.ImageAttachment(
+                        mediaData.first,
+                        mediaData.second,
+                        pendingPayment,
+                        isMessageThread
+                    )
+                }
             } else {
-                onBindDownloadMedia.invoke()
+                null
             }
-        }
-        val isThread = message.thread?.isNotEmpty() ?: false
-
-        return message.retrieveImageUrlAndMessageMedia()?.let { mediaData ->
-            LayoutState.Bubble.ContainerSecond.ImageAttachment(
-                mediaData.first,
-                mediaData.second,
-                pendingPayment,
-                isThread
-            )
         }
     }
 
@@ -797,7 +806,7 @@ internal sealed class MessageHolderViewState(
                         if (isThread) {
                             onBindThreadDownloadMedia.invoke()
                         } else {
-                            onBindDownloadMedia.invoke()
+                            onBindDownloadMedia.invoke(index)
                         }
                     }
 
@@ -841,7 +850,7 @@ internal sealed class MessageHolderViewState(
                         if (isThread) {
                             onBindThreadDownloadMedia.invoke()
                         } else {
-                            onBindDownloadMedia.invoke()
+                            onBindDownloadMedia.invoke(index)
                         }
                     }
 
@@ -879,7 +888,7 @@ internal sealed class MessageHolderViewState(
                         if (isThread) {
                             onBindThreadDownloadMedia.invoke()
                         } else {
-                            onBindDownloadMedia.invoke()
+                            onBindDownloadMedia.invoke(index)
                         }
                     }
 
@@ -902,12 +911,13 @@ internal sealed class MessageHolderViewState(
         background: BubbleBackground,
         invoiceLinesHolderViewState: InvoiceLinesHolderViewState,
         highlightedText: String?,
+        index: Int,
         messageSenderInfo: (Message) -> Triple<PhotoUrl?, ContactAlias?, String>,
         accountOwner: () -> Contact,
         urlLinkPreviewsEnabled: Boolean,
         previewProvider: suspend (link: MessageLinkPreview) -> LayoutState.Bubble.ContainerThird.LinkPreview?,
         paidTextMessageContentProvider: suspend (message: Message) -> LayoutState.Bubble.ContainerThird.Message?,
-        onBindDownloadMedia: () -> Unit,
+        onBindDownloadMedia: (index: Int) -> Unit,
         onBindThreadDownloadMedia: () -> Unit,
         memberTimezoneIdentifier: String?,
         spaceLeft: Int,
@@ -922,6 +932,7 @@ internal sealed class MessageHolderViewState(
         invoiceLinesHolderViewState,
         InitialHolderViewState.None,
         highlightedText,
+        index,
         messageSenderInfo,
         accountOwner,
         urlLinkPreviewsEnabled,
@@ -942,12 +953,13 @@ internal sealed class MessageHolderViewState(
         invoiceLinesHolderViewState: InvoiceLinesHolderViewState,
         initialHolder: InitialHolderViewState,
         highlightedText: String?,
+        index: Int,
         messageSenderInfo: (Message) -> Triple<PhotoUrl?, ContactAlias?, String>,
         accountOwner: () -> Contact,
         urlLinkPreviewsEnabled: Boolean,
         previewProvider: suspend (link: MessageLinkPreview) -> LayoutState.Bubble.ContainerThird.LinkPreview?,
         paidTextMessageContentProvider: suspend (message: Message) -> LayoutState.Bubble.ContainerThird.Message?,
-        onBindDownloadMedia: () -> Unit,
+        onBindDownloadMedia: (index: Int) -> Unit,
         onBindThreadDownloadMedia: () -> Unit,
         memberTimezoneIdentifier: String?,
         spaceLeft: Int,
@@ -962,6 +974,7 @@ internal sealed class MessageHolderViewState(
         invoiceLinesHolderViewState,
         initialHolder,
         highlightedText,
+        index,
         messageSenderInfo,
         accountOwner,
         urlLinkPreviewsEnabled,
@@ -980,6 +993,7 @@ internal sealed class MessageHolderViewState(
         chat: Chat,
         tribeAdmin: Contact?,
         background: BubbleBackground,
+        index: Int,
         invoiceLinesHolderViewState: InvoiceLinesHolderViewState,
         initialHolder: InitialHolderViewState,
         accountOwner: () -> Contact,
@@ -993,6 +1007,7 @@ internal sealed class MessageHolderViewState(
         invoiceLinesHolderViewState,
         initialHolder,
         null,
+        index,
         messageSenderInfo = { null },
         accountOwner,
         false,
@@ -1009,6 +1024,7 @@ internal sealed class MessageHolderViewState(
         chat: Chat,
         val tribeAdmin: Contact?,
         initialHolder: InitialHolderViewState,
+        index: Int,
         val messageSenderInfo: (Message) -> Triple<PhotoUrl?, ContactAlias?, String>?,
         val accountOwner: () -> Contact,
         val timestamp: String,
@@ -1023,6 +1039,7 @@ internal sealed class MessageHolderViewState(
         InvoiceLinesHolderViewState(false, false),
         initialHolder,
         null,
+        index,
         messageSenderInfo,
         accountOwner,
         false,
@@ -1039,6 +1056,7 @@ internal sealed class MessageHolderViewState(
                 chat,
                 tribeAdmin,
                 initialHolder,
+                index,
                 messageSenderInfo,
                 accountOwner,
                 timestamp,
@@ -1054,6 +1072,7 @@ internal sealed class MessageHolderViewState(
         background: BubbleBackground,
         initialHolder: InitialHolderViewState,
         highlightedText: String?,
+        index: Int,
         messageSenderInfo: (Message) -> Triple<PhotoUrl?, ContactAlias?, String>?,
         accountOwner: () -> Contact,
         memberTimezoneIdentifier: String?,
@@ -1069,6 +1088,7 @@ internal sealed class MessageHolderViewState(
         InvoiceLinesHolderViewState(false, false),
         initialHolder,
         highlightedText,
+        index,
         messageSenderInfo,
         accountOwner,
         false,
@@ -1086,6 +1106,7 @@ internal sealed class MessageHolderViewState(
             chat: Chat,
             background: BubbleBackground,
             highlightedText: String?,
+            index: Int,
             messageSenderInfo: (Message) -> Triple<PhotoUrl?, ContactAlias?, String>,
             accountOwner: () -> Contact,
             memberTimezoneIdentifier: String?,
@@ -1098,6 +1119,7 @@ internal sealed class MessageHolderViewState(
             background,
             InitialHolderViewState.None,
             highlightedText,
+            index,
             messageSenderInfo,
             accountOwner,
             memberTimezoneIdentifier,
@@ -1111,6 +1133,7 @@ internal sealed class MessageHolderViewState(
             background: BubbleBackground,
             initialHolder: InitialHolderViewState,
             highlightedText: String?,
+            index: Int,
             messageSenderInfo: (Message) -> Triple<PhotoUrl?, ContactAlias?, String>,
             accountOwner: () -> Contact,
             memberTimezoneIdentifier: String?,
@@ -1123,6 +1146,7 @@ internal sealed class MessageHolderViewState(
             background,
             initialHolder,
             highlightedText,
+            index,
             messageSenderInfo,
             accountOwner,
             memberTimezoneIdentifier,
@@ -1131,11 +1155,11 @@ internal sealed class MessageHolderViewState(
         )
     }
 
-    data class FileAttachment(
-        val fileName: FileName?,
-        val fileSize: FileSize,
-        val isPdf: Boolean,
-        val pageCount: Int
-    )
+//    data class FileAttachment(
+//        val fileName: FileName?,
+//        val fileSize: FileSize,
+//        val isPdf: Boolean,
+//        val pageCount: Int
+//    )
 
 }

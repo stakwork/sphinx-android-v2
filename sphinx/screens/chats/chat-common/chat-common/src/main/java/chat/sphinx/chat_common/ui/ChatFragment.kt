@@ -116,6 +116,7 @@ import io.matthewnelson.concept_views.viewstate.value
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
@@ -180,6 +181,8 @@ abstract class ChatFragment<
 
     override val chatFragmentWindow: Window?
         get() = activity?.window
+
+    private val visibleRange = MutableStateFlow(IntRange.EMPTY)
 
     private val bottomMenuCall: BottomMenu by lazy(LazyThreadSafetyMode.NONE) {
         BottomMenu(
@@ -925,15 +928,24 @@ abstract class ChatFragment<
             adapter = ConcatAdapter(messageListAdapter, footerAdapter)
             itemAnimator = null
 
-            val chatScrollListener = ChatScrollListener(lifecycleScope, viewModel, linearLayoutManager)
+            val chatScrollListener = ChatScrollListener(lifecycleScope, viewModel, linearLayoutManager, updateVisibleRange = {
+                updateVisibleRange()
+            })
             addOnScrollListener(chatScrollListener)
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            visibleRange.collect { range ->
+                viewModel.updateVisibleRange(range)
+            }
         }
     }
 
     class ChatScrollListener<ARGS : NavArgs>(
         private val lifecycleScope: LifecycleCoroutineScope,
         private val viewModel: ChatViewModel<ARGS>,
-        private val layoutManager: LinearLayoutManager
+        private val layoutManager: LinearLayoutManager,
+        private val updateVisibleRange: () -> Unit,
     ) : RecyclerView.OnScrollListener() {
 
         private val threshold = 10 // Load more when 5 items from top
@@ -960,10 +972,13 @@ abstract class ChatFragment<
                 } else {
                     viewModel.changeThreadHeaderState(true)
                 }
-            } else if (dy < 0) {
-                if (firstVisiblePosition < threshold) {
-                    viewModel.loadMoreMessages()
+            } else {
+                if (dy < 0) {
+                    if (firstVisiblePosition < threshold) {
+                        viewModel.loadMoreMessages()
+                    }
                 }
+                updateVisibleRange()
             }
         }
 
@@ -981,6 +996,16 @@ abstract class ChatFragment<
             } else {
                 viewModel.updateScrollDownButton(false)
             }
+        }
+    }
+
+    private fun updateVisibleRange() {
+        val layoutManager = recyclerView.layoutManager as? LinearLayoutManager ?: return
+        val firstVisible = layoutManager.findFirstVisibleItemPosition()
+        val lastVisible = layoutManager.findLastVisibleItemPosition()
+
+        if (firstVisible != RecyclerView.NO_POSITION && lastVisible != RecyclerView.NO_POSITION) {
+            visibleRange.value = firstVisible..lastVisible
         }
     }
 

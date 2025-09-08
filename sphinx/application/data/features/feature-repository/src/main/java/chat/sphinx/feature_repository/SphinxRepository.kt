@@ -3629,7 +3629,9 @@ abstract class SphinxRepository(
         } ?: messageDboPresenterMapper.mapFrom(messageDbo)
 
         if (message.type.canContainMedia) {
-            message._messageMedia = messageMedia
+            messageMedia?.let {
+                message._messageMedia = it
+            }
         }
 
         if ((thread?.size ?: 0) > 1) {
@@ -3959,6 +3961,7 @@ abstract class SphinxRepository(
         )
     }
 
+    @OptIn(UnencryptedDataAccess::class)
     override fun getMessagesByIds(messagesIds: List<MessageId>): Flow<List<Message?>> = flow {
         val queries = coreDB.getSphinxDatabaseQueries()
 
@@ -3968,8 +3971,74 @@ abstract class SphinxRepository(
                 .asFlow()
                 .mapToList(io)
                 .map { listMessageDbo ->
+                    val messageMediaMap: MutableMap<MessageId, MessageMediaDboWrapper?> =
+                        LinkedHashMap(listMessageDbo.size)
+
+                    val messagesMediaIds: MutableList<MessageId> = mutableListOf()
+                    messagesMediaIds.addAll(listMessageDbo.filter({ it.type.canContainMedia }).map { it.id })
+
+                    messagesMediaIds.chunked(500).forEach { messageIds ->
+                        queries.messageMediaGetAllById(messageIds).executeAsList()
+                            .let { response ->
+                                response.forEach { mediaDbo ->
+                                    mediaDbo.media_key?.let { key ->
+                                        mediaDbo.media_key_decrypted.let { decrypted ->
+                                            if (decrypted == null) {
+                                                val decryptResponse = decryptMediaKey(MediaKey(key.value))
+
+                                                @Exhaustive
+                                                when (decryptResponse) {
+                                                    is Response.Error -> {
+                                                        messageMediaMap[mediaDbo.id] = MessageMediaDboWrapper(mediaDbo).also {
+                                                            it._mediaKeyDecrypted = null
+                                                            it._mediaKeyDecryptionError = true
+                                                            it._mediaKeyDecryptionException = decryptResponse.exception
+                                                        }
+                                                    }
+                                                    is Response.Success -> {
+                                                        decryptResponse.value
+                                                            .toUnencryptedString(trim = false)
+                                                            .value
+                                                            .toMediaKeyDecrypted()
+                                                            .let { decryptedKey ->
+                                                                messageMediaMap[mediaDbo.id] = MessageMediaDboWrapper(mediaDbo)
+                                                                    .also {
+                                                                        it._mediaKeyDecrypted = decryptedKey
+
+                                                                        if (decryptedKey == null) {
+                                                                            it._mediaKeyDecryptionError = true
+                                                                        } else {
+
+                                                                            messageLock.withLock {
+                                                                                withContext(io) {
+                                                                                    queries.messageMediaUpdateMediaKeyDecrypted(
+                                                                                        decryptedKey,
+                                                                                        mediaDbo.id
+                                                                                    )
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    }
+                                                            }
+                                                    }
+                                                }
+                                            } else {
+                                                messageMediaMap[mediaDbo.id] = MessageMediaDboWrapper(mediaDbo)
+                                            }
+                                        }
+                                    } ?: run {
+                                        messageMediaMap[mediaDbo.id] = MessageMediaDboWrapper(mediaDbo)
+                                    }
+                                }
+                            }
+                    }
+
                     listMessageDbo.map {
-                        mapMessageDboAndDecryptContentIfNeeded(queries, it)
+                        mapMessageDboAndDecryptContentIfNeeded(
+                            queries,
+                            it,
+                            messageMedia = messageMediaMap[it.id],
+                        )
                     }
                 }
                 .distinctUntilChanged()

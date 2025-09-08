@@ -112,31 +112,32 @@ internal fun LayoutMessageHolderBinding.setView(
         holderScope.launch(dispatchers.mainImmediate) {
             val file: File? = media?.localFile
 
-            val options: ImageLoaderOptions? = if (media != null) {
-                val builder = ImageLoaderOptions.Builder()
-
-                if (file == null) {
-                    media.host?.let { host ->
-                        memeServerTokenHandler.retrieveAuthenticationToken(host)
-                            ?.let { token ->
-                                builder.addHeader(token.headerKey, token.headerValue)
-
-                                media.mediaKeyDecrypted?.value?.let { key ->
-                                    val header = CryptoHeader.Decrypt.Builder()
-                                        .setScheme(CryptoScheme.Decrypt.JNCryptor)
-                                        .setPassword(key)
-                                        .build()
-
-                                    builder.addHeader(header.key, header.value)
-                                }
-                            }
-                    }
-                }
-
-                builder.build()
-            } else {
-                null
-            }
+            val options: ImageLoaderOptions = ImageLoaderOptions.Builder().build()
+//            if (media != null) {
+//                val builder = ImageLoaderOptions.Builder()
+//
+//                if (file == null) {
+//                    media.host?.let { host ->
+//                        memeServerTokenHandler.retrieveAuthenticationToken(host)
+//                            ?.let { token ->
+//                                builder.addHeader(token.headerKey, token.headerValue)
+//
+//                                media.mediaKeyDecrypted?.value?.let { key ->
+//                                    val header = CryptoHeader.Decrypt.Builder()
+//                                        .setScheme(CryptoScheme.Decrypt.JNCryptor)
+//                                        .setPassword(key)
+//                                        .build()
+//
+//                                    builder.addHeader(header.key, header.value)
+//                                }
+//                            }
+//                    }
+//                }
+//
+//                builder.build()
+//            } else {
+//                null
+//            }
 
             if (file != null) {
                 imageLoader.load(imageView, file, options, object : OnImageLoadListener {
@@ -161,30 +162,31 @@ internal fun LayoutMessageHolderBinding.setView(
                         )
                     }
                 }, media.mediaType.isGif).also { disposables.add(it) }
-            } else {
-                imageLoader.load(imageView, url, options, object : OnImageLoadListener {
-                    override fun onSuccess() {
-                        super.onSuccess()
-
-                        loadingContainer.gone
-                        onRowLayoutListener?.onRowHeightChanged()
-                    }
-
-                    override fun onError() {
-                        super.onError()
-
-                        imageView.setImageDrawable(
-                            ContextCompat.getDrawable(root.context,
-                                if (viewState is MessageHolderViewState.Sent) {
-                                    R.drawable.sent_image_not_available
-                                } else {
-                                    R.drawable.received_image_not_available
-                                }
-                            )
-                        )
-                    }
-                }, media?.mediaType?.isGif == true || url.contains("gif", ignoreCase = true)).also { disposables.add(it) }
             }
+//            else {
+//                imageLoader.load(imageView, url, options, object : OnImageLoadListener {
+//                    override fun onSuccess() {
+//                        super.onSuccess()
+//
+//                        loadingContainer.gone
+//                        onRowLayoutListener?.onRowHeightChanged()
+//                    }
+//
+//                    override fun onError() {
+//                        super.onError()
+//
+//                        imageView.setImageDrawable(
+//                            ContextCompat.getDrawable(root.context,
+//                                if (viewState is MessageHolderViewState.Sent) {
+//                                    R.drawable.sent_image_not_available
+//                                } else {
+//                                    R.drawable.received_image_not_available
+//                                }
+//                            )
+//                        )
+//                    }
+//                }, media?.mediaType?.isGif == true || url.contains("gif", ignoreCase = true)).also { disposables.add(it) }
+//            }
         }
     }
 
@@ -397,23 +399,23 @@ internal fun LayoutMessageHolderBinding.setView(
                             }
                         )
 
-                        if (file == null) {
-                            media.host?.let { host ->
-                                memeServerTokenHandler.retrieveAuthenticationToken(host)
-                                    ?.let { token ->
-                                        builder.addHeader(token.headerKey, token.headerValue)
-
-                                        media.mediaKeyDecrypted?.value?.let { key ->
-                                            val header = CryptoHeader.Decrypt.Builder()
-                                                .setScheme(CryptoScheme.Decrypt.JNCryptor)
-                                                .setPassword(key)
-                                                .build()
-
-                                            builder.addHeader(header.key, header.value)
-                                        }
-                                    }
-                            }
-                        }
+//                        if (file == null) {
+//                            media.host?.let { host ->
+//                                memeServerTokenHandler.retrieveAuthenticationToken(host)
+//                                    ?.let { token ->
+//                                        builder.addHeader(token.headerKey, token.headerValue)
+//
+//                                        media.mediaKeyDecrypted?.value?.let { key ->
+//                                            val header = CryptoHeader.Decrypt.Builder()
+//                                                .setScheme(CryptoScheme.Decrypt.JNCryptor)
+//                                                .setPassword(key)
+//                                                .build()
+//
+//                                            builder.addHeader(header.key, header.value)
+//                                        }
+//                                    }
+//                            }
+//                        }
 
                         builder.build()
                     } else {
@@ -422,9 +424,10 @@ internal fun LayoutMessageHolderBinding.setView(
 
                     if (file != null) {
                         imageLoader.load(imageView, file, options).also { disposables.add(it) }
-                    } else {
-                        imageLoader.load(imageView, url, options).also { disposables.add(it) }
                     }
+//                    else {
+//                        imageLoader.load(imageView, url, options).also { disposables.add(it) }
+//                    }
                 }.let { job ->
                     holderJobs.add(job)
                 }

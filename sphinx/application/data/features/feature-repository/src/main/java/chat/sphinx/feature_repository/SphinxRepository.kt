@@ -48,6 +48,7 @@ import chat.sphinx.example.concept_connect_manager.ConnectManagerListener
 import chat.sphinx.example.concept_connect_manager.model.OwnerInfo
 import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
 import chat.sphinx.example.wrapper_mqtt.LastReadMessages.Companion.toLastReadMap
+import chat.sphinx.example.wrapper_mqtt.Message.Companion.toMessage
 import chat.sphinx.example.wrapper_mqtt.MessageDto
 import chat.sphinx.example.wrapper_mqtt.MessageMetadata
 import chat.sphinx.example.wrapper_mqtt.MessageMetadata.Companion.toMessageMetadata
@@ -3568,8 +3569,9 @@ abstract class SphinxRepository(
         messageDbo: MessageDbo,
         reactions: List<Message>? = null,
         thread: List<Message>? = null,
+        messageMedia: MessageMediaDboWrapper? = null,
         purchaseItems: List<Message>? = null,
-        replyMessage: ReplyUUID? = null,
+        replyMessage: Message? = null,
         chat: ChatDbo? = null
     ): Message {
 
@@ -3627,70 +3629,7 @@ abstract class SphinxRepository(
         } ?: messageDboPresenterMapper.mapFrom(messageDbo)
 
         if (message.type.canContainMedia) {
-            withContext(io) {
-                queries.messageMediaGetById(message.id).executeAsOneOrNull()
-            }?.let { mediaDbo ->
-
-                mediaDbo.media_key?.let { key ->
-
-                    mediaDbo.media_key_decrypted.let { decrypted ->
-
-                        if (decrypted == null) {
-                            val response = decryptMediaKey(MediaKey(key.value))
-
-                            @Exhaustive
-                            when (response) {
-                                is Response.Error -> {
-                                    MessageMediaDboWrapper(mediaDbo).also {
-                                        it._mediaKeyDecrypted = null
-                                        it._mediaKeyDecryptionError = true
-                                        it._mediaKeyDecryptionException = response.exception
-                                        message._messageMedia = it
-                                    }
-                                }
-                                is Response.Success -> {
-
-                                    response.value
-                                        .toUnencryptedString(trim = false)
-                                        .value
-                                        .toMediaKeyDecrypted()
-                                        .let { decryptedKey ->
-
-                                            message._messageMedia = MessageMediaDboWrapper(mediaDbo)
-                                                .also {
-                                                    it._mediaKeyDecrypted = decryptedKey
-
-                                                    if (decryptedKey == null) {
-                                                        it._mediaKeyDecryptionError = true
-                                                    } else {
-
-                                                        messageLock.withLock {
-
-                                                            withContext(io) {
-                                                                queries.messageMediaUpdateMediaKeyDecrypted(
-                                                                    decryptedKey,
-                                                                    mediaDbo.id
-                                                                )
-                                                            }
-
-                                                        }
-
-                                                    }
-                                                }
-                                        }
-                                }
-                            }
-                        } else {
-                            message._messageMedia = MessageMediaDboWrapper(mediaDbo)
-                        }
-
-                    }
-
-                } ?: message.also {
-                    it._messageMedia = MessageMediaDboWrapper(mediaDbo)
-                }
-
-            } // else do nothing
+            message._messageMedia = messageMedia
         }
 
         if ((thread?.size ?: 0) > 1) {
@@ -3701,10 +3640,8 @@ abstract class SphinxRepository(
         message._purchaseItems = purchaseItems
         message._isPinned = chat?.pin_message?.value == messageDbo.uuid?.value
 
-        replyMessage?.value?.toMessageUUID()?.let { uuid ->
-            queries.messageGetToShowByUUID(uuid).executeAsOneOrNull()?.let { replyDbo ->
-                message._replyMessage = mapMessageDboAndDecryptContentIfNeeded(queries, replyDbo)
-            }
+        replyMessage?.let { replyMsg ->
+            message._replyMessage = replyMsg
         }
 
         message._remoteTimezoneIdentifier = messageDbo.remote_timezone_identifier
@@ -3744,6 +3681,7 @@ abstract class SphinxRepository(
         )
     }
 
+    @OptIn(UnencryptedDataAccess::class)
     override fun getAllMessagesToShowByChatId(
         chatId: ChatId,
         limit: Long,
@@ -3779,6 +3717,12 @@ abstract class SphinxRepository(
                             val requestResponsesMap: MutableMap<MessageUUID, Boolean?> =
                                 LinkedHashMap(listMessageDbo.size)
 
+                            val messageMediaMap: MutableMap<MessageId, MessageMediaDboWrapper?> =
+                                LinkedHashMap(listMessageDbo.size)
+
+                            val repliesMap: MutableMap<MessageUUID, Message?> =
+                                LinkedHashMap(listMessageDbo.size)
+
                             for (dbo in listMessageDbo) {
                                 dbo.uuid?.let { uuid ->
                                     reactionsMap[uuid] = ArrayList(0)
@@ -3791,7 +3735,7 @@ abstract class SphinxRepository(
                                 }
                             }
 
-                            val replyUUIDs = reactionsMap.keys.map { ReplyUUID(it.value) }
+                            val reactionsUUIDs = reactionsMap.keys.map { ReplyUUID(it.value) }
 
                             val threadUUID = threadMap.keys.map { ThreadUUID(it.value) }
 
@@ -3799,6 +3743,11 @@ abstract class SphinxRepository(
                                 purchaseItemsMap.keys.map { MessageMUID(it.value) }
 
                             val memberRequestsUUID = listMessageDbo.filter({ it.type.isMemberRequest() && it.uuid != null }).map { ReplyUUID(it.uuid!!.value) }
+
+                            val messagesMediaIds: MutableList<MessageId> = mutableListOf()
+                            messagesMediaIds.addAll(listMessageDbo.filter({ it.type.canContainMedia }).map { it.id })
+
+                            val repliesUUIDs = listMessageDbo.filter({ it.reply_uuid != null }).map { it.reply_uuid?.value?.toMessageUUID() }
 
                             memberRequestsUUID.chunked(500).forEach { chunkedIds ->
                                 queries.messageGetAllRequestResponseItemsByReplyUUID(
@@ -3814,7 +3763,7 @@ abstract class SphinxRepository(
                                     }
                             }
 
-                            replyUUIDs.chunked(500).forEach { chunkedIds ->
+                            reactionsUUIDs.chunked(500).forEach { chunkedIds ->
                                 queries.messageGetAllReactionsByUUID(
                                     chatId,
                                     chunkedIds,
@@ -3833,22 +3782,15 @@ abstract class SphinxRepository(
                                     }
                             }
 
+                            val threadMessagesDbo: MutableList<MessageDbo> = mutableListOf()
                             threadUUID.chunked(500).forEach { chunkedThreadUUID ->
                                 queries.messageGetAllMessagesByThreadUUID(
                                     chatId,
                                     chunkedThreadUUID
                                 ).executeAsList()
                                     .let { response ->
-                                        response.forEach { dbo ->
-                                            dbo.thread_uuid?.let { uuid ->
-                                                threadMap[MessageUUID(uuid.value)]?.add(
-                                                    mapMessageDboAndDecryptContentIfNeeded(
-                                                        queries,
-                                                        dbo
-                                                    )
-                                                )
-                                            }
-                                        }
+                                        threadMessagesDbo.addAll(response)
+                                        messagesMediaIds.addAll(response.filter({ it.type.canContainMedia }).map { it.id })
                                     }
                             }
 
@@ -3879,6 +3821,73 @@ abstract class SphinxRepository(
                                     }
                             }
 
+                            messagesMediaIds.chunked(500).forEach { messageIds ->
+                                queries.messageMediaGetAllById(messageIds).executeAsList()
+                                    .let { response ->
+                                        response.forEach { mediaDbo ->
+                                            mediaDbo.media_key?.let { key ->
+                                                mediaDbo.media_key_decrypted.let { decrypted ->
+                                                    if (decrypted == null) {
+                                                        val decryptResponse = decryptMediaKey(MediaKey(key.value))
+
+                                                        @Exhaustive
+                                                        when (decryptResponse) {
+                                                            is Response.Error -> {
+                                                                messageMediaMap[mediaDbo.id] = MessageMediaDboWrapper(mediaDbo).also {
+                                                                    it._mediaKeyDecrypted = null
+                                                                    it._mediaKeyDecryptionError = true
+                                                                    it._mediaKeyDecryptionException = decryptResponse.exception
+                                                                }
+                                                            }
+                                                            is Response.Success -> {
+                                                                decryptResponse.value
+                                                                    .toUnencryptedString(trim = false)
+                                                                    .value
+                                                                    .toMediaKeyDecrypted()
+                                                                    .let { decryptedKey ->
+                                                                        messageMediaMap[mediaDbo.id] = MessageMediaDboWrapper(mediaDbo)
+                                                                            .also {
+                                                                                it._mediaKeyDecrypted = decryptedKey
+
+                                                                                if (decryptedKey == null) {
+                                                                                    it._mediaKeyDecryptionError = true
+                                                                                } else {
+
+                                                                                    messageLock.withLock {
+                                                                                        withContext(io) {
+                                                                                            queries.messageMediaUpdateMediaKeyDecrypted(
+                                                                                                decryptedKey,
+                                                                                                mediaDbo.id
+                                                                                            )
+                                                                                        }
+                                                                                    }
+                                                                                }
+                                                                            }
+                                                                    }
+                                                            }
+                                                        }
+                                                    } else {
+                                                        messageMediaMap[mediaDbo.id] = MessageMediaDboWrapper(mediaDbo)
+                                                    }
+                                                }
+                                            } ?: run {
+                                                messageMediaMap[mediaDbo.id] = MessageMediaDboWrapper(mediaDbo)
+                                            }
+                                        }
+                                }
+                            }
+
+                            repliesUUIDs.chunked(500).forEach {  messageUUIDs ->
+                                queries.messageGetAllByUUID(messageUUIDs).executeAsList()
+                                    .let { response ->
+                                        response.forEach { messageDbo ->
+                                            messageDbo.uuid?.let {
+                                                repliesMap[it] = mapMessageDboAndDecryptContentIfNeeded(queries, messageDbo)
+                                            }
+                                    }
+                                }
+                            }
+
                             val chatDbo = queries.chatGetById(chatId).executeAsOneOrNull()
                             var isMyTribe = false
 
@@ -3901,14 +3910,27 @@ abstract class SphinxRepository(
                                 }
                             }
 
+                            threadMessagesDbo.forEach { dbo ->
+                                dbo.thread_uuid?.let { uuid ->
+                                    threadMap[MessageUUID(uuid.value)]?.add(
+                                        mapMessageDboAndDecryptContentIfNeeded(
+                                            queries,
+                                            dbo,
+                                            messageMedia = messageMediaMap[dbo.id]
+                                        )
+                                    )
+                                }
+                            }
+
                             filteredMemberRequests.reversed().map { dbo ->
                                 mapMessageDboAndDecryptContentIfNeeded(
                                     queries,
                                     dbo,
                                     dbo.uuid?.let { reactionsMap[it] },
                                     dbo.uuid?.let { threadMap[it] },
+                                    messageMediaMap[dbo.id],
                                     dbo.muid?.let { purchaseItemsMap[it] },
-                                    dbo.reply_uuid,
+                                    dbo.reply_uuid?.value?.toMessageUUID()?.let { repliesMap[it] },
                                     chatDbo
                                 )
                             }

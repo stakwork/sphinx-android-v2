@@ -884,12 +884,20 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                             },
                             accountOwner = { owner },
                             urlLinkPreviewsEnabled = areUrlLinkPreviewsEnabled(),
-                            previewProvider = { handleLinkPreview(it) },
+                            previewProvider = { link, itemIndex ->
+                                delay(500L)
+
+                                if (itemIndex in _visibleRange.value) {
+                                    handleLinkPreview(link)
+                                } else {
+                                    null
+                                }
+                            },
                             paidTextMessageContentProvider = { messageCallback ->
                                 handlePaidTextMessageContent(messageCallback)
                             },
                             onBindDownloadMedia = { itemIndex ->
-                                viewModelScope.launch() {
+                                viewModelScope.launch {
                                     delay(500L)
 
                                     if (itemIndex in _visibleRange.value) {
@@ -902,13 +910,20 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                                     }
                                 }
                             },
-                            onBindThreadDownloadMedia = {
+                            onBindThreadDownloadMedia = { itemIndex ->
                                 message.thread?.first()?.let { lastReplyMessage ->
-                                    val job = repositoryMedia.downloadMediaIfApplicable(lastReplyMessage, sent)
-                                    activeDownloadJobs.add(job)
+                                    viewModelScope.launch() {
+                                        if (itemIndex in _visibleRange.value) {
+                                            val job = repositoryMedia.downloadMediaIfApplicable(
+                                                lastReplyMessage,
+                                                sent
+                                            )
+                                            activeDownloadJobs.add(job)
 
-                                    job.invokeOnCompletion {
-                                        activeDownloadJobs.remove(job)
+                                            job.invokeOnCompletion {
+                                                activeDownloadJobs.remove(job)
+                                            }
+                                        }
                                     }
                                 }
                             },
@@ -967,7 +982,15 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                             },
                             accountOwner = { owner },
                             urlLinkPreviewsEnabled = areUrlLinkPreviewsEnabled(),
-                            previewProvider = { link -> handleLinkPreview(link) },
+                            previewProvider = { link, itemIndex ->
+                                delay(500L)
+
+                                if (itemIndex in _visibleRange.value) {
+                                    handleLinkPreview(link)
+                                } else {
+                                    null
+                                }
+                            },
                             paidTextMessageContentProvider = { messageCallback ->
                                 handlePaidTextMessageContent(messageCallback)
                             },
@@ -985,13 +1008,20 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                                     }
                                 }
                             },
-                            onBindThreadDownloadMedia = {
+                            onBindThreadDownloadMedia = { itemIndex ->
                                 message.thread?.first()?.let { lastReplyMessage ->
-                                    val job = repositoryMedia.downloadMediaIfApplicable(lastReplyMessage, sent)
-                                    activeDownloadJobs.add(job)
+                                    viewModelScope.launch() {
+                                        if (itemIndex in _visibleRange.value) {
+                                            val job = repositoryMedia.downloadMediaIfApplicable(
+                                                lastReplyMessage,
+                                                sent
+                                            )
+                                            activeDownloadJobs.add(job)
 
-                                    job.invokeOnCompletion {
-                                        activeDownloadJobs.remove(job)
+                                            job.invokeOnCompletion {
+                                                activeDownloadJobs.remove(job)
+                                            }
+                                        }
                                     }
                                 }
                             },

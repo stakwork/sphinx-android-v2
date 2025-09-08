@@ -82,10 +82,10 @@ internal sealed class MessageHolderViewState(
     private val messageSenderInfo: (Message) -> Triple<PhotoUrl?, ContactAlias?, String>?,
     private val accountOwner: () -> Contact,
     private val urlLinkPreviewsEnabled: Boolean,
-    private val previewProvider: suspend (link: MessageLinkPreview) -> LayoutState.Bubble.ContainerThird.LinkPreview?,
+    private val previewProvider: suspend (link: MessageLinkPreview, index: Int) -> LayoutState.Bubble.ContainerThird.LinkPreview?,
     private val paidTextAttachmentContentProvider: suspend (message: Message) -> LayoutState.Bubble.ContainerThird.Message?,
     private val onBindDownloadMedia: (index: Int) -> Unit,
-    private val onBindThreadDownloadMedia: () -> Unit,
+    private val onBindThreadDownloadMedia: (index: Int) -> Unit,
     private val memberTimezoneIdentifier: String?,
     val spaceLeft: Int? = null,
     val spaceRight: Int? = null,
@@ -674,7 +674,7 @@ internal sealed class MessageHolderViewState(
     suspend fun retrieveLinkPreview(): LayoutState.Bubble.ContainerThird.LinkPreview? {
         return messageLinkPreview?.let { nnPreview ->
             linkPreviewLayoutState ?: previewLock.withLock {
-                linkPreviewLayoutState ?: previewProvider.invoke(nnPreview)
+                linkPreviewLayoutState ?: previewProvider.invoke(nnPreview, index)
                     ?.also { linkPreviewLayoutState = it }
             }
         }
@@ -767,7 +767,7 @@ internal sealed class MessageHolderViewState(
 
                 if (!pendingPayment && imageUrlAndMedia?.second?.localFile == null) {
                     if (isThread) {
-                        onBindThreadDownloadMedia.invoke()
+                        onBindThreadDownloadMedia.invoke(index)
                     } else {
                         onBindDownloadMedia.invoke(index)
                     }
@@ -804,7 +804,7 @@ internal sealed class MessageHolderViewState(
                     // data to view.
                     if (!pendingPayment) {
                         if (isThread) {
-                            onBindThreadDownloadMedia.invoke()
+                            onBindThreadDownloadMedia.invoke(index)
                         } else {
                             onBindDownloadMedia.invoke(index)
                         }
@@ -848,7 +848,7 @@ internal sealed class MessageHolderViewState(
 
                     if (!pendingPayment) {
                         if (isThread) {
-                            onBindThreadDownloadMedia.invoke()
+                            onBindThreadDownloadMedia.invoke(index)
                         } else {
                             onBindDownloadMedia.invoke(index)
                         }
@@ -886,7 +886,7 @@ internal sealed class MessageHolderViewState(
                     // data to view.
                     if (!pendingPayment) {
                         if (isThread) {
-                            onBindThreadDownloadMedia.invoke()
+                            onBindThreadDownloadMedia.invoke(index)
                         } else {
                             onBindDownloadMedia.invoke(index)
                         }
@@ -915,10 +915,10 @@ internal sealed class MessageHolderViewState(
         messageSenderInfo: (Message) -> Triple<PhotoUrl?, ContactAlias?, String>,
         accountOwner: () -> Contact,
         urlLinkPreviewsEnabled: Boolean,
-        previewProvider: suspend (link: MessageLinkPreview) -> LayoutState.Bubble.ContainerThird.LinkPreview?,
+        previewProvider: suspend (link: MessageLinkPreview, index: Int) -> LayoutState.Bubble.ContainerThird.LinkPreview?,
         paidTextMessageContentProvider: suspend (message: Message) -> LayoutState.Bubble.ContainerThird.Message?,
         onBindDownloadMedia: (index: Int) -> Unit,
-        onBindThreadDownloadMedia: () -> Unit,
+        onBindThreadDownloadMedia: (index: Int) -> Unit,
         memberTimezoneIdentifier: String?,
         spaceLeft: Int,
         spaceRight: Int,
@@ -957,10 +957,10 @@ internal sealed class MessageHolderViewState(
         messageSenderInfo: (Message) -> Triple<PhotoUrl?, ContactAlias?, String>,
         accountOwner: () -> Contact,
         urlLinkPreviewsEnabled: Boolean,
-        previewProvider: suspend (link: MessageLinkPreview) -> LayoutState.Bubble.ContainerThird.LinkPreview?,
+        previewProvider: suspend (link: MessageLinkPreview, index: Int) -> LayoutState.Bubble.ContainerThird.LinkPreview?,
         paidTextMessageContentProvider: suspend (message: Message) -> LayoutState.Bubble.ContainerThird.Message?,
         onBindDownloadMedia: (index: Int) -> Unit,
-        onBindThreadDownloadMedia: () -> Unit,
+        onBindThreadDownloadMedia: (index: Int) -> Unit,
         memberTimezoneIdentifier: String?,
         spaceLeft: Int,
         spaceRight: Int,
@@ -1011,7 +1011,7 @@ internal sealed class MessageHolderViewState(
         messageSenderInfo = { null },
         accountOwner,
         false,
-        previewProvider = { null },
+        previewProvider = { _, _ -> null },
         paidTextAttachmentContentProvider = { null },
         onBindDownloadMedia = {},
         onBindThreadDownloadMedia = {},
@@ -1043,7 +1043,7 @@ internal sealed class MessageHolderViewState(
         messageSenderInfo,
         accountOwner,
         false,
-        { null },
+        previewProvider = { _, _ -> null },
         { null },
         {},
         {},
@@ -1092,7 +1092,7 @@ internal sealed class MessageHolderViewState(
         messageSenderInfo,
         accountOwner,
         false,
-        { null },
+        previewProvider = { _, _ -> null },
         { null },
         {},
         {},

@@ -86,9 +86,9 @@ class SphinxCoreDBImpl(
             "PRAGMA foreign_keys = ON",
             "PRAGMA journal_mode = WAL",
             "PRAGMA synchronous = NORMAL",
-            "PRAGMA cache_size = 10000",
+            "PRAGMA cache_size = -10000",
             "PRAGMA temp_store = MEMORY",
-            "PRAGMA mmap_size = 268435456",
+            "PRAGMA mmap_size = 67108864",
             "PRAGMA auto_vacuum = INCREMENTAL"
         )
 

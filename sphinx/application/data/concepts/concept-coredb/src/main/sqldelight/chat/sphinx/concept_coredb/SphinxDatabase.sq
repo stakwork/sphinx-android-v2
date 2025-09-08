@@ -838,6 +838,10 @@ CREATE TABLE messageDbo(
     remote_timezone_identifier  TEXT            AS RemoteTimezoneIdentifier DEFAULT NULL
 );
 
+messageGetAllCount:
+SELECT COUNT(*)
+FROM messageDbo;
+
 messageGetAllReactionsByUUID:
 SELECT *
 FROM messageDbo
@@ -918,6 +922,13 @@ messageGetToShowByUUID:
 SELECT *
 FROM messageDbo
 WHERE uuid = ?
+AND type IN(0, 6)
+LIMIT 1;
+
+messageGetAllToShowByUUID:
+SELECT *
+FROM messageDbo
+WHERE uuid IN ?
 AND type IN(0, 6)
 LIMIT 1;
 

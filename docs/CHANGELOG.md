@@ -1,5 +1,9 @@
 # ChangeLog
 
+## Version 1.0.0-alpha91 (2025-09-09)
+- Fixes issue related with message media
+- Improves message sending process
+
 ## Version 1.0.0-alpha90 (2025-09-08)
 - Improves chat loading performance
 - Improves message media and link preview loading performance

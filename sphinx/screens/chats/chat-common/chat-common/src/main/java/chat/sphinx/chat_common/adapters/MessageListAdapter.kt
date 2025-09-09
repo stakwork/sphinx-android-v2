@@ -218,7 +218,7 @@ internal class MessageListAdapter<ARGS : NavArgs>(
         }
     }
 
-    private suspend fun scrollToPreviousPositionWithCallback(
+    private fun scrollToPreviousPositionWithCallback(
         newListSize: Int,
         callback: (() -> Unit)? = null,
     ) {
@@ -241,7 +241,6 @@ internal class MessageListAdapter<ARGS : NavArgs>(
         val isLoadingMore = !diffCallback.areItemsTheSame(firstItemBeforeUpdate, firstItemAfterUpdate)
         val newItemsAdded = newListSize - currentListSize
         val newTargetPosition = currentFirstVisible + (if (isLoadingMore) newItemsAdded else 0)
-
 
         if (diffToBottom <= 1) {
             recyclerView.post {

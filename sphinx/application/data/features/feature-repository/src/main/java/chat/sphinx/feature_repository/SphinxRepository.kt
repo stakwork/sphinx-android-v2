@@ -2199,17 +2199,13 @@ abstract class SphinxRepository(
         timezoneUpdated: TimezoneUpdated,
         chatId: ChatId
     ) {
-        val queries = coreDB.getSphinxDatabaseQueries()
+        applicationScope.launch(io) {
+            val queries = coreDB.getSphinxDatabaseQueries()
 
-        try {
-            chatLock.withLock {
-                queries.chatUpdateTimezoneUpdated(
-                    timezone_updated = timezoneUpdated,
-                    id = chatId
-                )
-            }
-        } catch (ex: Exception) {
-            LOG.e(TAG, ex.printStackTrace().toString(), ex)
+            queries.chatUpdateTimezoneUpdated(
+                timezone_updated = timezoneUpdated,
+                id = chatId
+            )
         }
     }
 
@@ -4459,6 +4455,70 @@ abstract class SphinxRepository(
                 null
             }
 
+            val dateTime = DateTime.nowUTC().toDateTime()
+
+            val provisionalMessageId: MessageId? = chat?.let { chatDbo ->
+                val currentProvisionalId: MessageId? = queries.messageGetLowestProvisionalMessageId().executeAsOneOrNull()
+                val provisionalId = MessageId((currentProvisionalId?.value ?: 0L) - 1)
+
+                queries.transaction {
+                    if (media != null) {
+                        queries.messageMediaUpsert(
+                            null,
+                            media.mediaType,
+                            MediaToken.PROVISIONAL_TOKEN,
+                            null,
+                            provisionalId,
+                            chat.id,
+                            media.file,
+                            sendMessage.attachmentInfo?.fileName
+                        )
+                    }
+
+                    queries.messageUpsert(
+                        MessageStatus.Pending,
+                        Seen.True,
+                        sendMessage.senderAlias ?: chatDbo.myAlias?.value?.toSenderAlias(),
+                        chatDbo.myPhotoUrl,
+                        null,
+                        replyUUID,
+                        messageType,
+                        null,
+                        null,
+                        Push.False,
+                        null,
+                        threadUUID,
+                        null,
+                        null,
+                        provisionalId,
+                        null,
+                        chatDbo.id,
+                        owner.id,
+                        sendMessage.contactId,
+                        sendMessage.tribePaymentAmount ?: sendMessage.paidMessagePrice ?: messagePrice ,
+                        null,
+                        null,
+                        dateTime,
+                        null,
+                        null,
+                        message?.toMessageContentDecrypted() ?: sendMessage.text?.toMessageContentDecrypted(),
+                        null,
+                        false.toFlagged(),
+                        if (chat.timezoneEnabled?.isTrue() == true) chat.timezoneIdentifier?.value?.toRemoteTimezoneIdentifier() else null
+                    )
+
+                    updateChatNewLatestMessage(
+                        provisionalId,
+                        chatDbo.id,
+                        dateTime,
+                        latestMessageUpdatedTimeMap,
+                        queries,
+                        forceUpdateOnSend = true
+                    )
+                }
+                provisionalId
+            }
+
             if (metadata != null && chat?.id != null) {
                 updateTimezoneFlag(
                     timezoneUpdated = TimezoneUpdated.False,
@@ -4466,86 +4526,14 @@ abstract class SphinxRepository(
                 )
             }
 
-            val dateTime = DateTime.nowUTC().toDateTime()
-
-            val provisionalMessageId: MessageId? = chat?.let { chatDbo ->
-                // Build provisional message and insert
-                provisionalMessageLock.withLock {
-
-                    val currentProvisionalId: MessageId? = withContext(io) {
-                        queries.messageGetLowestProvisionalMessageId().executeAsOneOrNull()
-                    }
-                    val provisionalId = MessageId((currentProvisionalId?.value ?: 0L) - 1)
-
-                    withContext(io) {
-                        queries.transaction {
-                            if (media != null) {
-                                queries.messageMediaUpsert(
-                                    null,
-                                    media.mediaType,
-                                    MediaToken.PROVISIONAL_TOKEN,
-                                    null,
-                                    provisionalId,
-                                    chat.id,
-                                    media.file,
-                                    sendMessage.attachmentInfo?.fileName
-                                )
-                            }
-
-                            queries.messageUpsert(
-                                MessageStatus.Pending,
-                                Seen.True,
-                                sendMessage.senderAlias ?: chatDbo.myAlias?.value?.toSenderAlias(),
-                                chatDbo.myPhotoUrl,
-                                null,
-                                replyUUID,
-                                messageType,
-                                null,
-                                null,
-                                Push.False,
-                                null,
-                                threadUUID,
-                                null,
-                                null,
-                                provisionalId,
-                                null,
-                                chatDbo.id,
-                                owner.id,
-                                sendMessage.contactId,
-                                sendMessage.tribePaymentAmount ?: sendMessage.paidMessagePrice ?: messagePrice ,
-                                null,
-                                null,
-                                dateTime,
-                                null,
-                                null,
-                                message?.toMessageContentDecrypted() ?: sendMessage.text?.toMessageContentDecrypted(),
-                                null,
-                                false.toFlagged(),
-                                if (chat.timezoneEnabled?.isTrue() == true) chat.timezoneIdentifier?.value?.toRemoteTimezoneIdentifier() else null
-                            )
-
-                            updateChatNewLatestMessage(
-                                provisionalId,
-                                chatDbo.id,
-                                dateTime,
-                                latestMessageUpdatedTimeMap,
-                                queries,
-                                forceUpdateOnSend = true
-                            )
-                        }
-                        provisionalId
-                    }
-                }
-            }
+            delay(250L)
 
             if (contact != null || chat != null) {
                 if (media != null) {
                     val password = PasswordGenerator(MEDIA_KEY_SIZE).password
                     val token = memeServerTokenHandler.retrieveAuthenticationToken(MediaHost.DEFAULT)
                             ?: provisionalMessageId?.let { provId ->
-                                withContext(io) {
-                                    queries.messageUpdateStatus(MessageStatus.Failed, provId)
-                                }
+                                queries.messageUpdateStatus(MessageStatus.Failed, provId)
                                 return@launch
                             } ?: return@launch
 
@@ -4564,9 +4552,7 @@ abstract class SphinxRepository(
                             LOG.e(TAG, response.message, response.exception)
 
                             provisionalMessageId?.let { provId ->
-                                withContext(io) {
-                                    queries.messageUpdateStatus(MessageStatus.Failed, provId)
-                                }
+                                queries.messageUpdateStatus(MessageStatus.Failed, provId)
                             }
                             return@launch
                         }

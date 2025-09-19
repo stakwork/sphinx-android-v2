@@ -1,0 +1,4 @@
+import chat.sphinx.wrapper_chat.OwnedTribe;
+
+
+ALTER TABLE chatDbo ADD COLUMN is_my_tribe INTEGER AS OwnedTribe DEFAULT 0;

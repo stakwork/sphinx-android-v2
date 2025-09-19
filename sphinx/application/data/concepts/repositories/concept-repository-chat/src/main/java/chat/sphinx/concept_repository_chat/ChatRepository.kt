@@ -8,6 +8,7 @@ import chat.sphinx.kotlin_response.ResponseError
 import chat.sphinx.wrapper_chat.Chat
 import chat.sphinx.wrapper_chat.ChatAlias
 import chat.sphinx.wrapper_chat.NotificationLevel
+import chat.sphinx.wrapper_chat.OwnedTribe
 import chat.sphinx.wrapper_common.chat.ChatUUID
 import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_common.dashboard.ContactId
@@ -106,6 +107,11 @@ interface ChatRepository {
     suspend fun updateChatMyAlias(
         chatId: ChatId,
         chatAlias: ChatAlias,
+    )
+
+    suspend fun updateChatOwned(
+        chatId: ChatId,
+        ownedTribe: OwnedTribe
     )
 
     suspend fun updateChatMyPhotoUrl(

@@ -13,6 +13,7 @@ import chat.sphinx.wrapper_chat.ChatStatus;
 import chat.sphinx.wrapper_chat.ChatType;
 import chat.sphinx.wrapper_chat.ChatUnlisted;
 import chat.sphinx.wrapper_chat.NotificationLevel;
+import chat.sphinx.wrapper_chat.OwnedTribe;
 import chat.sphinx.wrapper_chat.SecondBrainUrl;
 import chat.sphinx.wrapper_chat.TimezoneEnabled;
 import chat.sphinx.wrapper_chat.TimezoneIdentifier;
@@ -172,7 +173,8 @@ CREATE TABLE chatDbo(
     timezone_enabled            INTEGER         AS TimezoneEnabled DEFAULT 1,
     timezone_identifier         TEXT            AS TimezoneIdentifier DEFAULT NULL,
     remote_timezone_identifier  TEXT            AS RemoteTimezoneIdentifier DEFAULT NULL,
-    timezone_updated            INTEGER         AS TimezoneUpdated DEFAULT 1
+    timezone_updated            INTEGER         AS TimezoneUpdated DEFAULT 1,
+    is_my_tribe                 INTEGER         AS OwnedTribe DEFAULT 0
 );
 
 chatUpdateNameAndStatus:
@@ -189,6 +191,11 @@ WHERE id = ?;
 chatUpdateMuted:
 UPDATE chatDbo
 SET is_muted = :muted
+WHERE id = ?;
+
+chatUpdateOwnedTribe:
+UPDATE chatDbo
+SET is_my_tribe = :is_my_tribe
 WHERE id = ?;
 
 chatUpdateNotificationLevel:
@@ -303,7 +310,8 @@ chatUpsert {
         my_alias = :my_alias,
         pending_contact_ids = :pending_contact_ids,
         notify = :notify,
-        pin_message = :pin_message
+        pin_message = :pin_message,
+        is_my_tribe = :is_my_tribe
     WHERE id = :id;
 
     INSERT OR IGNORE INTO chatDbo(
@@ -329,7 +337,8 @@ chatUpsert {
         my_alias,
         pending_contact_ids,
         notify,
-        pin_message
+        pin_message,
+        is_my_tribe
     )
     VALUES (
         :id,
@@ -354,7 +363,8 @@ chatUpsert {
         :my_alias,
         :pending_contact_ids,
         :notify,
-        :pin_message
+        :pin_message,
+        :is_my_tribe
     );
 }
 

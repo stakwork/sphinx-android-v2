@@ -9,7 +9,7 @@ import chat.sphinx.example.wrapper_mqtt.TransactionDto
 import chat.sphinx.transactions.navigation.TransactionsNavigator
 import chat.sphinx.transactions.ui.viewstate.TransactionHolderViewState
 import chat.sphinx.wrapper_chat.isConversation
-import chat.sphinx.wrapper_chat.isTribeNotOwnedByAccount
+import chat.sphinx.wrapper_chat.isTrue
 import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_common.dashboard.ContactId
 import chat.sphinx.wrapper_common.message.MessageUUID
@@ -182,7 +182,7 @@ internal class TransactionsViewModel @Inject constructor(
         chatRepository.getAllChatsByIds(chatIds).let { response ->
             response.forEach { chat ->
                 if (
-                    (chat.isTribeNotOwnedByAccount(owner.nodePubKey) || chat.isConversation()) &&
+                    (chat.ownedTribe?.isTrue() == true || chat.isConversation()) &&
                     chat.contactIds.size == 2
                 ) {
                     chatsIdsMap[chat.id]?.let { transactionIds ->

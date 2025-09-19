@@ -14,7 +14,7 @@ import chat.sphinx.highlighting_tool.replacingMarkdown
 import chat.sphinx.wrapper_chat.Chat
 import chat.sphinx.wrapper_chat.isConversation
 import chat.sphinx.wrapper_chat.isTribe
-import chat.sphinx.wrapper_chat.isTribeOwnedByAccount
+import chat.sphinx.wrapper_chat.isTrue
 import chat.sphinx.wrapper_common.*
 import chat.sphinx.wrapper_common.dashboard.ContactId
 import chat.sphinx.wrapper_common.lightning.Sat
@@ -649,11 +649,7 @@ internal sealed class MessageHolderViewState(
             } else {
                 LayoutState.GroupActionIndicator(
                     actionType = type,
-                    isAdminView = if (chat.ownerPubKey == null || accountOwner().nodePubKey == null) {
-                        false
-                    } else {
-                        chat.ownerPubKey == accountOwner().nodePubKey
-                    },
+                    isAdminView = chat.ownedTribe?.isTrue() == true,
                     chatType = chat.type,
                     subjectName = message.senderAlias?.value ?: ""
                 )
@@ -728,7 +724,7 @@ internal sealed class MessageHolderViewState(
                 list.add(MenuItemState.Resend)
             }
 
-            if ((this is Sent || this is MessageOnlyTextHolderViewState.Sent) || chat.isTribeOwnedByAccount(accountOwner().nodePubKey)) {
+            if ((this is Sent || this is MessageOnlyTextHolderViewState.Sent) || chat.ownedTribe?.isTrue() == true) {
                 list.add(MenuItemState.Delete)
             }
 
@@ -736,7 +732,7 @@ internal sealed class MessageHolderViewState(
                 list.add(MenuItemState.Flag)
             }
 
-            if(chat.isTribeOwnedByAccount(accountOwner().nodePubKey)) {
+            if(chat.ownedTribe?.isTrue() == true) {
                 if (nnMessage.isPinAllowed(chat.pinedMessage)) {
                     list.add(MenuItemState.PinMessage)
                 }

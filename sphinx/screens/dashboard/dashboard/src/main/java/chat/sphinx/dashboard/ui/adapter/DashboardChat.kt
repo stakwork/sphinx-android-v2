@@ -9,7 +9,7 @@ import chat.sphinx.wrapper_chat.Chat
 import chat.sphinx.wrapper_chat.getColorKey
 import chat.sphinx.wrapper_chat.isConversation
 import chat.sphinx.wrapper_chat.isTribe
-import chat.sphinx.wrapper_chat.isTribeOwnedByAccount
+import chat.sphinx.wrapper_chat.isTrue
 import chat.sphinx.wrapper_common.DateTime
 import chat.sphinx.wrapper_common.PhotoUrl
 import chat.sphinx.wrapper_common.chatTimeFormat
@@ -89,8 +89,8 @@ sealed class DashboardChat {
 
         abstract fun getMessageSender(message: Message, context: Context, withColon: Boolean = true): String
 
-        fun isMyTribe(owner: Contact?): Boolean =
-            chat.isTribeOwnedByAccount(owner?.nodePubKey)
+        fun isMyTribe(): Boolean =
+            chat.ownedTribe?.isTrue() == true
 
         override fun hasUnseenMessages(): Boolean {
             val ownerId: ContactId? = chat.contactIds.firstOrNull()
@@ -148,7 +148,7 @@ sealed class DashboardChat {
                     )
                 }
                 message.type.isMemberReject() -> {
-                    if (isMyTribe(owner)) {
+                    if (isMyTribe()) {
                         context.getString(
                             R.string.last_message_description_declined_request_from,
                             getMessageSender(message, context, false)
@@ -158,7 +158,7 @@ sealed class DashboardChat {
                     }
                 }
                 message.type.isMemberApprove() -> {
-                    if (isMyTribe(owner)) {
+                    if (isMyTribe()) {
                         context.getString(
                             R.string.last_message_description_approved_request_from,
                             getMessageSender(message, context, false)

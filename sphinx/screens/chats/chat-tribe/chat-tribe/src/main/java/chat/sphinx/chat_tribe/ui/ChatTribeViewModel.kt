@@ -59,6 +59,7 @@ import com.squareup.moshi.Moshi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.matthewnelson.android_feature_navigation.util.navArgs
 import io.matthewnelson.android_feature_viewmodel.submitSideEffect
+import io.matthewnelson.android_feature_viewmodel.updateViewState
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
 import io.matthewnelson.concept_media_cache.MediaCacheHandler
 import io.matthewnelson.concept_views.viewstate.ViewStateContainer
@@ -93,7 +94,7 @@ class ChatTribeViewModel @Inject constructor(
     cameraViewModelCoordinator: ViewModelCoordinator<CameraRequest, CameraResponse>,
     linkPreviewHandler: LinkPreviewHandler,
     memeInputStreamHandler: MemeInputStreamHandler,
-    connectManagerRepository: ConnectManagerRepository,
+    val connectManagerRepository: ConnectManagerRepository,
     moshi: Moshi,
     LOG: SphinxLogger,
 ): ChatViewModel<ChatTribeFragmentArgs>(
@@ -313,7 +314,7 @@ class ChatTribeViewModel @Inject constructor(
                 chat?.let { nnChat ->
                     withContext(dispatchers.mainImmediate) updateUI1@ {
                         moreOptionsMenuStateFlow.value =
-                            if (nnChat.isTribeOwnedByAccount(owner.nodePubKey) || !nnChat.privateTribe.isTrue()) {
+                            if (nnChat.ownedTribe?.isTrue() == true || !nnChat.privateTribe.isTrue()) {
                                 MoreMenuOptionsViewState.ShareTribeLinkAvailable
                             } else {
                                 MoreMenuOptionsViewState.ShareTribeLinkDisable
@@ -347,7 +348,35 @@ class ChatTribeViewModel @Inject constructor(
             }
         }
 
-//        getAllLeaderboards()
+        viewModelScope.launch(mainImmediate) {
+            loadOwnerRole()
+            updateOwnerRole()
+        }
+    }
+
+    private suspend fun updateOwnerRole(){
+        connectManagerRepository.tribeMembersState.collect { tribeMembersList ->
+            tribeMembersList?.let {
+                chatRepository.updateChatOwned(
+                    chatId,
+                    OwnedTribe.True
+                )
+            }
+        }
+    }
+
+    private suspend fun loadOwnerRole() {
+        val chat = chatRepository.getChatById(ChatId(args.argChatId)).firstOrNull()
+        val tribeServerPubKey = connectManagerRepository.getTribeServerPubKey()
+
+        chat?.uuid?.value?.let { tribePubKey ->
+            if (tribeServerPubKey != null) {
+                connectManagerRepository.getTribeMembers(
+                    tribeServerPubKey,
+                    tribePubKey
+                )
+            }
+        }
     }
 
     override suspend fun processMemberRequest(
@@ -650,7 +679,7 @@ class ChatTribeViewModel @Inject constructor(
         var pinnedMessageData: PinedMessageDataViewState = PinedMessageDataViewState.Idle
 
         val owner = getOwner()
-        val isOwner = getChat().isTribeOwnedByAccount(getOwner().nodePubKey)
+        val isOwner = getChat().ownedTribe?.isTrue() == true
         val messageContent = message.retrieveTextToShow()
         val senderAlias = if (isOwner) owner.alias?.value else message.senderAlias?.value
         val senderPic = if (isOwner) owner.photoUrl else message.senderPic

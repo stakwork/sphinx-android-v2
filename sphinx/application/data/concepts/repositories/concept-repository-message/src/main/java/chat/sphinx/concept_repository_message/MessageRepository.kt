@@ -6,6 +6,7 @@ import chat.sphinx.concept_repository_message.model.SendPayment
 import chat.sphinx.kotlin_response.Response
 import chat.sphinx.kotlin_response.ResponseError
 import chat.sphinx.wrapper_chat.Chat
+import chat.sphinx.wrapper_chat.OwnedTribe
 import chat.sphinx.wrapper_common.DateTime
 import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_common.feed.FeedId

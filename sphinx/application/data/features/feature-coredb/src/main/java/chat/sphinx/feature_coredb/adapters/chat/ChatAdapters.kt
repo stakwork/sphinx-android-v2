@@ -179,3 +179,10 @@ internal class TimezoneUpdatedAdapter : ColumnAdapter<TimezoneUpdated, Long> {
 
     override fun encode(value: TimezoneUpdated): Long = value.value.toLong()
 }
+
+internal class OwnedTribeAdapter : ColumnAdapter<OwnedTribe, Long> {
+    override fun decode(databaseValue: Long): OwnedTribe =
+        databaseValue.toInt().toOwnedTribe()
+
+    override fun encode(value: OwnedTribe): Long = value.value.toLong()
+}

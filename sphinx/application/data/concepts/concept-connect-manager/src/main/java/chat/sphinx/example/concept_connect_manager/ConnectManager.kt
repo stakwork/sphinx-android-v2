@@ -213,11 +213,11 @@ interface ConnectManagerListener {
     )
     fun onRestoreMessages()
     fun onUpsertTribes(
-        tribeList: List<Pair<String?, Boolean>>,
+        tribeList: List<Triple<String?, Int, Boolean>>,
         isProductionEnvironment: Boolean,
         callback: (() -> Unit)? = null
-    ) // Sender, FromMe
-//    fun onRestoreNextPageMessages(highestIndex: Long, limit: Int)
+    )
+
     fun onNewBalance(balance: Long)
     fun onSignedChallenge(sign: String)
     fun onInitialTribe(tribe: String, isProductionEnvironment: Boolean)

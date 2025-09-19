@@ -107,8 +107,6 @@ internal class TribeMembersListViewModel @Inject constructor(
         val chat = chatRepository.getChatById(ChatId(args.argChatId)).firstOrNull()
         val tribeServerPubKey = connectManagerRepository.getTribeServerPubKey()
 
-        val firstPage = (page == 0)
-
         chat?.uuid?.value?.let { tribePubKey ->
             if (tribeServerPubKey != null) {
                 connectManagerRepository.getTribeMembers(
@@ -127,14 +125,14 @@ internal class TribeMembersListViewModel @Inject constructor(
 
     private suspend fun fetchTribeMembers(){
         connectManagerRepository.tribeMembersState.collect { tribeMembersList ->
-            if (tribeMembersList != null) {
+            tribeMembersList?.let {
                 val tribeMembers = TribeMembersListViewState.ListMode(
                     processMembers(
-                        tribeMembersList,
+                        it,
                         getOwner()
                     ),
-                    false,
-                    true
+                    loading = false,
+                    firstPage = true
                 )
 
                 updateViewState(tribeMembers)

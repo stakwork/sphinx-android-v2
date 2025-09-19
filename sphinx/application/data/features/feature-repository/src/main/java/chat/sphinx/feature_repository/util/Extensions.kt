@@ -13,6 +13,7 @@ import chat.sphinx.wrapper_chat.ChatMuted
 import chat.sphinx.wrapper_chat.NotificationLevel
 import chat.sphinx.wrapper_chat.isConversation
 import chat.sphinx.wrapper_chat.isTribe
+import chat.sphinx.wrapper_chat.isTrue
 import chat.sphinx.wrapper_chat.toChatAlias
 import chat.sphinx.wrapper_chat.toChatGroupKey
 import chat.sphinx.wrapper_chat.toChatHost
@@ -23,6 +24,7 @@ import chat.sphinx.wrapper_chat.toChatStatus
 import chat.sphinx.wrapper_chat.toChatType
 import chat.sphinx.wrapper_chat.toChatUnlisted
 import chat.sphinx.wrapper_chat.toNotificationLevel
+import chat.sphinx.wrapper_chat.toOwnedTribe
 import chat.sphinx.wrapper_chat.toSecondBrainUrl
 import chat.sphinx.wrapper_common.DateTime
 import chat.sphinx.wrapper_common.PhotoUrl
@@ -399,6 +401,7 @@ inline fun TransactionCallbacks.upsertNewChat(
         chat.pendingContactIds,
         chat.notify,
         pinedMessage,
+        chat.ownedTribe,
         chatId,
         chat.uuid,
         chatType,
@@ -409,7 +412,7 @@ inline fun TransactionCallbacks.upsertNewChat(
 
     if (
         chatType.isTribe() &&
-        (ownerPubKey == adminPubKey) &&
+        chat.ownedTribe?.isTrue() == true &&
         (pricePerMessage != null || escrowAmount != null || pinedMessage != null)
     ) {
         queries.chatUpdateTribeData(
@@ -493,6 +496,7 @@ inline fun TransactionCallbacks.upsertChat(
         dto.pending_contact_ids?.map { ContactId(it) },
         dto.notify?.toNotificationLevel(),
         pinedMessage,
+        dto.isOwnedTribe.toOwnedTribe(),
         chatId,
         ChatUUID(dto.uuid),
         chatType,
@@ -503,7 +507,7 @@ inline fun TransactionCallbacks.upsertChat(
 
     if (
         chatType.isTribe() &&
-        (ownerPubKey == adminPubKey) &&
+        dto.isOwnedTribe &&
         (pricePerMessage != null || escrowAmount != null || pinedMessage != null)
     ) {
         queries.chatUpdateTribeData(

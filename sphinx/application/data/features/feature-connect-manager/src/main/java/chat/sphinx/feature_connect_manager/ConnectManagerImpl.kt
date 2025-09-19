@@ -585,7 +585,11 @@ class ConnectManagerImpl: ConnectManager()
             val tribesToUpdate = msgs.filter {
                 it.type?.toInt() == TYPE_MEMBER_APPROVE || it.type?.toInt() == TYPE_GROUP_JOIN
             }.map {
-                Pair(it.sender, it.fromMe ?: false)
+                Triple(
+                    it.sender,
+                    it.type?.toInt() ?: 100 ,
+                    it.fromMe ?: false
+                )
             }
 
             Log.d("RESTORE_PROCESS_TRIBE", "$tribesToUpdate")
@@ -604,7 +608,7 @@ class ConnectManagerImpl: ConnectManager()
 
                     notifyListeners {
                         onUpsertContacts(contactsToRestore, isRestoreAccount()) {
-                            if (isRestoringContacts()) {
+                            if (!isRestoringContacts()) {
                                 processMessages(msgs)
                             }
                             continueRestore(msgs, topic)
@@ -695,6 +699,11 @@ class ConnectManagerImpl: ConnectManager()
 
                 restoreProgress.currentChatRestoreIndex += 1
 
+                if (restoreProgress.currentChatRestoreIndex == restoreProgress.totalChatsToRestore) {
+                    goToNextPhaseOrFinish()
+                    return
+                }
+
                 fetchMessagesOnRestoreAccount(
                     restoreProgress.messagesHighestIndex.toLong(),
                     restoreProgress.totalChatsToRestore.toLong(),
@@ -705,7 +714,6 @@ class ConnectManagerImpl: ConnectManager()
             if (isRestoreFinished()) {
                 goToNextPhaseOrFinish()
             }
-
         } else {
             val highestIndexReceived = msgs.maxByOrNull { it.index?.toLong() ?: 0L }?.index?.toULong()
 
@@ -2262,11 +2270,11 @@ class ConnectManagerImpl: ConnectManager()
                     val decodedValue = Base64.decode(encodedValue, Base64.NO_WRAP)
                     decodedMap[key] = decodedValue
                 } catch (e: Exception) {
-//                    Log.w("UserState", "Failed to decode key '$key': ${e.message}")
+                    Log.w("UserState", "Failed to decode key '$key': ${e.message}")
                 }
             }
         } catch (e: JSONException) {
-//            Log.e("UserState", "Failed to parse user state JSON", e)
+            Log.e("UserState", "Failed to parse user state JSON", e)
         }
 
         return decodedMap

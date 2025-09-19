@@ -41,7 +41,8 @@ inline fun ChatDbo.toChat(): Chat =
         timezoneEnabled = timezone_enabled,
         timezoneIdentifier = timezone_identifier,
         remoteTimezoneIdentifier = remote_timezone_identifier,
-        timezoneUpdated = timezone_updated
+        timezoneUpdated = timezone_updated,
+        ownedTribe = is_my_tribe,
     )
 
 internal class ChatDboPresenterMapper(
@@ -83,7 +84,8 @@ internal class ChatDboPresenterMapper(
             timezoneEnabled = value.timezone_enabled,
             timezoneIdentifier = value.timezone_identifier,
             remoteTimezoneIdentifier = value.remote_timezone_identifier,
-            timezoneUpdated = value.timezone_updated
+            timezoneUpdated = value.timezone_updated,
+            ownedTribe = value.is_my_tribe,
         )
     }
 
@@ -118,7 +120,8 @@ internal class ChatDboPresenterMapper(
             timezone_enabled = value.timezoneEnabled,
             timezone_identifier = value.timezoneIdentifier,
             remote_timezone_identifier = value.remoteTimezoneIdentifier,
-            timezone_updated = value.timezoneUpdated
+            timezone_updated = value.timezoneUpdated,
+            is_my_tribe = value.ownedTribe,
         )
     }
 }

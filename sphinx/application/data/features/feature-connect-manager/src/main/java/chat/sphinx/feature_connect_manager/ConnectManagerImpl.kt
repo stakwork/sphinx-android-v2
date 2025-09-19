@@ -8,7 +8,6 @@ import chat.sphinx.example.concept_connect_manager.model.OwnerInfo
 import chat.sphinx.example.concept_connect_manager.model.RestoreProgress
 import chat.sphinx.example.concept_connect_manager.model.RestoreState
 import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
-import chat.sphinx.example.wrapper_mqtt.MessageTag
 import chat.sphinx.example.wrapper_mqtt.MsgsCounts
 import chat.sphinx.example.wrapper_mqtt.NewInvite
 import chat.sphinx.wrapper_common.lightning.toLightningNodePubKey
@@ -25,7 +24,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import okio.base64.encodeBase64
 import org.eclipse.paho.client.mqttv3.IMqttActionListener
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken
@@ -47,6 +45,7 @@ import uniffi.sphinxrs.codeFromInvite
 import uniffi.sphinxrs.concatRoute
 import uniffi.sphinxrs.deleteMsgs
 import uniffi.sphinxrs.fetchMsgsBatch
+import uniffi.sphinxrs.fetchMsgsBatchPerContact
 import uniffi.sphinxrs.fetchPings
 import uniffi.sphinxrs.findRoute
 import uniffi.sphinxrs.getDefaultTribeServer
@@ -125,7 +124,6 @@ class ConnectManagerImpl: ConnectManager()
         const val TEST_V2_TRIBES_SERVER = "75.101.247.127:8801"
         const val REGTEST_NETWORK = "regtest"
         const val MAINNET_NETWORK = "bitcoin"
-        const val TEST_SERVER_PORT =  1883
         const val PROD_SERVER_PORT = 8883
         const val COMPLETE_STATUS = "COMPLETE"
         const val MSG_BATCH_LIMIT = 100
@@ -587,7 +585,7 @@ class ConnectManagerImpl: ConnectManager()
             val tribesToUpdate = msgs.filter {
                 it.type?.toInt() == TYPE_MEMBER_APPROVE || it.type?.toInt() == TYPE_GROUP_JOIN
             }.map {
-                Pair(it.sender, it.fromMe)
+                Pair(it.sender, it.fromMe ?: false)
             }
 
             Log.d("RESTORE_PROCESS_TRIBE", "$tribesToUpdate")
@@ -606,8 +604,9 @@ class ConnectManagerImpl: ConnectManager()
 
                     notifyListeners {
                         onUpsertContacts(contactsToRestore, isRestoreAccount()) {
-                            // Handle new messages
-                            processMessages(msgs)
+                            if (isRestoringContacts()) {
+                                processMessages(msgs)
+                            }
                             continueRestore(msgs, topic)
                         }
                     }
@@ -620,24 +619,35 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
+    private fun isRestoringContacts() : Boolean {
+        return restoreStateFlow.value is RestoreState.RestoringContacts
+    }
+
+    private fun isRestoringMessages() : Boolean {
+        return restoreStateFlow.value is RestoreState.RestoringMessages
+    }
+
+    private fun isRestoreFinished() : Boolean {
+        return restoreStateFlow.value is RestoreState.RestoreFinished
+    }
+
     private fun goToNextPhaseOrFinish() {
-        if (restoreStateFlow.value is RestoreState.RestoringContacts) {
+        if (isRestoringContacts()) {
             notifyListeners { onRestoreProgress(restoreProgress.fixedContactPercentage) }
             notifyListeners { onRestoreMessages() }
         }
 
         if (
-            restoreStateFlow.value is RestoreState.RestoringMessages ||
-            restoreStateFlow.value is RestoreState.RestoreFinished ||
+            isRestoringMessages() ||
+            isRestoreFinished() ||
             restoreStateFlow.value == null
         ) {
             if (
-                restoreStateFlow.value is RestoreState.RestoringMessages ||
-                restoreStateFlow.value is RestoreState.RestoreFinished
+                isRestoringMessages() ||
+                isRestoreFinished()
             ) {
                 notifyListeners { onRestoreProgress(restoreProgress.fixedContactPercentage + restoreProgress.fixedMessagesPercentage) }
                 _restoreStateFlow.value = null
-                notifyListeners { onRestoreFinished() }
                 setMnemonicWords(null)
             }
 
@@ -650,7 +660,6 @@ class ConnectManagerImpl: ConnectManager()
 
     override fun finishRestore() {
         _restoreStateFlow.value = RestoreState.RestoreFinished
-        notifyListeners { onRestoreFinished() }
     }
 
     private fun updatePaidInvoices() {
@@ -666,7 +675,7 @@ class ConnectManagerImpl: ConnectManager()
         }
 
         if (isRestoreAccount()) {
-            if (restoreStateFlow.value is RestoreState.RestoringContacts) {
+            if (isRestoringContacts()) {
                 val highestIndex = msgs.maxByOrNull { it.index?.toLong() ?: 0L }?.index?.toLong()
                 highestIndex?.let { nnHighestIndex ->
                     calculateContactRestore()
@@ -680,20 +689,20 @@ class ConnectManagerImpl: ConnectManager()
                     }
                 }
             }
-            // Restore Message Step
-            if (restoreStateFlow.value is RestoreState.RestoringMessages) {
-                val minIndex = msgs.minByOrNull { it.index?.toLong() ?: 0L }?.index?.toULong()
-                minIndex?.let { nnMinIndex ->
-                    calculateMessageRestore()
-                    fetchMessagesOnRestoreAccount(nnMinIndex.minus(1u).toLong(), msgsCountsState.value?.total)
 
-                    notifyListeners {
-                        onRestoreMinIndex(nnMinIndex.toLong())
-                    }
-                }
+            if (isRestoringMessages()) {
+                calculateMessageRestore()
+
+                restoreProgress.currentChatRestoreIndex += 1
+
+                fetchMessagesOnRestoreAccount(
+                    restoreProgress.messagesHighestIndex.toLong(),
+                    restoreProgress.totalChatsToRestore.toLong(),
+                    restoreProgress.chatPublicKeys
+                )
             }
 
-            if (restoreStateFlow.value is RestoreState.RestoreFinished) {
+            if (isRestoreFinished()) {
                 goToNextPhaseOrFinish()
             }
 
@@ -992,22 +1001,31 @@ class ConnectManagerImpl: ConnectManager()
     }
 
     override fun fetchMessagesOnRestoreAccount(
-        totalHighestIndex: Long?,
-        totalMsgsCount: Long?
+        totalHighestIndex: Long,
+        chatsTotal: Long,
+        chatsPublicKeys: List<String>
     ) {
         try {
-            if (restoreStateFlow.value !is RestoreState.RestoringMessages) {
+            if (!isRestoringMessages()) {
                 _restoreStateFlow.value = RestoreState.RestoringMessages
-                setMessagesTotal(totalMsgsCount)
+                setChatsRestoreData(
+                    totalHighestIndex,
+                    chatsTotal,
+                    chatsPublicKeys
+                )
             }
 
-            val fetchMessages = fetchMsgsBatch(
+            val currentIndex = restoreProgress.currentChatRestoreIndex
+            val currentPublicKey = chatsPublicKeys[currentIndex]
+
+            val fetchMessages = fetchMsgsBatchPerContact(
                 ownerSeed!!,
                 getTimestampInMilliseconds(),
                 getCurrentUserState(),
-                totalHighestIndex?.toULong() ?: 0.toULong(),
+                totalHighestIndex.toULong(),
                 MSG_BATCH_LIMIT.toUInt(),
                 true,
+                currentPublicKey
             )
             handleRunReturn(fetchMessages)
         } catch (e: Exception) {
@@ -1234,7 +1252,7 @@ class ConnectManagerImpl: ConnectManager()
     private fun isProductionServer(): Boolean {
         val ip = mixerIp ?: return false
         val port = ip.substringAfterLast(":").toIntOrNull() ?: return false
-        return port != TEST_SERVER_PORT
+        return port == PROD_SERVER_PORT
     }
 
     private fun isProductionEnvironment(): Boolean {
@@ -2466,9 +2484,15 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
-    private fun setMessagesTotal(totalMsgs: Long?) {
-        totalMsgs?.let {
-            restoreProgress.totalMessages = it.toInt()
+    private fun setChatsRestoreData(
+        highestIndex: Long,
+        totalChat: Long?,
+        chatsPublicKeys: List<String>
+    ) {
+        totalChat?.let {
+            restoreProgress.messagesHighestIndex = highestIndex.toInt()
+            restoreProgress.totalChatsToRestore = it.toInt()
+            restoreProgress.chatPublicKeys = chatsPublicKeys
         }
     }
 
@@ -2490,12 +2514,12 @@ class ConnectManagerImpl: ConnectManager()
 
     private fun calculateMessageRestore() {
         try {
-            val restoredMsgs = restoreProgress.restoredMessagesAmount.plus(MSG_BATCH_LIMIT)
-            if (restoredMsgs >= restoreProgress.totalMessages) {
+            val restoredIndex = restoreProgress.currentChatRestoreIndex
+
+            if (restoredIndex >= restoreProgress.totalChatsToRestore) {
                 restoreProgress.progressPercentage = 100
             } else {
-                restoreProgress.restoredMessagesAmount = restoredMsgs
-                restoreProgress.progressPercentage = (restoreProgress.fixedContactPercentage + ((restoredMsgs.toDouble() / restoreProgress.totalMessages.toDouble())) * restoreProgress.fixedMessagesPercentage.toDouble()).roundToInt()
+                restoreProgress.progressPercentage = (restoreProgress.fixedContactPercentage + ((restoredIndex.toDouble() / restoreProgress.totalChatsToRestore.toDouble())) * restoreProgress.fixedMessagesPercentage.toDouble()).roundToInt()
             }
             notifyListeners {
                 onRestoreProgress(restoreProgress.progressPercentage)

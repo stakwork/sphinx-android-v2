@@ -41,7 +41,11 @@ abstract class ConnectManager {
     abstract fun setOwnerDeviceId(deviceId: String, pushKey: String)
     abstract fun processChallengeSignature(challenge: String): String?
     abstract fun fetchFirstMessagesPerKey(lastMsgIdx: Long, totalCount: Long?)
-    abstract fun fetchMessagesOnRestoreAccount(totalHighestIndex: Long?, totalMsgsCount: Long?)
+    abstract fun fetchMessagesOnRestoreAccount(
+        totalHighestIndex: Long,
+        chatsTotal: Long,
+        chatsPublicKeys: List<String>
+    )
     abstract fun getAllMessagesCount()
     abstract fun initializeMqttAndSubscribe(
         serverUri: String,
@@ -209,7 +213,7 @@ interface ConnectManagerListener {
     )
     fun onRestoreMessages()
     fun onUpsertTribes(
-        tribes: List<Pair<String?, Boolean?>>,
+        tribeList: List<Pair<String?, Boolean>>,
         isProductionEnvironment: Boolean,
         callback: (() -> Unit)? = null
     ) // Sender, FromMe
@@ -222,7 +226,6 @@ interface ConnectManagerListener {
     fun onGetNodes()
     fun onConnectManagerError(error: ConnectManagerError)
     fun onRestoreProgress(progress: Int)
-    fun onRestoreFinished()
     fun updatePaidInvoices()
 
     fun onMessages(messages: List<MqttMessage>, isRestore: Boolean)
@@ -232,8 +235,6 @@ interface ConnectManagerListener {
     fun onMessagesCounts(msgsCounts: String)
     fun onSentStatus(sentStatus: String)
     fun onMessageTagList(tags: String)
-
-    fun onRestoreMinIndex(minIndex: Long)
 
     // Tribe Management Callbacks
     fun onNewTribeCreated(newTribe: String)

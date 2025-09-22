@@ -3176,6 +3176,10 @@ abstract class ChatViewModel<ARGS : NavArgs>(
     override fun onCleared() {
         super.onCleared()
 
+        chatId?.let {
+            messageRepository.cleanupOldMessages(it)
+        }
+
         (audioPlayerController as AudioPlayerControllerImpl).onCleared()
         audioRecorderController.clear()
 

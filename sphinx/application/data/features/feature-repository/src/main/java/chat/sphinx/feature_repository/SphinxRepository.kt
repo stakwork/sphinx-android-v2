@@ -3748,6 +3748,48 @@ abstract class SphinxRepository(
         )
     }
 
+    fun cleanupOldMessages(chatId: ChatId) {
+        applicationScope.launch(io) {
+            try {
+                val deletedCount = withContext(dispatchers.io) {
+                    val queries = coreDB.getSphinxDatabaseQueries()
+
+                    queries.transactionWithResult {
+                        val thresholdMessage = queries.messageGetRecentMessages(chatId, 100)
+                            .executeAsList()
+                            .lastOrNull()
+
+                        if (thresholdMessage == null) {
+                            0
+                        } else {
+                            val thresholdId = thresholdMessage.id
+
+                            val countToDelete = queries.messageCountOlderThan(chatId, thresholdId)
+                                .executeAsOne()
+                                .toInt()
+
+                            if (countToDelete > 0) {
+                                queries.messageDeleteOlderThan(chatId, thresholdId)
+                                LOG.d("SphinxRepository", "Deleted $countToDelete old messages from chat ${chatId.value}")
+                            }
+
+                            countToDelete
+                        }
+                    }
+                }
+
+                if (deletedCount > 0) {
+                    LOG.d("SphinxRepository", "Successfully cleaned up $deletedCount old messages from chat ${chatId.value}")
+                } else {
+                    LOG.d("SphinxRepository", "No old messages to clean up from chat ${chatId.value}")
+                }
+
+            } catch (e: Exception) {
+                LOG.e("SphinxRepository", "Error cleaning up old messages for chat ${chatId.value}: ${e.message}", e)
+            }
+        }
+    }
+
     override fun getRemoteTimezoneForAliases(
         chatId: ChatId,
         aliases: List<SenderAlias>

@@ -1341,13 +1341,35 @@ messageDeleteByUUID:
 DELETE FROM messageDbo
 WHERE uuid = ?;
 
-
 messageDeleteByChatId:
 DELETE FROM messageDbo
 WHERE chat_id = ?;
 
 messageDeleteAll:
 DELETE FROM messageDbo;
+
+messageGetRecentMessages:
+SELECT *
+FROM messageDbo
+WHERE chat_id = ?
+ORDER BY id DESC
+LIMIT ?;
+
+messageCountOlderThan:
+SELECT COUNT(*)
+FROM messageDbo
+WHERE chat_id = ? AND id < ?;
+
+messageDeleteOlderThan:
+DELETE FROM messageDbo
+WHERE chat_id = ? AND id < ?;
+
+messageGetIdThreshold:
+SELECT id
+FROM messageDbo
+WHERE chat_id = ?
+ORDER BY id DESC
+LIMIT 1 OFFSET ?;
 
 CREATE TABLE messageMediaDbo(
     id                          INTEGER         AS MessageId NOT NULL PRIMARY KEY,

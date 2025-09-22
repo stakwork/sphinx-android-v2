@@ -45,6 +45,8 @@ interface MessageRepository {
         aliases: List<SenderAlias>
     ): Flow<List<Message>>
 
+    fun cleanupOldMessages(chatId: ChatId)
+
     fun searchMessagesBy(chatId: ChatId, term: String): Flow<List<Message>>
 
     fun getMessageById(messageId: MessageId): Flow<Message?>

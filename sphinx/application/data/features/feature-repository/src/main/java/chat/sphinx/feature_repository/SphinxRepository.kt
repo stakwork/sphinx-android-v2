@@ -894,58 +894,6 @@ abstract class SphinxRepository(
         restoreProcessState.value = RestoreProcessState.RestoreMessages
     }
 
-//    override fun onUpsertTribes(
-//        tribes: List<Pair<String?, Boolean?>>,
-//        isProductionEnvironment: Boolean,
-//        callback: (() -> Unit)?
-//    )  {
-//        if (tribes.isEmpty()) {
-//            callback?.let { nnCallback ->
-//                nnCallback()
-//            }
-//            return
-//        }
-//
-//        applicationScope.launch(io) {
-//            val total = tribes.count();
-//            var index = 0
-//
-//            val tribeList = tribes.mapNotNull { tribes ->
-//                try {
-//                    Pair(
-//                        tribes.first?.toMsgSender(moshi),
-//                        tribes.second
-//                    )
-//                } catch (e: Exception) {
-//                    null
-//                }
-//            }
-//
-//            tribeList.forEach { tribe ->
-//                val isAdmin = (tribe.first?.role == 0 && tribe.second == true)
-//                tribe.first?.let {
-//                    joinTribeOnRestoreAccount(it, isAdmin, isProductionEnvironment) {
-//                        if (index == total - 1) {
-//                            callback?.let { nnCallback ->
-//                                nnCallback()
-//                            }
-//                        } else {
-//                            index += 1
-//                        }
-//                    }
-//                } ?: run {
-//                    if (index == total - 1) {
-//                        callback?.let { nnCallback ->
-//                            nnCallback()
-//                        }
-//                    } else {
-//                        index += 1
-//                    }
-//                }
-//            }
-//        }
-//    }
-
     override fun onNewBalance(balance: Long) {
         applicationScope.launch(io) {
 
@@ -3748,7 +3696,7 @@ abstract class SphinxRepository(
         )
     }
 
-    fun cleanupOldMessages(chatId: ChatId) {
+    override fun cleanupOldMessages(chatId: ChatId) {
         applicationScope.launch(io) {
             try {
                 val deletedCount = withContext(dispatchers.io) {

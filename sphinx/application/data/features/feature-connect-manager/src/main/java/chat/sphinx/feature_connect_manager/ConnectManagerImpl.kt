@@ -635,6 +635,10 @@ class ConnectManagerImpl: ConnectManager()
         return restoreStateFlow.value is RestoreState.RestoreFinished
     }
 
+    private fun isFetchingMessagesPerContact() : Boolean {
+        return restoreStateFlow.value is RestoreState.FetchingMessagesPerContact
+    }
+
     private fun goToNextPhaseOrFinish() {
         if (isRestoringContacts()) {
             notifyListeners { onRestoreProgress(restoreProgress.fixedContactPercentage) }
@@ -729,6 +733,8 @@ class ConnectManagerImpl: ConnectManager()
                         notifyListeners {
                             onMessagesRestoreWith(msgs.count(), publicKey)
                         }
+
+                        getReadMessages()
                         return
                     }
                 }
@@ -1079,6 +1085,7 @@ class ConnectManagerImpl: ConnectManager()
                 true,
                 publicKey
             )
+            Log.d("MQTT_MESSAGES", "fetchMessagesPerContact")
             handleRunReturn(fetchMessages)
         } catch (e: Exception) {
             notifyListeners {

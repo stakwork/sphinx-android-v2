@@ -246,6 +246,7 @@ internal class DashboardViewModel @Inject constructor(
 
         actionsRepository.syncActions()
         feedRepository.restoreContentFeedStatuses()
+        chatRepository.setLatestMessagesDatePerChat()
 
         networkRefresh()
     }

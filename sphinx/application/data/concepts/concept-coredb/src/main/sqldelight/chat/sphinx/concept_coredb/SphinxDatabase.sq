@@ -1356,25 +1356,25 @@ DELETE FROM messageDbo;
 messageGetRecentMessages:
 SELECT *
 FROM messageDbo
-WHERE chat_id = ?
+WHERE chat_id = :chatId
 ORDER BY id DESC
-LIMIT ?;
+LIMIT :messageLimit;
 
 messageCountOlderThan:
 SELECT COUNT(*)
 FROM messageDbo
-WHERE chat_id = ? AND id < ?;
+WHERE chat_id = :chatId AND id < :thresholdId;
 
 messageDeleteOlderThan:
 DELETE FROM messageDbo
-WHERE chat_id = ? AND id < ?;
+WHERE chat_id = :chatId AND id < :thresholdId;
 
 messageGetIdThreshold:
 SELECT id
 FROM messageDbo
-WHERE chat_id = ?
+WHERE chat_id = :chatId
 ORDER BY id DESC
-LIMIT 1 OFFSET ?;
+LIMIT 1 OFFSET :offsetValue;
 
 CREATE TABLE messageMediaDbo(
     id                          INTEGER         AS MessageId NOT NULL PRIMARY KEY,

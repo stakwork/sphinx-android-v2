@@ -1654,8 +1654,6 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                                 updateScrollDownButtonCount()
                                 updateClockIconState(processedData.second)
 
-                                isLoadingMore = false
-
                                 delay(25)
                                 hideShimmeringView()
                             }
@@ -1666,6 +1664,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         collectThread()
         collectUnseenMessagesNumber()
         collectItemsFetched()
+        fetchMoreItems()
 
         viewModelScope.launch(Dispatchers.IO) {
             connectManagerRepository.getTagsByChatId(getChat().id)
@@ -1705,6 +1704,9 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                     } else {
                         reachEndOfResults()
                     }
+                    connectManagerRepository.getTagsByChatId(chat.id)
+                    delay(4000L)
+                    isLoadingMore = false
                 }
             }
         }

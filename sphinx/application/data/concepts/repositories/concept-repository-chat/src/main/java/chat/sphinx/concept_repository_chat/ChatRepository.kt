@@ -135,4 +135,6 @@ interface ChatRepository {
     )
 
     suspend fun updateTimezoneUpdatedOnSystemChange()
+
+    fun setLatestMessagesDatePerChat()
 }

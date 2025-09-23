@@ -1472,7 +1472,13 @@ abstract class SphinxRepository(
     }
 
     override fun onMessagesRestoreWith(count: Int, publicKey: String) {
-        fetchProcessState.value = Pair(count, publicKey)
+        applicationScope.launch(mainImmediate) {
+            fetchProcessState.value = Pair(count, publicKey)
+
+            delay(5000L)
+
+            fetchProcessState.value = null
+        }
     }
 
     override fun fetchMessagesPerContact(
@@ -1873,6 +1879,7 @@ abstract class SphinxRepository(
                             ?.let {
                                 queries.contactUpdatePhotoUrl(it.toPhotoUrl(), contactId)
                             }
+
                         msgSender.alias?.takeIf { it.isNotEmpty() && it != contact.alias?.value }
                             ?.let {
                                 queries.contactUpdateAlias(it.toContactAlias(), contactId)
@@ -1936,6 +1943,25 @@ abstract class SphinxRepository(
                         chatId = ChatId(chatId),
                         isRestore = isRestore
                     )
+                }
+            }
+        }
+    }
+
+    override fun setLatestMessagesDatePerChat() {
+        applicationScope.launch(io) {
+            val allChats = getAllChats.firstOrNull()
+            allChats?.mapNotNull { it.latestMessageId }?.let { latestMessagesIds ->
+                val messagesMap = getMessagesByIds(latestMessagesIds).first().associateBy { it?.chatId }
+
+                messagesMap.forEach { (chatId, message) ->
+                    chatId?.let { nnChatId ->
+                        message?.date?.let { nnDateTime ->
+                            latestMessageUpdatedTimeMap.withLock { map ->
+                                map[nnChatId] = nnDateTime
+                            }
+                        }
+                    }
                 }
             }
         }

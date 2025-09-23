@@ -948,7 +948,7 @@ abstract class ChatFragment<
         private val updateVisibleRange: () -> Unit,
     ) : RecyclerView.OnScrollListener() {
 
-        private val threshold = 10 // Load more when 5 items from top
+        private val threshold = 30 // Load more when 5 items from top
 
         override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
             super.onScrolled(recyclerView, dx, dy)

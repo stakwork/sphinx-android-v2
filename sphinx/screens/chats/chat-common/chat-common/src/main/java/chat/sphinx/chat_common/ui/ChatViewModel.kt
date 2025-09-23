@@ -256,7 +256,6 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
     private val latestThreadMessagesFlow: MutableStateFlow<List<Message>?> = MutableStateFlow(null)
     private val scrollDownButtonCount: MutableStateFlow<Long?> = MutableStateFlow(null)
-    private val totalMessagesCount: MutableStateFlow<Long?> = MutableStateFlow(null)
 
     private suspend fun getAccountBalance(): StateFlow<NodeBalance?> =
         lightningRepository.getAccountBalance()
@@ -364,16 +363,6 @@ abstract class ChatViewModel<ARGS : NavArgs>(
             if (!isThreadChat()) {
                 repositoryDashboard.getUnseenMessagesByChatId(getChat().id).collect { unseenMessagesCount ->
                     scrollDownButtonCount.value = unseenMessagesCount
-                }
-            }
-        }
-    }
-
-    private fun collectTotalMessagesCount() {
-        viewModelScope.launch(io) {
-            if (!isThreadChat()) {
-                messageRepository.getAllMessagesCountByChatId(getChat().id).collect { messagesCount ->
-                    totalMessagesCount.value = messagesCount
                 }
             }
         }
@@ -1592,7 +1581,6 @@ abstract class ChatViewModel<ARGS : NavArgs>(
     }
 
     var messagesLoadJob: Job? = null
-    private var currentMessageLimit = 100L
     private val messageLimitFlow = MutableStateFlow(100L)
     private var isLoadingMore = false
 
@@ -1677,7 +1665,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         }
         collectThread()
         collectUnseenMessagesNumber()
-        collectTotalMessagesCount()
+        collectItemsFetched()
 
         viewModelScope.launch(Dispatchers.IO) {
             connectManagerRepository.getTagsByChatId(getChat().id)
@@ -1685,21 +1673,48 @@ abstract class ChatViewModel<ARGS : NavArgs>(
     }
 
     fun loadMoreMessages() {
-        if (messageLimitFlow.value >= (totalMessagesCount.value ?: 0)) return
         if (isThreadChat()) return
         if (isLoadingMore) return
 
         isLoadingMore = true
-        currentMessageLimit += 100
-        messageLimitFlow.value = currentMessageLimit
+        fetchMoreItems()
+    }
+
+    private fun fetchMoreItems() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val chat = getChat()
+            chat.ownerPubKey?.value?.let { publicKey ->
+                messageRepository.fetchMessagesPerContact(
+                    chat.id,
+                    publicKey
+                )
+            }
+        }
+    }
+
+    private fun collectItemsFetched() {
+        viewModelScope.launch(mainImmediate) {
+            val chat = getChat()
+
+            connectManagerRepository.fetchProcessState.collect { pair ->
+                if (pair?.second == chat.ownerPubKey?.value) {
+                    if ((pair?.first ?: 0) > 0) {
+                        messageLimitFlow.value += 100
+
+                        reloadSearchWithFetchedMsgs()
+                    } else {
+                        reachEndOfResults()
+                    }
+                }
+            }
+        }
     }
 
     fun resetMessageLimit() {
-        currentMessageLimit = 100
-        messageLimitFlow.value = currentMessageLimit
+        messageLimitFlow.value = 100
     }
 
-    fun hideShimmeringView() {
+    private fun hideShimmeringView() {
         shimmerViewState.updateViewState(ShimmerViewState.Off)
     }
 
@@ -1910,23 +1925,25 @@ abstract class ChatViewModel<ARGS : NavArgs>(
     abstract fun navigateToNotificationLevel()
 
     private var messagesSearchJob: Job? = null
-    fun searchMessages(text: String?) {
+    fun searchMessages(
+        text: String?,
+        index: Int? = null
+    ) {
         moreOptionsMenuHandler.updateViewState(
             MenuBottomViewState.Closed
         )
-
-        if (
-            messagesSearchViewStateContainer.viewStateFlow.value is MessagesSearchViewState.Idle
-        ) {
-            loadAllMessages()
-        }
 
         chatId?.let { nnChatId ->
             text?.let { nnText ->
                 if (nnText.toCharArray().size > 2) {
                     messagesSearchViewStateContainer.updateViewState(
-                        MessagesSearchViewState.Loading(
-                            true
+                        MessagesSearchViewState.Searching(
+                            true,
+                            nnText,
+                            false,
+                            emptyList(),
+                            index ?: 0,
+                            false
                         )
                     )
 
@@ -1938,9 +1955,11 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                             ?.let { messages ->
                                 messagesSearchViewStateContainer.updateViewState(
                                     MessagesSearchViewState.Searching(
+                                        false,
+                                        nnText,
                                         true,
                                         messages,
-                                        0,
+                                        index ?: 0,
                                         true
                                     )
                                 )
@@ -1953,9 +1972,11 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
         messagesSearchViewStateContainer.updateViewState(
             MessagesSearchViewState.Searching(
+                false,
+                text,
                 (text ?: "").isNotEmpty(),
                 emptyList(),
-                0,
+                index ?: 0,
                 true
             )
         )
@@ -1978,8 +1999,20 @@ abstract class ChatViewModel<ARGS : NavArgs>(
     ) {
         val searchViewState = messagesSearchViewStateContainer.viewStateFlow.value
         if (searchViewState is MessagesSearchViewState.Searching) {
+            var didReachLimit = false
+
+            if (advanceBy > 0) {
+                didReachLimit = searchViewState.index + advanceBy == searchViewState.messages.size - 1
+
+                if (didReachLimit) {
+                    fetchMoreItems()
+                }
+            }
+
             messagesSearchViewStateContainer.updateViewState(
                 MessagesSearchViewState.Searching(
+                    didReachLimit,
+                    searchViewState.term,
                     searchViewState.clearButtonVisible,
                     searchViewState.messages,
                     searchViewState.index + advanceBy,
@@ -1989,16 +2022,29 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         }
     }
 
-    private fun loadAllMessages() {
-        if (messagesLoadJob?.isActive == true) {
-            messagesLoadJob?.cancel()
+    private fun reloadSearchWithFetchedMsgs() {
+        val searchViewState = messagesSearchViewStateContainer.viewStateFlow.value
+        if (searchViewState is MessagesSearchViewState.Searching) {
+            searchMessages(
+                searchViewState.term,
+                searchViewState.index
+            )
         }
-        messagesLoadJob = viewModelScope.launch(io) {
-            messageRepository.getAllMessagesToShowByChatId(getChat().id, 0)
-                .distinctUntilChanged().collect { messages ->
-                    messageHolderViewStateFlow.value =
-                        getMessageHolderViewStateList(messages).toList()
-                }
+    }
+
+    private fun reachEndOfResults() {
+        val searchViewState = messagesSearchViewStateContainer.viewStateFlow.value
+        if (searchViewState is MessagesSearchViewState.Searching) {
+            messagesSearchViewStateContainer.updateViewState(
+                MessagesSearchViewState.Searching(
+                    false,
+                    searchViewState.term,
+                    searchViewState.clearButtonVisible,
+                    searchViewState.messages,
+                    searchViewState.index,
+                    searchViewState.navigatingForward
+                )
+            )
         }
     }
 
@@ -2139,9 +2185,6 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                 updateSelectedMessageViewState(SelectedMessageViewState.None)
             }
             messageSearchViewState is MessagesSearchViewState.Searching -> {
-                messagesSearchViewStateContainer.updateViewState(MessagesSearchViewState.Idle)
-            }
-            messageSearchViewState is MessagesSearchViewState.Loading -> {
                 messagesSearchViewStateContainer.updateViewState(MessagesSearchViewState.Idle)
             }
             else -> {

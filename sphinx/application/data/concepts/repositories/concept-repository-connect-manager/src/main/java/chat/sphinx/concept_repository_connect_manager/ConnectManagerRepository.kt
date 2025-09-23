@@ -28,6 +28,7 @@ interface ConnectManagerRepository {
     val connectionManagerState: MutableStateFlow<OwnerRegistrationState?>
     val networkStatus: MutableStateFlow<NetworkStatus>
     val restoreProcessState: MutableStateFlow<RestoreProcessState?>
+    val fetchProcessState: MutableStateFlow<Pair<Int, String>?>
     val connectManagerErrorState: MutableStateFlow<ConnectManagerError?>
     val transactionDtoState: MutableStateFlow<List<TransactionDto>?>
     val userStateFlow: MutableStateFlow<String?>

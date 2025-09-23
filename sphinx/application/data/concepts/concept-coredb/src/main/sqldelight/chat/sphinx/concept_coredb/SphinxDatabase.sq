@@ -852,6 +852,11 @@ messageGetAllCount:
 SELECT COUNT(*)
 FROM messageDbo;
 
+messageGetLowestIndex:
+SELECT MIN(id)
+FROM messageDbo
+WHERE chat_id = ?;
+
 messageGetAllReactionsByUUID:
 SELECT *
 FROM messageDbo

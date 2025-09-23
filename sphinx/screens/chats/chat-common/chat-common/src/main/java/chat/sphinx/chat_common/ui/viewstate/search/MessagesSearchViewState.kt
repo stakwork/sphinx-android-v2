@@ -12,11 +12,9 @@ sealed class MessagesSearchViewState: ViewState<MessagesSearchViewState>() {
 
     object Cancel: MessagesSearchViewState()
 
-    data class Loading(
-        val clearButtonVisible: Boolean
-    ): MessagesSearchViewState()
-
     class Searching(
+        val loading: Boolean,
+        val term: String?,
         val clearButtonVisible: Boolean,
         val messages: List<Message>,
         val index: Int,

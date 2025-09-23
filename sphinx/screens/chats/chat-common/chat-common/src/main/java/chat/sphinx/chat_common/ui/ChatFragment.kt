@@ -1970,21 +1970,6 @@ abstract class ChatFragment<
                             buttonChatSearchClear.gone
                         }
                     }
-                    is MessagesSearchViewState.Loading -> {
-                        headerBinding.root.gone
-                        footerBinding.root.gone
-
-                        searchHeaderBinding.root.visible
-                        searchFooterBinding.root.visible
-
-                        searchHeaderBinding.buttonChatSearchClear.goneIfFalse(viewState.clearButtonVisible)
-
-                        searchFooterBinding.apply {
-                            progressBarLoadingSearch.visible
-                            textViewChatSearchResultsFound.text = getString(R.string.searching_messages)
-                            root.visible
-                        }
-                    }
                     is MessagesSearchViewState.Searching -> {
                         headerBinding.root.gone
                         footerBinding.root.gone
@@ -2000,9 +1985,9 @@ abstract class ChatFragment<
                         }
 
                         searchFooterBinding.apply {
-                            progressBarLoadingSearch.gone
+                            progressBarLoadingSearch.goneIfFalse(viewState.loading)
+                            textViewChatSearchResultsFound.text = if (viewState.loading) getString(R.string.searching_messages) else getString(R.string.results_found, viewState.messages.size)
 
-                            textViewChatSearchResultsFound.text = getString(R.string.results_found, viewState.messages.size)
 
                             val enabledColor = ContextCompat.getColor(binding.root.context, R_common.color.text)
                             val disabledColor = ContextCompat.getColor(binding.root.context, R_common.color.secondaryText)
@@ -2026,10 +2011,11 @@ abstract class ChatFragment<
                                     disabledColor
                                 }
                             )
-
+                            root.visible
                         }
 
                         setFocusOnSearchField()
+
                         scrollToResult(
                             viewState.messages,
                             viewState.index,

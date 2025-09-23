@@ -6,4 +6,6 @@ sealed class RestoreState {
     object RestoringMessages : RestoreState()
 
     object RestoreFinished : RestoreState()
+
+    data class FetchingMessagesPerContact(val publicKey: String) : RestoreState()
 }

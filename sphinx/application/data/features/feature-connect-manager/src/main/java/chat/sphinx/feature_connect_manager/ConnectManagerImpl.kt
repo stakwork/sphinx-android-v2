@@ -686,7 +686,10 @@ class ConnectManagerImpl: ConnectManager()
 
                     msgsCountsState.value?.first_for_each_scid_highest_index?.let { highestIndex ->
                         if (nnHighestIndex < highestIndex) {
-                            fetchFirstMessagesPerKey(nnHighestIndex.plus(1L), msgsCountsState.value?.ok_key)
+                            fetchFirstMessagesPerKey(
+                                nnHighestIndex.plus(1L),
+                                msgsCountsState.value?.ok_key
+                            )
                         } else {
                             goToNextPhaseOrFinish()
                         }
@@ -715,6 +718,22 @@ class ConnectManagerImpl: ConnectManager()
                 goToNextPhaseOrFinish()
             }
         } else {
+            if (_restoreStateFlow.value is RestoreState.FetchingMessagesPerContact){
+                (_restoreStateFlow.value as? RestoreState.FetchingMessagesPerContact)?.let { stateFlow ->
+                    val publicKey = stateFlow.publicKey
+                    val allHaveSameSender = msgs.all { it -> it.sender?.contains(publicKey) == true || it.sentTo == publicKey }
+
+                    if (msgs.isNotEmpty() && allHaveSameSender) {
+                        _restoreStateFlow.value = RestoreState.RestoreFinished
+
+                        notifyListeners {
+                            onMessagesRestoreWith(msgs.count(), publicKey)
+                        }
+                        return
+                    }
+                }
+            }
+
             val highestIndexReceived = msgs.maxByOrNull { it.index?.toLong() ?: 0L }?.index?.toULong()
 
             highestIndexReceived?.let { nnHighestIndexReceived ->
@@ -1041,6 +1060,31 @@ class ConnectManagerImpl: ConnectManager()
                 onConnectManagerError(ConnectManagerError.FetchMessageError)
             }
             Log.e("MQTT_MESSAGES", "fetchMessagesOnRestoreAccount ${e.message}")
+        }
+    }
+
+    override fun fetchMessagesPerContact(
+        minIndex: Long,
+        publicKey: String
+    ) {
+        _restoreStateFlow.value = RestoreState.FetchingMessagesPerContact(publicKey)
+
+        try {
+            val fetchMessages = fetchMsgsBatchPerContact(
+                ownerSeed!!,
+                getTimestampInMilliseconds(),
+                getCurrentUserState(),
+                minIndex.toULong(),
+                MSG_BATCH_LIMIT.toUInt(),
+                true,
+                publicKey
+            )
+            handleRunReturn(fetchMessages)
+        } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.FetchMessageError)
+            }
+            Log.e("MQTT_MESSAGES", "fetchMessagesPerContact ${e.message}")
         }
     }
 

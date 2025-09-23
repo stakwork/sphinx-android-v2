@@ -46,6 +46,10 @@ abstract class ConnectManager {
         chatsTotal: Long,
         chatsPublicKeys: List<String>
     )
+    abstract fun fetchMessagesPerContact(
+        minIndex: Long,
+        publicKey: String
+    )
     abstract fun getAllMessagesCount()
     abstract fun initializeMqttAndSubscribe(
         serverUri: String,
@@ -229,6 +233,7 @@ interface ConnectManagerListener {
     fun updatePaidInvoices()
 
     fun onMessages(messages: List<MqttMessage>, isRestore: Boolean)
+    fun onMessagesRestoreWith(count: Int, publicKey: String)
 
     fun onMessageTagAndUuid(tag: String?, msgUUID: String, provisionalId: Long)
     fun onMessagePaymentHash(paymentHash: String, provisionalId: Long)

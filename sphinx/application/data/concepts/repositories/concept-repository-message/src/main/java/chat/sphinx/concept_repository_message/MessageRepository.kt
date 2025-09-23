@@ -47,6 +47,11 @@ interface MessageRepository {
 
     fun cleanupOldMessages(chatId: ChatId)
 
+    fun fetchMessagesPerContact(
+        chatId: ChatId,
+        publicKey: String
+    )
+
     fun searchMessagesBy(chatId: ChatId, term: String): Flow<List<Message>>
 
     fun getMessageById(messageId: MessageId): Flow<Message?>

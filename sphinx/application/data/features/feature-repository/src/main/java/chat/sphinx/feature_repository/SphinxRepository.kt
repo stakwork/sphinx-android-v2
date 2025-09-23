@@ -245,6 +245,10 @@ abstract class SphinxRepository(
         MutableStateFlow(null)
     }
 
+    override val fetchProcessState: MutableStateFlow<Pair<Int, String>?> by lazy {
+        MutableStateFlow(null)
+    }
+
     override val connectManagerErrorState: MutableStateFlow<ConnectManagerError?> by lazy {
         MutableStateFlow(null)
     }
@@ -1463,6 +1467,25 @@ abstract class SphinxRepository(
                         )
                     }
                 }
+            }
+        }
+    }
+
+    override fun onMessagesRestoreWith(count: Int, publicKey: String) {
+        fetchProcessState.value = Pair(count, publicKey)
+    }
+
+    override fun fetchMessagesPerContact(
+        chatId: ChatId,
+        publicKey: String
+    ) {
+        applicationScope.launch(io) {
+            val queries = coreDB.getSphinxDatabaseQueries()
+            queries.messageGetLowestIndex(chatId).executeAsOneOrNull()?.let { it.MIN?.minus(1) }?.let {
+                if (it - 1 <= 0) {
+                    return@let
+                }
+                connectManager.fetchMessagesPerContact(it - 1, publicKey)
             }
         }
     }

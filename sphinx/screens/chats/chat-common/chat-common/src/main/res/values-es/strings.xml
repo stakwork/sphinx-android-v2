@@ -178,6 +178,7 @@
 
     <string name="searching_messages">Buscando...</string>
     <string name="results_found">%d Resultados Encontrados</string>
+    <string name="search_matches">%d/%d coincidencias</string>
 
     <string name="slide_to_cancel">&lt;&lt; Desliza para cancelar</string>
     <string name="recording_permission_granted">Permiso de grabación concedido</string>

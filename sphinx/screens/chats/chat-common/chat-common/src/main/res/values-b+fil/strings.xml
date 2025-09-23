@@ -138,6 +138,7 @@
     <string name="bottom_menu_more_option_notification">Notipikasyon</string>
     <string name="searching_messages">Naghahanap...</string>
     <string name="results_found">%d Mga Resulta ang Natagpuan</string>
+    <string name="search_matches">%d/%d na tugma</string>
     <string name="slide_to_cancel">&lt;&lt; I-slide pakanancel</string>
     <string name="recording_permission_granted">Naipagkaloob na ang permiso sa pagre-record</string>
     <string name="recording_permission_required">Mga permiso sa pagre-record ay kinakailangan</string>

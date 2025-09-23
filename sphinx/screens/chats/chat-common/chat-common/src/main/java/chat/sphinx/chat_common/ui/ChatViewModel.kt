@@ -1700,12 +1700,13 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                     if ((pair?.first ?: 0) > 0) {
                         messageLimitFlow.value += 100
 
+                        delay(2000L)
                         reloadSearchWithFetchedMsgs()
                     } else {
                         reachEndOfResults()
                     }
                     connectManagerRepository.getTagsByChatId(chat.id)
-                    delay(4000L)
+                    delay(2000L)
                     isLoadingMore = false
                 }
             }
@@ -1928,12 +1929,13 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
     private var messagesSearchJob: Job? = null
     fun searchMessages(
-        text: String?,
-        index: Int? = null
+        text: String?
     ) {
         moreOptionsMenuHandler.updateViewState(
             MenuBottomViewState.Closed
         )
+
+        val currentState = (messagesSearchViewStateContainer.viewStateFlow.value as? MessagesSearchViewState.Searching)
 
         chatId?.let { nnChatId ->
             text?.let { nnText ->
@@ -1943,9 +1945,9 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                             true,
                             nnText,
                             false,
-                            emptyList(),
-                            index ?: 0,
-                            false
+                            currentState?.results ?: emptyList(),
+                            currentState?.index ?: 0,
+                            currentState?.navigatingForward ?: false
                         )
                     )
 
@@ -1953,19 +1955,33 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                     messagesSearchJob = viewModelScope.launch(io) {
                         delay(500L)
 
-                        messageRepository.searchMessagesBy(nnChatId, nnText).firstOrNull()
-                            ?.let { messages ->
-                                messagesSearchViewStateContainer.updateViewState(
-                                    MessagesSearchViewState.Searching(
-                                        false,
-                                        nnText,
-                                        true,
-                                        messages,
-                                        index ?: 0,
-                                        true
-                                    )
-                                )
+                        val results = messageHolderViewStateFlow.value
+                            .reversed()
+                            .mapNotNull { holder ->
+                                holder.message?.let { message ->
+                                    val content = message.messageContentDecrypted?.value
+                                    if (content?.contains(nnText, ignoreCase = true) == true) {
+                                        message.id.value to content
+                                    } else {
+                                        null
+                                    }
+                                }
                             }
+
+                        if (results.isEmpty()) {
+                            fetchMoreItems()
+                        }
+
+                        messagesSearchViewStateContainer.updateViewState(
+                            MessagesSearchViewState.Searching(
+                                results.isEmpty(),
+                                nnText,
+                                true,
+                                results,
+                                currentState?.index ?: 0,
+                                true
+                            )
+                        )
                     }
                     return
                 }
@@ -1977,9 +1993,9 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                 false,
                 text,
                 (text ?: "").isNotEmpty(),
-                emptyList(),
-                index ?: 0,
-                true
+                currentState?.results ?: emptyList(),
+                currentState?.index ?: 0,
+                currentState?.navigatingForward ?: true
             )
         )
     }
@@ -2004,7 +2020,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
             var didReachLimit = false
 
             if (advanceBy > 0) {
-                didReachLimit = searchViewState.index + advanceBy == searchViewState.messages.size - 1
+                didReachLimit = searchViewState.index + advanceBy == searchViewState.results.size - 1
 
                 if (didReachLimit) {
                     fetchMoreItems()
@@ -2016,7 +2032,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                     didReachLimit,
                     searchViewState.term,
                     searchViewState.clearButtonVisible,
-                    searchViewState.messages,
+                    searchViewState.results,
                     searchViewState.index + advanceBy,
                     advanceBy > 0
                 )
@@ -2028,8 +2044,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         val searchViewState = messagesSearchViewStateContainer.viewStateFlow.value
         if (searchViewState is MessagesSearchViewState.Searching) {
             searchMessages(
-                searchViewState.term,
-                searchViewState.index
+                searchViewState.term
             )
         }
     }
@@ -2042,7 +2057,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                     false,
                     searchViewState.term,
                     searchViewState.clearButtonVisible,
-                    searchViewState.messages,
+                    searchViewState.results,
                     searchViewState.index,
                     searchViewState.navigatingForward
                 )

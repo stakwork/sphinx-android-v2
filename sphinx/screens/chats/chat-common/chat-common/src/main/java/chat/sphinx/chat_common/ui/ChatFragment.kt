@@ -9,17 +9,26 @@ import android.graphics.Color
 import android.graphics.Matrix
 import android.graphics.pdf.PdfRenderer
 import android.media.ExifInterface
+import android.os.Build
 import android.os.Bundle
 import android.os.ParcelFileDescriptor
 import android.text.Editable
 import android.text.InputFilter
+import android.text.Spannable
+import android.text.SpannableString
 import android.text.Spanned
+import android.text.TextPaint
 import android.text.TextWatcher
+import android.text.style.BackgroundColorSpan
+import android.text.style.ForegroundColorSpan
+import android.text.style.MetricAffectingSpan
+import android.text.style.TypefaceSpan
 import android.util.Log
 import android.view.View
 import android.view.Window
 import android.view.inputmethod.InputMethodManager
 import android.widget.ImageView
+import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
@@ -28,6 +37,7 @@ import androidx.appcompat.content.res.AppCompatResources
 import androidx.constraintlayout.motion.widget.MotionLayout
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
+import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.isVisible
 import androidx.core.widget.addTextChangedListener
 import androidx.fragment.app.FragmentActivity
@@ -1960,7 +1970,6 @@ abstract class ChatFragment<
 
                             if (viewState is MessagesSearchViewState.Cancel) {
                                 hideKeyboardFrom(textViewChatSearchDone.context, textViewChatSearchDone )
-                                forceScrollToBottom()
                             }
                         }
                     }
@@ -1985,14 +1994,32 @@ abstract class ChatFragment<
                         }
 
                         searchFooterBinding.apply {
+                            val matchesCount = viewState.results.size
+                            val resultsFound = matchesCount > 0
                             progressBarLoadingSearch.goneIfFalse(viewState.loading)
-                            textViewChatSearchResultsFound.text = if (viewState.loading) getString(R.string.searching_messages) else getString(R.string.results_found, viewState.messages.size)
 
+                            val matchesText = getString(R.string.search_matches, viewState.index + 1, matchesCount)
+                            textViewChatSearchResultsFound.text = if (resultsFound) matchesText else getString(R.string.results_found, 0)
+
+                            if (resultsFound) {
+                                val spannable: Spannable = SpannableString(matchesText)
+
+                                for (range in matchesText.allRangesOf(getString(R.string.search_matches_highlighted, viewState.index + 1))) {
+                                    spannable.setSpan(
+                                        ForegroundColorSpan(resources.getColor(chat.sphinx.resources.R.color.primaryGreen)),
+                                        range.first,
+                                        range.last + 1,
+                                        Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                                    )
+                                }
+
+                                textViewChatSearchResultsFound.setText(spannable, TextView.BufferType.SPANNABLE)
+                            }
 
                             val enabledColor = ContextCompat.getColor(binding.root.context, R_common.color.text)
                             val disabledColor = ContextCompat.getColor(binding.root.context, R_common.color.secondaryText)
 
-                            val nextButtonEnable = viewState.index < viewState.messages.size - 1
+                            val nextButtonEnable = !viewState.loading && viewState.index < matchesCount - 1
                             textViewChatSearchNext.isEnabled = nextButtonEnable
                             textViewChatSearchNext.setTextColor(
                                 if (nextButtonEnable) {
@@ -2002,7 +2029,7 @@ abstract class ChatFragment<
                                 }
                             )
 
-                            val previousButtonEnable = viewState.index > 0
+                            val previousButtonEnable = !viewState.loading && viewState.index > 0
                             textViewChatSearchPrevious.isEnabled = previousButtonEnable
                             textViewChatSearchPrevious.setTextColor(
                                 if (previousButtonEnable) {
@@ -2017,7 +2044,7 @@ abstract class ChatFragment<
                         setFocusOnSearchField()
 
                         scrollToResult(
-                            viewState.messages,
+                            viewState.results,
                             viewState.index,
                             if (viewState.navigatingForward) viewState.index - 1 else viewState.index + 1
                         )
@@ -2031,8 +2058,9 @@ abstract class ChatFragment<
                 when (viewState) {
                     is ScrollDownViewState.On -> {
                         scrollDownButtonBinding.root.visible
-                        scrollDownButtonBinding.textViewChatMessagesCount.goneIfFalse(!viewState.unseenMessagesCount.isNullOrEmpty())
-                        scrollDownButtonBinding.textViewChatMessagesCount.text = viewState.unseenMessagesCount
+                        scrollDownButtonBinding.textViewChatMessagesCount.gone
+//                        scrollDownButtonBinding.textViewChatMessagesCount.goneIfFalse(!viewState.unseenMessagesCount.isNullOrEmpty())
+//                        scrollDownButtonBinding.textViewChatMessagesCount.text = viewState.unseenMessagesCount
                     }
                     is ScrollDownViewState.Off -> {
                         scrollDownButtonBinding.root.gone
@@ -2089,7 +2117,7 @@ abstract class ChatFragment<
      }
 
     private fun scrollToResult(
-        messages: List<Message>,
+        messages: List<Pair<Long, String>>,
         index: Int,
         prevIndex: Int
     ) {
@@ -2209,4 +2237,19 @@ fun RecyclerView.getItemsDistanceToBottom(): Int {
 fun Context.getScreenWidth(): Int {
     val displayMetrics = resources.displayMetrics
     return displayMetrics.widthPixels
+}
+
+fun String.allRangesOf(substring: String): List<IntRange> {
+    val ranges = mutableListOf<IntRange>()
+    var startIndex = 0
+
+    while (true) {
+        val index = this.lowercase().indexOf(substring.lowercase(), startIndex)
+        if (index == -1) break
+
+        ranges.add(index until (index + substring.length))
+        startIndex = index + 1
+    }
+
+    return ranges
 }

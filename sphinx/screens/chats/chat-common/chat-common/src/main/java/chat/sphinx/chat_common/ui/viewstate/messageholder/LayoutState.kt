@@ -24,7 +24,7 @@ import java.io.File
 sealed class LayoutState private constructor() {
 
     data class SearchHighlightedStatus(
-        val highlightedText: String
+        val highlightedTexts: List<Pair<String, IntRange>>
     ): LayoutState()
 
     data class MessageStatusHeader(

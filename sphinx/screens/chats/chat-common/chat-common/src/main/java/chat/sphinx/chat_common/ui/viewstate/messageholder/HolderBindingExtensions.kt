@@ -210,9 +210,6 @@ internal fun LayoutMessageHolderBinding.setView(
         }.let { job ->
             holderJobs.add(job)
         }
-        setSearchHighlightedStatus(
-            viewState.searchHighlightedStatus
-        )
         setMessagesSeparator(
             viewState.messagesSeparator
         )
@@ -275,6 +272,7 @@ internal fun LayoutMessageHolderBinding.setView(
             )
             setBubbleMessageLayout(
                 viewState.bubbleMessage,
+                viewState.searchHighlightedStatus,
                 onSphinxInteractionListener
             )
             val job2 = holderScope.launch {
@@ -728,20 +726,6 @@ internal inline fun LayoutMessageHolderBinding.setMessagesSeparator(
 
 @MainThread
 @Suppress("NOTHING_TO_INLINE")
-internal inline fun LayoutMessageHolderBinding.setSearchHighlightedStatus(
-    searchStatus: LayoutState.SearchHighlightedStatus?
-) {
-    root.setBackgroundColor(
-        if (searchStatus != null) {
-            root.context.getColor(R_common.color.lightDivider)
-        } else {
-            root.context.getColor(android.R.color.transparent)
-        }
-    )
-}
-
-@MainThread
-@Suppress("NOTHING_TO_INLINE")
 internal inline fun LayoutMessageHolderBinding.setStatusHeader(
     statusHeader: LayoutState.MessageStatusHeader?,
     holderJobs: ArrayList<Job>,
@@ -1135,6 +1119,7 @@ internal suspend inline fun LayoutMessageHolderBinding.setBubbleThreadLayout(
 @Suppress("NOTHING_TO_INLINE")
 internal inline fun LayoutMessageHolderBinding.setBubbleMessageLayout(
     message: LayoutState.Bubble.ContainerThird.Message?,
+    searchStatus: LayoutState.SearchHighlightedStatus?,
     onSphinxInteractionListener: SphinxUrlSpan.OnInteractionListener?
 ) {
     includeMessageHolderBubble.textViewMessageText.apply {
@@ -1165,6 +1150,7 @@ internal inline fun LayoutMessageHolderBinding.setBubbleMessageLayout(
             SphinxHighlightingTool.addMarkdowns(
                 this,
                 message.highlightedTexts,
+                searchStatus?.highlightedTexts ?: emptyList(),
                 message.boldTexts,
                 message.markdownLinkTexts,
                 onSphinxInteractionListener,
@@ -1219,6 +1205,7 @@ internal inline fun LayoutMessageHolderBinding.setBubblePaidMessageLayout(
             holderScope.launch(dispatchers.mainImmediate) {
                 setBubbleMessageLayout(
                     viewState.retrievePaidTextMessageContent(),
+                    viewState.searchHighlightedStatus,
                     onSphinxInteractionListener
                 )
             }.let { job ->

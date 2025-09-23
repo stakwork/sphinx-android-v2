@@ -266,19 +266,23 @@ internal class MessageListAdapter<ARGS : NavArgs>(
     }
 
     fun highlightAndScrollToSearchResult(
-        message: Message,
-        previousMessage: Message?,
+        result: Pair<Long, String>,
+        previousResult: Pair<Long, String>?,
         searchTerm: String
     ) {
-        var previousMessageUpdated = (previousMessage == null)
+        var previousMessageUpdated = (previousResult == null)
         var indexToScroll: Int? = null
 
         for ((index, messageHolderVS) in differ.currentList.withIndex()) {
-            if (messageHolderVS.message?.id == previousMessage?.id && !previousMessageUpdated) {
+            if (messageHolderVS.message?.id?.value == previousResult?.first && !previousMessageUpdated) {
 
                 (messageHolderVS as? MessageHolderViewState.Sent)?.let {
                     it.highlightedText = null
                 } ?: (messageHolderVS as? MessageHolderViewState.Received)?.let {
+                    it.highlightedText = null
+                } ?: (messageHolderVS as? MessageHolderViewState.MessageOnlyTextHolderViewState.Sent)?.let {
+                    it.highlightedText = null
+                } ?: (messageHolderVS as? MessageHolderViewState.MessageOnlyTextHolderViewState.Received)?.let {
                     it.highlightedText = null
                 }
 
@@ -287,11 +291,14 @@ internal class MessageListAdapter<ARGS : NavArgs>(
                 previousMessageUpdated = true
             }
 
-            if (messageHolderVS.message?.id == message.id && indexToScroll == null) {
-
+            if (messageHolderVS.message?.id?.value == result.first && indexToScroll == null) {
                 (messageHolderVS as? MessageHolderViewState.Sent)?.let {
                     it.highlightedText = searchTerm
                 } ?: (messageHolderVS as? MessageHolderViewState.Received)?.let {
+                    it.highlightedText = searchTerm
+                } ?: (messageHolderVS as? MessageHolderViewState.MessageOnlyTextHolderViewState.Sent)?.let {
+                    it.highlightedText = searchTerm
+                } ?: (messageHolderVS as? MessageHolderViewState.MessageOnlyTextHolderViewState.Received)?.let {
                     it.highlightedText = searchTerm
                 }
 

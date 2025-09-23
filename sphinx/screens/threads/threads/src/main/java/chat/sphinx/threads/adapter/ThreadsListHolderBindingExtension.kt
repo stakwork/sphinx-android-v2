@@ -636,6 +636,7 @@ internal inline fun ThreadsListItemHolderBinding.setBubbleMessageLayout(
             SphinxHighlightingTool.addMarkdowns(
                 this,
                 message.highlightedTexts,
+                emptyList(),
                 message.boldTexts,
                 message.markdownLinkTexts,
                 onSphinxInteractionListener,

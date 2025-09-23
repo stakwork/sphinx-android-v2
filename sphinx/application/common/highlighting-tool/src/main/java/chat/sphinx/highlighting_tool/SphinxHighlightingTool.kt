@@ -9,6 +9,7 @@ import android.text.SpannableString
 import android.text.TextPaint
 import android.text.method.LinkMovementMethod
 import android.text.style.BackgroundColorSpan
+import android.text.style.ForegroundColorSpan
 import android.text.style.MetricAffectingSpan
 import android.text.style.TypefaceSpan
 import android.text.style.URLSpan
@@ -38,6 +39,7 @@ object SphinxHighlightingTool {
     fun addMarkdowns(
         text: TextView,
         highlightedTexts: List<Pair<String, IntRange>>,
+        searchHighlightedText: List<Pair<String, IntRange>>,
         boldTexts: List<Pair<String, IntRange>>,
         linkTexts: List<Pair<String, IntRange>>,
         onSphinxInteractionListener: SphinxUrlSpan.OnInteractionListener?,
@@ -154,6 +156,44 @@ object SphinxHighlightingTool {
             }
         }
 
+        if (searchHighlightedText.isNotEmpty()) {
+            val t = text.text
+
+            if (t is Spannable) {
+                for (search in searchHighlightedText) {
+                    ResourcesCompat.getFont(context, R_common.font.roboto_black)?.let { typeface ->
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                            t.setSpan(
+                                BackgroundColorSpan(resources.getColor(chat.sphinx.resources.R.color.primaryGreen)),
+                                search.second.first,
+                                search.second.last + 1,
+                                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                            )
+                        }
+                    }
+
+                    text.setText(t, TextView.BufferType.SPANNABLE)
+                }
+            } else {
+                val spannable: Spannable = SpannableString(text.text)
+
+                for (search in searchHighlightedText) {
+                    ResourcesCompat.getFont(context, R_common.font.roboto_black)?.let { typeface ->
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                            spannable.setSpan(
+                                BackgroundColorSpan(resources.getColor(chat.sphinx.resources.R.color.primaryGreen)),
+                                search.second.first,
+                                search.second.last + 1,
+                                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                            )
+                        }
+                    }
+
+                    text.setText(spannable, TextView.BufferType.SPANNABLE)
+                }
+            }
+        }
+
         if (linkTexts.isNotEmpty()) {
             val t = text.text
 
@@ -171,7 +211,7 @@ object SphinxHighlightingTool {
                     t.setSpan(
                         span,
                         linkText.second.first,
-                        linkText.second.last,
+                        linkText.second.last + 1,
                         Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
                     )
 

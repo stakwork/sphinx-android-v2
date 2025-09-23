@@ -170,6 +170,7 @@
 
     <string name="searching_messages">正在搜尋...</string>
     <string name="results_found">找到 %d 個結果</string>
+    <string name="search_matches">%d/%d 個匹配</string>
 
     <string name="slide_to_cancel">&lt;&lt; 滑動來取消</string>
     <string name="recording_permission_granted">已授予錄音權限</string>

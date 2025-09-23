@@ -768,6 +768,7 @@ internal class ChatTribeFragment: ChatFragment<
                                     SphinxHighlightingTool.addMarkdowns(
                                         textViewPinnedBottomHeaderText,
                                         viewState.messageContent.highlightedTexts(),
+                                        emptyList(),
                                         viewState.messageContent.boldTexts(),
                                         viewState.messageContent.markDownLinkTexts(),
                                         null,
@@ -828,6 +829,7 @@ internal class ChatTribeFragment: ChatFragment<
                                         SphinxHighlightingTool.addMarkdowns(
                                             textView,
                                             nnMessage.highlightedTexts(),
+                                            emptyList(),
                                             nnMessage.boldTexts(),
                                             nnMessage.markDownLinkTexts(),
                                             null,

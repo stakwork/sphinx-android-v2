@@ -282,6 +282,7 @@ internal inline fun LayoutThreadMessageHeaderBinding.setBubbleMessageLayout(
             SphinxHighlightingTool.addMarkdowns(
                 this,
                 message.highlightedTexts,
+                emptyList(),
                 message.boldTexts,
                 message.markdownLinkTexts,
                 onSphinxInteractionListener,

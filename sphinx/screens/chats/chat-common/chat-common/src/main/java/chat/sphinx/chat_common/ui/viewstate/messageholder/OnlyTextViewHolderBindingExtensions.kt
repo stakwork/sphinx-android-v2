@@ -43,9 +43,6 @@ internal fun LayoutOnlyTextSentMessageHolderBinding.setView(
     onSphinxInteractionListener: SphinxUrlSpan.OnInteractionListener? = null
 ) {
     apply {
-        setSearchHighlightedStatus(
-            viewState.searchHighlightedStatus
-        )
         setStatusHeader(
             viewState.statusHeader,
             holderJobs,
@@ -60,24 +57,11 @@ internal fun LayoutOnlyTextSentMessageHolderBinding.setView(
         if (viewState.background !is BubbleBackground.Gone) {
             setBubbleMessageLayout(
                 viewState.bubbleMessage,
+                viewState.searchHighlightedStatus,
                 onSphinxInteractionListener
             )
         }
     }
-}
-
-@MainThread
-@Suppress("NOTHING_TO_INLINE")
-internal inline fun LayoutOnlyTextSentMessageHolderBinding.setSearchHighlightedStatus(
-    searchStatus: LayoutState.SearchHighlightedStatus?
-) {
-    root.setBackgroundColor(
-        if (searchStatus != null) {
-            root.context.getColor(R_common.color.lightDivider)
-        } else {
-            root.context.getColor(android.R.color.transparent)
-        }
-    )
 }
 
 @MainThread
@@ -222,9 +206,14 @@ internal fun LayoutOnlyTextSentMessageHolderBinding.setBubbleBackground(
 @Suppress("NOTHING_TO_INLINE")
 internal inline fun LayoutOnlyTextSentMessageHolderBinding.setBubbleMessageLayout(
     message: LayoutState.Bubble.ContainerThird.Message?,
+    searchStatus: LayoutState.SearchHighlightedStatus?,
     onSphinxInteractionListener: SphinxUrlSpan.OnInteractionListener?
 ) {
-    includeMessageHolderBubble.setBubbleMessageLayout(message, onSphinxInteractionListener)
+    includeMessageHolderBubble.setBubbleMessageLayout(
+        message,
+        searchStatus,
+        onSphinxInteractionListener
+    )
 }
 
 @MainThread
@@ -261,9 +250,6 @@ internal fun LayoutOnlyTextReceivedMessageHolderBinding.setView(
         }.let { job ->
             holderJobs.add(job)
         }
-        setSearchHighlightedStatus(
-            viewState.searchHighlightedStatus
-        )
         setStatusHeader(
             viewState.statusHeader,
             holderJobs,
@@ -278,24 +264,11 @@ internal fun LayoutOnlyTextReceivedMessageHolderBinding.setView(
         if (viewState.background !is BubbleBackground.Gone) {
             setBubbleMessageLayout(
                 viewState.bubbleMessage,
+                viewState.searchHighlightedStatus,
                 onSphinxInteractionListener
             )
         }
     }
-}
-
-@MainThread
-@Suppress("NOTHING_TO_INLINE")
-internal inline fun LayoutOnlyTextReceivedMessageHolderBinding.setSearchHighlightedStatus(
-    searchStatus: LayoutState.SearchHighlightedStatus?
-) {
-    root.setBackgroundColor(
-        if (searchStatus != null) {
-            root.context.getColor(R_common.color.lightDivider)
-        } else {
-            root.context.getColor(android.R.color.transparent)
-        }
-    )
 }
 
 @MainThread
@@ -444,10 +417,13 @@ internal fun LayoutOnlyTextReceivedMessageHolderBinding.setBubbleBackground(
 @Suppress("NOTHING_TO_INLINE")
 internal inline fun LayoutOnlyTextReceivedMessageHolderBinding.setBubbleMessageLayout(
     message: LayoutState.Bubble.ContainerThird.Message?,
+    searchStatus: LayoutState.SearchHighlightedStatus?,
     onSphinxInteractionListener: SphinxUrlSpan.OnInteractionListener?
 ) {
     includeMessageHolderBubble.setBubbleMessageLayout(
-        message, onSphinxInteractionListener
+        message,
+        searchStatus,
+        onSphinxInteractionListener
     )
 }
 
@@ -455,6 +431,7 @@ internal inline fun LayoutOnlyTextReceivedMessageHolderBinding.setBubbleMessageL
 @Suppress("NOTHING_TO_INLINE")
 internal inline fun LayoutOnlyTextMessageHolderBubbleBinding.setBubbleMessageLayout(
     message: LayoutState.Bubble.ContainerThird.Message?,
+    searchStatus: LayoutState.SearchHighlightedStatus?,
     onSphinxInteractionListener: SphinxUrlSpan.OnInteractionListener?
 ) {
     textViewMessageText.apply {
@@ -483,6 +460,7 @@ internal inline fun LayoutOnlyTextMessageHolderBubbleBinding.setBubbleMessageLay
             SphinxHighlightingTool.addMarkdowns(
                 this,
                 message.highlightedTexts,
+                searchStatus?.highlightedTexts ?: emptyList(),
                 message.boldTexts,
                 message.markdownLinkTexts,
                 onSphinxInteractionListener,

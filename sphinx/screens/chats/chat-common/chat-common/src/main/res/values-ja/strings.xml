@@ -172,6 +172,7 @@
 
     <string name="searching_messages">検索中...</string>
     <string name="results_found">%d 件の結果が見つかりました</string>
+    <string name="search_matches">%d/%d の一致</string>
 
     <string name="slide_to_cancel">&lt;&lt; キャンセルする為スワイプ</string>
     <string name="recording_permission_granted">録音許可が付与されました</string>

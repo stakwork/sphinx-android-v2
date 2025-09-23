@@ -4,6 +4,7 @@ import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
 import android.os.ParcelFileDescriptor.MODE_READ_ONLY
 import chat.sphinx.chat_common.model.MessageLinkPreview
+import chat.sphinx.chat_common.ui.allRangesOf
 import chat.sphinx.chat_common.ui.viewstate.InitialHolderViewState
 import chat.sphinx.chat_common.ui.viewstate.selected.MenuItemState
 import chat.sphinx.highlighting_tool.SphinxLinkify
@@ -97,12 +98,14 @@ internal sealed class MessageHolderViewState(
 
     val searchHighlightedStatus: LayoutState.SearchHighlightedStatus?
     get() = if (highlightedText != null && highlightedText?.isEmpty() == false) {
-                LayoutState.SearchHighlightedStatus(
-                    highlightedText!!
-                )
-            } else {
-                null
-            }
+        val matches = message?.retrieveTextToShow()?.replacingMarkdown()?.allRangesOf(highlightedText!!) ?: emptyList()
+
+        LayoutState.SearchHighlightedStatus(
+            matches.map { Pair(highlightedText!!, it) }
+        )
+    } else {
+        null
+    }
 
 
     val unsupportedMessageType: LayoutState.Bubble.ContainerThird.UnsupportedMessageType? by lazy(LazyThreadSafetyMode.PUBLICATION) {
@@ -305,7 +308,7 @@ internal sealed class MessageHolderViewState(
                 } else {
                     null
                 }
-            } ?: message.messageDecryptionError?.let { decryptionError ->
+            } ?: message.messageDecryptionError.let { decryptionError ->
                 if (decryptionError) {
                     LayoutState.Bubble.ContainerThird.Message(
                         text = null,

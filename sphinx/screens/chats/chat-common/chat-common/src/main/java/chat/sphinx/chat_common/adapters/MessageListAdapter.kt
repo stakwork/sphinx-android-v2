@@ -7,6 +7,7 @@ import android.view.View
 import android.view.View.OnLongClickListener
 import android.view.ViewGroup
 import android.widget.ImageView
+import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
@@ -17,6 +18,8 @@ import androidx.recyclerview.widget.AsyncListDiffer
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.transition.AutoTransition
+import androidx.transition.TransitionManager
 import androidx.viewbinding.ViewBinding
 import by.kirich1409.viewbindingdelegate.viewBinding
 import chat.sphinx.chat_common.R
@@ -29,6 +32,8 @@ import chat.sphinx.chat_common.ui.isMessageSelected
 import chat.sphinx.chat_common.ui.viewstate.audio.AudioMessageState
 import chat.sphinx.chat_common.ui.viewstate.audio.AudioPlayState
 import chat.sphinx.chat_common.ui.viewstate.messageholder.*
+import chat.sphinx.chat_common.ui.viewstate.messageholder.MessageHolderViewState.MessageOnlyTextHolderViewState
+import chat.sphinx.chat_common.ui.viewstate.messageholder.MessageHolderViewState.Sent
 import chat.sphinx.chat_common.ui.viewstate.selected.SelectedMessageViewState
 import chat.sphinx.chat_common.util.*
 import chat.sphinx.concept_image_loader.*
@@ -465,6 +470,7 @@ internal class MessageListAdapter<ARGS : NavArgs>(
         private val holderScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
         private val onSphinxInteractionListener: SphinxUrlSpan.OnInteractionListener
+
         init {
             binding.includeMessageHolderBubble.apply {
 
@@ -522,6 +528,32 @@ internal class MessageListAdapter<ARGS : NavArgs>(
                 includeMessageLinkPreviewTribe.apply tribe@ {
                     root.setOnLongClickListener(selectedMessageLongClickListener)
                     root.setOnClickListener(linkPreviewClickListener)
+                }
+
+                val replyClickListener = View.OnClickListener {
+                    includeMessageReply.textViewReplyMessageLabel.let {
+                        if (it.maxLines == 1) {
+                            it.maxLines = Integer.MAX_VALUE
+                            it.setTextColor(ContextCompat.getColor(root.context, chat.sphinx.resources.R.color.text))
+                        } else {
+                            it.maxLines = 1
+                            val isSent = currentViewState is Sent || currentViewState is MessageOnlyTextHolderViewState.Sent
+                            it.setTextColor(
+                                ContextCompat.getColor(
+                                    root.context,
+                                    if (isSent) {
+                                        chat.sphinx.resources.R.color.washedOutSentText
+                                    } else {
+                                        chat.sphinx.resources.R.color.washedOutReceivedText
+                                    }
+                                )
+                            )
+                        }
+                    }
+                }
+
+                includeMessageReply.apply reply@ {
+                    root.setOnClickListener(replyClickListener)
                 }
 
                 includeMessageTypeCallInvite.let { holder ->

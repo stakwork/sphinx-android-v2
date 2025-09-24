@@ -1651,6 +1651,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                             withContext(Dispatchers.Main.immediate) {
                                 messageHolderViewStateFlow.value = processedData.first
 
+                                reloadSearchWithFetchedMsgs()
                                 updateScrollDownButtonCount()
                                 updateClockIconState(processedData.second)
 
@@ -1699,14 +1700,11 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                 if (pair?.second == chat.ownerPubKey?.value) {
                     if ((pair?.first ?: 0) > 0) {
                         messageLimitFlow.value += 100
-
-                        delay(2000L)
-                        reloadSearchWithFetchedMsgs()
                     } else {
                         reachEndOfResults()
                     }
                     connectManagerRepository.getTagsByChatId(chat.id)
-                    delay(2000L)
+                    delay(5000L)
                     isLoadingMore = false
                 }
             }

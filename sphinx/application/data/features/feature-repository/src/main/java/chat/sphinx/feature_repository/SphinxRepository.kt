@@ -3811,6 +3811,7 @@ abstract class SphinxRepository(
     override fun getAllMessagesToShowByChatId(
         chatId: ChatId,
         limit: Long,
+        isSearchMode: Boolean,
         chatThreadUUID: ThreadUUID?
     ): Flow<List<Message>> =
         flow {
@@ -4053,7 +4054,7 @@ abstract class SphinxRepository(
                                     queries,
                                     dbo,
                                     dbo.uuid?.let { reactionsMap[it] },
-                                    dbo.uuid?.let { threadMap[it] },
+                                    if (isSearchMode) null else dbo.uuid?.let { threadMap[it] },
                                     messageMediaMap[dbo.id],
                                     dbo.muid?.let { purchaseItemsMap[it] },
                                     dbo.reply_uuid?.value?.toMessageUUID()?.let { repliesMap[it] },
@@ -4311,24 +4312,6 @@ abstract class SphinxRepository(
             }
             .distinctUntilChanged()
 
-    override fun searchMessagesBy(chatId: ChatId, term: String): Flow<List<Message>> = flow {
-        emitAll(
-            coreDB.getSphinxDatabaseQueries()
-                .messagesSearchByTerm(
-                    chatId,
-                    "%${term.lowercase()}%"
-                )
-                .asFlow()
-                .mapToList(io)
-                .map { listMessageDbo ->
-                    listMessageDbo.map {
-                        messageDboPresenterMapper.mapFrom(it)
-                    }
-                }
-                .distinctUntilChanged()
-        )
-    }
-
     override fun getTribeLastMemberRequestBySenderAlias(
         alias: SenderAlias,
         chatId: ChatId,
@@ -4348,6 +4331,7 @@ abstract class SphinxRepository(
         )
     }
 
+    @OptIn(UnencryptedDataAccess::class)
     override fun getMessageByUUID(messageUUID: MessageUUID): Flow<Message?> = flow {
         val queries = coreDB.getSphinxDatabaseQueries()
         emitAll(
@@ -4356,7 +4340,66 @@ abstract class SphinxRepository(
                 .mapToOneOrNull(io)
                 .map {
                     it?.let { messageDbo ->
-                        mapMessageDboAndDecryptContentIfNeeded(queries, messageDbo)
+                        val mediaDbo = messageDbo.id.let { queries.messageMediaGetById(it) }.executeAsOneOrNull()
+
+                        val messageMediaDboWrapper = mediaDbo?.let { nnMediaDbo ->
+                            nnMediaDbo.media_key?.let { key ->
+                                nnMediaDbo.media_key_decrypted.let { decrypted ->
+                                    if (decrypted == null) {
+                                        val decryptResponse = decryptMediaKey(MediaKey(key.value))
+
+                                        @Exhaustive
+                                        when (decryptResponse) {
+                                            is Response.Error -> {
+                                                MessageMediaDboWrapper(nnMediaDbo).also {
+                                                    it._mediaKeyDecrypted = null
+                                                    it._mediaKeyDecryptionError = true
+                                                    it._mediaKeyDecryptionException = decryptResponse.exception
+                                                }
+                                            }
+                                            is Response.Success -> {
+                                                decryptResponse.value
+                                                    .toUnencryptedString(trim = false)
+                                                    .value
+                                                    .toMediaKeyDecrypted()
+                                                    .let { decryptedKey ->
+                                                        MessageMediaDboWrapper(nnMediaDbo)
+                                                            .also {
+                                                                it._mediaKeyDecrypted = decryptedKey
+
+                                                                if (decryptedKey == null) {
+                                                                    it._mediaKeyDecryptionError = true
+                                                                } else {
+
+                                                                    messageLock.withLock {
+                                                                        withContext(io) {
+                                                                            queries.messageMediaUpdateMediaKeyDecrypted(
+                                                                                decryptedKey,
+                                                                                nnMediaDbo.id
+                                                                            )
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                    }
+                                            }
+                                        }
+                                    } else {
+                                        MessageMediaDboWrapper(nnMediaDbo)
+                                    }
+                                }
+                            } ?: run {
+                                MessageMediaDboWrapper(mediaDbo)
+                            }
+                        } ?: run {
+                            null
+                        }
+
+                        mapMessageDboAndDecryptContentIfNeeded(
+                            queries,
+                            messageDbo,
+                            messageMedia = messageMediaDboWrapper
+                        )
                     }
                 }
                 .distinctUntilChanged()

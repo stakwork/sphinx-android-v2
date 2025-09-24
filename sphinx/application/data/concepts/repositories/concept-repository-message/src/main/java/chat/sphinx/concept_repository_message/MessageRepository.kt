@@ -33,6 +33,7 @@ interface MessageRepository {
     fun getAllMessagesToShowByChatId(
         chatId: ChatId,
         limit: Long,
+        isSearchMode: Boolean,
         chatThreadUUID: ThreadUUID? = null
     ): Flow<List<Message>>
 
@@ -51,8 +52,6 @@ interface MessageRepository {
         chatId: ChatId,
         publicKey: String
     )
-
-    fun searchMessagesBy(chatId: ChatId, term: String): Flow<List<Message>>
 
     fun getMessageById(messageId: MessageId): Flow<Message?>
 

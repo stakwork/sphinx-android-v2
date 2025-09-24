@@ -254,7 +254,6 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         ViewStateContainer(ShimmerViewState.On)
     }
 
-    private val latestThreadMessagesFlow: MutableStateFlow<List<Message>?> = MutableStateFlow(null)
     private val scrollDownButtonCount: MutableStateFlow<Long?> = MutableStateFlow(null)
 
     private suspend fun getAccountBalance(): StateFlow<NodeBalance?> =
@@ -270,6 +269,10 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
     fun updateVisibleRange(range: IntRange) {
         _visibleRange.value = range
+    }
+
+    private fun isSearching() : Boolean {
+        return messagesSearchViewStateContainer.viewStateFlow.value is MessagesSearchViewState.Searching
     }
 
     protected abstract suspend fun getChatInfo(): Triple<ChatName?, PhotoUrl?, String>?
@@ -348,14 +351,6 @@ abstract class ChatViewModel<ARGS : NavArgs>(
             SharingStarted.WhileSubscribed(5_000),
             ChatHeaderViewState.Idle
         )
-    }
-
-    private fun collectThread() {
-        viewModelScope.launch(io) {
-            threadSharedFlow?.collect { messages ->
-                latestThreadMessagesFlow.value = messages
-            }
-        }
     }
 
     private fun collectUnseenMessagesNumber() {
@@ -552,7 +547,8 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         var openSentPaidInvoicesCount = 0
         var openReceivedPaidInvoicesCount = 0
 
-        val messagesList = filterAndSortMessagesIfNecessary(chat, messages)
+        val isSearching = isSearching()
+        val messagesList = if (isSearching) messages else filterAndSortMessagesIfNecessary(chat, messages)
 
         for ((index, message) in messagesList.withIndex()) {
 
@@ -1269,7 +1265,6 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         // Filter messages to do not show thread replies on chat
         if (chat.isTribe() && !isThreadChat()) {
             for (message in messages) {
-
                 if (message.thread?.isNotEmpty() == true) {
                     message.uuid?.value?.let { uuid ->
                         threadMessageMap[uuid] = message.thread?.count() ?: 0
@@ -1584,6 +1579,8 @@ abstract class ChatViewModel<ARGS : NavArgs>(
     private val messageLimitFlow = MutableStateFlow(100L)
     private var isLoadingMore = false
 
+    private val _refreshFlow = MutableStateFlow(0L)
+
     fun screenInit() {
         if (messageHolderViewStateFlow.value.isNotEmpty()) {
             return
@@ -1599,7 +1596,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
         messagesLoadJob = viewModelScope.launch(Dispatchers.IO) {
             if (isThreadChat()) {
-                messageRepository.getAllMessagesToShowByChatId(getChat().id, 0, getThreadUUID())
+                messageRepository.getAllMessagesToShowByChatId(getChat().id, 0, false, getThreadUUID())
                     .distinctUntilChanged()
                     .flowOn(Dispatchers.IO)
                     .collect { messages ->
@@ -1627,42 +1624,49 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                         }
                     }
             } else {
-                messageLimitFlow
-                    .flatMapLatest { limit ->
-                        messageRepository.getAllMessagesToShowByChatId(getChat().id, limit).distinctUntilChanged()
-                    }
-                    .flowOn(Dispatchers.IO)
-                    .collect { messages ->
-                        viewModelScope.launch {
-                            val processedData = withContext(Dispatchers.Default) {
-                                val list = getMessageHolderViewStateList(messages).toList()
+                combine(
+                    messageLimitFlow,
+                    _refreshFlow
+                ) { limit, _ -> limit }
+                .flatMapLatest { limit ->
+                    //If it's search mode then thread messages will shown as independent messages
+                    messageRepository.getAllMessagesToShowByChatId(
+                        getChat().id,
+                        limit,
+                        isSearching()
+                    ).distinctUntilChanged()
+                }
+                .flowOn(Dispatchers.IO)
+                .collect { messages ->
+                    viewModelScope.launch {
+                        val processedData = withContext(Dispatchers.Default) {
+                            val list = getMessageHolderViewStateList(messages).toList()
 
-                                reloadPinnedMessage()
+                            reloadPinnedMessage()
 
-                                val lastMessage = messages.lastOrNull()
-                                val showClockIcon = lastMessage?.let {
-                                    it.status == MessageStatus.Pending &&
-                                            System.currentTimeMillis() - it.date.time > 30_000
-                                } == true
+                            val lastMessage = messages.lastOrNull()
+                            val showClockIcon = lastMessage?.let {
+                                it.status == MessageStatus.Pending &&
+                                        System.currentTimeMillis() - it.date.time > 30_000
+                            } == true
 
-                                Pair(list, showClockIcon)
-                            }
+                            Pair(list, showClockIcon)
+                        }
 
-                            withContext(Dispatchers.Main.immediate) {
-                                messageHolderViewStateFlow.value = processedData.first
+                        withContext(Dispatchers.Main.immediate) {
+                            messageHolderViewStateFlow.value = processedData.first
 
-                                reloadSearchWithFetchedMsgs()
-                                updateScrollDownButtonCount()
-                                updateClockIconState(processedData.second)
+                            reloadSearchWithFetchedMsgs()
+                            updateScrollDownButtonCount()
+                            updateClockIconState(processedData.second)
 
-                                delay(25)
-                                hideShimmeringView()
-                            }
+                            delay(25)
+                            hideShimmeringView()
                         }
                     }
+                }
             }
         }
-        collectThread()
         collectUnseenMessagesNumber()
         collectItemsFetched()
         fetchMoreItems()
@@ -1925,6 +1929,10 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
     abstract fun navigateToNotificationLevel()
 
+    private fun refreshMessages() {
+        _refreshFlow.value = System.currentTimeMillis()
+    }
+
     private var messagesSearchJob: Job? = null
     fun searchMessages(
         text: String?
@@ -1934,6 +1942,22 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         )
 
         val currentState = (messagesSearchViewStateContainer.viewStateFlow.value as? MessagesSearchViewState.Searching)
+
+        if (currentState == null && text == null) {
+            messagesSearchViewStateContainer.updateViewState(
+                MessagesSearchViewState.Searching(
+                    false,
+                    null,
+                    false,
+                    emptyList(),
+                    0,
+                    true
+                )
+            )
+
+            refreshMessages()
+            return
+        }
 
         chatId?.let { nnChatId ->
             text?.let { nnText ->
@@ -2002,6 +2026,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         messagesSearchViewStateContainer.updateViewState(
             MessagesSearchViewState.Cancel
         )
+        refreshMessages()
     }
 
     fun clearSearch() {

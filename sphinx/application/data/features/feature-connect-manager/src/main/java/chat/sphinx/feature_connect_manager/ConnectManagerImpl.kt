@@ -117,7 +117,7 @@ class ConnectManagerImpl: ConnectManager()
     private var isMqttConnected: Boolean = false
     private var isAppFirstInit: Boolean = true
 
-    private val userStateScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    private val userStateScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     companion object {
         const val TEST_V2_SERVER_IP = "75.101.247.127:1883"

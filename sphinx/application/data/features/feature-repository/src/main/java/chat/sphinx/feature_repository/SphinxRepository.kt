@@ -1004,7 +1004,7 @@ abstract class SphinxRepository(
     override fun onLastReadMessages(
         lastReadMessages: String
     ) {
-        applicationScope.launch(dispatchers.default) {
+        applicationScope.launch(dispatchers.io) {
             val queries = coreDB.getSphinxDatabaseQueries()
 
             val lastReadMessagesMap = lastReadMessages.toLastReadMap(moshi)
@@ -1047,7 +1047,7 @@ abstract class SphinxRepository(
     }
 
     override fun onUpdateMutes(mutes: String) {
-        applicationScope.launch(dispatchers.default) {
+        applicationScope.launch(dispatchers.io) {
             val queries = coreDB.getSphinxDatabaseQueries()
 
             val mutesMap = mutes.toMuteLevelsMap(moshi)
@@ -1139,7 +1139,6 @@ abstract class SphinxRepository(
         messages: List<MqttMessage>,
         isRestore: Boolean
     ) {
-
         applicationScope.launch(default) {
             val contactPublicKeys = messages.mapNotNull {
                 if (it.fromMe == true) {
@@ -2412,6 +2411,11 @@ abstract class SphinxRepository(
     private fun generateTribeId(): Long {
         val randomLong = secureRandom.nextLong()
         return randomLong.absoluteValue
+    }
+
+    private fun generateProvisionalMessageId(): Long {
+        val randomLong = secureRandom.nextLong()
+        return -randomLong.absoluteValue
     }
 
     override var updatedContactIds: MutableList<ContactId> = mutableListOf()
@@ -4528,7 +4532,7 @@ abstract class SphinxRepository(
     override fun sendMessage(sendMessage: SendMessage?) {
         if (sendMessage == null) return
 
-        applicationScope.launch(mainImmediate) {
+        applicationScope.launch(io) {
 
             val queries = coreDB.getSphinxDatabaseQueries()
 
@@ -4541,22 +4545,7 @@ abstract class SphinxRepository(
                 getContactById(it).firstOrNull()
             }
 
-            val owner: Contact? = accountOwner.value
-                ?: let {
-                    // TODO: Handle this better...
-                    var owner: Contact? = null
-                    try {
-                        accountOwner.collect {
-                            if (it != null) {
-                                owner = it
-                                throw Exception()
-                            }
-                        }
-                    } catch (e: Exception) {
-                    }
-                    delay(25L)
-                    owner
-                }
+            val owner: Contact? = getOwnerContact()
 
             val ownerPubKey = owner?.nodePubKey
 
@@ -4629,8 +4618,8 @@ abstract class SphinxRepository(
             val dateTime = DateTime.nowUTC().toDateTime()
 
             val provisionalMessageId: MessageId? = chat?.let { chatDbo ->
-                val currentProvisionalId: MessageId? = queries.messageGetLowestProvisionalMessageId().executeAsOneOrNull()
-                val provisionalId = MessageId((currentProvisionalId?.value ?: 0L) - 1)
+                val provisionalMessageId = generateProvisionalMessageId()
+                val provisionalId = MessageId(provisionalMessageId)
 
                 queries.transaction {
                     if (media != null) {
@@ -4697,16 +4686,14 @@ abstract class SphinxRepository(
                 )
             }
 
-            delay(250L)
-
             if (contact != null || chat != null) {
                 if (media != null) {
                     val password = PasswordGenerator(MEDIA_KEY_SIZE).password
                     val token = memeServerTokenHandler.retrieveAuthenticationToken(MediaHost.DEFAULT)
-                            ?: provisionalMessageId?.let { provId ->
-                                queries.messageUpdateStatus(MessageStatus.Failed, provId)
-                                return@launch
-                            } ?: return@launch
+                        ?: provisionalMessageId?.let { provId ->
+                            queries.messageUpdateStatus(MessageStatus.Failed, provId)
+                            return@launch
+                        } ?: return@launch
 
                     val response = networkQueryMemeServer.uploadAttachmentEncrypted(
                         token,

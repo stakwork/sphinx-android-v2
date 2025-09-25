@@ -916,6 +916,7 @@ abstract class ChatFragment<
         }
     }
 
+    private var chatScrollListener: ChatScrollListener<ARGS>? = null
     private fun setupRecyclerView() {
         val linearLayoutManager = LinearLayoutManager(binding.root.context)
         val messageListAdapter = MessageListAdapter(
@@ -938,10 +939,10 @@ abstract class ChatFragment<
             adapter = ConcatAdapter(messageListAdapter, footerAdapter)
             itemAnimator = null
 
-            val chatScrollListener = ChatScrollListener(lifecycleScope, viewModel, linearLayoutManager, updateVisibleRange = {
+            chatScrollListener = ChatScrollListener(lifecycleScope, viewModel, linearLayoutManager, updateVisibleRange = {
                 updateVisibleRange()
             })
-            addOnScrollListener(chatScrollListener)
+            addOnScrollListener(chatScrollListener!!)
         }
 
         viewLifecycleOwner.lifecycleScope.launch {
@@ -960,8 +961,12 @@ abstract class ChatFragment<
 
         private val threshold = 30 // Load more when 5 items from top
 
+        private var isActive = true
+
         override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
             super.onScrolled(recyclerView, dx, dy)
+
+            if (!isActive) return
 
             val firstVisiblePosition = layoutManager.findFirstVisibleItemPosition()
             val yOffset = recyclerView.computeVerticalScrollOffset()
@@ -995,6 +1000,8 @@ abstract class ChatFragment<
         override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
             super.onScrollStateChanged(recyclerView, newState)
 
+            if (!isActive) return
+
             if (!recyclerView.canScrollVertically(1) && newState == RecyclerView.SCROLL_STATE_IDLE) {
                 lifecycleScope.launch(viewModel.mainImmediate) {
                     viewModel.readMessages()
@@ -1006,6 +1013,10 @@ abstract class ChatFragment<
             } else {
                 viewModel.updateScrollDownButton(false)
             }
+        }
+
+        fun cleanup() {
+            isActive = false
         }
     }
 
@@ -1082,7 +1093,7 @@ abstract class ChatFragment<
     override fun subscribeToViewStateFlow() {
         super.subscribeToViewStateFlow()
 
-        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
             viewModel.shimmerViewState.collect { viewState ->
                 shimmerBinding.apply {
                     when (viewState) {
@@ -1099,7 +1110,7 @@ abstract class ChatFragment<
             }
         }
 
-        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
             viewModel.messageReplyViewStateContainer.collect { viewState ->
                 messageReplyLastViewState?.let {
                     if (it == viewState) {
@@ -1247,7 +1258,7 @@ abstract class ChatFragment<
             }
         }
 
-        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
             viewModel.clockIconState.collect { showClockIcon ->
                 headerBinding.textViewChatHeaderClockIcon.apply {
                     if (showClockIcon) {
@@ -1259,7 +1270,7 @@ abstract class ChatFragment<
             }
         }
 
-        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
             viewModel.remoteTimezoneStateFlow.collect { viewState ->
                 headerBinding.apply {
                     viewState?.let {
@@ -1274,7 +1285,7 @@ abstract class ChatFragment<
             }
         }
 
-        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
             viewModel.headerInitialHolderSharedFlow.collect { viewState ->
                 headerInitialHolderLastViewState?.let {
                     if (it == viewState) {
@@ -1422,9 +1433,14 @@ abstract class ChatFragment<
         }
 
         onStopSupervisor.scope.launch(viewModel.mainImmediate) {
-            combine(viewModel.messageHolderViewStateFlow, viewModel.chatHeaderViewStateContainer.viewStateFlow) { value1, value2 ->
+            combine(
+                viewModel.messageHolderViewStateFlow,
+                viewModel.chatHeaderViewStateContainer.viewStateFlow
+            ) { value1, value2 ->
                 Pair(value1, value2)
             }.collect { result ->
+                if (!isAdded || view == null || isRemoving) return@collect
+
                 val messages = result.first
                 val viewState = result.second
 
@@ -1514,7 +1530,7 @@ abstract class ChatFragment<
             }
         }
 
-        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
             viewModel.getSelectedMessageViewStateFlow().collect { viewState ->
                 @Exhaustive
                 when (viewState) {
@@ -1647,7 +1663,7 @@ abstract class ChatFragment<
             viewModel.updateSelectedMessageViewState(SelectedMessageViewState.None)
         }
 
-        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
             viewModel.getFooterViewStateFlow().collect { viewState ->
                 footerBinding.apply {
                     editTextChatFooter.hint = getString(viewState.hintTextStringId)
@@ -1674,7 +1690,7 @@ abstract class ChatFragment<
             }
         }
 
-        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
             viewModel.getAttachmentSendViewStateFlow().collect { viewState ->
                 attachmentSendLastViewState?.let {
                     if (it == viewState) {
@@ -1822,7 +1838,7 @@ abstract class ChatFragment<
             }
         }
 
-        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
             viewModel.getAttachmentFullscreenViewStateFlow().collect { viewState ->
                 fullscreenLastViewState?.let {
                     if (it == viewState) {
@@ -1948,7 +1964,7 @@ abstract class ChatFragment<
             }
         }
 
-        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
             viewModel.messagesSearchViewStateContainer.collect { viewState ->
                 @Exhaustive
                 when (viewState) {
@@ -2052,7 +2068,7 @@ abstract class ChatFragment<
                 }
             }
         }
-        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
             viewModel.scrollDownViewStateContainer.collect { viewState ->
                 @Exhaustive
                 when (viewState) {
@@ -2071,7 +2087,7 @@ abstract class ChatFragment<
     }
 
     private fun loadImageWithCorrectOrientation(imageView: ImageView, imageFile: File) {
-        lifecycleScope.launch(Dispatchers.IO) {
+        val job = viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val bitmap = BitmapFactory.decodeFile(imageFile.absolutePath)
 
@@ -2097,6 +2113,7 @@ abstract class ChatFragment<
                 Log.e("IMAGE_ROTATION", "Failed to load image with rotation: ${e.message}")
             }
         }
+        holderJobs.add(job)
     }
 
     private fun rotateBitmap(bitmap: Bitmap, degrees: Float): Bitmap {
@@ -2171,10 +2188,52 @@ abstract class ChatFragment<
     override fun onDestroyView() {
         super.onDestroyView()
 
+        // Cancel all jobs
+        holderJobs.forEach { it.cancel() }
+        holderJobs.clear()
+
+        // Dispose all image loading operations
+        disposables.forEach { it.dispose() }
+        disposables.clear()
+
+        // Clear other job lists
+        messageReplyViewStateJobs.forEach { it.cancel() }
+        messageReplyViewStateJobs.clear()
+
+        headerInitialHolderViewStateJobs.forEach { it.cancel() }
+        headerInitialHolderViewStateJobs.clear()
+
+        attachmentSendViewStateJobs.forEach { it.cancel() }
+        attachmentSendViewStateJobs.clear()
+
+        fullScreenViewStateJobs.forEach { it.cancel() }
+        fullScreenViewStateJobs.clear()
+
+        // Clear disposables for each category
+        messageReplyViewStateDisposables.forEach { it.dispose() }
+        messageReplyViewStateDisposables.clear()
+
+        headerInitialHolderViewStateDisposables.forEach { it.dispose() }
+        headerInitialHolderViewStateDisposables.clear()
+
+        attachmentSendViewStateDisposables.forEach { it.dispose() }
+        attachmentSendViewStateDisposables.clear()
+
+        fullScreenViewStateDisposables.forEach { it.dispose() }
+        fullScreenViewStateDisposables.clear()
+
+        chatScrollListener?.cleanup()
+        chatScrollListener = null
+
+        // Clear references
         messageReplyLastViewState = null
         headerInitialHolderLastViewState = null
         fullscreenLastViewState = null
         attachmentSendLastViewState = null
+
+        // Clear RecyclerView to prevent memory leaks
+        recyclerView.adapter = null
+        recyclerView.layoutManager = null
     }
 
     private fun isRecordingPermissionsGranted() = arrayOf(Manifest.permission.RECORD_AUDIO).all {

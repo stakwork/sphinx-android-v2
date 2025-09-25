@@ -68,6 +68,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import kotlin.coroutines.suspendCoroutine
 
@@ -128,6 +129,8 @@ class ChatTribeViewModel @Inject constructor(
         const val ROUTER_PUBKEY= "router_pubkey"
     }
 
+    private var isViewModelActive = true
+
     override val args: ChatTribeFragmentArgs by savedStateHandle.navArgs()
     override val chatId: ChatId = args.chatId
 
@@ -147,7 +150,7 @@ class ChatTribeViewModel @Inject constructor(
         emitAll(chatRepository.getChatById(chatId))
     }.distinctUntilChanged().shareIn(
         viewModelScope,
-        SharingStarted.Lazily,
+        SharingStarted.WhileSubscribed(5_000),
         replay = 1,
     )
 
@@ -155,7 +158,7 @@ class ChatTribeViewModel @Inject constructor(
         emitAll(chatRepository.getPodcastByChatId(chatId))
     }.distinctUntilChanged().shareIn(
         viewModelScope,
-        SharingStarted.Lazily,
+        SharingStarted.WhileSubscribed(5_000),
         replay = 1,
     )
 
@@ -184,31 +187,21 @@ class ChatTribeViewModel @Inject constructor(
     }
 
     private suspend fun getPodcast(): Podcast? {
+        if (!isViewModelActive) return null
+
         podcastSharedFlow.replayCache.firstOrNull()?.let { podcast ->
             return podcast
         }
 
-        podcastSharedFlow.firstOrNull()?.let { podcast ->
-            return podcast
+        return withTimeoutOrNull(1000) {
+            podcastSharedFlow.first { it != null }
         }
-
-        var podcast: Podcast? = null
-
-        try {
-            podcastSharedFlow.collect {
-                if (it != null) {
-                    podcast = it
-                    throw Exception()
-                }
-            }
-        } catch (e: Exception) {
-        }
-        delay(25L)
-        return podcast
     }
 
     override val headerInitialHolderSharedFlow: SharedFlow<InitialHolderViewState> = flow {
         chatSharedFlow.collect { chat ->
+            if (!isViewModelActive) return@collect
+
             chat?.photoUrl?.let {
                 emit(
                     InitialHolderViewState.Url(it)
@@ -236,7 +229,9 @@ class ChatTribeViewModel @Inject constructor(
         } else
             flow {
                 messageRepository.getThreadUUIDMessagesByUUID(chatId, ThreadUUID(args.argThreadUUID!!)).collect {
-                    emit(it)
+                    if (isViewModelActive) {
+                        emit(it)
+                    }
                 }
             }.distinctUntilChanged().shareIn(
                 viewModelScope,
@@ -285,8 +280,12 @@ class ChatTribeViewModel @Inject constructor(
     }
 
     override fun readMessages() {
+        if (!isViewModelActive) return
+
         viewModelScope.launch {
-            messageRepository.readMessages(chatId)
+            if (isViewModelActive) {
+                messageRepository.readMessages(chatId)
+            }
         }
     }
 
@@ -307,12 +306,19 @@ class ChatTribeViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            if (!isViewModelActive) return@launch
+
             withContext(dispatchers.io) {
+                if (!isViewModelActive) return@withContext
+
                 val chat = chatRepository.getChatById(chatId).firstOrNull()
-                val owner = getOwner()
 
                 chat?.let { nnChat ->
+                    if (!isViewModelActive) return@let
+
                     withContext(dispatchers.mainImmediate) updateUI1@ {
+                        if (!isViewModelActive) return@updateUI1
+
                         moreOptionsMenuStateFlow.value =
                             if (nnChat.ownedTribe?.isTrue() == true || !nnChat.privateTribe.isTrue()) {
                                 MoreMenuOptionsViewState.ShareTribeLinkAvailable
@@ -323,6 +329,8 @@ class ChatTribeViewModel @Inject constructor(
 
                     chatRepository.updateTribeInfo(nnChat, isProductionEnvironment)?.let { tribeData ->
                         withContext(dispatchers.mainImmediate) updateUI2@ {
+                            if (!isViewModelActive) return@updateUI2
+
                             if (!args.argThreadUUID.isNullOrEmpty()) {
                                 _feedDataStateFlow.value = TribeFeedData.Result.NoFeed
                             }
@@ -340,27 +348,37 @@ class ChatTribeViewModel @Inject constructor(
                             updatePinnedMessageState(tribeData.pin?.toMessageUUID(), nnChat.id)
                         }
                     } ?: run {
-                        _feedDataStateFlow.value = TribeFeedData.Result.NoFeed
+                        if (isViewModelActive) {
+                            _feedDataStateFlow.value = TribeFeedData.Result.NoFeed
+                        }
                     }
                 } ?: run {
-                    _feedDataStateFlow.value = TribeFeedData.Result.NoFeed
+                    if (isViewModelActive) {
+                        _feedDataStateFlow.value = TribeFeedData.Result.NoFeed
+                    }
                 }
             }
         }
 
         viewModelScope.launch(mainImmediate) {
-            loadOwnerRole()
-            updateOwnerRole()
+            if (isViewModelActive) {
+                loadOwnerRole()
+                updateOwnerRole()
+            }
         }
     }
 
     private suspend fun updateOwnerRole(){
         connectManagerRepository.tribeMembersState.collect { tribeMembersList ->
+            if (!isViewModelActive) return@collect
+
             tribeMembersList?.let {
-                chatRepository.updateChatOwned(
-                    chatId,
-                    OwnedTribe.True
-                )
+                if (isViewModelActive) {
+                    chatRepository.updateChatOwned(
+                        chatId,
+                        OwnedTribe.True
+                    )
+                }
             }
         }
     }
@@ -700,5 +718,22 @@ class ChatTribeViewModel @Inject constructor(
 
     override fun shouldProcessMemberMentions(s: CharSequence?) {
         processMemberMention(s)
+    }
+
+    override fun onCleared() {
+        isViewModelActive = false
+
+        leaderboardListStateFlow.value = null
+
+        tribeMemberProfileViewStateContainer.updateViewState(TribeMemberProfileViewState.Closed)
+        tribeMemberDataViewStateContainer.updateViewState(TribeMemberDataViewState.Idle)
+        pinedMessagePopupViewState.updateViewState(PinedMessagePopupViewState.Idle)
+        pinedMessageBottomViewState.updateViewState(PinMessageBottomViewState.Closed)
+        pinedMessageDataViewState.updateViewState(PinedMessageDataViewState.Idle)
+
+        _feedDataStateFlow.value = TribeFeedData.Loading
+        moreOptionsMenuStateFlow.value = MoreMenuOptionsViewState.ShareTribeLinkDisable
+
+        super.onCleared()
     }
 }

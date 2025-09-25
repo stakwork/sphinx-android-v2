@@ -279,11 +279,10 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
     abstract suspend fun shouldStreamSatsFor(podcastClip: PodcastClip, messageUUID: MessageUUID?)
 
-    private inner class ChatHeaderViewStateContainer :
-        ViewStateContainer<ChatHeaderViewState>(ChatHeaderViewState.Idle) {
+    var contactCollectionJob: Job? = null
+    var chatCollectionJob: Job? = null
 
-        private var contactCollectionJob: Job? = null
-        private var chatCollectionJob: Job? = null
+    private inner class ChatHeaderViewStateContainer : ViewStateContainer<ChatHeaderViewState>(ChatHeaderViewState.Idle) {
 
         @RequiresApi(Build.VERSION_CODES.N)
         override val viewStateFlow: StateFlow<ChatHeaderViewState> = flow {
@@ -1190,6 +1189,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
     }
 
     private suspend fun getMessageHolderViewStateList(messages: List<Message>): List<MessageHolderViewState> {
+        if (!isViewModelActive) { return emptyList() }
         if (messages.isEmpty()) return emptyList()
         val chat = getChatOrNull() ?: return emptyList()
 
@@ -1582,6 +1582,8 @@ abstract class ChatViewModel<ARGS : NavArgs>(
     private val _refreshFlow = MutableStateFlow(0L)
 
     fun screenInit() {
+        if (!isViewModelActive) { return }
+
         if (messageHolderViewStateFlow.value.isNotEmpty()) {
             return
         }
@@ -1600,7 +1602,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                     .distinctUntilChanged()
                     .flowOn(Dispatchers.IO)
                     .collect { messages ->
-                        viewModelScope.launch {
+                        withContext(io) {
                             val processedData = withContext(Dispatchers.Default) {
                                 val originalMessage = messageRepository.getMessageByUUID(
                                     MessageUUID(getThreadUUID()?.value!!)
@@ -1613,7 +1615,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                                 Triple(list, messages.size.toLong(), originalMessage != null)
                             }
 
-                            withContext(Dispatchers.Main.immediate) {
+                            withContext(mainImmediate) {
                                 messageHolderViewStateFlow.value = processedData.first
                                 changeThreadHeaderState(processedData.third)
                                 scrollDownButtonCount.value = processedData.second
@@ -1638,7 +1640,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                 }
                 .flowOn(Dispatchers.IO)
                 .collect { messages ->
-                    viewModelScope.launch {
+                    withContext(io) {
                         val processedData = withContext(Dispatchers.Default) {
                             val list = getMessageHolderViewStateList(messages).toList()
 
@@ -1653,7 +1655,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                             Pair(list, showClockIcon)
                         }
 
-                        withContext(Dispatchers.Main.immediate) {
+                        withContext(mainImmediate) {
                             messageHolderViewStateFlow.value = processedData.first
 
                             reloadSearchWithFetchedMsgs()
@@ -3256,18 +3258,30 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         actionsRepository.setAppLog(appLog)
     }
 
+    private var isViewModelActive = true
     override fun onCleared() {
+        isViewModelActive = false
+
         super.onCleared()
 
-        chatId?.let {
-            messageRepository.cleanupOldMessages(it)
-        }
+        messagesLoadJob?.cancel()
+
+        contactCollectionJob?.cancel()
+        chatCollectionJob?.cancel()
+        messagesSearchJob?.cancel()
+        toggleChatMutedJob?.cancel()
+        payAttachmentJob?.cancel()
+        payInvoiceJob?.cancel()
+
+        activeDownloadJobs.forEach { it.cancel() }
+        activeDownloadJobs.clear()
 
         (audioPlayerController as AudioPlayerControllerImpl).onCleared()
         audioRecorderController.clear()
 
-        activeDownloadJobs.forEach { it.cancel() }
-        activeDownloadJobs.clear()
+        chatId?.let {
+            messageRepository.cleanupOldMessages(it)
+        }
     }
 }
 

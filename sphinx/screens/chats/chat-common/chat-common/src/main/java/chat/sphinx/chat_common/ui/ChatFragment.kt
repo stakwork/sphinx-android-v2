@@ -916,7 +916,6 @@ abstract class ChatFragment<
         }
     }
 
-    private var chatScrollListener: ChatScrollListener<ARGS>? = null
     private fun setupRecyclerView() {
         val linearLayoutManager = LinearLayoutManager(binding.root.context)
         val messageListAdapter = MessageListAdapter(
@@ -939,10 +938,10 @@ abstract class ChatFragment<
             adapter = ConcatAdapter(messageListAdapter, footerAdapter)
             itemAnimator = null
 
-            chatScrollListener = ChatScrollListener(lifecycleScope, viewModel, linearLayoutManager, updateVisibleRange = {
+            val chatScrollListener = ChatScrollListener(lifecycleScope, viewModel, linearLayoutManager, updateVisibleRange = {
                 updateVisibleRange()
             })
-            addOnScrollListener(chatScrollListener!!)
+            addOnScrollListener(chatScrollListener)
         }
 
         viewLifecycleOwner.lifecycleScope.launch {
@@ -961,12 +960,8 @@ abstract class ChatFragment<
 
         private val threshold = 30 // Load more when 5 items from top
 
-        private var isActive = true
-
         override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
             super.onScrolled(recyclerView, dx, dy)
-
-            if (!isActive) return
 
             val firstVisiblePosition = layoutManager.findFirstVisibleItemPosition()
             val yOffset = recyclerView.computeVerticalScrollOffset()
@@ -1000,8 +995,6 @@ abstract class ChatFragment<
         override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
             super.onScrollStateChanged(recyclerView, newState)
 
-            if (!isActive) return
-
             if (!recyclerView.canScrollVertically(1) && newState == RecyclerView.SCROLL_STATE_IDLE) {
                 lifecycleScope.launch(viewModel.mainImmediate) {
                     viewModel.readMessages()
@@ -1013,10 +1006,6 @@ abstract class ChatFragment<
             } else {
                 viewModel.updateScrollDownButton(false)
             }
-        }
-
-        fun cleanup() {
-            isActive = false
         }
     }
 
@@ -2221,9 +2210,6 @@ abstract class ChatFragment<
 
         fullScreenViewStateDisposables.forEach { it.dispose() }
         fullScreenViewStateDisposables.clear()
-
-        chatScrollListener?.cleanup()
-        chatScrollListener = null
 
         // Clear references
         messageReplyLastViewState = null

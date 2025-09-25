@@ -4532,7 +4532,7 @@ abstract class SphinxRepository(
     override fun sendMessage(sendMessage: SendMessage?) {
         if (sendMessage == null) return
 
-        applicationScope.launch(io) {
+        applicationScope.launch(mainImmediate) {
 
             val queries = coreDB.getSphinxDatabaseQueries()
 
@@ -4679,112 +4679,124 @@ abstract class SphinxRepository(
                 provisionalId
             }
 
-            if (metadata != null && chat?.id != null) {
-                updateTimezoneFlag(
-                    timezoneUpdated = TimezoneUpdated.False,
-                    chatId = chat.id
-                )
-            }
 
-            if (contact != null || chat != null) {
-                if (media != null) {
-                    val password = PasswordGenerator(MEDIA_KEY_SIZE).password
-                    val token = memeServerTokenHandler.retrieveAuthenticationToken(MediaHost.DEFAULT)
-                        ?: provisionalMessageId?.let { provId ->
-                            queries.messageUpdateStatus(MessageStatus.Failed, provId)
-                            return@launch
-                        } ?: return@launch
+            applicationScope.launch(io) {
+                delay(1000L)
 
-                    val response = networkQueryMemeServer.uploadAttachmentEncrypted(
-                        token,
-                        media.mediaType,
-                        media.file,
-                        media.fileName,
-                        password,
-                        MediaHost.DEFAULT,
+                if (metadata != null && chat?.id != null) {
+                    updateTimezoneFlag(
+                        timezoneUpdated = TimezoneUpdated.False,
+                        chatId = chat.id
                     )
+                }
 
-                    @Exhaustive
-                    when (response) {
-                        is Response.Error -> {
-                            LOG.e(TAG, response.message, response.exception)
+                if (contact != null || chat != null) {
+                    if (media != null) {
+                        val password = PasswordGenerator(MEDIA_KEY_SIZE).password
+                        val token =
+                            memeServerTokenHandler.retrieveAuthenticationToken(MediaHost.DEFAULT)
+                                ?: provisionalMessageId?.let { provId ->
+                                    queries.messageUpdateStatus(MessageStatus.Failed, provId)
+                                    return@launch
+                                } ?: return@launch
 
-                            provisionalMessageId?.let { provId ->
-                                queries.messageUpdateStatus(MessageStatus.Failed, provId)
+                        val response = networkQueryMemeServer.uploadAttachmentEncrypted(
+                            token,
+                            media.mediaType,
+                            media.file,
+                            media.fileName,
+                            password,
+                            MediaHost.DEFAULT,
+                        )
+
+                        @Exhaustive
+                        when (response) {
+                            is Response.Error -> {
+                                LOG.e(TAG, response.message, response.exception)
+
+                                provisionalMessageId?.let { provId ->
+                                    queries.messageUpdateStatus(MessageStatus.Failed, provId)
+                                }
+                                return@launch
                             }
-                            return@launch
-                        }
 
-                        is Response.Success -> {
-                            val pubKey = contact?.nodePubKey?.value ?: chat?.uuid?.value
+                            is Response.Success -> {
+                                val pubKey = contact?.nodePubKey?.value ?: chat?.uuid?.value
 
-                            pubKey?.let { nnPubKey ->
+                                pubKey?.let { nnPubKey ->
 
-                                val amount = sendMessage.paidMessagePrice?.value
+                                    val amount = sendMessage.paidMessagePrice?.value
 
-                                val mediaTokenValue = connectManager.generateMediaToken(
-                                    nnPubKey,
-                                    response.value.muid,
-                                    MediaHost.DEFAULT.value,
-                                    null,
-                                    amount,
-                                )
+                                    val mediaTokenValue = connectManager.generateMediaToken(
+                                        nnPubKey,
+                                        response.value.muid,
+                                        MediaHost.DEFAULT.value,
+                                        null,
+                                        amount,
+                                    )
 
-                                val mediaKey = MediaKey(password.value.copyOf().joinToString(""))
+                                    val mediaKey =
+                                        MediaKey(password.value.copyOf().joinToString(""))
 
-                                queries.messageMediaUpsert(
-                                    mediaKey,
-                                    media.mediaType,
-                                    mediaTokenValue?.toMediaToken() ?: MediaToken.PROVISIONAL_TOKEN,
-                                    MediaKeyDecrypted(password.value.copyOf().joinToString("")),
-                                    provisionalMessageId ?: MessageId(Long.MIN_VALUE),
-                                    chat?.id ?: ChatId(ChatId.NULL_CHAT_ID.toLong()),
-                                    media.file,
-                                    sendMessage.attachmentInfo?.fileName
-                                )
+                                    queries.messageMediaUpsert(
+                                        mediaKey,
+                                        media.mediaType,
+                                        mediaTokenValue?.toMediaToken()
+                                            ?: MediaToken.PROVISIONAL_TOKEN,
+                                        MediaKeyDecrypted(password.value.copyOf().joinToString("")),
+                                        provisionalMessageId ?: MessageId(Long.MIN_VALUE),
+                                        chat?.id ?: ChatId(ChatId.NULL_CHAT_ID.toLong()),
+                                        media.file,
+                                        sendMessage.attachmentInfo?.fileName
+                                    )
 
-                                sendNewMessage(
-                                    contact?.nodePubKey?.value ?: chat?.uuid?.value ?: "",
-                                    message ?: sendMessage.text ?: "",
-                                    media,
-                                    mediaTokenValue?.toMediaToken(),
-                                    if (isPaidMessage && chat?.isTribe() == false) null else mediaKey,
-                                    messageType,
-                                    provisionalMessageId,
-                                    sendMessage.tribePaymentAmount ?: messagePrice,
-                                    dateTime.time,
-                                    replyUUID,
-                                    threadUUID,
-                                    sendMessage.senderAlias ?: chat?.myAlias?.value?.toSenderAlias(),
-                                    chat?.myPhotoUrl,
-                                    chat?.isTribe() ?: false,
-                                    sendMessage.memberPubKey,
-                                    metadata
-                                )
+                                    sendNewMessage(
+                                        contact?.nodePubKey?.value ?: chat?.uuid?.value ?: "",
+                                        message ?: sendMessage.text ?: "",
+                                        media,
+                                        mediaTokenValue?.toMediaToken(),
+                                        if (isPaidMessage && chat?.isTribe() == false) null else mediaKey,
+                                        messageType,
+                                        provisionalMessageId,
+                                        sendMessage.tribePaymentAmount ?: messagePrice,
+                                        dateTime.time,
+                                        replyUUID,
+                                        threadUUID,
+                                        sendMessage.senderAlias
+                                            ?: chat?.myAlias?.value?.toSenderAlias(),
+                                        chat?.myPhotoUrl,
+                                        chat?.isTribe() ?: false,
+                                        sendMessage.memberPubKey,
+                                        metadata
+                                    )
 
-                                LOG.d("MQTT_MESSAGES", "Media Message was sent. mediatoken=$mediaTokenValue mediakey$mediaKey" )
+                                    LOG.d(
+                                        "MQTT_MESSAGES",
+                                        "Media Message was sent. mediatoken=$mediaTokenValue mediakey$mediaKey"
+                                    )
+                                }
                             }
                         }
+                    } else {
+                        sendNewMessage(
+                            contact?.nodePubKey?.value ?: chat?.uuid?.value ?: "",
+                            message ?: sendMessage.text ?: "",
+                            null,
+                            null,
+                            null,
+                            messageType,
+                            provisionalMessageId,
+                            sendMessage.tribePaymentAmount ?: messagePrice,
+                            dateTime.time,
+                            replyUUID,
+                            threadUUID,
+                            sendMessage.senderAlias ?: chat?.myAlias?.value?.toSenderAlias(),
+                            chat?.myPhotoUrl,
+                            chat?.isTribe() ?: false,
+                            sendMessage.memberPubKey,
+                            metadata
+                        )
                     }
-                } else {
-                    sendNewMessage(
-                        contact?.nodePubKey?.value ?: chat?.uuid?.value ?: "",
-                        message ?: sendMessage.text ?: "",
-                        null,
-                        null,
-                        null,
-                        messageType,
-                        provisionalMessageId,
-                        sendMessage.tribePaymentAmount ?: messagePrice,
-                        dateTime.time,
-                        replyUUID,
-                        threadUUID,
-                        sendMessage.senderAlias ?: chat?.myAlias?.value?.toSenderAlias(),
-                        chat?.myPhotoUrl,
-                        chat?.isTribe() ?: false,
-                        sendMessage.memberPubKey,
-                        metadata
-                    )
                 }
             }
         }

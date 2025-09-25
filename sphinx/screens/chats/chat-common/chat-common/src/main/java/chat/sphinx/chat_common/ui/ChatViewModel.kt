@@ -1602,7 +1602,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                     .distinctUntilChanged()
                     .flowOn(Dispatchers.IO)
                     .collect { messages ->
-                        withContext(io) {
+                        withContext(default) {
                             val processedData = withContext(Dispatchers.Default) {
                                 val originalMessage = messageRepository.getMessageByUUID(
                                     MessageUUID(getThreadUUID()?.value!!)
@@ -1640,7 +1640,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                 }
                 .flowOn(Dispatchers.IO)
                 .collect { messages ->
-                    withContext(io) {
+                    withContext(default) {
                         val processedData = withContext(Dispatchers.Default) {
                             val list = getMessageHolderViewStateList(messages).toList()
 

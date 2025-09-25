@@ -1,5 +1,9 @@
 # ChangeLog
 
+## Version 1.0.0-alpha92 (2025-09-24)
+- New restore process
+- Improvements on performance based on db storage
+
 ## Version 1.0.0-alpha91 (2025-09-09)
 - Fixes issue related with message media
 - Improves message sending process

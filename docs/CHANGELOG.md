@@ -1,5 +1,8 @@
 # ChangeLog
 
+## Version 1.0.0-alpha93 (2025-09-25)
+- Improves performance
+
 ## Version 1.0.0-alpha92 (2025-09-24)
 - New restore process
 - Improvements on performance based on db storage

@@ -3752,7 +3752,7 @@ abstract class SphinxRepository(
     override fun cleanupOldMessages(chatId: ChatId) {
         applicationScope.launch(io) {
             try {
-                val deletedCount = withContext(dispatchers.io) {
+                val deleted: Boolean = withContext(dispatchers.io) {
                     val queries = coreDB.getSphinxDatabaseQueries()
 
                     queries.transactionWithResult {
@@ -3761,26 +3761,20 @@ abstract class SphinxRepository(
                             .lastOrNull()
 
                         if (thresholdMessage == null) {
-                            0
+                            false
                         } else {
                             val thresholdId = thresholdMessage.id
 
-                            val countToDelete = queries.messageCountOlderThan(chatId, thresholdId)
-                                .executeAsOne()
-                                .toInt()
+                            queries.messageDeleteOlderThan(chatId, thresholdId)
+                            LOG.d("SphinxRepository", "Deleted old messages from chat ${chatId.value}")
 
-                            if (countToDelete > 0) {
-                                queries.messageDeleteOlderThan(chatId, thresholdId)
-                                LOG.d("SphinxRepository", "Deleted $countToDelete old messages from chat ${chatId.value}")
-                            }
-
-                            countToDelete
+                            true
                         }
                     }
                 }
 
-                if (deletedCount > 0) {
-                    LOG.d("SphinxRepository", "Successfully cleaned up $deletedCount old messages from chat ${chatId.value}")
+                if (deleted) {
+                    LOG.d("SphinxRepository", "Successfully cleaned up $deleted old messages from chat ${chatId.value}")
                 } else {
                     LOG.d("SphinxRepository", "No old messages to clean up from chat ${chatId.value}")
                 }
@@ -4529,11 +4523,13 @@ abstract class SphinxRepository(
 
     // TODO: Rework to handle different message types
     @OptIn(RawPasswordAccess::class)
-    override fun sendMessage(sendMessage: SendMessage?) {
+    override fun sendMessage(
+        sendMessage: SendMessage?,
+        completeCallback: () -> Unit
+    ) {
         if (sendMessage == null) return
 
         applicationScope.launch(mainImmediate) {
-
             val queries = coreDB.getSphinxDatabaseQueries()
 
             // TODO: Update SendMessage to accept a Chat && Contact instead of just IDs
@@ -4620,61 +4616,65 @@ abstract class SphinxRepository(
             val provisionalMessageId: MessageId? = chat?.let { chatDbo ->
                 val provisionalMessageId = generateProvisionalMessageId()
                 val provisionalId = MessageId(provisionalMessageId)
+                runBlocking {
+                    queries.transaction {
+                        if (media != null) {
+                            queries.messageMediaUpsert(
+                                null,
+                                media.mediaType,
+                                MediaToken.PROVISIONAL_TOKEN,
+                                null,
+                                provisionalId,
+                                chat.id,
+                                media.file,
+                                sendMessage.attachmentInfo?.fileName
+                            )
+                        }
 
-                queries.transaction {
-                    if (media != null) {
-                        queries.messageMediaUpsert(
+                        queries.messageUpsert(
+                            MessageStatus.Pending,
+                            Seen.True,
+                            sendMessage.senderAlias ?: chatDbo.myAlias?.value?.toSenderAlias(),
+                            chatDbo.myPhotoUrl,
                             null,
-                            media.mediaType,
-                            MediaToken.PROVISIONAL_TOKEN,
+                            replyUUID,
+                            messageType,
+                            null,
+                            null,
+                            Push.False,
+                            null,
+                            threadUUID,
+                            null,
                             null,
                             provisionalId,
-                            chat.id,
-                            media.file,
-                            sendMessage.attachmentInfo?.fileName
+                            null,
+                            chatDbo.id,
+                            owner.id,
+                            sendMessage.contactId,
+                            sendMessage.tribePaymentAmount ?: sendMessage.paidMessagePrice
+                            ?: messagePrice,
+                            null,
+                            null,
+                            dateTime,
+                            null,
+                            null,
+                            message?.toMessageContentDecrypted()
+                                ?: sendMessage.text?.toMessageContentDecrypted(),
+                            null,
+                            false.toFlagged(),
+                            if (chat.timezoneEnabled?.isTrue() == true) chat.timezoneIdentifier?.value?.toRemoteTimezoneIdentifier() else null
+                        )
+
+                        updateChatNewLatestMessage(
+                            provisionalId,
+                            chatDbo.id,
+                            dateTime,
+                            latestMessageUpdatedTimeMap,
+                            queries,
+                            forceUpdateOnSend = true
                         )
                     }
-
-                    queries.messageUpsert(
-                        MessageStatus.Pending,
-                        Seen.True,
-                        sendMessage.senderAlias ?: chatDbo.myAlias?.value?.toSenderAlias(),
-                        chatDbo.myPhotoUrl,
-                        null,
-                        replyUUID,
-                        messageType,
-                        null,
-                        null,
-                        Push.False,
-                        null,
-                        threadUUID,
-                        null,
-                        null,
-                        provisionalId,
-                        null,
-                        chatDbo.id,
-                        owner.id,
-                        sendMessage.contactId,
-                        sendMessage.tribePaymentAmount ?: sendMessage.paidMessagePrice ?: messagePrice ,
-                        null,
-                        null,
-                        dateTime,
-                        null,
-                        null,
-                        message?.toMessageContentDecrypted() ?: sendMessage.text?.toMessageContentDecrypted(),
-                        null,
-                        false.toFlagged(),
-                        if (chat.timezoneEnabled?.isTrue() == true) chat.timezoneIdentifier?.value?.toRemoteTimezoneIdentifier() else null
-                    )
-
-                    updateChatNewLatestMessage(
-                        provisionalId,
-                        chatDbo.id,
-                        dateTime,
-                        latestMessageUpdatedTimeMap,
-                        queries,
-                        forceUpdateOnSend = true
-                    )
+                    completeCallback()
                 }
                 provisionalId
             }
@@ -5209,7 +5209,7 @@ abstract class SphinxRepository(
 
             sendMessage(
                 sendMessageBuilder.build().first
-            )
+            ) {}
         }
     }
 
@@ -5366,7 +5366,7 @@ abstract class SphinxRepository(
 
             sendMessage(
                 sendMessageBuilder.build().first
-            )
+            ) {}
         }
     }
 
@@ -7463,7 +7463,7 @@ abstract class SphinxRepository(
             messageBuilder.setSenderAlias(senderAlias)
         }
 
-        sendMessage(messageBuilder.build().first)
+        sendMessage(messageBuilder.build().first) {}
     }
 
     override suspend fun addTribeMember(addMember: AddMember): Response<Any, ResponseError> {

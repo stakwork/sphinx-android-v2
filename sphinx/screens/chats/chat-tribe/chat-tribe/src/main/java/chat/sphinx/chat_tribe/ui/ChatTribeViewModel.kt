@@ -649,18 +649,16 @@ class ChatTribeViewModel @Inject constructor(
         return getThreadUUID() != null
     }
 
-    override fun reloadPinnedMessage() {
-        viewModelScope.launch(default) {
-            getChat()?.let { nnChat ->
+    override suspend fun reloadPinnedMessage() {
+        getChat().let { nnChat ->
 
-                (pinedMessageDataViewState.value as? PinedMessageDataViewState.Data)?.let { viewState ->
-                    if (viewState.message.uuid == nnChat.pinedMessage) {
-                        return@launch
-                    }
+            (pinedMessageDataViewState.value as? PinedMessageDataViewState.Data)?.let { viewState ->
+                if (viewState.message.uuid == nnChat.pinedMessage) {
+                    return
                 }
-
-                updatePinnedMessageState(nnChat.pinedMessage, nnChat.id)
             }
+
+            updatePinnedMessageState(nnChat.pinedMessage, nnChat.id)
         }
     }
 

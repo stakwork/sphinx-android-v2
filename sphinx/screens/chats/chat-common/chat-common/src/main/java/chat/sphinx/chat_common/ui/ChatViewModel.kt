@@ -1580,6 +1580,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
     private var isLoadingMore = false
 
     private val _refreshFlow = MutableStateFlow(0L)
+    private val _refreshThreadFlow = MutableStateFlow(0L)
 
     fun screenInit() {
         if (!isViewModelActive) { return }
@@ -1598,33 +1599,39 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
         messagesLoadJob = viewModelScope.launch(Dispatchers.IO) {
             if (isThreadChat()) {
-                messageRepository.getAllMessagesToShowByChatId(getChat().id, 0, false, getThreadUUID())
+                _refreshThreadFlow
+                .flatMapLatest { _ ->
+                    messageRepository.getAllMessagesToShowByChatId(
+                        getChat().id,
+                        0,
+                        false,
+                        getThreadUUID()
+                    )
                     .distinctUntilChanged()
-                    .flowOn(Dispatchers.IO)
-                    .collect { messages ->
-                        withContext(default) {
-                            val processedData = withContext(Dispatchers.Default) {
-                                val originalMessage = messageRepository.getMessageByUUID(
-                                    MessageUUID(getThreadUUID()?.value!!)
-                                ).firstOrNull()
+                }
+                .flowOn(Dispatchers.IO)
+                .collect { messages ->
+                    val processedData = withContext(Dispatchers.Default) {
+                        val originalMessage = messageRepository.getMessageByUUID(
+                            MessageUUID(getThreadUUID()?.value!!)
+                        ).firstOrNull()
 
-                                val completeThread = listOf(originalMessage) + messages.reversed()
-                                val list =
-                                    getMessageHolderViewStateList(completeThread.filterNotNull()).toList()
+                        val completeThread = listOf(originalMessage) + messages.reversed()
+                        val list =
+                            getMessageHolderViewStateList(completeThread.filterNotNull()).toList()
 
-                                Triple(list, messages.size.toLong(), originalMessage != null)
-                            }
-
-                            withContext(mainImmediate) {
-                                messageHolderViewStateFlow.value = processedData.first
-                                changeThreadHeaderState(processedData.third)
-                                scrollDownButtonCount.value = processedData.second
-
-                                delay(25)
-                                hideShimmeringView()
-                            }
-                        }
+                        Triple(list, messages.size.toLong(), originalMessage != null)
                     }
+
+                    withContext(mainImmediate) {
+                        messageHolderViewStateFlow.value = processedData.first
+                        changeThreadHeaderState(processedData.third)
+                        scrollDownButtonCount.value = processedData.second
+
+                        delay(25)
+                        hideShimmeringView()
+                    }
+                }
             } else {
                 combine(
                     messageLimitFlow,
@@ -1640,31 +1647,29 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                 }
                 .flowOn(Dispatchers.IO)
                 .collect { messages ->
-                    withContext(default) {
-                        val processedData = withContext(Dispatchers.Default) {
-                            val list = getMessageHolderViewStateList(messages).toList()
+                    val processedData = withContext(Dispatchers.Default) {
+                        val list = getMessageHolderViewStateList(messages).toList()
 
-                            reloadPinnedMessage()
+                        reloadPinnedMessage()
 
-                            val lastMessage = messages.lastOrNull()
-                            val showClockIcon = lastMessage?.let {
-                                it.status == MessageStatus.Pending &&
-                                        System.currentTimeMillis() - it.date.time > 30_000
-                            } == true
+                        val lastMessage = messages.lastOrNull()
+                        val showClockIcon = lastMessage?.let {
+                            it.status == MessageStatus.Pending &&
+                                    System.currentTimeMillis() - it.date.time > 30_000
+                        } == true
 
-                            Pair(list, showClockIcon)
-                        }
+                        Pair(list, showClockIcon)
+                    }
 
-                        withContext(mainImmediate) {
-                            messageHolderViewStateFlow.value = processedData.first
+                    withContext(mainImmediate) {
+                        messageHolderViewStateFlow.value = processedData.first
 
-                            reloadSearchWithFetchedMsgs()
-                            updateScrollDownButtonCount()
-                            updateClockIconState(processedData.second)
+                        reloadSearchWithFetchedMsgs()
+                        updateScrollDownButtonCount()
+                        updateClockIconState(processedData.second)
 
-                            delay(25)
-                            hideShimmeringView()
-                        }
+                        delay(25)
+                        hideShimmeringView()
                     }
                 }
             }
@@ -1763,7 +1768,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
     abstract fun readMessages()
 
-    abstract fun reloadPinnedMessage()
+    abstract suspend fun reloadPinnedMessage()
 
     abstract fun getThreadUUID(): ThreadUUID?
 
@@ -1816,10 +1821,15 @@ abstract class ChatViewModel<ARGS : NavArgs>(
             }
 
         } ?: msg.first?.let { message ->
-            messageRepository.sendMessage(message)
-
-            joinCallIfNeeded(message)
-//            trackMessage(message.text)
+            messageRepository.sendMessage(message) {
+                joinCallIfNeeded(message)
+                if (isThreadChat()) {
+                    refreshThreadMessages()
+                } else {
+                    refreshMessages()
+                }
+                //trackMessage(message.text)
+            }
         }
 
         return msg.first
@@ -1933,6 +1943,10 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
     private fun refreshMessages() {
         _refreshFlow.value = System.currentTimeMillis()
+    }
+
+    private fun refreshThreadMessages() {
+        _refreshThreadFlow.value = System.currentTimeMillis()
     }
 
     private var messagesSearchJob: Job? = null

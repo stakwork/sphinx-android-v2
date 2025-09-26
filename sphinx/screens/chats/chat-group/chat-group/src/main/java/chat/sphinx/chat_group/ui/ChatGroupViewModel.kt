@@ -159,7 +159,7 @@ class ChatGroupViewModel @Inject constructor(
         }
     }
 
-    override fun reloadPinnedMessage() {}
+    override suspend fun reloadPinnedMessage() {}
 
     override fun getThreadUUID(): ThreadUUID? {
         return null

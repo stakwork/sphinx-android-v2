@@ -28,6 +28,7 @@ import chat.sphinx.wrapper_message.SenderAlias
 import chat.sphinx.wrapper_message.TagMessage
 import chat.sphinx.wrapper_message.ThreadUUID
 import kotlinx.coroutines.flow.Flow
+import java.io.File
 
 interface MessageRepository {
     fun getAllMessagesToShowByChatId(
@@ -88,7 +89,10 @@ interface MessageRepository {
 
     suspend fun readMessages(chatId: ChatId)
 
-    fun sendMessage(sendMessage: SendMessage?)
+    fun sendMessage(
+        sendMessage: SendMessage?,
+        completeCallback: () -> Unit
+    )
 
     suspend fun payAttachment(message: Message)
 

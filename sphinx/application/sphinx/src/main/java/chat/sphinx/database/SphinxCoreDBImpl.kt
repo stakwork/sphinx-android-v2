@@ -42,14 +42,17 @@ class SphinxCoreDBImpl(
                 callback = object : AndroidSqliteDriver.Callback(SphinxDatabase.Schema) {
                     override fun onOpen(db: SupportSQLiteDatabase) {
                         super.onOpen(db)
-
                         optimizeDatabase(db)
                     }
 
                     override fun onConfigure(db: SupportSQLiteDatabase) {
                         super.onConfigure(db)
-
-                        db.execSQL("PRAGMA foreign_keys = ON")
+                        // Configure basic settings that can use execSQL
+                        try {
+                            db.execSQL("PRAGMA foreign_keys = ON")
+                        } catch (e: Exception) {
+                            android.util.Log.w("SphinxDB", "Failed to enable foreign keys", e)
+                        }
                     }
                 }
             )
@@ -68,13 +71,16 @@ class SphinxCoreDBImpl(
                 callback = object : AndroidSqliteDriver.Callback(SphinxDatabase.Schema) {
                     override fun onOpen(db: SupportSQLiteDatabase) {
                         super.onOpen(db)
-
                         optimizeDatabase(db)
                     }
 
                     override fun onConfigure(db: SupportSQLiteDatabase) {
                         super.onConfigure(db)
-                        db.execSQL("PRAGMA foreign_keys = ON")
+                        try {
+                            db.execSQL("PRAGMA foreign_keys = ON")
+                        } catch (e: Exception) {
+                            android.util.Log.w("SphinxDB", "Failed to enable foreign keys", e)
+                        }
                     }
                 }
             )
@@ -82,40 +88,62 @@ class SphinxCoreDBImpl(
     }
 
     private fun optimizeDatabase(db: SupportSQLiteDatabase) {
-        val configPragmas = listOf(
-            "PRAGMA foreign_keys = ON",
-            "PRAGMA journal_mode = WAL",
-            "PRAGMA synchronous = NORMAL",
-            "PRAGMA cache_size = -10000",
-            "PRAGMA temp_store = MEMORY",
-            "PRAGMA mmap_size = 67108864",
-            "PRAGMA auto_vacuum = INCREMENTAL"
+        // Configuration PRAGMAs that need to use query() instead of execSQL()
+        val configPragmas = mapOf(
+            "journal_mode" to "WAL",
+            "synchronous" to "NORMAL",
+            "cache_size" to "-10000",
+            "temp_store" to "MEMORY",
+            "mmap_size" to "67108864",
+            "auto_vacuum" to "INCREMENTAL",
+            "busy_timeout" to "5000"
         )
 
-        // Execute configuration PRAGMAs
-        configPragmas.forEach { pragma ->
+        // Execute configuration PRAGMAs using query() method
+        configPragmas.forEach { (pragma, value) ->
             try {
-                db.execSQL(pragma)
+                val cursor = db.query("PRAGMA $pragma = $value")
+                if (cursor.moveToFirst()) {
+                    val result = cursor.getString(0)
+                    android.util.Log.d("SphinxDB", "Set $pragma = $value, result: $result")
+                }
+                cursor.close()
+            } catch (e: Exception) {
+                android.util.Log.w("SphinxDB", "Failed to execute: PRAGMA $pragma = $value", e)
+            }
+        }
+
+        // Execute maintenance PRAGMAs
+        val maintenancePragmas = listOf(
+            "PRAGMA optimize",
+            "PRAGMA incremental_vacuum(1000)"
+        )
+
+        maintenancePragmas.forEach { pragma ->
+            try {
+                val cursor = db.query(pragma)
+                cursor.moveToFirst() // Execute the pragma
+                cursor.close()
+                android.util.Log.d("SphinxDB", "Executed: $pragma")
             } catch (e: Exception) {
                 android.util.Log.w("SphinxDB", "Failed to execute: $pragma", e)
             }
         }
 
-        // Execute query PRAGMAs
-        val queryPragmas = listOf(
-            "PRAGMA optimize",
-            "PRAGMA incremental_vacuum(1000)"
-        )
-
-        queryPragmas.forEach { pragma ->
-            try {
-                db.query(pragma).use { cursor ->
-                    // Just execute the query, don't need to process results
-                    cursor.moveToFirst()
+        // Verify WAL mode is enabled
+        try {
+            val cursor = db.query("PRAGMA journal_mode")
+            if (cursor.moveToFirst()) {
+                val journalMode = cursor.getString(0)
+                if (journalMode.equals("wal", ignoreCase = true)) {
+                    android.util.Log.d("SphinxDB", "✅ WAL mode successfully enabled")
+                } else {
+                    android.util.Log.w("SphinxDB", "⚠️ WAL mode not enabled, current: $journalMode")
                 }
-            } catch (e: Exception) {
-                android.util.Log.w("SphinxDB", "Failed to execute query: $pragma", e)
             }
+            cursor.close()
+        } catch (e: Exception) {
+            android.util.Log.w("SphinxDB", "Could not verify journal mode", e)
         }
     }
 }

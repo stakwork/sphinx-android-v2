@@ -1,5 +1,8 @@
 # ChangeLog
 
+## Version 1.0.0-alpha95 (2025-09-26)
+- Improves performance
+
 ## Version 1.0.0-alpha94 (2025-09-25)
 - Improves performance
 

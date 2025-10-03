@@ -195,6 +195,10 @@ abstract class ChatViewModel<ARGS : NavArgs>(
 
     private var dimensionCache = mutableMapOf<String, Pair<Int, Int>>()
 
+    val messagesLoadingViewStateContainer: ViewStateContainer<MessagesLoadingViewState> by lazy {
+        ViewStateContainer(MessagesLoadingViewState.Idle)
+    }
+
     val recyclerWidth = app.applicationContext.getScreenWidth()
 
     val imageLoaderDefaults by lazy {
@@ -1579,6 +1583,9 @@ abstract class ChatViewModel<ARGS : NavArgs>(
     private val messageLimitFlow = MutableStateFlow(100L)
     private var isLoadingMore = false
 
+    private val _loadingCompleteEvent = MutableSharedFlow<Unit>(replay = 0)
+    val loadingCompleteEvent: SharedFlow<Unit> = _loadingCompleteEvent.asSharedFlow()
+
     private val _refreshFlow = MutableStateFlow(0L)
     private val _refreshThreadFlow = MutableStateFlow(0L)
 
@@ -1688,6 +1695,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         if (isLoadingMore) return
 
         isLoadingMore = true
+        messagesLoadingViewStateContainer.updateViewState(MessagesLoadingViewState.Loading)
         fetchMoreItems()
     }
 
@@ -1717,6 +1725,8 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                     connectManagerRepository.getTagsByChatId(chat.id)
                     delay(5000L)
                     isLoadingMore = false
+                    messagesLoadingViewStateContainer.updateViewState(MessagesLoadingViewState.Idle)
+                    _loadingCompleteEvent.emit(Unit)
                 }
             }
         }

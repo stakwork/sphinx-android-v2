@@ -202,6 +202,7 @@
     <string name="pin_message_error">Ocurrió un error. Por favor inténtalo luego</string>
     <string name="chat_placeholder_invited">Invitado el %s</string>
     <string name="chat_placeholder_secure">Los mensajes y las llamadas están protegidos\ncon cifrado de extremo a extremo</string>
+    <string name="loading_messages">Cargando más mensajes…</string>
 
     <string name="cancel_search">CANCELAR</string>
 </resources>

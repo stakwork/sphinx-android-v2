@@ -187,6 +187,7 @@
     <string name="chat_placeholder_invited">Invited on %s</string>
     <string name="chat_placeholder_secure">Messages and calls are secured\nwith end to end encryption</string>
 
+    <string name="loading_messages">Loading messages…</string>
     <string name="cancel_search">取消</string>
 
 </resources>

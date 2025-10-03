@@ -216,5 +216,6 @@
     <string name="reset_values" translatable="false">Reset Values</string>
     <string name="chat_placeholder_invited">Invited on %s</string>
     <string name="chat_placeholder_secure">Messages and calls are secured\nwith end to end encryption</string>
+    <string name="loading_messages">Loading messages…</string>
 
 </resources>

@@ -44,6 +44,7 @@ import chat.sphinx.highlighting_tool.SphinxUrlSpan
 import chat.sphinx.resources.getRandomHexCode
 import chat.sphinx.resources.getString
 import chat.sphinx.resources.setBackgroundRandomColor
+import chat.sphinx.wrapper_chat.Chat
 import chat.sphinx.wrapper_common.PhotoUrl
 import chat.sphinx.wrapper_common.asFormattedString
 import chat.sphinx.wrapper_common.dashboard.ChatId
@@ -64,6 +65,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 
@@ -88,6 +90,7 @@ internal class MessageListAdapter<ARGS : NavArgs>(
         private const val VIEW_TYPE_THREAD_HEADER = 1
         private const val VIEW_TYPE_ONLY_TEXT_SENT_MSG = 2
         private const val VIEW_TYPE_ONLY_TEXT_RECEIVED_MSG = 3
+        private const val VIEW_TYPE_LOADING_INDICATOR = 4
     }
 
     interface OnRowLayoutListener {
@@ -153,51 +156,125 @@ internal class MessageListAdapter<ARGS : NavArgs>(
         super.onStart(owner)
 
         onStopSupervisor.scope.launch {
-            viewModel.messageHolderViewStateFlow
-                .collect { list ->
-                if (differ.currentList.isEmpty()) {
-                    differ.submitList(list) {
-                        scrollToUnseenSeparatorOrBottom(list)
+            var cachedChat: Chat? = null
+            var isInitialLoad = true
+
+            combine(
+                viewModel.messageHolderViewStateFlow,
+                viewModel.messagesLoadingViewStateContainer.viewStateFlow
+            ) { messages, loadingState ->
+                if (cachedChat == null) {
+                    cachedChat = viewModel.getChat()
+                }
+
+                buildList {
+                    if (loadingState is MessagesLoadingViewState.Loading) {
+                        add(
+                            MessageHolderViewState.LoadingIndicator(
+                                isLoading = true,
+                                chat = cachedChat!!,
+                                index = 0
+                            )
+                        )
+                    }
+                    addAll(messages)
+                }
+            }.collect { combinedList ->
+                val layoutManager = recyclerView.layoutManager as? LinearLayoutManager
+
+                if (differ.currentList.isEmpty() && isInitialLoad) {
+                    // Initial load
+                    isInitialLoad = false
+                    differ.submitList(combinedList) {
+                        // Ensure RecyclerView is laid out before scrolling
+                        recyclerView.post {
+                            scrollToUnseenSeparatorOrBottom(combinedList)
+                        }
                     }
                 } else {
-                    scrollToPreviousPositionWithCallback(list.size) {
-                        differ.submitList(list)
+                    // Capture position before update
+                    val firstVisiblePosition = layoutManager?.findFirstVisibleItemPosition() ?: 0
+                    val firstVisibleView = layoutManager?.findViewByPosition(firstVisiblePosition)
+                    val topOffset = firstVisibleView?.top ?: 0
+
+                    val oldSize = differ.currentList.size
+                    val newSize = combinedList.size
+                    val itemsAdded = newSize - oldSize
+
+                    val lastVisiblePosition = layoutManager?.findLastVisibleItemPosition() ?: 0
+                    val isNearBottom = (oldSize - lastVisiblePosition) <= 1
+
+                    differ.submitList(combinedList) {
+                        if (isNearBottom) {
+                            // User was at bottom - scroll to new bottom
+                            recyclerView.post {
+                                recyclerView.scrollToPosition(combinedList.size - 1)
+                            }
+                        } else if (itemsAdded > 0) {
+                            // Items were added at top - maintain position
+                            val newPosition = firstVisiblePosition + itemsAdded
+                            recyclerView.post {
+                                layoutManager?.scrollToPositionWithOffset(newPosition, topOffset)
+                            }
+                        }
                     }
                 }
             }
         }
     }
+
 
     override fun getItemViewType(position: Int): Int {
         return when (differ.currentList.getOrNull(position)) {
             is MessageHolderViewState.ThreadHeader -> VIEW_TYPE_THREAD_HEADER
             is MessageHolderViewState.MessageOnlyTextHolderViewState.Sent -> VIEW_TYPE_ONLY_TEXT_SENT_MSG
             is MessageHolderViewState.MessageOnlyTextHolderViewState.Received -> VIEW_TYPE_ONLY_TEXT_RECEIVED_MSG
+            is MessageHolderViewState.LoadingIndicator -> VIEW_TYPE_LOADING_INDICATOR
             else -> VIEW_TYPE_MESSAGE
         }
     }
 
     private fun scrollToUnseenSeparatorOrBottom(messageHolders: List<MessageHolderViewState>) {
-        viewModel.viewModelScope.launch(viewModel.mainImmediate) {
-            delay(500L)
+        if (messageHolders.isEmpty()) return
 
+        viewModel.viewModelScope.launch(viewModel.mainImmediate) {
+            // Wait for RecyclerView to finish layout
+            delay(100L)
+
+            var unseenSeparatorIndex: Int? = null
+
+            // Look for unseen separator
             for ((index, message) in messageHolders.withIndex()) {
                 (message as? MessageHolderViewState.Separator)?.let {
                     if (it.messageHolderType.isUnseenSeparatorHolder()) {
-                        (recyclerView.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(index, recyclerView.measuredHeight / 4)
+                        unseenSeparatorIndex = index
                         return@launch
                     }
                 }
             }
 
-            if (messageHolders.isNotEmpty()) {
-                recyclerView.layoutManager?.scrollToPosition(
-                    messageHolders.size
-                )
+            recyclerView.post {
+                unseenSeparatorIndex?.let { index ->
+                    // Scroll to unseen separator with offset
+                    (recyclerView.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(
+                        index,
+                        recyclerView.measuredHeight / 4
+                    )
+                } ?: run {
+                    // No unseen separator - scroll to bottom
+                    val lastPosition = messageHolders.size - 1
+                    recyclerView.scrollToPosition(lastPosition)
+
+                    // Double check after a short delay
+                    recyclerView.postDelayed({
+                        if ((recyclerView.layoutManager as? LinearLayoutManager)?.findLastVisibleItemPosition() != lastPosition) {
+                            recyclerView.scrollToPosition(lastPosition)
+                        }
+                    }, 100L)
+                }
             }
         }
     }
-
     fun scrollToBottomIfNeeded(
         callback: (() -> Unit)? = null,
         replyingToMessage: Boolean = false,
@@ -223,48 +300,6 @@ internal class MessageListAdapter<ARGS : NavArgs>(
         }
     }
 
-    private fun scrollToPreviousPositionWithCallback(
-        newListSize: Int,
-        callback: (() -> Unit)? = null,
-    ) {
-        val firstItemBeforeUpdate = differ.currentList.first()
-        val lastVisibleItemPositionBeforeDispatch = layoutManager.findLastVisibleItemPosition()
-        val listSizeBeforeDispatch = differ.currentList.size
-        val diffToBottom = listSizeBeforeDispatch - lastVisibleItemPositionBeforeDispatch
-
-        val layoutManager = recyclerView.layoutManager as LinearLayoutManager
-        val currentFirstVisible = layoutManager.findFirstVisibleItemPosition()
-        val currentFirstView = layoutManager.findViewByPosition(currentFirstVisible)
-        val currentOffset = currentFirstView?.top ?: 0
-        val currentListSize = itemCount
-
-        if (callback != null) {
-            callback()
-        }
-
-        val firstItemAfterUpdate = differ.currentList.first()
-        val isLoadingMore = !diffCallback.areItemsTheSame(firstItemBeforeUpdate, firstItemAfterUpdate)
-        val newItemsAdded = newListSize - currentListSize
-        val newTargetPosition = currentFirstVisible + (if (isLoadingMore) newItemsAdded else 0)
-
-        if (diffToBottom <= 1) {
-            recyclerView.post {
-                recyclerView.smoothScrollToPosition(
-                    newListSize - 1
-                )
-            }
-        } else {
-            if (!isLoadingMore) {
-                return
-            }
-            recyclerView.post {
-                (recyclerView.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(
-                    newTargetPosition,
-                    currentOffset
-                )
-            }
-        }
-    }
 
     fun forceScrollToBottom() {
         recyclerView.layoutManager?.scrollToPosition(differ.currentList.size)
@@ -396,6 +431,14 @@ internal class MessageListAdapter<ARGS : NavArgs>(
                 )
                 ThreadHeaderViewHolder(binding)
             }
+            VIEW_TYPE_LOADING_INDICATOR -> {
+                val binding = LayoutMessagesLoadingIndicatorBinding.inflate(
+                    LayoutInflater.from(parent.context),
+                    parent,
+                    false
+                )
+                LoadingIndicatorViewHolder(binding)
+            }
             else -> throw IllegalArgumentException("Invalid view type")
         }
     }
@@ -414,12 +457,28 @@ internal class MessageListAdapter<ARGS : NavArgs>(
             is MessageListAdapter<*>.MessageViewHolder -> {
                 holder.bind(position)
             }
+            is MessageListAdapter<*>.LoadingIndicatorViewHolder -> {  // Add this case
+                holder.bind(position)
+            }
             else -> {
                 throw IllegalArgumentException("Unknown ViewHolder type: ${holder::class.java}")
             }
         }
     }
 
+    inner class LoadingIndicatorViewHolder(
+        private val binding: LayoutMessagesLoadingIndicatorBinding
+    ) : RecyclerView.ViewHolder(binding.root) {
+
+        fun bind(position: Int) {
+            val viewState = differ.currentList.getOrNull(position) as? MessageHolderViewState.LoadingIndicator ?: return
+
+            binding.apply {
+                progressBarLoading.visibility = if (viewState.isLoading) View.VISIBLE else View.GONE
+                textViewLoadingMessages.visibility = if (viewState.isLoading) View.VISIBLE else View.GONE
+            }
+        }
+    }
     override fun getItemCount(): Int {
         return differ.currentList.size
     }

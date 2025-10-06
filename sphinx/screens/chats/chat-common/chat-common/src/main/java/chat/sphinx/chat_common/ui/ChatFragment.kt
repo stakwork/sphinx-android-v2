@@ -25,6 +25,7 @@ import android.text.style.MetricAffectingSpan
 import android.text.style.TypefaceSpan
 import android.util.Log
 import android.view.View
+import android.view.ViewTreeObserver
 import android.view.Window
 import android.view.inputmethod.InputMethodManager
 import android.widget.ImageView
@@ -932,16 +933,34 @@ abstract class ChatFragment<
         )
         val footerAdapter = MessageListFooterAdapter()
 
+        val chatScrollListener = ChatScrollListener(
+            lifecycleScope,
+            viewModel,
+            linearLayoutManager,
+            updateVisibleRange = {
+                updateVisibleRange()
+            }
+        )
+
         recyclerView.apply {
             setHasFixedSize(false)
             layoutManager = linearLayoutManager
             adapter = ConcatAdapter(messageListAdapter, footerAdapter)
             itemAnimator = null
-
-            val chatScrollListener = ChatScrollListener(lifecycleScope, viewModel, linearLayoutManager, updateVisibleRange = {
-                updateVisibleRange()
-            })
             addOnScrollListener(chatScrollListener)
+
+            viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
+                override fun onGlobalLayout() {
+                    viewTreeObserver.removeOnGlobalLayoutListener(this)
+                }
+            })
+        }
+
+        // Listen for loading complete events to reset scroll listener
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.loadingCompleteEvent.collect {
+                chatScrollListener.resetLoadingFlag()
+            }
         }
 
         viewLifecycleOwner.lifecycleScope.launch {
@@ -958,7 +977,8 @@ abstract class ChatFragment<
         private val updateVisibleRange: () -> Unit,
     ) : RecyclerView.OnScrollListener() {
 
-        private val threshold = 30 // Load more when 5 items from top
+        private val threshold = 30
+        private var isLoadingTriggered = false
 
         override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
             super.onScrolled(recyclerView, dx, dy)
@@ -977,17 +997,24 @@ abstract class ChatFragment<
                         } else {
                             viewModel.changeThreadHeaderState(false)
                         }
-
-                    } ?: false
+                    }
                 } else {
                     viewModel.changeThreadHeaderState(true)
                 }
             } else {
-                if (dy < 0) {
-                    if (firstVisiblePosition < threshold) {
+                // Load more messages when scrolling up AND near the top
+                // OR when at position 0 (very top)
+                if (firstVisiblePosition <= threshold) {
+                    if (!isLoadingTriggered) {
+                        isLoadingTriggered = true
                         viewModel.loadMoreMessages()
                     }
+                } else if (firstVisiblePosition > threshold + 10) {
+                    // Reset the flag when user scrolls away from top
+                    // Add buffer of 10 to avoid rapid toggling
+                    isLoadingTriggered = false
                 }
+
                 updateVisibleRange()
             }
         }
@@ -1006,6 +1033,24 @@ abstract class ChatFragment<
             } else {
                 viewModel.updateScrollDownButton(false)
             }
+
+            // Additional check when scroll stops
+            if (newState == RecyclerView.SCROLL_STATE_IDLE) {
+                val firstVisiblePosition = layoutManager.findFirstVisibleItemPosition()
+
+                // If stopped at the very top, ensure loading is triggered
+                if (firstVisiblePosition == 0 && !viewModel.isThreadChat()) {
+                    if (!isLoadingTriggered) {
+                        isLoadingTriggered = true
+                        viewModel.loadMoreMessages()
+                    }
+                }
+            }
+        }
+
+        // Add method to reset the flag externally if needed
+        fun resetLoadingFlag() {
+            isLoadingTriggered = false
         }
     }
 

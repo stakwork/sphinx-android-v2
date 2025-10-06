@@ -107,7 +107,6 @@ internal sealed class MessageHolderViewState(
         null
     }
 
-
     val unsupportedMessageType: LayoutState.Bubble.ContainerThird.UnsupportedMessageType? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         null
     }
@@ -122,6 +121,8 @@ internal sealed class MessageHolderViewState(
             )
         }
     }
+
+
 
     val threadHeader: ThreadHeaderHolder? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null) {
@@ -1153,6 +1154,33 @@ internal sealed class MessageHolderViewState(
             spaceRight
         )
     }
+    class LoadingIndicator(
+        val isLoading: Boolean,
+        chat: Chat,
+        index: Int,
+    ) : MessageHolderViewState(
+        message = null,
+        chat = chat,
+        tribeAdmin = null,
+        messageHolderType = MessageHolderType.LoadingIndicator,
+        separatorDate = null,
+        background = BubbleBackground.Gone(setSpacingEqual = true),
+        invoiceLinesHolderViewState = InvoiceLinesHolderViewState(false, false),
+        initialHolder = InitialHolderViewState.None,
+        highlightedText = null,
+        index = index,
+        messageSenderInfo = { null },
+        accountOwner = { throw IllegalStateException("Loading indicator has no account owner") },
+        urlLinkPreviewsEnabled = false,
+        previewProvider = { _, _ -> null },
+        paidTextAttachmentContentProvider = { null },
+        onBindDownloadMedia = {},
+        onBindThreadDownloadMedia = {},
+        memberTimezoneIdentifier = null
+    )
+
+
+
 
 //    data class FileAttachment(
 //        val fileName: FileName?,
@@ -1160,5 +1188,4 @@ internal sealed class MessageHolderViewState(
 //        val isPdf: Boolean,
 //        val pageCount: Int
 //    )
-
 }

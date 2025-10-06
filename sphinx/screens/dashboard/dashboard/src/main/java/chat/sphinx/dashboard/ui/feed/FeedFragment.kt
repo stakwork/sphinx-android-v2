@@ -159,15 +159,21 @@ internal class FeedFragment : SideEffectFragment<
 
     private fun setupFeedViewPager() {
         binding.apply {
+
+
             val feedFragmentsAdapter = FeedFragmentsAdapter(
                 this@FeedFragment
             )
 
             chipAll.isChecked = true
 
+            viewPagerFeedFragments.isSaveEnabled = false
+            viewPagerFeedFragments.isSaveFromParentEnabled = false
+
             viewPagerFeedFragments.adapter = feedFragmentsAdapter
             viewPagerFeedFragments.isUserInputEnabled = false
             viewPagerFeedFragments.currentItem = FeedFragmentsAdapter.CHIP_ALL_POSITION
+
 
             chipAll.setOnClickListener {
                 viewModel.feedChipsViewStateContainer.updateViewState(
@@ -228,6 +234,8 @@ internal class FeedFragment : SideEffectFragment<
     }
 
     companion object {
+        private const val KEY_CURRENT_CHIP = "current_chip_position"
+
         fun newInstance(): FeedFragment {
             return FeedFragment()
         }
@@ -314,6 +322,41 @@ internal class FeedFragment : SideEffectFragment<
 //                                FeedFragmentsAdapter.CHIP_PLAY_POSITION
 //                        }
                     }
+                }
+            }
+        }
+    }
+
+    override fun onDestroyView() {
+    super.onDestroyView()
+
+    // Clear adapter to prevent state restoration issues
+    binding.viewPagerFeedFragments.adapter = null
+}
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+
+        // Save only the current chip position if needed
+        outState.putInt(KEY_CURRENT_CHIP, binding.viewPagerFeedFragments.currentItem)
+    }
+
+    override fun onViewStateRestored(savedInstanceState: Bundle?) {
+        super.onViewStateRestored(savedInstanceState)
+
+        savedInstanceState?.let { bundle ->
+            val position = bundle.getInt(KEY_CURRENT_CHIP, FeedFragmentsAdapter.CHIP_ALL_POSITION)
+
+            // Restore position after setup
+            binding.viewPagerFeedFragments.post {
+                binding.viewPagerFeedFragments.setCurrentItem(position, false)
+
+                // Update chip selection
+                when (position) {
+                    FeedFragmentsAdapter.CHIP_ALL_POSITION -> binding.chipAll.isChecked = true
+                    FeedFragmentsAdapter.CHIP_LISTEN_POSITION -> binding.chipListen.isChecked = true
+                    FeedFragmentsAdapter.CHIP_WATCH_POSITION -> binding.chipWatch.isChecked = true
+                    FeedFragmentsAdapter.CHIP_READ_POSITION -> binding.chipRead.isChecked = true
                 }
             }
         }

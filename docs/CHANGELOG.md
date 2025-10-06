@@ -1,5 +1,10 @@
 # ChangeLog
 
+## Version 1.0.0-alpha96 (2025-10-06)
+- Fixes crash on chat navigation
+- Fixes scroll issues on chat
+- Adds "Loading more..." row on chats
+
 ## Version 1.0.0-alpha95 (2025-09-26)
 - Improves performance
 

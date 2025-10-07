@@ -1004,7 +1004,7 @@ abstract class ChatFragment<
             } else {
                 // Load more messages when scrolling up AND near the top
                 // OR when at position 0 (very top)
-                if (firstVisiblePosition <= threshold) {
+                if (dy < 0 && firstVisiblePosition <= threshold) {
                     if (!isLoadingTriggered) {
                         isLoadingTriggered = true
                         viewModel.loadMoreMessages()

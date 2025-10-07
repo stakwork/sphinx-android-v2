@@ -124,6 +124,7 @@ internal class ChatContactViewModel @Inject constructor(
     private var _chatId: ChatId? = args.chatId
     override val chatId: ChatId?
         get() = _chatId
+
     override val contactId: ContactId = args.contactId
 
     private val contactSharedFlow: SharedFlow<Contact?> = flow {
@@ -311,7 +312,6 @@ internal class ChatContactViewModel @Inject constructor(
     override fun onCleared() {
         isViewModelActive = false
         cachedInitialHolder = null
-        _chatId = null
 
         super.onCleared()
     }

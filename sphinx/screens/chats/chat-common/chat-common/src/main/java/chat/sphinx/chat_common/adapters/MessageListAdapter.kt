@@ -208,7 +208,7 @@ internal class MessageListAdapter<ARGS : NavArgs>(
                         if (isNearBottom) {
                             // User was at bottom - scroll to new bottom
                             recyclerView.post {
-                                recyclerView.scrollToPosition(combinedList.size - 1)
+                                recyclerView.scrollToPosition(combinedList.size)
                             }
                         } else if (itemsAdded > 0) {
                             // Items were added at top - maintain position
@@ -262,7 +262,7 @@ internal class MessageListAdapter<ARGS : NavArgs>(
                     )
                 } ?: run {
                     // No unseen separator - scroll to bottom
-                    val lastPosition = messageHolders.size - 1
+                    val lastPosition = messageHolders.size
                     recyclerView.scrollToPosition(lastPosition)
 
                     // Double check after a short delay

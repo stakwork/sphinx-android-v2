@@ -1,7 +1,7 @@
 # ChangeLog
 
 ## Version 1.0.0-alpha98 (2025-10-07)
-- Fixes for getting messages status
+- Fixes issues on chat
 
 ## Version 1.0.0-alpha97 (2025-10-07)
 - Fixes issues on chat

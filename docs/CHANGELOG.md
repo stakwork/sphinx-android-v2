@@ -1,5 +1,8 @@
 # ChangeLog
 
+## Version 1.0.0-alpha97 (2025-10-07)
+- Fixes issues on chat
+
 ## Version 1.0.0-alpha96 (2025-10-06)
 - Fixes crash on chat navigation
 - Fixes scroll issues on chat

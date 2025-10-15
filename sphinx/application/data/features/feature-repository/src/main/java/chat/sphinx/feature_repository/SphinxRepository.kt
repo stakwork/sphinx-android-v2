@@ -48,7 +48,6 @@ import chat.sphinx.example.concept_connect_manager.ConnectManagerListener
 import chat.sphinx.example.concept_connect_manager.model.OwnerInfo
 import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
 import chat.sphinx.example.wrapper_mqtt.LastReadMessages.Companion.toLastReadMap
-import chat.sphinx.example.wrapper_mqtt.Message.Companion.toMessage
 import chat.sphinx.example.wrapper_mqtt.MessageDto
 import chat.sphinx.example.wrapper_mqtt.MessageMetadata
 import chat.sphinx.example.wrapper_mqtt.MessageMetadata.Companion.toMessageMetadata
@@ -161,7 +160,6 @@ import io.matthewnelson.crypto_common.annotations.UnencryptedDataAccess
 import io.matthewnelson.crypto_common.clazzes.*
 import io.matthewnelson.feature_authentication_core.AuthenticationCoreManager
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -1469,9 +1467,9 @@ abstract class SphinxRepository(
         }
     }
 
-    override fun onMessagesRestoreWith(count: Int, publicKey: String) {
+    override fun onMessagesRestoreWith(count: Int, publicKey: String?) {
         applicationScope.launch(mainImmediate) {
-            fetchProcessState.value = Pair(count, publicKey)
+            fetchProcessState.value = Pair(count, publicKey ?: "")
 
             delay(5000L)
 

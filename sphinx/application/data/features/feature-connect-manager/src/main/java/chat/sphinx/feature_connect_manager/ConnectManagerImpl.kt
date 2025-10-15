@@ -663,6 +663,11 @@ class ConnectManagerImpl: ConnectManager()
             getReadMessages()
             getMutedChats()
             getPings()
+        } else {
+            // No more messages to restore
+            notifyListeners {
+                onMessagesRestoreWith(0,  null)
+            }
         }
     }
 

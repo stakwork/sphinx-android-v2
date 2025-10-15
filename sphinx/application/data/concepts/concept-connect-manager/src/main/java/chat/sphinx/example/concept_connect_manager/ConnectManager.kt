@@ -233,7 +233,7 @@ interface ConnectManagerListener {
     fun updatePaidInvoices()
 
     fun onMessages(messages: List<MqttMessage>, isRestore: Boolean)
-    fun onMessagesRestoreWith(count: Int, publicKey: String)
+    fun onMessagesRestoreWith(count: Int, publicKey: String?)
 
     fun onMessageTagAndUuid(tag: String?, msgUUID: String, provisionalId: Long)
     fun onMessagePaymentHash(paymentHash: String, provisionalId: Long)

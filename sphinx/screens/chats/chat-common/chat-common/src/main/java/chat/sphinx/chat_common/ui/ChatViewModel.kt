@@ -1727,6 +1727,11 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                     isLoadingMore = false
                     messagesLoadingViewStateContainer.updateViewState(MessagesLoadingViewState.Idle)
                     _loadingCompleteEvent.emit(Unit)
+                } else {
+                    delay(5000L)
+                    isLoadingMore = false
+                    messagesLoadingViewStateContainer.updateViewState(MessagesLoadingViewState.Idle)
+                    _loadingCompleteEvent.emit(Unit)
                 }
             }
         }

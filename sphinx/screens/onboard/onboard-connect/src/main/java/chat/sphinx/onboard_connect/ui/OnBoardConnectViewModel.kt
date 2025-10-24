@@ -89,7 +89,6 @@ internal class OnBoardConnectViewModel @Inject constructor(
     companion object {
         const val BITCOIN_NETWORK_REG_TEST = "regtest"
         const val BITCOIN_NETWORK_MAIN_NET = "bitcoin"
-        const val BITCOIN = "bitcoin"
     }
 
     val submitButtonViewStateContainer: ViewStateContainer<OnBoardConnectSubmitButtonViewState> by lazy {
@@ -189,15 +188,12 @@ internal class OnBoardConnectViewModel @Inject constructor(
                             redemptionCode.relay
                         )
                         signerMenuHandler.viewStateContainer.updateViewState(MenuBottomViewState.Open)
-                    }
-                    if (redemptionCode is RedemptionCode.NewInvite) {
+                    } else if (redemptionCode is RedemptionCode.NewInvite) {
                         connectManagerRepository.setInviteCode(code)
                         presentLoginModal()
-                    }
-                    if (redemptionCode is RedemptionCode.MnemonicRestoration) {
+                    } else if (redemptionCode is RedemptionCode.MnemonicRestoration) {
                         continueToConnectingScreen(code)
-                    }
-                    else {
+                    } else {
                         viewModelScope.launch(mainImmediate) {
                             navigator.toOnBoardConnectingScreen(code)
                         }

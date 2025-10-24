@@ -1,5 +1,9 @@
 # ChangeLog
 
+## Version 1.0.0-alpha99 (2025-10-24)
+- Fixes issues on signup
+- Adds loading more messages row on chats
+
 ## Version 1.0.0-alpha98 (2025-10-07)
 - Fixes issues on chat
 

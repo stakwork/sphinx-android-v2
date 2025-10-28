@@ -1,5 +1,8 @@
 # ChangeLog
 
+## Version 1.0.1-alpha01 (2025-10-28)
+- Adds support for 16 KB devices
+
 ## Version 1.0.0-alpha99 (2025-10-24)
 - Fixes issues on signup
 - Adds loading more messages row on chats

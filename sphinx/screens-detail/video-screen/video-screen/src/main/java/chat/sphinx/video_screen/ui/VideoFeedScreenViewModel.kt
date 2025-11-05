@@ -6,7 +6,6 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
-import androidx.core.net.toUri
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewModelScope
 import chat.sphinx.concept_network_query_feed_status.NetworkQueryFeedStatus
@@ -17,7 +16,7 @@ import chat.sphinx.concept_repository_feed.FeedRepository
 import chat.sphinx.concept_repository_lightning.LightningRepository
 import chat.sphinx.concept_repository_media.RepositoryMedia
 import chat.sphinx.concept_repository_message.MessageRepository
-import chat.sphinx.video_screen.R
+import chat.sphinx.create_description.BuildConfig
 import chat.sphinx.resources.R as R_common
 import chat.sphinx.video_screen.navigation.VideoScreenNavigator
 import chat.sphinx.video_screen.ui.viewstate.BoostAnimationViewState
@@ -501,7 +500,13 @@ internal open class VideoFeedScreenViewModel(
 
     fun checkYoutubeVideoAvailable(videoId: FeedId){
         viewModelScope.launch(mainImmediate) {
+            val workflowId = BuildConfig.GRAPH_MINDSET_WORKFLOW_ID.toInt()
+            val token = BuildConfig.GRAPH_MINDSET_TOKEN
+
             videoPlayerStateContainer.updateViewState(VideoPlayerViewState.YoutubeVideoIframe(videoId))
+
+            val enclosureUrl = "https://www.youtube.com/watch?v=${videoId.youtubeVideoId()}"
+            feedRepository.checkIfEpisodeNodeExists(null,null, enclosureUrl, workflowId, token)
         }
     }
 }

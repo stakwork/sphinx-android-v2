@@ -49,22 +49,31 @@ class NetworkQueryFeedSearchImpl(
         )
 
     override fun checkIfEpisodeNodeExists(
-        episode: PodcastEpisode,
-        feedTitle: FeedTitle
+        episode: PodcastEpisode?,
+        feedTitle: FeedTitle?,
+        youtubeMediaUrl: String?
     ): Flow<LoadResponse<EpisodeNodeResponseDto, ResponseError>> {
 
-        val nodeData = mapOf(
-            "source_link" to episode.enclosureUrl.value,
-            "date" to episode.date?.value?.time?.div(1000),
-            "episode_title" to episode.title.value,
-            "image_url" to episode.image?.value,
-            "show_title" to feedTitle.value
-        ).filterValues { it != null }
+        val requestBody = if (youtubeMediaUrl != null) {
+            mapOf(
+                "media_url" to youtubeMediaUrl,
+                "content_type" to "audio_video"
+            )
+        } else {
+            // Podcast episode case
+            val nodeData = mapOf(
+                "source_link" to episode?.enclosureUrl?.value,
+                "date" to episode?.date?.value?.time?.div(1000),
+                "episode_title" to episode?.title?.value,
+                "image_url" to episode?.image?.value,
+                "show_title" to feedTitle?.value
+            ).filterValues { it != null }
 
-        val requestBody = mapOf(
-            "node_type" to "Episode",
-            "node_data" to nodeData
-        )
+            mapOf(
+                "node_type" to "Episode",
+                "node_data" to nodeData
+            )
+        }
 
         return networkRelayCall.post(
             url = GRAPH_MINDSET_ADD_NODE_URL,
@@ -75,7 +84,6 @@ class NetworkQueryFeedSearchImpl(
             accept400AsSuccess = true
         )
     }
-
     override fun createStakworkProject(
         podcastEpisode: PodcastEpisode,
         feedTitle: FeedTitle,

@@ -23,8 +23,9 @@ interface FeedRepository {
     fun getPodcastByChatId(chatId: ChatId): Flow<Podcast?>
     fun getPodcastById(feedId: FeedId): Flow<Podcast?>
     suspend fun checkIfEpisodeNodeExists(
-        podcastEpisode: PodcastEpisode,
-        podcastTitle: FeedTitle,
+        podcastEpisode: PodcastEpisode?,
+        podcastTitle: FeedTitle?,
+        youtubeMediaUrl: String? = null,
         workflowId: Int?,
         token: String?
     )

@@ -6653,17 +6653,25 @@ abstract class SphinxRepository(
     }
 
     override suspend fun checkIfEpisodeNodeExists(
-        podcastEpisode: PodcastEpisode,
-        podcastTitle: FeedTitle,
+        podcastEpisode: PodcastEpisode?,
+        podcastTitle: FeedTitle?,
+        youtubeMediaUrl: String?,
         workflowId: Int?,
         token: String?
     ) {
-        networkQueryFeedSearch.checkIfEpisodeNodeExists(podcastEpisode, podcastTitle).collect { response ->
+        networkQueryFeedSearch.checkIfEpisodeNodeExists(
+            podcastEpisode,
+            podcastTitle,
+            youtubeMediaUrl
+        ).collect { response ->
             @Exhaustive
             when (response) {
                 is LoadResponse.Loading -> {}
                 is Response.Error -> {}
                 is Response.Success -> {
+                    if (podcastEpisode == null || podcastTitle == null) {
+                        return@collect
+                    }
                     val queries = coreDB.getSphinxDatabaseQueries()
                     val referenceId = response.value.data?.ref_id?.toFeedReferenceId()
 

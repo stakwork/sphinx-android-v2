@@ -23,7 +23,11 @@ abstract class NetworkQueryFeedSearch {
         feedType: FeedType,
     ): Flow<LoadResponse<List<FeedSearchResultDto>, ResponseError>>
 
-    abstract fun checkIfEpisodeNodeExists(episode: PodcastEpisode, feedTitle: FeedTitle): Flow<LoadResponse<EpisodeNodeResponseDto, ResponseError>>
+    abstract fun checkIfEpisodeNodeExists(
+        episode: PodcastEpisode?,
+        feedTitle: FeedTitle?,
+        youtubeMediaUrl: String? = null
+    ): Flow<LoadResponse<EpisodeNodeResponseDto, ResponseError>>
     abstract fun createStakworkProject(
         podcastEpisode: PodcastEpisode,
         feedTitle: FeedTitle,

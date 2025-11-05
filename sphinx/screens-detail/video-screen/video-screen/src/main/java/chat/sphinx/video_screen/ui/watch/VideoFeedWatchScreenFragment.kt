@@ -89,7 +89,7 @@ internal class VideoFeedWatchScreenFragment : SideEffectFragment<
     companion object {
         val SLIDER_VALUES = listOf(0,3,3,5,5,8,8,10,10,15,20,20,40,40,80,80,100)
 
-        const val YOUTUBE_URL = "https://www.youtube.com"
+        const val YOUTUBE_URL = "https://www.youtube-nocookie.com"
         const val MIME_TYPE_HTML = "text/html"
         const val ENCODING_UTF = "UTF-8"
     }

@@ -501,13 +501,7 @@ internal open class VideoFeedScreenViewModel(
 
     fun checkYoutubeVideoAvailable(videoId: FeedId){
         viewModelScope.launch(mainImmediate) {
-            val url = networkQueryFeedStatus.checkYoutubeVideoAvailable(videoId.youtubeVideoId())
-
-            if (url != null) {
-                videoPlayerStateContainer.updateViewState(VideoPlayerViewState.WebViewPlayer(url.toUri(), null))
-            } else {
-                videoPlayerStateContainer.updateViewState(VideoPlayerViewState.YoutubeVideoIframe(videoId))
-            }
+            videoPlayerStateContainer.updateViewState(VideoPlayerViewState.YoutubeVideoIframe(videoId))
         }
     }
 }

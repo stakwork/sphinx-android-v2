@@ -27,7 +27,8 @@ internal class FeedItemDboPresenterMapper(
             value.duration,
             value.local_file,
             value.reference_id,
-            value.chapters_data
+            value.chapters_data,
+            value.downloaded_item_url
         )
     }
 
@@ -50,7 +51,8 @@ internal class FeedItemDboPresenterMapper(
             value.duration,
             value.localFile,
             value.referenceId,
-            value.chaptersData
+            value.chaptersData,
+            value.downloadedItemUrl
         )
     }
 }

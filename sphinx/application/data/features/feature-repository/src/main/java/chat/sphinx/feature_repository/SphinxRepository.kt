@@ -6184,6 +6184,7 @@ abstract class SphinxRepository(
                 FeedItemDuration(0),
                 null,
                 null,
+                null,
                 null
             )
 
@@ -6655,37 +6656,36 @@ abstract class SphinxRepository(
     override suspend fun checkIfEpisodeNodeExists(
         podcastEpisode: PodcastEpisode?,
         podcastTitle: FeedTitle?,
-        youtubeMediaUrl: String?,
+        videoId: FeedId?,
         workflowId: Int?,
         token: String?
     ) {
         networkQueryFeedSearch.checkIfEpisodeNodeExists(
             podcastEpisode,
             podcastTitle,
-            youtubeMediaUrl
+            videoId?.youtubeVideoId()
         ).collect { response ->
             @Exhaustive
             when (response) {
                 is LoadResponse.Loading -> {}
                 is Response.Error -> {}
                 is Response.Success -> {
-                    if (podcastEpisode == null || podcastTitle == null) {
-                        return@collect
-                    }
                     val queries = coreDB.getSphinxDatabaseQueries()
                     val referenceId = response.value.data?.ref_id?.toFeedReferenceId()
 
-                    queries.feedItemUpdateReferenceId(referenceId, podcastEpisode.id)
+                    val id = videoId ?: podcastEpisode?.id
+
+                    queries.feedItemUpdateReferenceId(referenceId, id!!)
 
                     if (response.value.errorCode?.contains("already exists") == true ||
                         response.value.node_key != null
                     ) {
-                        getChaptersData(podcastEpisode, podcastTitle, referenceId!!, podcastEpisode.id, workflowId, token)
+                        getChaptersData(podcastEpisode, podcastTitle, referenceId!!, id, workflowId, token)
                     } else if (response.value.success == true) {
 
                         if (workflowId != null && token != null && referenceId != null) {
 
-                            createProjectTimestamps.value[podcastEpisode.id.value] = System.currentTimeMillis()
+                            createProjectTimestamps.value[referenceId.value] = System.currentTimeMillis()
 
                             networkQueryFeedSearch.createStakworkProject(
                                 podcastEpisode,
@@ -6708,8 +6708,8 @@ abstract class SphinxRepository(
     }
 
     override suspend fun getEpisodeNodeDetails(
-        podcastEpisode: PodcastEpisode,
-        podcastTitle: FeedTitle,
+        podcastEpisode: PodcastEpisode?,
+        podcastTitle: FeedTitle?,
         referenceId: FeedReferenceId,
         workflowId: Int?,
         token: String?
@@ -6723,7 +6723,7 @@ abstract class SphinxRepository(
                     if (!hasProjectId) {
                         if (workflowId != null && token != null) {
 
-                            createProjectTimestamps.value[podcastEpisode.id.value] = System.currentTimeMillis()
+                            createProjectTimestamps.value[referenceId.value] = System.currentTimeMillis()
 
                             networkQueryFeedSearch.createStakworkProject(
                                 podcastEpisode,
@@ -6745,15 +6745,15 @@ abstract class SphinxRepository(
         }
     }
     override suspend fun getChaptersData(
-        podcastEpisode: PodcastEpisode,
-        podcastTitle: FeedTitle,
+        podcastEpisode: PodcastEpisode?,
+        podcastTitle: FeedTitle?,
         referenceId: FeedReferenceId,
         id: FeedId,
         workflowId: Int?,
         token: String?
     ) {
 
-        val lastProjectTimestamp = createProjectTimestamps.value[podcastEpisode.id.value]
+        val lastProjectTimestamp = createProjectTimestamps.value[referenceId.value]
         val currentTime = System.currentTimeMillis()
 
         if (lastProjectTimestamp != null && currentTime - lastProjectTimestamp < 60 * 60 * 1000) {
@@ -6778,10 +6778,14 @@ abstract class SphinxRepository(
 
                         val hasChapters = chapterResponseDto.nodes.any { it.node_type == "Chapter" }
 
+                        val downloadedMediaUrl: FeedUrl? =
+                            chapterResponseDto.nodes
+                                .firstOrNull { it.node_type.equals("Episode", ignoreCase = true) }
+                                ?.properties?.media_url?.toFeedUrl()
+
                         if (hasChapters) {
-                            val feedChaptersData =
-                                adapter.toJson(chapterResponseDto).toFeedChapterData()
-                            queries.feedItemUpdateChaptersData(feedChaptersData, id)
+                            val feedChaptersData = adapter.toJson(chapterResponseDto).toFeedChapterData()
+                            queries.feedItemUpdateChaptersData(feedChaptersData, downloadedMediaUrl, id)
                         } else {
                             getEpisodeNodeDetails(
                                 podcastEpisode,

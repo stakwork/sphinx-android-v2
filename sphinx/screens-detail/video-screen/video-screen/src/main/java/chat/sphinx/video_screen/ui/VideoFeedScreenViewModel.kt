@@ -504,9 +504,7 @@ internal open class VideoFeedScreenViewModel(
             val token = BuildConfig.GRAPH_MINDSET_TOKEN
 
             videoPlayerStateContainer.updateViewState(VideoPlayerViewState.YoutubeVideoIframe(videoId))
-
-            val enclosureUrl = "https://www.youtube.com/watch?v=${videoId.youtubeVideoId()}"
-            feedRepository.checkIfEpisodeNodeExists(null,null, enclosureUrl, workflowId, token)
+            feedRepository.checkIfEpisodeNodeExists(null,null, videoId, workflowId, token)
         }
     }
 }

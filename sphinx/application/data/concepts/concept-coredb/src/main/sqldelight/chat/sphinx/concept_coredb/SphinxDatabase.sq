@@ -1796,7 +1796,8 @@ CREATE TABLE feedItemDbo(
     duration                    INTEGER            AS FeedItemDuration,
     local_file                  TEXT               AS File,
     reference_id                TEXT               AS FeedReferenceId,
-    chapters_data               TEXT               AS FeedChaptersData
+    chapters_data               TEXT               AS FeedChaptersData,
+    downloaded_item_url         TEXT               AS FeedUrl
 );
 
 feedItemUpsert {
@@ -1919,7 +1920,8 @@ WHERE id = :id;
 
 feedItemUpdateChaptersData:
 UPDATE feedItemDbo
-SET chapters_data = :chapters_data
+SET chapters_data = :chapters_data,
+    downloaded_item_url = :downloaded_item_url
 WHERE id = :id;
 
 feedItemDeleteAll:

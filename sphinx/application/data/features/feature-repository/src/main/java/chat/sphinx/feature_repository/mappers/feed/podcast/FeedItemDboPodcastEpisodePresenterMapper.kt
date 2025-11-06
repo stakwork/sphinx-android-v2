@@ -44,7 +44,7 @@ internal class FeedItemDboPodcastEpisodePresenterMapper(
             localFile = value.local_file,
             date = value.date_published,
             referenceId = value.reference_id,
-            chaptersData = value.chapters_data
+            chaptersData = value.chapters_data,
         )
     }
 
@@ -67,7 +67,8 @@ internal class FeedItemDboPodcastEpisodePresenterMapper(
             feed_id = value.podcastId,
             local_file = value.localFile,
             reference_id = null,
-            chapters_data = null
+            chapters_data = null,
+            downloaded_item_url = null
         )
     }
 }

@@ -31,6 +31,7 @@ class NetworkQueryFeedSearchImpl(
         private const val ENDPOINT_PODCAST_SEARCH = "$TRIBES_DEFAULT_SERVER_URL/search_podcasts?q=%s"
         private const val ENDPOINT_YOUTUBE_SEARCH = "$TRIBES_DEFAULT_SERVER_URL/search_youtube?q=%s"
         private const val ENDPOINT_FEED_RECOMMENDATIONS = "/feeds"
+        private const val YOUTUBE_ENCLOSURE_URL = "https://www.youtube.com/watch?v=%s"
 
     }
 
@@ -51,12 +52,12 @@ class NetworkQueryFeedSearchImpl(
     override fun checkIfEpisodeNodeExists(
         episode: PodcastEpisode?,
         feedTitle: FeedTitle?,
-        youtubeMediaUrl: String?
+        youtubeVideoId: String?
     ): Flow<LoadResponse<EpisodeNodeResponseDto, ResponseError>> {
 
-        val requestBody = if (youtubeMediaUrl != null) {
+        val requestBody = if (youtubeVideoId != null) {
             mapOf(
-                "media_url" to youtubeMediaUrl,
+                "media_url" to String.format(YOUTUBE_ENCLOSURE_URL, youtubeVideoId),
                 "content_type" to "audio_video"
             )
         } else {
@@ -85,14 +86,14 @@ class NetworkQueryFeedSearchImpl(
         )
     }
     override fun createStakworkProject(
-        podcastEpisode: PodcastEpisode,
-        feedTitle: FeedTitle,
+        podcastEpisode: PodcastEpisode?,
+        feedTitle: FeedTitle?,
         workflowId: Int,
         token: String,
         referenceId: FeedReferenceId
     ): Flow<LoadResponse<CreateProjectResponseDto, ResponseError>> {
 
-        val mediaUrl = podcastEpisode.enclosureUrl.value
+        val mediaUrl = podcastEpisode?.enclosureUrl?.value
         val requestBody = mapOf(
             "name" to mediaUrl,
             "workflow_id" to workflowId,
@@ -102,10 +103,10 @@ class NetworkQueryFeedSearchImpl(
                         "vars" to mapOf(
                             "media_url" to mediaUrl,
                             "ref_id" to referenceId.value,
-                            "episode_publish_date" to (podcastEpisode.date?.time?.div(1000) ?: 0),
-                            "episode_title" to podcastEpisode.title.value,
-                            "episode_thumbnail_url" to (podcastEpisode.image?.value ?: ""),
-                            "show_title" to (feedTitle.value)
+                            "episode_publish_date" to (podcastEpisode?.date?.time?.div(1000) ?: 0),
+                            "episode_title" to podcastEpisode?.title?.value,
+                            "episode_thumbnail_url" to (podcastEpisode?.image?.value ?: ""),
+                            "show_title" to (feedTitle?.value)
                         )
                     )
                 )

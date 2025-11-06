@@ -25,20 +25,20 @@ interface FeedRepository {
     suspend fun checkIfEpisodeNodeExists(
         podcastEpisode: PodcastEpisode?,
         podcastTitle: FeedTitle?,
-        youtubeMediaUrl: String? = null,
+        videoId: FeedId? = null,
         workflowId: Int?,
         token: String?
     )
     suspend fun getEpisodeNodeDetails(
-        podcastEpisode: PodcastEpisode,
-        podcastTitle: FeedTitle,
+        podcastEpisode: PodcastEpisode?,
+        podcastTitle: FeedTitle?,
         referenceId: FeedReferenceId,
         workflowId: Int?,
         token: String?
     )
     suspend fun getChaptersData(
-        podcastEpisode: PodcastEpisode,
-        podcastTitle: FeedTitle,
+        podcastEpisode: PodcastEpisode?,
+        podcastTitle: FeedTitle?,
         referenceId: FeedReferenceId,
         id: FeedId,
         workflowId: Int?,

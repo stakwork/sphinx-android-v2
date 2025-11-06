@@ -328,6 +328,7 @@ abstract class CoreDBImpl(private val moshi: Moshi): CoreDB() {
                     local_fileAdapter = FileAdapter.getInstance(),
                     reference_idAdapter = FeedReferenceIdAdapter(),
                     chapters_dataAdapter = FeedChapterDataAdapter(),
+                    downloaded_item_urlAdapter = FeedUrlAdapter.getInstance()
                 ),
                 feedModelDboAdapter = FeedModelDbo.Adapter(
                     idAdapter = FeedIdAdapter(),

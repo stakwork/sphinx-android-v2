@@ -26,11 +26,11 @@ abstract class NetworkQueryFeedSearch {
     abstract fun checkIfEpisodeNodeExists(
         episode: PodcastEpisode?,
         feedTitle: FeedTitle?,
-        youtubeMediaUrl: String? = null
+        youtubeVideoId: String? = null
     ): Flow<LoadResponse<EpisodeNodeResponseDto, ResponseError>>
     abstract fun createStakworkProject(
-        podcastEpisode: PodcastEpisode,
-        feedTitle: FeedTitle,
+        podcastEpisode: PodcastEpisode?,
+        feedTitle: FeedTitle?,
         workflowId: Int,
         token: String,
         referenceId: FeedReferenceId

@@ -6692,7 +6692,8 @@ abstract class SphinxRepository(
                                 podcastTitle,
                                 workflowId,
                                 token,
-                                referenceId
+                                referenceId,
+                                videoId?.youtubeVideoId()
                             ).collect { projectResponse ->
                                 when (projectResponse) {
                                     is LoadResponse.Loading -> {}

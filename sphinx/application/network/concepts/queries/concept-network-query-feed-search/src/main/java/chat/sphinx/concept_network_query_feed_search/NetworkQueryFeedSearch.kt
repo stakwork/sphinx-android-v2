@@ -28,12 +28,14 @@ abstract class NetworkQueryFeedSearch {
         feedTitle: FeedTitle?,
         youtubeVideoId: String? = null
     ): Flow<LoadResponse<EpisodeNodeResponseDto, ResponseError>>
+
     abstract fun createStakworkProject(
         podcastEpisode: PodcastEpisode?,
         feedTitle: FeedTitle?,
         workflowId: Int,
         token: String,
-        referenceId: FeedReferenceId
+        referenceId: FeedReferenceId,
+        youtubeVideoId: String? = null
     ): Flow<LoadResponse<CreateProjectResponseDto, ResponseError>>
 
     abstract fun getEpisodeNodeDetails(referenceId: FeedReferenceId): Flow<LoadResponse<EpisodeNodeDetailsDto, ResponseError>>

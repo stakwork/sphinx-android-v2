@@ -144,14 +144,37 @@ internal class VideoFeedWatchScreenFragment : SideEffectFragment<
     override fun onDestroyView() {
         super.onDestroyView()
 
+        // Cleanup video players
+        binding.includeLayoutVideoPlayer.apply {
+            // Stop VideoView
+            videoViewVideoPlayer.stopPlayback()
+            videoViewVideoPlayer.suspend()
+
+            // Stop WebView
+            webViewYoutubePlayer.loadUrl("about:blank")
+            webViewYoutubePlayer.stopLoading()
+        }
+
         viewModel.createHistoryItem()
         viewModel.trackVideoConsumed()
 
         val a: Activity? = activity
         a?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-
     }
 
+    override fun onPause() {
+        super.onPause()
+
+        // Pause players when fragment is paused
+        binding.includeLayoutVideoPlayer.apply {
+            if (videoViewVideoPlayer.isPlaying) {
+                videoViewVideoPlayer.pause()
+            }
+
+            // Pause YouTube player via JavaScript
+            webViewYoutubePlayer.evaluateJavascript("pauseVideo();", null)
+        }
+    }
     private var draggingSatsSlider: Boolean = false
     private fun setupSeekBar() {
         binding.includeLayoutVideoItemsList.includeLayoutDescriptionBox.apply {
@@ -521,16 +544,38 @@ internal class VideoFeedWatchScreenFragment : SideEffectFragment<
                                 textViewVideoDescription.text = viewState.description?.value ?: ""
                                 textViewVideoPublishedDate.text = viewState.date?.hhmmElseDate()
 
-                                if (viewState.url.isYoutubeVideo()) {
-                                    viewModel.checkYoutubeVideoAvailable(viewState.id)
+                                // Determine which player to use and update view state accordingly
+                                if (viewState.downloadedItemUrl != null) {
+                                    // Processed video with S3 link - use WebView player
+                                    val videoUri = viewState.downloadedItemUrl.value.toUri()
+
+                                    viewModel.videoPlayerStateContainer.updateViewState(
+                                        VideoPlayerViewState.WebViewPlayer(
+                                            videoUri,
+                                            viewState.duration
+                                        )
+                                    )
+
+                                } else if (viewState.url.isYoutubeVideo()) {
+                                    // YouTube video - use YouTube iframe player
+                                    viewModel.videoPlayerStateContainer.updateViewState(
+                                        VideoPlayerViewState.YoutubeVideoIframe(viewState.id)
+                                    )
+
                                 } else {
+                                    // Local file or other URL - use WebView player
                                     val videoUri = if (viewState.localFile != null) {
                                         viewState.localFile.toUri()
                                     } else {
                                         viewState.url.value.toUri()
                                     }
 
-                                    viewModel.videoPlayerStateContainer.updateViewState(VideoPlayerViewState.WebViewPlayer(videoUri, viewState.duration))
+                                    viewModel.videoPlayerStateContainer.updateViewState(
+                                        VideoPlayerViewState.WebViewPlayer(
+                                            videoUri,
+                                            viewState.duration
+                                        )
+                                    )
                                 }
                             }
                         }
@@ -538,6 +583,7 @@ internal class VideoFeedWatchScreenFragment : SideEffectFragment<
                 }
             }
         }
+
 
         onStopSupervisor.scope.launch(viewModel.mainImmediate) {
             viewModel.loadingVideoStateContainer.collect { viewState ->
@@ -584,38 +630,62 @@ internal class VideoFeedWatchScreenFragment : SideEffectFragment<
         onStopSupervisor.scope.launch(viewModel.mainImmediate) {
             viewModel.videoPlayerStateContainer.collect { viewState ->
                 binding.includeLayoutVideoPlayer.apply {
-                @Exhaustive
-                when (viewState) {
-                    is VideoPlayerViewState.Idle -> {}
-                    is VideoPlayerViewState.YoutubeVideoIframe -> {
-
+                    @Exhaustive
+                    when (viewState) {
+                        is VideoPlayerViewState.Idle -> {
+                            // Hide both players
                             layoutConstraintVideoViewContainer.gone
+                            layoutConstraintYoutubeIframeContainer.gone
+                            layoutConstraintLoadingVideo.gone
+                        }
+
+                        is VideoPlayerViewState.YoutubeVideoIframe -> {
+                            // Show ONLY YouTube player, hide WebView player
+                            layoutConstraintVideoViewContainer.gone
+                            layoutConstraintLoadingVideo.gone
                             layoutConstraintYoutubeIframeContainer.visible
 
+                            // Stop any video playing in WebView
+                            videoViewVideoPlayer.stopPlayback()
+                            videoViewVideoPlayer.suspend()
+
+                            // Load YouTube video
                             cueYoutubeVideo(viewState.videoId.youtubeVideoId())
 
+                            // Track consumption
                             viewModel.createHistoryItem()
                             viewModel.trackVideoConsumed()
                             viewModel.createVideoRecordConsumed(viewState.videoId)
+                        }
 
-                    }
-                    is VideoPlayerViewState.WebViewPlayer -> {
-
-                            layoutConstraintLoadingVideo.visible
-                            layoutConstraintVideoViewContainer.visible
+                        is VideoPlayerViewState.WebViewPlayer -> {
+                            // Show ONLY WebView player, hide YouTube player
                             layoutConstraintYoutubeIframeContainer.gone
+                            layoutConstraintVideoViewContainer.visible
+                            layoutConstraintLoadingVideo.visible
 
+                            // Stop YouTube player
+                            webViewYoutubePlayer.loadUrl("about:blank")
+
+                            // Initialize WebView video player
                             viewModel.initializeVideo(
                                 viewState.videoUri,
                                 viewState.duration?.value?.toInt()
                             )
-                        }
 
+                            // Track consumption for WebView videos too
+                            viewModel.createHistoryItem()
+                            viewModel.trackVideoConsumed()
+
+                            // Create video record with proper ID
+                            (viewModel.selectedVideoStateContainer.value as? SelectedVideoViewState.VideoSelected)?.let { video ->
+                                viewModel.createVideoRecordConsumed(video.id)
+                            }
+                        }
                     }
                 }
             }
         }
-
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {

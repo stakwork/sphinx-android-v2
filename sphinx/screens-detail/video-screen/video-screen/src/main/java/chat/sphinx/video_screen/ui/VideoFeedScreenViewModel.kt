@@ -6,6 +6,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import androidx.core.net.toUri
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewModelScope
 import chat.sphinx.concept_network_query_feed_status.NetworkQueryFeedStatus
@@ -200,7 +201,8 @@ internal open class VideoFeedScreenViewModel(
                                     video.enclosureUrl,
                                     video.localFile,
                                     video.dateUpdated,
-                                    video.duration
+                                    video.duration,
+                                    video.downloadedItemUrl
                                 )
                             )
                         }
@@ -255,12 +257,12 @@ internal open class VideoFeedScreenViewModel(
                     video.enclosureUrl,
                     video.localFile,
                     video.dateUpdated,
-                    video.duration
+                    video.duration,
+                    video.downloadedItemUrl
                 )
             )
         }
     }
-
     fun updateVideoLastPlayed() {
         (selectedVideoStateContainer.value as? SelectedVideoViewState.VideoSelected)?.let {
             it.feedId?.let { feedId ->
@@ -453,6 +455,17 @@ internal open class VideoFeedScreenViewModel(
                         routerPubKey = routerPubKey
                     )
                 }
+            }
+        }
+    }
+
+    fun checkYoutubeVideoAvailable(videoId: FeedId, downloadedItemUrl: FeedUrl?){
+        viewModelScope.launch(mainImmediate) { // Keep for backend chapter fetching only
+            if (downloadedItemUrl == null) {
+                val workflowId = BuildConfig.GRAPH_MINDSET_WORKFLOW_ID.toInt()
+                val token = BuildConfig.GRAPH_MINDSET_TOKEN
+
+                feedRepository.checkIfEpisodeNodeExists(null, null, videoId, workflowId, token)
             }
         }
     }

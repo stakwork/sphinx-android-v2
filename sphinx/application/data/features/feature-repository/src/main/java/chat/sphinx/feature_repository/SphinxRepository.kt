@@ -139,7 +139,7 @@ import chat.sphinx.wrapper_message.MsgSender.Companion.toMsgSender
 import chat.sphinx.wrapper_message.MsgSender.Companion.toMsgSenderNull
 import chat.sphinx.wrapper_message_media.*
 import chat.sphinx.wrapper_message_media.token.MediaHost
-import chat.sphinx.wrapper_podcast.ChapterResponseDto
+import chat.sphinx.wrapper_common.ChapterResponseDto
 import chat.sphinx.wrapper_podcast.FeedRecommendation
 import chat.sphinx.wrapper_podcast.FeedSearchResultRow
 import chat.sphinx.wrapper_podcast.Podcast
@@ -6472,6 +6472,7 @@ abstract class SphinxRepository(
         return list
     }
 
+
     private suspend fun mapFeedDbo(
         feedDbo: FeedDbo,
         items: List<FeedItem>,
@@ -6534,8 +6535,23 @@ abstract class SphinxRepository(
             contentEpisodeStatusDboPresenterMapper.mapFrom(it)
         }
 
+        val moshi = Moshi.Builder()
+            .add(KotlinJsonAdapterFactory())
+            .build()
+
+        val adapter = moshi.adapter(ChapterResponseDto::class.java).lenient()
+
         items.forEach { feedItem ->
             feedItem.feed = feed
+
+            feedItem.chaptersData?.value?.let { chaptersJson ->
+                try {
+                    val parsedChapters: ChapterResponseDto? = adapter.fromJson(chaptersJson)
+                    feedItem.chapters = parsedChapters
+                } catch (e: Exception) {
+                    feedItem.chapters = null
+                }
+            }
 
             contentEpisodeStatuses.forEach { contentEpisodeStatus ->
                 if (feedItem.id == contentEpisodeStatus.itemId) {
@@ -6568,6 +6584,20 @@ abstract class SphinxRepository(
 
         val contentEpisodeStatus = queries.contentEpisodeStatusGetByFeedIdAndItemId(feedItem.feedId, feedItem.id).executeAsOneOrNull()?.let {
             contentEpisodeStatusDboPresenterMapper.mapFrom(it)
+        }
+
+        feedItem.chaptersData?.value?.let { chaptersJson ->
+            try {
+                val moshi = Moshi.Builder()
+                    .add(KotlinJsonAdapterFactory())
+                    .build()
+
+                val adapter = moshi.adapter(ChapterResponseDto::class.java).lenient()
+                val parsedChapters: ChapterResponseDto? = adapter.fromJson(chaptersJson)
+                feedItem.chapters = parsedChapters
+            } catch (e: Exception) {
+                feedItem.chapters = null
+            }
         }
 
         feedItem.contentEpisodeStatus = contentEpisodeStatus

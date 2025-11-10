@@ -13,7 +13,7 @@ import chat.sphinx.wrapper_common.feed.isPodcast
 import chat.sphinx.wrapper_common.time
 import chat.sphinx.wrapper_feed.FeedReferenceId
 import chat.sphinx.wrapper_feed.FeedTitle
-import chat.sphinx.wrapper_podcast.ChapterResponseDto
+import chat.sphinx.wrapper_common.ChapterResponseDto
 import chat.sphinx.wrapper_podcast.PodcastEpisode
 import kotlinx.coroutines.flow.Flow
 

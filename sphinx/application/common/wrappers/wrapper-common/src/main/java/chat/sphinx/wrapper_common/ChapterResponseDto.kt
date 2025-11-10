@@ -1,4 +1,4 @@
-package chat.sphinx.wrapper_podcast
+package chat.sphinx.wrapper_common
 
 import com.squareup.moshi.JsonClass
 

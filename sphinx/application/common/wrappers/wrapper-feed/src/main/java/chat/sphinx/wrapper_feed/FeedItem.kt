@@ -4,6 +4,7 @@ import chat.sphinx.wrapper_common.DateTime
 import chat.sphinx.wrapper_common.PhotoUrl
 import chat.sphinx.wrapper_common.feed.*
 import chat.sphinx.wrapper_common.time
+import chat.sphinx.wrapper_common.ChapterResponseDto
 import java.io.File
 
 inline val FeedItem.isPodcast: Boolean
@@ -91,6 +92,11 @@ data class FeedItem(
         get()= localFile != null
 
     var contentEpisodeStatus: ContentEpisodeStatus? = null
+
+    var chapters: ChapterResponseDto? = null
+
+    val hasChapters: Boolean
+        get() = chapters?.nodes?.any { it.node_type == "Chapter" } == true
 
     var showTitle: String? = null
     var feedType: FeedType? = null

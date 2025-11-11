@@ -53,6 +53,19 @@ class VideoPlayerController(
         videoView?.seekTo(progress)
     }
 
+    // NEW: Seek to specific time in milliseconds
+    fun seekToTime(timeMillis: Long) {
+        videoView?.let { video ->
+            if (video.canSeekForward() || video.canSeekBackward()) {
+                video.seekTo(timeMillis.toInt())
+                // If video is paused, start playing after seek
+                if (!video.isPlaying) {
+                    play()
+                }
+            }
+        }
+    }
+
     fun pause() {
         videoView?.pause()
         dispatchStateJob?.cancel()

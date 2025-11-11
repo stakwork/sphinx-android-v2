@@ -125,6 +125,10 @@ internal class VideoFeedWatchScreenViewModel @Inject constructor(
         videoPlayerController.setVideo(videoView)
     }
 
+    override fun seekToVideoTime(timeMillis: Long) {
+        videoPlayerController.seekToTime(timeMillis)
+    }
+
     override fun getArgChatId(): ChatId {
         return args.chatId
     }

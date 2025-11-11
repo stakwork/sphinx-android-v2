@@ -259,9 +259,12 @@ internal class VideoFeedItemsAdapter (
                 if (hasDownloadedUrl && chaptersList?.isNotEmpty() == true) {
                     buttonListIcon.visible
 
-                    val chaptersAdapter = EpisodeChapterListAdapter(lifecycleOwner) { time ->
-                        val timeMillis = viewModel.parseTimestampToMillis(time)
-//                        viewModel.seekToVideoTime(timeMillis)
+                    val chaptersAdapter = EpisodeChapterListAdapter(lifecycleOwner) { timestamp ->
+                        val timeMillis = viewModel.parseTimestampToMillis(timestamp)
+                        // Call the seek function only if downloadedItemUrl exists
+                        if (timeMillis > 0) {
+                            viewModel.seekToVideoTime(timeMillis)
+                        }
                     }
 
                     binding.recyclerViewChapters.apply {

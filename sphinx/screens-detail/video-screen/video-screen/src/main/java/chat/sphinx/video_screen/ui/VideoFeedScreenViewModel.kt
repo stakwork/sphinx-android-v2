@@ -89,6 +89,7 @@ internal open class VideoFeedScreenViewModel(
     private val serverSettingsSharedPreferences: SharedPreferences =
         app.getSharedPreferences(SERVER_SETTINGS_SHARED_PREFERENCES, Context.MODE_PRIVATE)
 
+    open fun seekToVideoTime(timeMillis: Long) {}
 
     private var videoRecordConsumed: VideoRecordConsumed? = null
     private var videoStreamSatsTimer: VideoStreamSatsTimer? = null

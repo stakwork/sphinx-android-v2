@@ -1,6 +1,7 @@
 package chat.sphinx.video_screen.adapter
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import androidx.core.content.ContextCompat
@@ -8,6 +9,7 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import chat.sphinx.concept_image_loader.Disposable
 import chat.sphinx.concept_image_loader.ImageLoader
@@ -97,6 +99,7 @@ internal class VideoFeedItemsAdapter (
     }
 
     private val videoItems = ArrayList<FeedItem>(listOf())
+    private var expandedPosition: Int? = null
 
     override fun onStart(owner: LifecycleOwner) {
         super.onStart(owner)
@@ -185,6 +188,22 @@ internal class VideoFeedItemsAdapter (
                     nnEpisode.link?.value?.let { link -> viewModel.share(link, binding.root.context) }
                 }
             }
+
+            binding.buttonListIcon.setOnClickListener {
+                val position = bindingAdapterPosition
+                if (position == RecyclerView.NO_POSITION) return@setOnClickListener
+
+                if (expandedPosition == position) {
+                    expandedPosition = null
+                    notifyItemChanged(position)
+                } else {
+                    val previousPosition = expandedPosition
+                    expandedPosition = position
+                    previousPosition?.let { notifyItemChanged(it) }
+                    notifyItemChanged(position)
+                }
+            }
+
             binding.layoutConstraintEpisodeInfoContainer.setOnClickListener {
                 videoItem?.let { nnEpisode ->
                     onStopSupervisor.scope.launch(viewModelDispatcher.mainImmediate) {
@@ -204,6 +223,9 @@ internal class VideoFeedItemsAdapter (
 
 
         fun bind(position: Int) {
+            val isExpanded = position == expandedPosition
+            binding.recyclerViewChapters.visibility = if (isExpanded) View.VISIBLE else View.GONE
+
             binding.apply {
                 val f: FeedItem = videoItems.getOrNull(position) ?: let {
                     videoItem = null
@@ -224,6 +246,33 @@ internal class VideoFeedItemsAdapter (
                 buttonPlayEpisode.visible
                 layoutConstraintAlpha.gone
 
+                // Chapter List Setup - Only show if downloadedItemUrl exists
+                val hasDownloadedUrl = f.downloadedItemUrl != null
+                val chapters = f.chapters?.nodes?.mapNotNull { it.properties }
+
+                val chaptersList = chapters?.filter {
+                    !it.name.isNullOrBlank() && !it.timestamp.isNullOrBlank()
+                }?.sortedBy {
+                    viewModel.parseTimestampToMillis(it.timestamp!!)
+                }
+
+                if (hasDownloadedUrl && chaptersList?.isNotEmpty() == true) {
+                    buttonListIcon.visible
+
+                    val chaptersAdapter = EpisodeChapterListAdapter(lifecycleOwner) { time ->
+                        val timeMillis = viewModel.parseTimestampToMillis(time)
+//                        viewModel.seekToVideoTime(timeMillis)
+                    }
+
+                    binding.recyclerViewChapters.apply {
+                        layoutManager = LinearLayoutManager(context)
+                        adapter = chaptersAdapter
+                    }
+                    chaptersAdapter.submitList(chaptersList)
+                } else {
+                    buttonListIcon.gone
+                    binding.recyclerViewChapters.adapter = null
+                }
 
                 // Image
                 f.thumbnailUrlToShow?.let { imageUrl ->
@@ -240,8 +289,9 @@ internal class VideoFeedItemsAdapter (
                     }
                 }
 
-                imageViewItemRowEpisodeType.setImageDrawable(ContextCompat.getDrawable(root.context, R_common.drawable.ic_youtube_type))
-
+                imageViewItemRowEpisodeType.setImageDrawable(
+                    ContextCompat.getDrawable(root.context, R_common.drawable.ic_youtube_type)
+                )
             }
         }
 

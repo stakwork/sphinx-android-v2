@@ -590,8 +590,12 @@ internal class VideoFeedWatchScreenFragment : SideEffectFragment<
                 binding.includeLayoutVideoPlayer.apply {
                     @Exhaustive
                     when (viewState) {
-                        is LoadingVideoViewState.Idle -> {}
-
+                        is LoadingVideoViewState.Idle -> {
+                            layoutConstraintLoadingVideo.gone
+                        }
+                        is LoadingVideoViewState.Loading -> {
+                            layoutConstraintLoadingVideo.visible
+                        }
                         is LoadingVideoViewState.MetaDataLoaded -> {
                             layoutConstraintLoadingVideo.gone
                         }

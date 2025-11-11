@@ -13,6 +13,8 @@ class VideoPlayerController(
     private val updateMetaDataCallback: (Int, Int, Int) -> Unit,
     private val updateCurrentTimeCallback: (Int) -> Unit,
     private val completePlaybackCallback: () -> Unit,
+    private val showLoadingCallback: () -> Unit,  // NEW
+    private val hideLoadingCallback: () -> Unit,  // NEW
     dispatchers: CoroutineDispatchers,
 ) : CoroutineDispatchers by dispatchers {
 
@@ -26,6 +28,8 @@ class VideoPlayerController(
         videoUri: Uri,
         videoDuration: Int? = null
     ) {
+        showLoadingCallback()  // Show loading when initializing
+
         videoView?.apply {
             setOnCompletionListener {
                 completePlaybackCallback()
@@ -36,7 +40,19 @@ class VideoPlayerController(
                     it.videoWidth,
                     it.videoHeight
                 )
+                hideLoadingCallback()  // Hide loading when prepared
                 play()
+            }
+            setOnInfoListener { _, what, _ ->
+                when (what) {
+                    android.media.MediaPlayer.MEDIA_INFO_BUFFERING_START -> {
+                        showLoadingCallback()
+                    }
+                    android.media.MediaPlayer.MEDIA_INFO_BUFFERING_END -> {
+                        hideLoadingCallback()
+                    }
+                }
+                false
             }
 
             setVideoURI(videoUri)
@@ -50,11 +66,12 @@ class VideoPlayerController(
     }
 
     fun seekTo(progress: Int) {
+        showLoadingCallback()  // Show loading when seeking
         videoView?.seekTo(progress)
     }
 
-    // NEW: Seek to specific time in milliseconds
     fun seekToTime(timeMillis: Long) {
+        showLoadingCallback()  // Show loading when seeking
         videoView?.let { video ->
             if (video.canSeekForward() || video.canSeekBackward()) {
                 video.seekTo(timeMillis.toInt())
@@ -96,7 +113,6 @@ class VideoPlayerController(
                 while (isActive) {
                     if (video.isPlaying) {
                         updateCurrentTimeCallback(video.currentPosition)
-
                         delay(250L)
                     } else {
                         break

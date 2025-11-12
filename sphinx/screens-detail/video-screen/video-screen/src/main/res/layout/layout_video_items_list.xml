@@ -33,6 +33,24 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent">
 
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/button_skip_add"
+                    android:layout_width="@dimen/badges_icon_create_size"
+                    android:layout_height="@dimen/badges_icon_row_size"
+                    android:text="@string/podcast_skip_ad_enabled"
+                    android:textStyle="bold"
+                    android:textSize="@dimen/chat_footer_episode_sub_title_text_size"
+                    android:gravity="center"
+                    android:visibility="gone"
+                    tools:visibility="visible"
+                    android:textColor="@android:color/white"
+                    android:background="@drawable/button_background_white_rad_48"
+                    android:backgroundTint="@color/primaryGreen"
+                    android:layout_marginEnd="@dimen/default_layout_margin"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent" />
+
                 <androidx.appcompat.widget.AppCompatTextView
                     android:id="@+id/text_view_videos_list_count"
                     android:layout_width="wrap_content"

@@ -94,6 +94,8 @@ internal class VideoFeedWatchScreenFragment : SideEffectFragment<
         const val ENCODING_UTF = "UTF-8"
     }
 
+    private var isSkipAdEnabled: Boolean = false
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -540,6 +542,7 @@ internal class VideoFeedWatchScreenFragment : SideEffectFragment<
                     is SelectedVideoViewState.VideoSelected -> {
                         binding.includeLayoutVideoPlayer.apply {
                             binding.includeLayoutVideoItemsList.includeLayoutDescriptionBox.apply {
+
                                 textViewVideoTitle.text = viewState.title.value
                                 textViewVideoDescription.text = viewState.description?.value ?: ""
                                 textViewVideoPublishedDate.text = viewState.date?.hhmmElseDate()
@@ -548,6 +551,7 @@ internal class VideoFeedWatchScreenFragment : SideEffectFragment<
                                 if (viewState.downloadedItemUrl != null) {
                                     // Processed video with S3 link - use WebView player
                                     val videoUri = viewState.downloadedItemUrl.value.toUri()
+                                    binding.includeLayoutVideoItemsList.buttonSkipAdd.visible
 
                                     viewModel.videoPlayerStateContainer.updateViewState(
                                         VideoPlayerViewState.WebViewPlayer(
@@ -561,7 +565,7 @@ internal class VideoFeedWatchScreenFragment : SideEffectFragment<
                                     viewModel.videoPlayerStateContainer.updateViewState(
                                         VideoPlayerViewState.YoutubeVideoIframe(viewState.id)
                                     )
-
+                                    binding.includeLayoutVideoItemsList.buttonSkipAdd.gone
                                 } else {
                                     // Local file or other URL - use WebView player
                                     val videoUri = if (viewState.localFile != null) {
@@ -681,6 +685,11 @@ internal class VideoFeedWatchScreenFragment : SideEffectFragment<
                             viewModel.createHistoryItem()
                             viewModel.trackVideoConsumed()
 
+                            binding.includeLayoutVideoItemsList.buttonSkipAdd.setOnClickListener {
+                                isSkipAdEnabled = !isSkipAdEnabled
+                                updateSkipAdButtonUI()
+                            }
+
                             // Create video record with proper ID
                             (viewModel.selectedVideoStateContainer.value as? SelectedVideoViewState.VideoSelected)?.let { video ->
                                 viewModel.createVideoRecordConsumed(video.id)
@@ -688,6 +697,20 @@ internal class VideoFeedWatchScreenFragment : SideEffectFragment<
                         }
                     }
                 }
+            }
+        }
+    }
+
+    private fun updateSkipAdButtonUI() {
+        binding.includeLayoutVideoItemsList.buttonSkipAdd.apply {
+            if (isSkipAdEnabled) {
+                setTextColor(ContextCompat.getColor(requireContext(), android.R.color.white))
+                backgroundTintList = ContextCompat.getColorStateList(requireContext(), chat.sphinx.resources.R.color.primaryGreen)
+                text = getString(R.string.video_skip_ad_enabled)
+            } else {
+                setTextColor(ContextCompat.getColor(requireContext(), chat.sphinx.resources.R.color.secondaryText))
+                backgroundTintList = ContextCompat.getColorStateList(requireContext(), android.R.color.secondary_text_dark)
+                text = getString(R.string.video_skip_ad_disabled)
             }
         }
     }

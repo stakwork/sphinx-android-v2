@@ -31,6 +31,7 @@ import chat.sphinx.concept_image_loader.ImageLoaderOptions
 import chat.sphinx.concept_image_loader.Transformation
 import chat.sphinx.insetter_activity.InsetterActivity
 import chat.sphinx.insetter_activity.addNavigationBarPadding
+import chat.sphinx.resources.SphinxToastUtils
 import chat.sphinx.resources.inputMethodManager
 import chat.sphinx.video_screen.R
 import chat.sphinx.resources.R as R_common
@@ -56,6 +57,7 @@ import io.matthewnelson.android_feature_screens.ui.sideeffect.SideEffectFragment
 import io.matthewnelson.android_feature_screens.util.gone
 import io.matthewnelson.android_feature_screens.util.goneIfFalse
 import io.matthewnelson.android_feature_screens.util.visible
+import io.matthewnelson.android_feature_viewmodel.submitSideEffect
 import io.matthewnelson.concept_views.viewstate.collect
 import io.matthewnelson.concept_views.viewstate.value
 import kotlinx.coroutines.Job
@@ -103,6 +105,7 @@ internal class VideoFeedWatchScreenFragment : SideEffectFragment<
     private var lastSkipTime = 0L
     private var lastSkippedChapterIndex = -1
     private val SKIP_COOLDOWN_MS = 5000L
+    private var adSkipWarningShown = false
 
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -802,7 +805,6 @@ internal class VideoFeedWatchScreenFragment : SideEffectFragment<
 
         val videoView = binding.includeLayoutVideoPlayer.videoViewVideoPlayer
         if (!videoView.isPlaying) {
-            Log.d("SkipAds", "Video not playing, skipping check")
             return
         }
 
@@ -812,10 +814,8 @@ internal class VideoFeedWatchScreenFragment : SideEffectFragment<
 
         // Log chapter structure ONCE
         if (now % 10000 < 500) { // Every 10 seconds
-            Log.i("SkipAds", "===== CHAPTER STRUCTURE =====")
             chapters.forEachIndexed { index, chapter ->
                 val startTime = viewModel.parseTimestampToMillis(chapter.timestamp)
-                Log.i("SkipAds", "Chapter $index: ${chapter} | Start: ${startTime}ms (${startTime/1000}s) | IsAd: ${chapter.isAdBoolean}")
             }
             Log.i("SkipAds", "===========================")
         }
@@ -834,6 +834,26 @@ internal class VideoFeedWatchScreenFragment : SideEffectFragment<
                 viewModel.parseTimestampToMillis(chapters[i + 1].timestamp)
             } else {
                 videoDuration
+            }
+
+            val warnTime = chapterStart - 5000
+
+            if (
+                chapters[i].isAdBoolean &&
+                currentTime in warnTime until chapterStart &&
+                !adSkipWarningShown &&
+                isSkipAdEnabled
+            ) {
+                adSkipWarningShown = true
+
+                lifecycleScope.launch(viewModel.mainImmediate) {
+                    viewModel.submitSideEffect(
+                        VideoFeedScreenSideEffect.Notify(
+                            msg = getString(R.string.video_skip_ad_warning),
+                            notificationLengthLong = false
+                        )
+                    )
+                }
             }
 
             // Check if we're currently in an ad chapter

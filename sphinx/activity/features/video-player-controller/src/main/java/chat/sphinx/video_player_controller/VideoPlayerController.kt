@@ -28,7 +28,7 @@ class VideoPlayerController(
         videoUri: Uri,
         videoDuration: Int? = null
     ) {
-        showLoadingCallback()  // Show loading when initializing
+        showLoadingCallback()
 
         videoView?.apply {
             setOnCompletionListener {
@@ -40,7 +40,7 @@ class VideoPlayerController(
                     it.videoWidth,
                     it.videoHeight
                 )
-                hideLoadingCallback()  // Hide loading when prepared
+                hideLoadingCallback()
                 play()
             }
             setOnInfoListener { _, what, _ ->
@@ -66,15 +66,22 @@ class VideoPlayerController(
     }
 
     fun seekTo(progress: Int) {
-        showLoadingCallback()  // Show loading when seeking
+        showLoadingCallback()
         videoView?.seekTo(progress)
     }
 
     fun seekToTime(timeMillis: Long) {
-        showLoadingCallback()  // Show loading when seeking
+        showLoadingCallback()
         videoView?.let { video ->
             if (video.canSeekForward() || video.canSeekBackward()) {
                 video.seekTo(timeMillis.toInt())
+
+                // Add a small delay to allow seek to complete, then hide loading
+                viewModelScope.launch(mainImmediate) {
+                    delay(500L) // Wait for seek to stabilize
+                    hideLoadingCallback()
+                }
+
                 // If video is paused, start playing after seek
                 if (!video.isPlaying) {
                     play()

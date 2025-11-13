@@ -1,5 +1,6 @@
 package chat.sphinx.video_screen.ui.viewstate
 
+import chat.sphinx.wrapper_common.ChapterResponseDto
 import chat.sphinx.wrapper_common.DateTime
 import chat.sphinx.wrapper_common.feed.FeedId
 import chat.sphinx.wrapper_common.feed.FeedUrl
@@ -22,6 +23,7 @@ internal sealed class SelectedVideoViewState: ViewState<SelectedVideoViewState>(
         val localFile: File?,
         val date: DateTime?,
         val duration: FeedItemDuration?,
-        val downloadedItemUrl: FeedUrl? = null
+        val downloadedItemUrl: FeedUrl? = null,
+        val chapters: ChapterResponseDto? = null
     ): SelectedVideoViewState()
 }

@@ -1,11 +1,12 @@
-// In video_screen module, create: ui/adapter/EpisodeChapterListAdapter.kt
 package chat.sphinx.video_screen.adapter
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.recyclerview.widget.RecyclerView
+import chat.sphinx.resources.R
 import chat.sphinx.resources.databinding.LayoutChapterListItemHolderBinding
 import chat.sphinx.wrapper_common.ChapterProperties
 
@@ -49,6 +50,14 @@ class EpisodeChapterListAdapter(
         fun bind(chapter: ChapterProperties) {
             binding.textViewEpisodeTitle.text = chapter.name
             binding.textViewEpisodeTime.text = chapter.timestamp
+
+            val textColor = if (chapter.isAdBoolean) {
+                ContextCompat.getColor(binding.root.context, R.color.secondaryText)
+            } else {
+                ContextCompat.getColor(binding.root.context, R.color.text)
+            }
+
+            binding.textViewEpisodeTitle.setTextColor(textColor)
 
             binding.root.setOnClickListener {
                 onChapterClick(chapter.timestamp)

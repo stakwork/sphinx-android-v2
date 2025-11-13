@@ -246,7 +246,6 @@ internal class VideoFeedItemsAdapter (
                 buttonPlayEpisode.visible
                 layoutConstraintAlpha.gone
 
-                // Chapter List Setup - Only show if downloadedItemUrl exists
                 val hasDownloadedUrl = f.downloadedItemUrl != null
                 val chapters = f.chapters?.nodes?.mapNotNull { it.properties }
 

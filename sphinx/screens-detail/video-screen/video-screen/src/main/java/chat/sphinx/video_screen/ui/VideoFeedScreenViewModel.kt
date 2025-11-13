@@ -203,7 +203,8 @@ internal open class VideoFeedScreenViewModel(
                                     video.localFile,
                                     video.dateUpdated,
                                     video.duration,
-                                    video.downloadedItemUrl
+                                    video.downloadedItemUrl,
+                                    video.chapters
                                 )
                             )
                         }
@@ -259,7 +260,8 @@ internal open class VideoFeedScreenViewModel(
                     video.localFile,
                     video.dateUpdated,
                     video.duration,
-                    video.downloadedItemUrl
+                    video.downloadedItemUrl,
+                    video.chapters
                 )
             )
         }

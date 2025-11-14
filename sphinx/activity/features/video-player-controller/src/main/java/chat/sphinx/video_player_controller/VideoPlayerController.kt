@@ -76,7 +76,6 @@ class VideoPlayerController(
             if (video.canSeekForward() || video.canSeekBackward()) {
                 video.seekTo(timeMillis.toInt())
 
-                // Add a small delay to allow seek to complete, then hide loading
                 viewModelScope.launch(mainImmediate) {
                     delay(500L) // Wait for seek to stabilize
                     hideLoadingCallback()

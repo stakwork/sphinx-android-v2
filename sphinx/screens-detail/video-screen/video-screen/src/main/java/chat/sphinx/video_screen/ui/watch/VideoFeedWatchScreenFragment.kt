@@ -578,7 +578,6 @@ internal class VideoFeedWatchScreenFragment : SideEffectFragment<
                                         updateSkipAdButtonUI()
 
                                         if (lastChaptersVideoId != viewState.id.value) {
-                                            addChapterMarkers(viewState)
                                             lastChaptersVideoId = viewState.id.value
                                         }
                                     } else {
@@ -616,7 +615,6 @@ internal class VideoFeedWatchScreenFragment : SideEffectFragment<
                                         updateSkipAdButtonUI()
 
                                         if (lastChaptersVideoId != viewState.id.value) {
-                                            addChapterMarkers(viewState)
                                             lastChaptersVideoId = viewState.id.value
                                         }
                                     } else {
@@ -774,19 +772,6 @@ internal class VideoFeedWatchScreenFragment : SideEffectFragment<
                 delay(500L) // Check every 500ms
             }
         }
-    }
-
-    private fun addChapterMarkers(video: SelectedVideoViewState.VideoSelected) {
-        // This function would add visual chapter markers similar to podcast player
-        // Implementation depends on your UI design for video player
-        // For now, we'll skip the visual markers and focus on the skip functionality
-
-        val chapters = video.chapters?.nodes
-            ?.filter { it.node_type == "Chapter" }
-            ?.mapNotNull { it.properties }
-            ?.filter { !it.timestamp.isNullOrBlank() }
-
-        Log.d("VideoPlayer", "Video has ${chapters?.size ?: 0} chapters")
     }
 
 

@@ -291,9 +291,16 @@ internal class VideoFeedItemsAdapter (
                     }
                 }
 
-                imageViewItemRowEpisodeType.setImageDrawable(
-                    ContextCompat.getDrawable(root.context, R_common.drawable.ic_youtube_type)
-                )
+
+                if (hasDownloadedUrl) {
+                    imageViewItemRowEpisodeType.setImageDrawable(
+                        ContextCompat.getDrawable(root.context, R_common.drawable.ic_video_placeholder)
+                    )
+                } else {
+                    imageViewItemRowEpisodeType.setImageDrawable(
+                        ContextCompat.getDrawable(root.context, R_common.drawable.ic_youtube_type)
+                    )
+                }
             }
         }
 

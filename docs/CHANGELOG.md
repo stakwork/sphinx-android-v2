@@ -1,5 +1,8 @@
 # ChangeLog
 
+## Version 1.0.1-alpha03 (2025-12-01)
+- Adds support for 16 KB devices
+
 ## Version 1.0.1-alpha02 (2025-12-01)
 - Adds YouTube videos processing
 - Adds chapters/ads for YouTube videos

@@ -2,6 +2,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <property
+        android:name="android.supports_16kb_page_sizes"
+        android:value="true" />
+
     <uses-feature
         android:name="android.hardware.camera"
         android:required="false" />

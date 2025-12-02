@@ -236,9 +236,9 @@ class ConnectManagerImpl: ConnectManager()
                         hasAttemptedReconnect = true
                         reconnectWithBackOff()
                     }
-                    notifyListeners {
-                        onConnectManagerError(ConnectManagerError.MqttConnectError(exception?.message))
-                    }
+//                    notifyListeners {
+//                        onConnectManagerError(ConnectManagerError.MqttConnectError(exception?.message))
+//                    }
                     Log.d("MQTT_MESSAGES", "Failed to connect to MQTT: ${exception?.message}")
                 }
             })
@@ -248,9 +248,9 @@ class ConnectManagerImpl: ConnectManager()
                     isMqttConnected = false
                     reconnectWithBackOff()
 
-                    notifyListeners {
-                        onConnectManagerError(ConnectManagerError.MqttConnectError(cause?.message))
-                    }
+//                    notifyListeners {
+//                        onConnectManagerError(ConnectManagerError.MqttConnectError(cause?.message))
+//                    }
                     Log.d("MQTT_MESSAGES", "MQTT DISCONNECTED! $cause ${cause?.message}")
                 }
 
@@ -276,9 +276,9 @@ class ConnectManagerImpl: ConnectManager()
             })
         } catch (e: MqttException) {
             isMqttConnected = false
-            notifyListeners {
-                onConnectManagerError(ConnectManagerError.MqttConnectError(e.message))
-            }
+//            notifyListeners {
+//                onConnectManagerError(ConnectManagerError.MqttConnectError(e.message))
+//            }
 
             reconnectWithBackOff()
             Log.d("MQTT_MESSAGES", "MQTT DISCONNECTED! exception ${e.printStackTrace()}")

@@ -328,17 +328,19 @@ internal class FeedFragment : SideEffectFragment<
     }
 
     override fun onDestroyView() {
-    super.onDestroyView()
+        super.onDestroyView()
 
-    // Clear adapter to prevent state restoration issues
-    binding.viewPagerFeedFragments.adapter = null
-}
+        // Clear adapter to prevent state restoration issues
+        binding.viewPagerFeedFragments.adapter = null
+    }
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
 
-        // Save only the current chip position if needed
-        outState.putInt(KEY_CURRENT_CHIP, binding.viewPagerFeedFragments.currentItem)
+        if (view != null) {
+            // Save only the current chip position if needed
+            outState.putInt(KEY_CURRENT_CHIP, binding.viewPagerFeedFragments.currentItem)
+        }
     }
 
     override fun onViewStateRestored(savedInstanceState: Bundle?) {

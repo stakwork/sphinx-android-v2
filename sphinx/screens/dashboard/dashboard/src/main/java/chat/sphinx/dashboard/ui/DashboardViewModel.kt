@@ -1082,10 +1082,10 @@ internal class DashboardViewModel @Inject constructor(
             DeepLinkPopupViewState.PopupDismissed
         )
 
-        val url = "https://$host?challenge=$challenge"
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-        val appContext: Context = app.applicationContext
-        appContext.startActivity(intent)
+//        val url = "https://$host?challenge=$challenge"
+//        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+//        val appContext: Context = app.applicationContext
+//        appContext.startActivity(intent)
     }
 
     private suspend fun createProfileFor(

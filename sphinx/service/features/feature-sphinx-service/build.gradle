@@ -2,6 +2,7 @@ plugins {
     id 'app.cash.exhaustive'
     id 'com.android.library'
     id 'kotlin-android'
+    id 'kotlin-kapt'
 }
 
 android {
@@ -31,4 +32,6 @@ dependencies {
     api project(path: ':kotlin:concepts:concept-coroutines')
 
     implementation deps.androidx.annotation
+    implementation deps.google.hilt
+    kapt kaptDeps.google.hilt
 }

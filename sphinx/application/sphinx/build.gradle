@@ -24,6 +24,10 @@ android {
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         testInstrumentationRunnerArguments disableAnalytics: 'true'
+
+        ndk {
+            abiFilters 'arm64-v8a'
+        }
     }
 
     // Gradle 4.0's introduction of Google analytics to Android App Developers.
@@ -112,7 +116,6 @@ dependencies {
     implementation project(path: ':sphinx:application:network:features:queries:feature-network-query-discover-tribes')
     implementation project(path: ':sphinx:application:network:features:queries:feature-network-query-feed-status')
     implementation project(path: ':sphinx:application:network:features:feature-network-relay-call')
-    implementation project(path: ':sphinx:application:network:features:tor:feature-network-tor')
 
     implementation project(path: ':sphinx:screens:onboard:key-restore')
 
@@ -133,12 +136,11 @@ dependencies {
     kapt kaptDeps.google.hilt
 
     implementation deps.sqlCipher
-    implementation deps.sqlRequery
+//    implementation deps.sqlRequery
     implementation deps.square.sqlDelightAndroid
     implementation deps.jna.sdk
 
     testImplementation project(path: ':kotlin:test:test-concept-coroutines')
-    testImplementation project(path: ':sphinx:test:test-tor-manager')
     testImplementation testDeps.robolectric
     testImplementation testDeps.androidx.core
 

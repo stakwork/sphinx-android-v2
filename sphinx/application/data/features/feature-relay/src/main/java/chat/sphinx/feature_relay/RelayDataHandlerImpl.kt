@@ -1,7 +1,6 @@
 package chat.sphinx.feature_relay
 
 import chat.sphinx.concept_crypto_rsa.RSA
-import chat.sphinx.concept_network_tor.TorManager
 import chat.sphinx.concept_relay.RelayDataHandler
 import chat.sphinx.kotlin_response.Response
 import chat.sphinx.wrapper_relay.*
@@ -32,7 +31,6 @@ class RelayDataHandlerImpl(
     private val authenticationCoreManager: AuthenticationCoreManager,
     private val dispatchers: CoroutineDispatchers,
     private val encryptionKeyHandler: EncryptionKeyHandler,
-    private val torManager: TorManager,
     private val rsa: RSA,
 ) : RelayDataHandler(), CoroutineDispatchers by dispatchers {
 

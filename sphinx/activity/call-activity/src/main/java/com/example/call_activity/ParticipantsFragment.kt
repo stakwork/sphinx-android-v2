@@ -130,14 +130,14 @@ class ParticipantsBottomSheetFragment : BottomSheetDialogFragment() {
 
             // Camera status
             viewHolder.cameraStatusImageView.visibility =
-                if (participant.isCameraEnabled()) View.VISIBLE else View.GONE
+                if (participant.isCameraEnabled) View.VISIBLE else View.GONE
             if (viewHolder.cameraStatusImageView.isVisible) {
                 viewHolder.cameraStatusImageView.setImageResource(R.drawable.camera)
             }
 
             // Microphone status
             viewHolder.micStatusImageView.setImageResource(
-                if (participant.isMicrophoneEnabled()) R.drawable.mic else R.drawable.mic_off
+                if (participant.isMicrophoneEnabled) R.drawable.mic else R.drawable.mic_off
             )
 
             // Load profile picture or initials

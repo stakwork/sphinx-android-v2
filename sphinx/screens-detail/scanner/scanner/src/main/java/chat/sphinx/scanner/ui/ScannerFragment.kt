@@ -28,9 +28,9 @@ import chat.sphinx.scanner.databinding.FragmentScannerBinding
 import chat.sphinx.scanner.navigation.BackType
 import chat.sphinx.scanner_view_model_coordinator.response.ScannerResponse
 import chat.sphinx.screen_detail_fragment.SideEffectDetailFragment
-import com.google.mlkit.vision.barcode.Barcode
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
+import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import dagger.hilt.android.AndroidEntryPoint
 import io.matthewnelson.android_feature_screens.util.goneIfFalse

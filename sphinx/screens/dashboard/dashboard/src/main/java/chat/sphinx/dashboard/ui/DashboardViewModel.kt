@@ -130,9 +130,6 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.jitsi.meet.sdk.JitsiMeetActivity
-import org.jitsi.meet.sdk.JitsiMeetConferenceOptions
-import org.jitsi.meet.sdk.JitsiMeetUserInfo
 import org.json.JSONObject
 import javax.inject.Inject
 
@@ -533,33 +530,6 @@ internal class DashboardViewModel @Inject constructor(
                             appContext.startActivity(intent)
                         }
                     }
-                }
-            }
-        } else if (link.isJitsiLink) {
-            link.callServerUrl?.let { nnCallUrl ->
-
-                viewModelScope.launch(mainImmediate) {
-
-                    val owner = getOwner()
-
-                    val userInfo = JitsiMeetUserInfo()
-                    userInfo.displayName = owner.alias?.value ?: ""
-
-                    owner.avatarUrl?.let { nnAvatarUrl ->
-                        userInfo.avatar = nnAvatarUrl
-                    }
-
-                    val options = JitsiMeetConferenceOptions.Builder()
-                        .setServerURL(nnCallUrl)
-                        .setRoom(link.callRoom)
-                        .setAudioMuted(false)
-                        .setVideoMuted(false)
-                        .setFeatureFlag("welcomepage.enabled", false)
-                        .setAudioOnly(audioOnly)
-                        .setUserInfo(userInfo)
-                        .build()
-
-                    JitsiMeetActivity.launch(app, options)
                 }
             }
         } else {

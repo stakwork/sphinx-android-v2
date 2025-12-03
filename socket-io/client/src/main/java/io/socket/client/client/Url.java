@@ -43,7 +43,7 @@ public class Url {
         }
 
         String userInfo = uri.getRawUserInfo();
-        String query = uri.getRawQuery();
+        String query = uri.getQuery();
         String fragment = uri.getRawFragment();
         String _host = uri.getHost();
         if (_host == null) {

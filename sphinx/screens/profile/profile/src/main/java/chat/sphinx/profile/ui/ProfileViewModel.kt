@@ -10,7 +10,6 @@ import app.cash.exhaustive.Exhaustive
 import chat.sphinx.camera_view_model_coordinator.request.CameraRequest
 import chat.sphinx.camera_view_model_coordinator.response.CameraResponse
 import chat.sphinx.concept_background_login.BackgroundLoginHandler
-import chat.sphinx.concept_network_tor.TorManager
 import chat.sphinx.concept_relay.RelayDataHandler
 import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.concept_repository_dashboard_android.RepositoryDashboardAndroid
@@ -96,7 +95,6 @@ internal class ProfileViewModel @Inject constructor(
     private val repositoryMedia: RepositoryMedia,
     private val relayDataHandler: RelayDataHandler,
     private val walletDataHandler: WalletDataHandler,
-    private val torManager: TorManager,
     private val keyRestore: KeyRestore,
     private val navigator: ProfileNavigator,
     private val LOG: SphinxLogger,

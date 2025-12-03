@@ -917,7 +917,7 @@ public class Socket extends Emitter {
             opts.secure = "https".equals(uri.getScheme()) || "wss".equals(uri.getScheme());
             opts.port = uri.getPort();
 
-            String query = uri.getRawQuery();
+            String query = uri.getQuery();
             if (query != null) {
                 opts.query = query;
             }

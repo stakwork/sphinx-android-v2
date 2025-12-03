@@ -59,7 +59,6 @@ dependencies {
 
     implementation project(path: ':sphinx:application:network:concepts:queries:concept-network-query-contact')
     implementation project(path: ':sphinx:application:network:concepts:queries:concept-network-query-crypter')
-    implementation project(path: ':sphinx:application:network:concepts:tor:concept-network-tor')
 
     implementation project(path: ':sphinx:screens-detail:common:detail-resources')
     implementation project(path: ':sphinx:screens-detail:camera:camera-view-model-coordinator')

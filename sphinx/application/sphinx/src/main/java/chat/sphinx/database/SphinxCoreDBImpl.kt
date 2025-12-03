@@ -10,8 +10,9 @@ import com.squareup.sqldelight.db.SqlDriver
 import io.matthewnelson.build_config.BuildConfigDebug
 import io.matthewnelson.concept_encryption_key.EncryptionKey
 import io.matthewnelson.crypto_common.annotations.RawPasswordAccess
-import net.sqlcipher.database.SQLiteDatabase
-import net.sqlcipher.database.SupportFactory
+import io.matthewnelson.crypto_common.extensions.toByteArray
+import net.zetetic.database.sqlcipher.SQLiteDatabase
+import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 import java.io.File
 
 class SphinxCoreDBImpl(
@@ -58,10 +59,10 @@ class SphinxCoreDBImpl(
             )
         } else {
             @OptIn(RawPasswordAccess::class)
-            val passphrase: ByteArray = SQLiteDatabase.getBytes(encryptionKey.privateKey.value)
+            val passphraseChars: CharArray = encryptionKey.privateKey.value
+            val passphrase: ByteArray = String(passphraseChars).toByteArray(Charsets.UTF_8)
 
-            @Suppress("RedundantExplicitType")
-            val factory: SupportFactory = SupportFactory(passphrase, null, true)
+            val factory = SupportOpenHelperFactory(passphrase)
 
             AndroidSqliteDriver(
                 SphinxDatabase.Schema,

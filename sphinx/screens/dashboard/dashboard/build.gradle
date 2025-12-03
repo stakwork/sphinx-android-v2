@@ -83,7 +83,6 @@ dependencies {
     implementation deps.lottie.sdk
     implementation deps.square.moshi
     implementation deps.msgpack.sdk
-    implementation deps.jitsi.sdk
     kapt kaptDeps.google.hilt
 
 

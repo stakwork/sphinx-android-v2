@@ -91,8 +91,6 @@ include ':sphinx:application:network:features:queries:feature-network-query-peop
 include ':sphinx:application:network:concepts:calls:concept-network-call'
 include ':sphinx:application:network:concepts:calls:concept-network-relay-call'
 include ':sphinx:application:network:features:feature-network-relay-call'
-include ':sphinx:application:network:concepts:tor:concept-network-tor'
-include ':sphinx:application:network:features:tor:feature-network-tor'
 include ':sphinx:application:network:concepts:queries:concept-network-query-feed-search'
 include ':sphinx:application:network:features:queries:feature-network-query-feed-search'
 include ':sphinx:application:network:concepts:queries:concept-network-query-crypter'
@@ -193,7 +191,6 @@ include ':sphinx:service:features:feature-sphinx-service'
 
 // Testing
 include ':sphinx:test:test-network-query'
-include ':sphinx:test:test-tor-manager'
 
 // SocketIO
 include ':socket-io:client'

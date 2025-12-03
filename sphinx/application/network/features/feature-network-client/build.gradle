@@ -13,7 +13,6 @@ dependencies {
     api project(path: ':sphinx:application:common:logger')
     api project(path: ':sphinx:application:network:concepts:clients:concept-network-client-cache')
     api project(path: ':sphinx:application:network:concepts:clients:concept-network-client-crypto')
-    api project(path: ':sphinx:application:network:concepts:tor:concept-network-tor')
 
     implementation deps.jncryptor
     implementation deps.square.okhttpLogging

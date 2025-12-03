@@ -2,7 +2,6 @@ package chat.sphinx.feature_network_client
 
 import chat.sphinx.concept_network_client.NetworkClientClearedListener
 import chat.sphinx.concept_network_client_cache.NetworkClientCache
-import chat.sphinx.concept_network_tor.*
 import chat.sphinx.logger.SphinxLogger
 import chat.sphinx.logger.d
 import io.matthewnelson.build_config.BuildConfigDebug
@@ -26,10 +25,8 @@ class NetworkClientImpl(
     private val cache: Cache,
     private val dispatchers: CoroutineDispatchers,
     redactedLoggingHeaders: RedactedLoggingHeaders?,
-    private val torManager: TorManager,
     private val LOG: SphinxLogger,
 ) : NetworkClientCache(),
-    TorManagerListener,
     CoroutineDispatchers by dispatchers
 {
 
@@ -113,7 +110,6 @@ class NetworkClientImpl(
     private var clearedClient: OkHttpClient? = null
 
     private val clientLock = Mutex()
-    private var currentClientSocksProxyAddress: SocksProxyAddress? = null
 
     private val cryptoInterceptor: CryptoInterceptor by lazy {
         CryptoInterceptor()
@@ -144,105 +140,8 @@ class NetworkClientImpl(
                 readTimeout(TIME_OUT, TimeUnit.SECONDS)
                 writeTimeout(TIME_OUT, TimeUnit.SECONDS)
 
-                if (torManager.isTorRequired() == true) {
 
-                    torManager.startTor()
-
-                    var socksPortJob: Job? = null
-                    var torStateJob: Job? = null
-
-                    coroutineScope {
-                        socksPortJob = launch(mainImmediate) {
-                            try {
-                                // wait for Tor to start and publish its socks address after
-                                // being bootstrapped.
-                                torManager.socksProxyAddressStateFlow.collect { socksAddress ->
-                                    if (socksAddress != null) {
-                                        proxy(
-                                            Proxy(
-                                                Proxy.Type.SOCKS,
-                                                InetSocketAddress(socksAddress.host, socksAddress.port)
-                                            )
-                                        )
-                                        currentClientSocksProxyAddress = socksAddress
-
-                                        throw Exception()
-                                    }
-                                }
-                            } catch (e: Exception) {}
-                        }
-
-                        torStateJob = launch(mainImmediate) {
-                            var retry: Int = 3
-                            delay(250L)
-                            try {
-                                torManager.torStateFlow.collect { state ->
-                                    if (state is TorState.Off) {
-                                        if (retry >= 0) {
-                                            LOG.d(TAG, "Tor failed to start, retrying: $retry")
-                                            torManager.startTor()
-                                            retry--
-                                        } else {
-                                            socksPortJob?.cancel()
-                                            throw Exception()
-                                        }
-                                    }
-
-                                    if (state is TorState.On) {
-                                        throw Exception()
-                                    }
-                                }
-                            } catch (e: Exception) {}
-                        }
-                    }
-
-                    torStateJob?.join()
-                    socksPortJob?.join()
-
-                    // Tor failed to start, but we still want to set the proxy port
-                    // so we don't leak _any_ network requests.
-                    if (
-                        currentClientSocksProxyAddress == null &&
-                        torManager.torStateFlow.value == TorState.Off
-                    ) {
-                        val socksPort: Int = try {
-                            // could be `auto` if user set it to that, which will mean we won't
-                            // know the port just yet so use the default setting,
-                            torManager.getSocksPortSetting().toInt()
-                        } catch (e: NumberFormatException) {
-                            TorManager.DEFAULT_SOCKS_PORT
-                        }
-
-                        proxy(
-                            Proxy(
-                                Proxy.Type.SOCKS,
-                                InetSocketAddress("127.0.0.1", socksPort)
-                            )
-                        )
-                        currentClientSocksProxyAddress = SocksProxyAddress("127.0.0.1:$socksPort")
-                    }
-
-                    // check again in case the setting has changed
-                    if (torManager.isTorRequired() != true) {
-                        proxy(null)
-                        currentClientSocksProxyAddress = null
-
-                        torManager.stopTor()
-
-                        LOG.d(
-                            TAG,
-                            """
-                                Tor requirement changed to false while building the network client.
-                                Proxy settings removed and stopTor called.
-                            """.trimIndent()
-                        )
-                    } else {
-                        LOG.d(TAG, "Client built with $currentClientSocksProxyAddress")
-                    }
-                } else {
-                    currentClientSocksProxyAddress = null
-                    proxy(null)
-                }
+                proxy(null)
 
                 if (!interceptors().contains(cryptoInterceptor)) {
                     addInterceptor(cryptoInterceptor)
@@ -276,55 +175,4 @@ class NetworkClientImpl(
                 .build()
                 .also { cachingClient = it }
         }
-
-    //////////////////////////
-    /// TorManagerListener ///
-    //////////////////////////
-    override suspend fun onTorRequirementChange(required: Boolean) {
-        cachingClientLock.withLock {
-            clientLock.withLock {
-                client?.let { nnClient ->
-                    if (required) {
-                        if (currentClientSocksProxyAddress == null) {
-                            clearedClient = nnClient
-                            client = null
-                            cachingClient = null
-                            synchronizedListeners.dispatchClearedEvent()
-                        }
-                    } else {
-                        if (currentClientSocksProxyAddress != null) {
-                            clearedClient = nnClient
-                            client = null
-                            cachingClient = null
-                            synchronizedListeners.dispatchClearedEvent()
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    override suspend fun onTorSocksProxyAddressChange(socksProxyAddress: SocksProxyAddress?) {
-        if (socksProxyAddress == null) {
-            return
-        }
-
-        cachingClientLock.withLock {
-            clientLock.withLock {
-                client?.let { nnClient ->
-                    // We don't want to close down the client,
-                    // just move it temporarily so it forces a rebuild
-                    // with the new proxy settings
-                    clearedClient = nnClient
-                    client = null
-                    cachingClient = null
-                    synchronizedListeners.dispatchClearedEvent()
-                }
-            }
-        }
-    }
-
-    init {
-        torManager.addTorManagerListener(this)
-    }
 }

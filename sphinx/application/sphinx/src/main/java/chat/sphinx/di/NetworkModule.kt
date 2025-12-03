@@ -20,7 +20,6 @@ import chat.sphinx.concept_network_query_feed_status.NetworkQueryFeedStatus
 import chat.sphinx.concept_network_query_verify_external.NetworkQueryAuthorizeExternal
 import chat.sphinx.concept_network_query_people.NetworkQueryPeople
 import chat.sphinx.concept_network_relay_call.NetworkRelayCall
-import chat.sphinx.concept_network_tor.TorManager
 import chat.sphinx.concept_relay.RelayDataHandler
 import chat.sphinx.concept_wallet.WalletDataHandler
 import chat.sphinx.feature_link_preview.LinkPreviewHandlerImpl
@@ -36,7 +35,6 @@ import chat.sphinx.feature_network_query_podcast_search.NetworkQueryFeedSearchIm
 import chat.sphinx.feature_network_query_verify_external.NetworkQueryAuthorizeExternalImpl
 import chat.sphinx.feature_network_query_people.NetworkQueryPeopleImpl
 import chat.sphinx.feature_network_relay_call.NetworkRelayCallImpl
-import chat.sphinx.feature_network_tor.TorManagerAndroid
 import chat.sphinx.feature_relay.RelayDataHandlerImpl
 import chat.sphinx.feature_sphinx_service.ApplicationServiceTracker
 import chat.sphinx.feature_wallet.WalletDataHandlerImpl
@@ -69,45 +67,11 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideTorManagerAndroid(
-        application: Application,
-        applicationScope: CoroutineScope,
-        authenticationStorage: AuthenticationStorage,
-        buildConfigDebug: BuildConfigDebug,
-        buildConfigVersionCode: BuildConfigVersionCode,
-        dispatchers: CoroutineDispatchers,
-        LOG: SphinxLogger,
-    ): TorManagerAndroid =
-        TorManagerAndroid(
-            application,
-            applicationScope,
-            authenticationStorage,
-            buildConfigDebug,
-            buildConfigVersionCode,
-            dispatchers,
-            LOG,
-        )
-
-    @Provides
-    fun provideTorManager(
-        torManagerAndroid: TorManagerAndroid
-    ): TorManager =
-        torManagerAndroid
-
-    @Provides
-    fun provideApplicationServiceTracker(
-        torManagerAndroid: TorManagerAndroid
-    ): ApplicationServiceTracker =
-        torManagerAndroid
-
-    @Provides
-    @Singleton
     fun provideRelayDataHandlerImpl(
         authenticationStorage: AuthenticationStorage,
         authenticationCoreManager: AuthenticationCoreManager,
         dispatchers: CoroutineDispatchers,
         encryptionKeyHandler: EncryptionKeyHandler,
-        torManager: TorManager,
         rsa: RSA,
     ): RelayDataHandlerImpl =
         RelayDataHandlerImpl(
@@ -115,7 +79,6 @@ object NetworkModule {
             authenticationCoreManager,
             dispatchers,
             encryptionKeyHandler,
-            torManager,
             rsa,
         )
 
@@ -151,7 +114,6 @@ object NetworkModule {
     fun provideNetworkClientImpl(
         @ApplicationContext appContext: Context,
         buildConfigDebug: BuildConfigDebug,
-        torManager: TorManager,
         dispatchers: CoroutineDispatchers,
         LOG: SphinxLogger,
     ): NetworkClientImpl {
@@ -171,7 +133,6 @@ object NetworkModule {
                     AuthenticationToken.HEADER_KEY
                 )
             ),
-            torManager,
             LOG,
         )
     }

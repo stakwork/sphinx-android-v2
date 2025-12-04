@@ -1,5 +1,9 @@
 # ChangeLog
 
+## Version 1.0.1-alpha04 (2025-12-04)
+- Fixes compatibility issues with 16 KB devices
+- Fixes issues on authorize with sphinx flow
+
 ## Version 1.0.1-alpha03 (2025-12-01)
 - Adds support for 16 KB devices
 

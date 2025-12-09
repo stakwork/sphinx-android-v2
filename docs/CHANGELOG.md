@@ -1,5 +1,8 @@
 # ChangeLog
 
+## Version 1.0.1-alpha05 (2025-12-09)
+- Fixes crash on authentication caused by SQLCipher upgrade
+
 ## Version 1.0.1-alpha04 (2025-12-04)
 - Fixes compatibility issues with 16 KB devices
 - Fixes issues on authorize with sphinx flow

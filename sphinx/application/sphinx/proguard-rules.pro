@@ -19,3 +19,15 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# SQLCipher - Prevent obfuscation of native library loading
+-keep class net.zetetic.database.** { *; }
+-keep class net.zetetic.database.sqlcipher.** { *; }
+
+# Keep native methods
+-keepclassmembers class * {
+    native <methods>;
+}
+
+# Keep SQLCipher's SupportOpenHelperFactory
+-keep class net.zetetic.database.sqlcipher.SupportOpenHelperFactory { *; }

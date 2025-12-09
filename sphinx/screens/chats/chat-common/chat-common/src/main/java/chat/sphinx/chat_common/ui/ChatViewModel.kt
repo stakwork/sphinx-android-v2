@@ -71,6 +71,7 @@ import chat.sphinx.concept_repository_feed.FeedRepository
 import chat.sphinx.concept_repository_lightning.LightningRepository
 import chat.sphinx.concept_repository_media.RepositoryMedia
 import chat.sphinx.concept_repository_message.MessageRepository
+import chat.sphinx.concept_repository_message.model.AttachmentInfo
 import chat.sphinx.concept_repository_message.model.SendMessage
 import chat.sphinx.concept_view_model_coordinator.ViewModelCoordinator
 import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
@@ -89,6 +90,7 @@ import chat.sphinx.wrapper_common.*
 import chat.sphinx.wrapper_common.chat.ChatUUID
 import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_common.dashboard.ContactId
+import chat.sphinx.wrapper_common.dashboard.toContactId
 import chat.sphinx.wrapper_common.feed.FeedItemLink
 import chat.sphinx.wrapper_common.feed.toFeedItemLink
 import chat.sphinx.wrapper_common.lightning.*
@@ -2395,10 +2397,49 @@ abstract class ChatViewModel<ARGS : NavArgs>(
     }
 
     fun resendMessage(message: Message) {
-//        viewModelScope.launch(io) {
-//            val chat = getChat()
-//            messageRepository.resendMessage(message, chat)
-//        }
+        viewModelScope.launch(io) {
+            val messageId = message.id
+
+            val chat = getChat()
+            val mediaInfo = message.messageMedia
+
+            val attachmentInfo = mediaInfo?.let { media ->
+                media.localFile?.let { localFile ->
+                    AttachmentInfo(
+                        file = localFile,
+                        mediaType = media.mediaType,
+                        fileName = media.fileName ?: localFile.name.toFileName(),
+                        isLocalFile = true
+                    )
+                }
+            }
+
+            // chat id is the same than contact id for conversations
+            val contact = chat.id.value.toContactId()
+                ?.let { contactRepository.getContactById(it).firstOrNull() }
+
+            val contactPubKey = contact?.nodePubKey?.value ?: chat.uuid.value
+            val dateTime = DateTime.nowUTC().toDateTime()
+
+            messageRepository.sendNewMessage(
+                contact = contactPubKey,
+                messageContent = message.messageContentDecrypted?.value ?: "",
+                attachmentInfo = attachmentInfo,
+                mediaToken = mediaInfo?.mediaToken,
+                mediaKey = mediaInfo?.mediaKey,
+                messageType = message.type,
+                provisionalId = messageId,
+                amount = message.amount,
+                date = dateTime.time,
+                replyUUID = message.replyUUID,
+                threadUUID = message.threadUUID,
+                myAlias = chat.myAlias?.value?.toSenderAlias(),
+                myPhotoUrl = chat.myPhotoUrl,
+                isTribe = chat.isTribe(),
+                memberPubKey = null,
+                metadata = null
+            )
+        }
     }
 
 //    fun flagMessage(message: Message) {

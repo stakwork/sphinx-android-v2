@@ -1,5 +1,6 @@
 package chat.sphinx.concept_repository_message
 
+import chat.sphinx.concept_repository_message.model.AttachmentInfo
 import chat.sphinx.concept_repository_message.model.SendPaymentRequest
 import chat.sphinx.concept_repository_message.model.SendMessage
 import chat.sphinx.concept_repository_message.model.SendPayment
@@ -8,6 +9,7 @@ import chat.sphinx.kotlin_response.ResponseError
 import chat.sphinx.wrapper_chat.Chat
 import chat.sphinx.wrapper_chat.OwnedTribe
 import chat.sphinx.wrapper_common.DateTime
+import chat.sphinx.wrapper_common.PhotoUrl
 import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_common.feed.FeedId
 import chat.sphinx.wrapper_common.lightning.Bolt11
@@ -24,9 +26,12 @@ import chat.sphinx.wrapper_message.MessageContentDecrypted
 import chat.sphinx.wrapper_message.MessageType
 import chat.sphinx.wrapper_message.Msg
 import chat.sphinx.wrapper_message.MsgSender
+import chat.sphinx.wrapper_message.ReplyUUID
 import chat.sphinx.wrapper_message.SenderAlias
 import chat.sphinx.wrapper_message.TagMessage
 import chat.sphinx.wrapper_message.ThreadUUID
+import chat.sphinx.wrapper_message_media.MediaKey
+import chat.sphinx.wrapper_message_media.MediaToken
 import kotlinx.coroutines.flow.Flow
 import java.io.File
 
@@ -92,6 +97,25 @@ interface MessageRepository {
     fun sendMessage(
         sendMessage: SendMessage?,
         completeCallback: () -> Unit
+    )
+
+    fun sendNewMessage(
+        contact: String,
+        messageContent: String,
+        attachmentInfo: AttachmentInfo?,
+        mediaToken: MediaToken?,
+        mediaKey: MediaKey?,
+        messageType: MessageType?,
+        provisionalId: MessageId?,
+        amount: Sat?,
+        date: Long,
+        replyUUID: ReplyUUID?,
+        threadUUID: ThreadUUID?,
+        myAlias: SenderAlias?,
+        myPhotoUrl: PhotoUrl?,
+        isTribe: Boolean,
+        memberPubKey: LightningNodePubKey?,
+        metadata: String?
     )
 
     suspend fun payAttachment(message: Message)

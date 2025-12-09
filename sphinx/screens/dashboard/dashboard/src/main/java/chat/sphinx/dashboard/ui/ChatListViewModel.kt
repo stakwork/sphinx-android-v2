@@ -265,10 +265,6 @@ internal class ChatListViewModel @Inject constructor(
         contactId: ContactId,
         chatId: ChatId?
     ) {
-        if (networkStatusStateFlow.value is NetworkStatus.Loading) {
-            return
-        }
-
         viewModelScope.launch(mainImmediate) {
             dashboardNavigator.toChatContact(
                 chatId,

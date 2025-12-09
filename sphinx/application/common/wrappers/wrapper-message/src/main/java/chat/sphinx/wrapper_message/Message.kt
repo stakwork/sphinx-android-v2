@@ -302,7 +302,26 @@ inline val Message.isReplyAllowed: Boolean
             (uuid?.value ?: "").isNotEmpty()
 
 inline val Message.isResendAllowed: Boolean
-    get() = type.isMessage() && status.isFailed()
+    get() {
+        if (isPaidMessage) {
+            return false
+        }
+
+        if (status == MessageStatus.Failed) {
+            return true
+        }
+
+        if (status == MessageStatus.Pending) {
+            val currentTime = System.currentTimeMillis()
+            val messageTime = date.time
+            val timeDifferenceInMillis = currentTime - messageTime
+            val thirtySecondsInMillis = 30_000L
+
+            return timeDifferenceInMillis >= thirtySecondsInMillis
+        }
+
+        return false
+    }
 
 //Paid types
 inline val Message.isPaidMessage: Boolean

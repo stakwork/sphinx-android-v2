@@ -2010,7 +2010,7 @@ abstract class SphinxRepository(
         }
     }
 
-    private fun sendNewMessage(
+    override fun sendNewMessage(
         contact: String,
         messageContent: String,
         attachmentInfo: AttachmentInfo?,

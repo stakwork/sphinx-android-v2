@@ -1,5 +1,8 @@
 # ChangeLog
 
+## Version 1.0.1-alpha06 (2025-12-09)
+- Adds ability to resend failed or pending messages
+
 ## Version 1.0.1-alpha05 (2025-12-09)
 - Fixes crash on authentication caused by SQLCipher upgrade
 

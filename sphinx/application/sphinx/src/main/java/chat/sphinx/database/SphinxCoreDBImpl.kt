@@ -26,6 +26,16 @@ class SphinxCoreDBImpl(
     @Volatile
     private var driver: AndroidSqliteDriver? = null
 
+    init {
+        try {
+            System.loadLibrary("sqlcipher")
+            android.util.Log.d("SphinxDB", "SQLCipher native library loaded successfully")
+        } catch (e: UnsatisfiedLinkError) {
+            android.util.Log.e("SphinxDB", "Failed to load SQLCipher native library", e)
+            throw e
+        }
+    }
+
     override fun getSqlDriver(encryptionKey: EncryptionKey): SqlDriver {
         return driver ?: synchronized(this) {
             driver ?: createSqlDriver(encryptionKey)
@@ -48,7 +58,6 @@ class SphinxCoreDBImpl(
 
                     override fun onConfigure(db: SupportSQLiteDatabase) {
                         super.onConfigure(db)
-                        // Configure basic settings that can use execSQL
                         try {
                             db.execSQL("PRAGMA foreign_keys = ON")
                         } catch (e: Exception) {
@@ -123,7 +132,7 @@ class SphinxCoreDBImpl(
         maintenancePragmas.forEach { pragma ->
             try {
                 val cursor = db.query(pragma)
-                cursor.moveToFirst() // Execute the pragma
+                cursor.moveToFirst()
                 cursor.close()
                 android.util.Log.d("SphinxDB", "Executed: $pragma")
             } catch (e: Exception) {

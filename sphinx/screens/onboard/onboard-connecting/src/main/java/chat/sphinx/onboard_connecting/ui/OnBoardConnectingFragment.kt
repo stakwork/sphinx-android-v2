@@ -68,6 +68,7 @@ internal class OnBoardConnectingFragment: MotionLayoutFragment<
             imageLoader.load(
                 binding.imageViewOnBoardConnecting,
                 R_common.drawable.connecting,
+                isGif = true
             )
         }
     }

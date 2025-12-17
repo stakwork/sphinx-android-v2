@@ -159,6 +159,7 @@
     <string name="dashboard_restore_progress_feeds">正在復原消息動態: %s</string>
     <string name="dashboard_restore_progress_messages">正在復原訊息: %s</string>
     <string name="dashboard_stop_restore">稍後繼續</string>
+    <string name="dashboard_restore_stopping">正在完成還原</string>
 
     <string name="loading_recommendations">正在載入推薦內容...</string>
     <string name="refresh_while_loading">在播放的同時無法獲得新推薦內容，請先停止播放後再刷新</string>

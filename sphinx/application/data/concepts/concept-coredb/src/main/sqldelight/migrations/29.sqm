@@ -1,0 +1,3 @@
+import chat.sphinx.wrapper_common.feed.FeedUrl;
+
+ALTER TABLE feedItemDbo ADD COLUMN downloaded_item_url INTEGER AS FeedUrl;

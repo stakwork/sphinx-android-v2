@@ -13,7 +13,7 @@ import chat.sphinx.wrapper_common.feed.isPodcast
 import chat.sphinx.wrapper_common.time
 import chat.sphinx.wrapper_feed.FeedReferenceId
 import chat.sphinx.wrapper_feed.FeedTitle
-import chat.sphinx.wrapper_podcast.ChapterResponseDto
+import chat.sphinx.wrapper_common.ChapterResponseDto
 import chat.sphinx.wrapper_podcast.PodcastEpisode
 import kotlinx.coroutines.flow.Flow
 
@@ -31,6 +31,7 @@ class NetworkQueryFeedSearchImpl(
         private const val ENDPOINT_PODCAST_SEARCH = "$TRIBES_DEFAULT_SERVER_URL/search_podcasts?q=%s"
         private const val ENDPOINT_YOUTUBE_SEARCH = "$TRIBES_DEFAULT_SERVER_URL/search_youtube?q=%s"
         private const val ENDPOINT_FEED_RECOMMENDATIONS = "/feeds"
+        private const val YOUTUBE_ENCLOSURE_URL = "https://www.youtube.com/watch?v=%s"
 
     }
 
@@ -49,22 +50,31 @@ class NetworkQueryFeedSearchImpl(
         )
 
     override fun checkIfEpisodeNodeExists(
-        episode: PodcastEpisode,
-        feedTitle: FeedTitle
+        episode: PodcastEpisode?,
+        feedTitle: FeedTitle?,
+        youtubeVideoId: String?
     ): Flow<LoadResponse<EpisodeNodeResponseDto, ResponseError>> {
 
-        val nodeData = mapOf(
-            "source_link" to episode.enclosureUrl.value,
-            "date" to episode.date?.value?.time?.div(1000),
-            "episode_title" to episode.title.value,
-            "image_url" to episode.image?.value,
-            "show_title" to feedTitle.value
-        ).filterValues { it != null }
+        val requestBody = if (youtubeVideoId != null) {
+            mapOf(
+                "media_url" to String.format(YOUTUBE_ENCLOSURE_URL, youtubeVideoId),
+                "content_type" to "audio_video"
+            )
+        } else {
+            // Podcast episode case
+            val nodeData = mapOf(
+                "source_link" to episode?.enclosureUrl?.value,
+                "date" to episode?.date?.value?.time?.div(1000),
+                "episode_title" to episode?.title?.value,
+                "image_url" to episode?.image?.value,
+                "show_title" to feedTitle?.value
+            ).filterValues { it != null }
 
-        val requestBody = mapOf(
-            "node_type" to "Episode",
-            "node_data" to nodeData
-        )
+            mapOf(
+                "node_type" to "Episode",
+                "node_data" to nodeData
+            )
+        }
 
         return networkRelayCall.post(
             url = GRAPH_MINDSET_ADD_NODE_URL,
@@ -77,32 +87,54 @@ class NetworkQueryFeedSearchImpl(
     }
 
     override fun createStakworkProject(
-        podcastEpisode: PodcastEpisode,
-        feedTitle: FeedTitle,
+        podcastEpisode: PodcastEpisode?,
+        feedTitle: FeedTitle?,
         workflowId: Int,
         token: String,
-        referenceId: FeedReferenceId
+        referenceId: FeedReferenceId,
+        youtubeVideoId: String?
     ): Flow<LoadResponse<CreateProjectResponseDto, ResponseError>> {
 
-        val mediaUrl = podcastEpisode.enclosureUrl.value
-        val requestBody = mapOf(
-            "name" to mediaUrl,
-            "workflow_id" to workflowId,
-            "workflow_params" to mapOf(
-                "set_var" to mapOf(
-                    "attributes" to mapOf(
-                        "vars" to mapOf(
-                            "media_url" to mediaUrl,
-                            "ref_id" to referenceId.value,
-                            "episode_publish_date" to (podcastEpisode.date?.time?.div(1000) ?: 0),
-                            "episode_title" to podcastEpisode.title.value,
-                            "episode_thumbnail_url" to (podcastEpisode.image?.value ?: ""),
-                            "show_title" to (feedTitle.value)
+        val requestBody = if (youtubeVideoId != null) {
+            // YouTube video case
+            val mediaUrl = String.format(YOUTUBE_ENCLOSURE_URL, youtubeVideoId)
+            mapOf(
+                "name" to mediaUrl,
+                "workflow_id" to workflowId,
+                "workflow_params" to mapOf(
+                    "set_var" to mapOf(
+                        "attributes" to mapOf(
+                            "vars" to mapOf(
+                                "media_url" to mediaUrl,
+                                "ref_id" to referenceId.value,
+                                "content_type" to "audio_video"
+                            )
                         )
                     )
                 )
             )
-        )
+        } else {
+            // Podcast episode case
+            val mediaUrl = podcastEpisode?.enclosureUrl?.value
+            mapOf(
+                "name" to mediaUrl,
+                "workflow_id" to workflowId,
+                "workflow_params" to mapOf(
+                    "set_var" to mapOf(
+                        "attributes" to mapOf(
+                            "vars" to mapOf(
+                                "media_url" to mediaUrl,
+                                "ref_id" to referenceId.value,
+                                "episode_publish_date" to (podcastEpisode?.date?.time?.div(1000) ?: 0),
+                                "episode_title" to podcastEpisode?.title?.value,
+                                "episode_thumbnail_url" to (podcastEpisode?.image?.value ?: ""),
+                                "show_title" to (feedTitle?.value)
+                            )
+                        )
+                    )
+                )
+            )
+        }
 
         return networkRelayCall.post(
             url = ENDPOINT_STAKWORK_PROJECT,
@@ -113,6 +145,7 @@ class NetworkQueryFeedSearchImpl(
             headers = mapOf("Authorization" to "Bearer ${token}")
         )
     }
+
 
     override fun getEpisodeNodeDetails(referenceId: FeedReferenceId): Flow<LoadResponse<EpisodeNodeDetailsDto, ResponseError>> {
         val url = "$GRAPH_MINDSET_BASE_URL/api/node/${referenceId.value}"

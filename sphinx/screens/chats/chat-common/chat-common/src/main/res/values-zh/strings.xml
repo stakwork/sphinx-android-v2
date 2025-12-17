@@ -56,6 +56,7 @@
 
     <string name="link_preview_add_contact_banner_label">添加聯絡人</string>
     <string name="link_preview_see_tribe_banner_label">查看部落</string>
+    <string name="link_preview_not_available">連結預覽不可用</string>
 
     <string name="reply_message_media_content_description">原始訊息中的多媒體內容</string>
     <string name="reply_message_close_button_content_description">關閉</string>
@@ -169,6 +170,7 @@
 
     <string name="searching_messages">正在搜尋...</string>
     <string name="results_found">找到 %d 個結果</string>
+    <string name="search_matches">%d/%d 個匹配</string>
 
     <string name="slide_to_cancel">&lt;&lt; 滑動來取消</string>
     <string name="recording_permission_granted">已授予錄音權限</string>
@@ -185,6 +187,7 @@
     <string name="chat_placeholder_invited">Invited on %s</string>
     <string name="chat_placeholder_secure">Messages and calls are secured\nwith end to end encryption</string>
 
+    <string name="loading_messages">Loading messages…</string>
     <string name="cancel_search">取消</string>
 
 </resources>

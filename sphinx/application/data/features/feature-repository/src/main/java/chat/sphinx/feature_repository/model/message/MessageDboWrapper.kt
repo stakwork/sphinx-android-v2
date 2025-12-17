@@ -4,6 +4,7 @@ import chat.sphinx.conceptcoredb.MessageDbo
 import chat.sphinx.conceptcoredb.MessageMediaDbo
 import chat.sphinx.wrapper_common.DateTime
 import chat.sphinx.wrapper_common.PhotoUrl
+import chat.sphinx.wrapper_common.Push
 import chat.sphinx.wrapper_common.Seen
 import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_common.dashboard.ContactId
@@ -65,6 +66,8 @@ class MessageDboWrapper(
         get() = messageDbo.status
     override val seen: Seen
         get() = messageDbo.seen
+    override val push: Push?
+        get() = messageDbo.push
     override val senderAlias: SenderAlias?
         get() = messageDbo.sender_alias
     override val senderPic: PhotoUrl?
@@ -189,6 +192,7 @@ fun convertMessageDboToNewMessage(messageDbo: MessageDbo, messageMedia: MessageM
         messageContent = messageDbo.message_content,
         status = messageDbo.status,
         seen = messageDbo.seen,
+        push = messageDbo.push,
         senderAlias = messageDbo.sender_alias,
         senderPic = messageDbo.sender_pic,
         originalMUID = messageDbo.original_muid,

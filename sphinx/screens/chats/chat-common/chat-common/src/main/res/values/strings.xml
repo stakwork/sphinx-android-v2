@@ -63,6 +63,7 @@
     <!-- Link Previews -->
     <string name="link_preview_add_contact_banner_label">Add Contact</string>
     <string name="link_preview_see_tribe_banner_label">See Tribe</string>
+    <string name="link_preview_not_available">Link preview not available</string>
 
     <!-- Replies -->
     <string name="reply_message_media_content_description">Media content of the original message</string>
@@ -188,6 +189,8 @@
 
     <string name="searching_messages">Searching...</string>
     <string name="results_found">%d Results Found</string>
+    <string name="search_matches">%d/%d matches</string>
+    <string translatable="false" name="search_matches_highlighted">%d/</string>
 
     <string name="slide_to_cancel">&lt;&lt; Slide to cancel</string>
     <string name="recording_permission_granted">Recording permission granted</string>
@@ -213,5 +216,6 @@
     <string name="reset_values" translatable="false">Reset Values</string>
     <string name="chat_placeholder_invited">Invited on %s</string>
     <string name="chat_placeholder_secure">Messages and calls are secured\nwith end to end encryption</string>
+    <string name="loading_messages">Loading messages…</string>
 
 </resources>

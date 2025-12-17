@@ -78,7 +78,10 @@ inline fun View.setInitialsColor(
 }
 
 inline fun Bitmap.blur(context: Context, radius:Float = 10F): Bitmap?{
-    val bitmap = copy(config,true)
+    if (config == null) {
+        return null
+    }
+    val bitmap = copy(config!!,true)
 
     RenderScript.create(context).apply {
         val input = Allocation.createFromBitmap(this,this@blur)

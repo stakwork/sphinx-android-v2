@@ -13,6 +13,7 @@ import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.LinearLayoutManager
 import app.cash.exhaustive.Exhaustive
 import by.kirich1409.viewbindingdelegate.viewBinding
+import chat.sphinx.chat_common.ui.ChatFragment.ChatScrollListener
 import chat.sphinx.concept_image_loader.ImageLoader
 import chat.sphinx.concept_user_colors_helper.UserColorsHelper
 import chat.sphinx.insetter_activity.InsetterActivity
@@ -26,6 +27,8 @@ import chat.sphinx.threads.viewstate.ThreadsViewState
 import dagger.hilt.android.AndroidEntryPoint
 import io.matthewnelson.android_feature_screens.ui.sideeffect.SideEffectFragment
 import io.matthewnelson.android_feature_screens.util.gone
+import io.matthewnelson.android_feature_screens.util.visible
+import io.matthewnelson.concept_views.viewstate.collect
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -65,7 +68,6 @@ internal class ThreadsFragment: SideEffectFragment<
 
         (requireActivity() as InsetterActivity)
             .addStatusBarPadding(binding.layoutConstraintThreads)
-
     }
 
     private inner class BackPressHandler(
@@ -100,18 +102,25 @@ internal class ThreadsFragment: SideEffectFragment<
     }
 
     private fun setupThreadsAdapter() {
+        val linearLayoutManager = LinearLayoutManager(binding.root.context)
+
+        val threadsAdapter = ThreadsAdapter(
+            binding.recyclerViewThreadsElementList,
+            linearLayoutManager,
+            imageLoader,
+            viewLifecycleOwner,
+            onStopSupervisor,
+            viewModel,
+            userColorsHelper
+        )
+
         val threadsFooterAdapter = ThreadsFooterAdapter(requireActivity() as InsetterActivity)
 
         binding.recyclerViewThreadsElementList.apply {
-            val threadsAdapter = ThreadsAdapter(
-                imageLoader,
-                viewLifecycleOwner,
-                onStopSupervisor,
-                viewModel,
-                userColorsHelper
-            )
-            layoutManager = LinearLayoutManager(binding.root.context)
+            setHasFixedSize(false)
+            layoutManager = linearLayoutManager
             adapter = ConcatAdapter(threadsAdapter, threadsFooterAdapter)
+            itemAnimator = null
         }
     }
 
@@ -120,10 +129,25 @@ internal class ThreadsFragment: SideEffectFragment<
     }
 
     override suspend fun onViewStateFlowCollect(viewState: ThreadsViewState) {
-        @Exhaustive
-        when (viewState) {
-            is ThreadsViewState.Idle -> {}
-            is ThreadsViewState.ThreadList -> {}
+        binding.apply {
+            @Exhaustive
+            when (viewState) {
+                is ThreadsViewState.Idle -> {
+                    progressBarThreadsList.visible
+                    recyclerViewThreadsElementList.gone
+                    textViewThreadsNoFound.gone
+                }
+                is ThreadsViewState.NoThreadsFound -> {
+                    progressBarThreadsList.gone
+                    recyclerViewThreadsElementList.gone
+                    textViewThreadsNoFound.visible
+                }
+                is ThreadsViewState.ThreadList -> {
+                    progressBarThreadsList.gone
+                    recyclerViewThreadsElementList.visible
+                    textViewThreadsNoFound.gone
+                }
+            }
         }
     }
 

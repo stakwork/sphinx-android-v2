@@ -419,7 +419,7 @@ internal class ProfileFragment: SideEffectFragment<
                             switchProfileBasicContainerPin.isChecked = !owner.privatePhoto.value.toPrivatePhoto().isTrue()
 
                             editTextProfileBasicContainerTip.setText(
-                                (owner.tipAmount ?: Sat(100)).asFormattedString()
+                                (owner.tipAmount ?: Sat(20L)).asFormattedString()
                             )
                         }
                     }

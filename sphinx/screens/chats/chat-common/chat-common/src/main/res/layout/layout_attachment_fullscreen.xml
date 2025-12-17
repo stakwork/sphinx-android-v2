@@ -23,10 +23,11 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <chat.sphinx.chat_common.ui.widgets.SphinxFullscreenImageView
+    <chat.sphinx.chat_common.ui.widgets.ZoomImageView
         android:id="@+id/image_view_attachment_fullscreen"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_bias="0.0"
@@ -41,7 +42,7 @@
         android:gravity="center"
         android:text="@string/material_icon_name_nav_forward"
         android:background="@drawable/button_background_pdf_navigation"
-        android:textColor="@color/exo_white"
+        android:textColor="@android:color/white"
         android:textSize="@dimen/default_text_size_back_arrow"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -59,7 +60,7 @@
         android:gravity="center"
         android:text="@string/material_icon_name_nav_back"
         android:background="@drawable/button_background_pdf_navigation"
-        android:textColor="@color/exo_white"
+        android:textColor="@android:color/white"
         android:textSize="@dimen/default_text_size_back_arrow"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -83,7 +84,7 @@
             android:fontFamily="@font/material_icons_regular"
             android:gravity="center"
             android:text="@string/material_icon_name_nav_back"
-            android:textColor="@color/exo_white"
+            android:textColor="@android:color/white"
             android:textSize="@dimen/default_text_size_back_arrow"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"

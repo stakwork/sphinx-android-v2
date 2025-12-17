@@ -30,8 +30,15 @@ interface RepositoryDashboard {
 
     fun getUnseenMessagesByChatId(chatId: ChatId): Flow<Long?>
     fun getUnseenMentionsByChatId(chatId: ChatId): Flow<Long?>
+
+    fun getUnseenMessagesByChatIdCache(chatId: ChatId): Flow<Long?>
+    fun getUnseenMentionsByChatIdCache(chatId: ChatId): Flow<Long?>
+
     fun getUnseenActiveConversationMessagesCount(): Flow<Long?>
     fun getUnseenTribeMessagesCount(): Flow<Long?>
+
+    fun getUnseenReceivedMessages(): Flow<List<Message>?>
+    fun getUnseenReceivedMentions(): Flow<List<Message>?>
 
     val accountOwner: StateFlow<Contact?>
     val getAllNotBlockedContacts: Flow<List<Contact>>

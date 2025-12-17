@@ -2,6 +2,7 @@ package chat.sphinx.wrapper_message
 
 import chat.sphinx.wrapper_common.DateTime
 import chat.sphinx.wrapper_common.PhotoUrl
+import chat.sphinx.wrapper_common.Push
 import chat.sphinx.wrapper_common.Seen
 import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_common.dashboard.ContactId
@@ -301,7 +302,26 @@ inline val Message.isReplyAllowed: Boolean
             (uuid?.value ?: "").isNotEmpty()
 
 inline val Message.isResendAllowed: Boolean
-    get() = type.isMessage() && status.isFailed()
+    get() {
+        if (isPaidMessage) {
+            return false
+        }
+
+        if (status == MessageStatus.Failed) {
+            return true
+        }
+
+        if (status == MessageStatus.Pending) {
+            val currentTime = System.currentTimeMillis()
+            val messageTime = date.time
+            val timeDifferenceInMillis = currentTime - messageTime
+            val thirtySecondsInMillis = 30_000L
+
+            return timeDifferenceInMillis >= thirtySecondsInMillis
+        }
+
+        return false
+    }
 
 //Paid types
 inline val Message.isPaidMessage: Boolean
@@ -383,6 +403,7 @@ abstract class Message {
     abstract val messageContent: MessageContent?
     abstract val status: MessageStatus
     abstract val seen: Seen
+    abstract val push: Push?
     abstract val senderAlias: SenderAlias?
     abstract val senderPic: PhotoUrl?
     abstract val originalMUID: MessageMUID?
@@ -427,6 +448,7 @@ abstract class Message {
                 other.messageContent                == messageContent               &&
                 other.status                        == status                       &&
                 other.seen                          == seen                         &&
+                other.push                          == push                         &&
                 other.senderAlias                   == senderAlias                  &&
                 other.senderPic                     == senderPic                    &&
                 other.originalMUID                  == originalMUID                 &&
@@ -484,6 +506,7 @@ abstract class Message {
         result = _31 * result + messageContent.hashCode()
         result = _31 * result + status.hashCode()
         result = _31 * result + seen.hashCode()
+        result = _31 * result + push.hashCode()
         result = _31 * result + senderAlias.hashCode()
         result = _31 * result + senderPic.hashCode()
         result = _31 * result + originalMUID.hashCode()
@@ -513,7 +536,7 @@ abstract class Message {
         return "Message(id=$id,uuid=$uuid,chatId=$chatId,type=$type,sender=$sender,"            +
                 "receiver=$receiver,amount=$amount,paymentHash=$paymentHash,"                   +
                 "paymentRequest=$paymentRequest,date=$date,expirationDate=$expirationDate,"     +
-                "messageContent=$messageContent,status=$status,seen=$seen,"                     +
+                "messageContent=$messageContent,status=$status,seen=$seen,push=$push,"          +
                 "senderAlias=$senderAlias,senderPic=$senderPic,originalMUID=$originalMUID,"     +
                 "replyUUID=$replyUUID,flagged=$flagged,"                                        +
                 "messageContentDecrypted=$messageContentDecrypted,"                             +

@@ -9,6 +9,7 @@ abstract class ImageLoader<ImageView> {
         url: String,
         options: ImageLoaderOptions? = null,
         listener: OnImageLoadListener? = null,
+        isGif: Boolean = false
     ): Disposable
 
     abstract suspend fun load(
@@ -16,6 +17,7 @@ abstract class ImageLoader<ImageView> {
         drawableResId: Int,
         options: ImageLoaderOptions? = null,
         listener: OnImageLoadListener? = null,
+        isGif: Boolean = false,
     ): Disposable
 
     abstract suspend fun load(
@@ -23,12 +25,28 @@ abstract class ImageLoader<ImageView> {
         file: File,
         options: ImageLoaderOptions? = null,
         listener: OnImageLoadListener? = null,
+        isGif: Boolean = false,
     ): Disposable
+
+    abstract fun preloadImages(urls: List<String>)
+
+    abstract fun setHighQualityMode(enabled: Boolean)
+
+    abstract fun pauseImageLoading()
+
+    abstract fun resumeImageLoading()
+
+    abstract fun clearMemoryCache()
+
+    abstract fun getCacheStats(): String
+
+    abstract fun trimMemory()
 
 }
 
 interface OnImageLoadListener {
     fun onSuccess() {}
+    fun onError() {}
 }
 
 /**
@@ -49,5 +67,5 @@ abstract class Disposable {
     /**
      * Suspends until any in progress work completes.
      */
-    abstract suspend fun await()
+//    abstract suspend fun await()
 }

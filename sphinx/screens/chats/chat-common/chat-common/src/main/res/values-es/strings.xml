@@ -54,6 +54,7 @@
     <!-- Link Previews -->
     <string name="link_preview_add_contact_banner_label">Agregar Contacto</string>
     <string name="link_preview_see_tribe_banner_label">Ver Tribu</string>
+    <string name="link_preview_not_available">Vista previa del enlace no disponible</string>
 
     <!-- Replies -->
     <string name="reply_message_media_content_description">Contenido del mensaje original</string>
@@ -177,6 +178,7 @@
 
     <string name="searching_messages">Buscando...</string>
     <string name="results_found">%d Resultados Encontrados</string>
+    <string name="search_matches">%d/%d coincidencias</string>
 
     <string name="slide_to_cancel">&lt;&lt; Desliza para cancelar</string>
     <string name="recording_permission_granted">Permiso de grabación concedido</string>
@@ -200,6 +202,7 @@
     <string name="pin_message_error">Ocurrió un error. Por favor inténtalo luego</string>
     <string name="chat_placeholder_invited">Invitado el %s</string>
     <string name="chat_placeholder_secure">Los mensajes y las llamadas están protegidos\ncon cifrado de extremo a extremo</string>
+    <string name="loading_messages">Cargando más mensajes…</string>
 
     <string name="cancel_search">CANCELAR</string>
 </resources>

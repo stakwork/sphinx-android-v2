@@ -24,7 +24,7 @@ import java.io.File
 sealed class LayoutState private constructor() {
 
     data class SearchHighlightedStatus(
-        val highlightedText: String
+        val highlightedTexts: List<Pair<String, IntRange>>
     ): LayoutState()
 
     data class MessageStatusHeader(
@@ -268,6 +268,10 @@ sealed class LayoutState private constructor() {
                     // Used only to anchor data for click listeners
                     val joinLink: TribeJoinLink,
                 ) : LinkPreview()
+
+                data class NoAvailablePreview(
+                    val url: String,
+                ) : LinkPreview()
             }
 
         }
@@ -314,6 +318,20 @@ data class BoostSenderHolder(
     val photoUrl: PhotoUrl?,
     val alias: ContactAlias?,
     val colorKey: String,
+)
+
+data class ThreadHeaderHolder(
+    val senderName: String?,
+    val colorKey: String,
+    val photoUrl: String?,
+    val messageTimestamp: String
+)
+
+data class ThreadRepliesHolder(
+    val userCount: Int,
+    val repliesAmount: String?,
+    val lastReplyDate: String?,
+    val replyUsersHolders: List<ReplyUserHolder>
 )
 
 data class ReplyUserHolder(

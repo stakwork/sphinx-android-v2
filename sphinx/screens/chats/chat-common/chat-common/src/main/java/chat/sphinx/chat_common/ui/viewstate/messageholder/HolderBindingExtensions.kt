@@ -1,6 +1,7 @@
 package chat.sphinx.chat_common.ui.viewstate.messageholder
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.graphics.Color
 import android.view.Gravity
 import android.view.View
@@ -62,13 +63,13 @@ import chat.sphinx.wrapper_common.util.getHHMMString
 import chat.sphinx.wrapper_common.util.getInitials
 import chat.sphinx.wrapper_meme_server.headerKey
 import chat.sphinx.wrapper_meme_server.headerValue
-import chat.sphinx.wrapper_message.Message
 import chat.sphinx.wrapper_message.MessageType
 import chat.sphinx.wrapper_message.PurchaseStatus
 import chat.sphinx.wrapper_message.isExpiredInvoice
 import chat.sphinx.wrapper_message.isPodcastBoost
 import chat.sphinx.wrapper_message.isSphinxCallLink
 import chat.sphinx.wrapper_message_media.MessageMedia
+import chat.sphinx.wrapper_message_media.isGif
 import chat.sphinx.wrapper_view.Px
 import io.matthewnelson.android_feature_screens.util.gone
 import io.matthewnelson.android_feature_screens.util.goneIfFalse
@@ -76,7 +77,9 @@ import io.matthewnelson.android_feature_screens.util.goneIfTrue
 import io.matthewnelson.android_feature_screens.util.visible
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import java.io.File
 import chat.sphinx.resources.R as R_common
@@ -86,7 +89,7 @@ import chat.sphinx.resources.R as common_R
 @MainThread
 @Suppress("NOTHING_TO_INLINE")
 internal fun LayoutMessageHolderBinding.setView(
-    lifecycleScope: CoroutineScope,
+    holderScope: CoroutineScope,
     holderJobs: ArrayList<Job>,
     disposables: ArrayList<Disposable>,
     dispatchers: CoroutineDispatchers,
@@ -96,110 +99,117 @@ internal fun LayoutMessageHolderBinding.setView(
     recyclerViewWidth: Px,
     viewState: MessageHolderViewState,
     userColorsHelper: UserColorsHelper,
+    colorCache: ColorCache,
     onSphinxInteractionListener: SphinxUrlSpan.OnInteractionListener? = null,
     onRowLayoutListener: MessageListAdapter.OnRowLayoutListener? = null,
 ) {
-
-    for (job in holderJobs) {
-        job.cancel()
-    }
-    holderJobs.clear()
-
-    for (disposable in disposables) {
-        disposable.dispose()
-    }
-    disposables.clear()
-
     fun loadImageAttachment(
         imageView: ImageView,
         loadingContainer: ConstraintLayout,
         url: String,
         media: MessageMedia?
     ) {
-        lifecycleScope.launch(dispatchers.mainImmediate) {
+        holderScope.launch(dispatchers.mainImmediate) {
             val file: File? = media?.localFile
 
-            val options: ImageLoaderOptions? = if (media != null) {
-                val builder = ImageLoaderOptions.Builder()
+            val options: ImageLoaderOptions = ImageLoaderOptions.Builder().build()
+//            if (media != null) {
+//                val builder = ImageLoaderOptions.Builder()
+//
+//                if (file == null) {
+//                    media.host?.let { host ->
+//                        memeServerTokenHandler.retrieveAuthenticationToken(host)
+//                            ?.let { token ->
+//                                builder.addHeader(token.headerKey, token.headerValue)
+//
+//                                media.mediaKeyDecrypted?.value?.let { key ->
+//                                    val header = CryptoHeader.Decrypt.Builder()
+//                                        .setScheme(CryptoScheme.Decrypt.JNCryptor)
+//                                        .setPassword(key)
+//                                        .build()
+//
+//                                    builder.addHeader(header.key, header.value)
+//                                }
+//                            }
+//                    }
+//                }
+//
+//                builder.build()
+//            } else {
+//                null
+//            }
 
-                builder.errorResId(
-                    if (viewState is MessageHolderViewState.Sent) {
-                        R.drawable.sent_image_not_available
-                    } else {
-                        R.drawable.received_image_not_available
-                    }
-                )
-
-                if (file == null) {
-                    media.host?.let { host ->
-                        memeServerTokenHandler.retrieveAuthenticationToken(host)
-                            ?.let { token ->
-                                builder.addHeader(token.headerKey, token.headerValue)
-
-                                media.mediaKeyDecrypted?.value?.let { key ->
-                                    val header = CryptoHeader.Decrypt.Builder()
-                                        .setScheme(CryptoScheme.Decrypt.JNCryptor)
-                                        .setPassword(key)
-                                        .build()
-
-                                    builder.addHeader(header.key, header.value)
-                                }
-                            }
-                    }
-                }
-
-                builder.build()
-            } else {
-                null
-            }
-
-            val disposable: Disposable = if (file != null) {
+            if (file != null) {
                 imageLoader.load(imageView, file, options, object : OnImageLoadListener {
                     override fun onSuccess() {
                         super.onSuccess()
-                        loadingContainer.gone
-                        onRowLayoutListener?.onRowHeightChanged()
-                    }
-                })
-            } else {
-                imageLoader.load(imageView, url, options, object : OnImageLoadListener {
-                    override fun onSuccess() {
-                        super.onSuccess()
-                        loadingContainer.gone
-                        onRowLayoutListener?.onRowHeightChanged()
-                    }
-                })
-            }
 
-            disposables.add(disposable)
-            disposable.await()
+                        loadingContainer.gone
+                        onRowLayoutListener?.onRowHeightChanged()
+                    }
+
+                    override fun onError() {
+                        super.onError()
+
+                        imageView.setImageDrawable(
+                            ContextCompat.getDrawable(root.context,
+                                if (viewState is MessageHolderViewState.Sent) {
+                                    R.drawable.sent_image_not_available
+                                } else {
+                                    R.drawable.received_image_not_available
+                                }
+                            )
+                        )
+                    }
+                }, media.mediaType.isGif).also { disposables.add(it) }
+            }
+//            else {
+//                imageLoader.load(imageView, url, options, object : OnImageLoadListener {
+//                    override fun onSuccess() {
+//                        super.onSuccess()
+//
+//                        loadingContainer.gone
+//                        onRowLayoutListener?.onRowHeightChanged()
+//                    }
+//
+//                    override fun onError() {
+//                        super.onError()
+//
+//                        imageView.setImageDrawable(
+//                            ContextCompat.getDrawable(root.context,
+//                                if (viewState is MessageHolderViewState.Sent) {
+//                                    R.drawable.sent_image_not_available
+//                                } else {
+//                                    R.drawable.received_image_not_available
+//                                }
+//                            )
+//                        )
+//                    }
+//                }, media?.mediaType?.isGif == true || url.contains("gif", ignoreCase = true)).also { disposables.add(it) }
+//            }
         }
     }
 
-
     apply {
-        lifecycleScope.launch(dispatchers.mainImmediate) {
+        holderScope.launch(dispatchers.default) {
             val initialsColor = viewState.statusHeader?.colorKey?.let { key ->
-                Color.parseColor(
-                    userColorsHelper.getHexCodeForKey(key, root.context.getRandomHexCode())
-                )
+                colorCache.getColor(key, root.context, holderScope, userColorsHelper)
             }
 
-            viewState.initialHolder.setInitialHolder(
-                includeMessageHolderChatImageInitialHolder.textViewInitialsName,
-                includeMessageHolderChatImageInitialHolder.imageViewChatPicture,
-                includeMessageStatusHeader,
-                imageLoader,
-                initialsColor
-            )?.also {
-                disposables.add(it)
+            launch(dispatchers.mainImmediate) {
+                viewState.initialHolder.setInitialHolder(
+                    includeMessageHolderChatImageInitialHolder.textViewInitialsName,
+                    includeMessageHolderChatImageInitialHolder.imageViewChatPicture,
+                    includeMessageStatusHeader,
+                    imageLoader,
+                    initialsColor
+                )?.also {
+                    disposables.add(it)
+                }
             }
         }.let { job ->
             holderJobs.add(job)
         }
-        setSearchHighlightedStatus(
-            viewState.searchHighlightedStatus
-        )
         setMessagesSeparator(
             viewState.messagesSeparator
         )
@@ -207,14 +217,15 @@ internal fun LayoutMessageHolderBinding.setView(
             viewState.statusHeader,
             holderJobs,
             dispatchers,
-            lifecycleScope,
-            userColorsHelper
+            holderScope,
+            userColorsHelper,
+            colorCache
         )
         setInvoiceExpirationHeader(
             viewState.invoiceExpirationHeader
         )
         setBubbleBackground(
-            viewState, recyclerViewWidth
+            viewState
         )
         setDeletedOrFlaggedMessageLayout(
             viewState.deletedOrFlaggedMessage
@@ -229,23 +240,25 @@ internal fun LayoutMessageHolderBinding.setView(
             viewState.groupActionIndicator
         )
         if (viewState.background !is BubbleBackground.Gone) {
-            setBubbleImageAttachment(viewState.bubbleImageAttachment) { imageView, loadingContainer, url, media ->
-                loadImageAttachment(imageView, loadingContainer, url, media)
+            val job1 = holderScope.launch {
+                setBubbleImageAttachment(viewState.bubbleImageAttachment) { imageView, loadingContainer, url, media ->
+                    loadImageAttachment(imageView, loadingContainer, url, media)
+                }
             }
-
+            holderJobs.add(job1)
             setBubbleAudioAttachment(
                 viewState.bubbleAudioAttachment,
                 audioPlayerController,
                 dispatchers,
                 holderJobs,
-                lifecycleScope
+                holderScope
             )
             setBubblePodcastClip(
                 viewState.bubblePodcastClip,
                 audioPlayerController,
                 dispatchers,
                 holderJobs,
-                lifecycleScope
+                holderScope
             )
             setBubbleVideoAttachment(
                 viewState.bubbleVideoAttachment,
@@ -259,17 +272,19 @@ internal fun LayoutMessageHolderBinding.setView(
             )
             setBubbleMessageLayout(
                 viewState.bubbleMessage,
+                viewState.searchHighlightedStatus,
                 onSphinxInteractionListener
             )
-            setBubbleThreadLayout(
-                viewState.bubbleThread,
-                holderJobs,
-                dispatchers,
-                lifecycleScope,
-                userColorsHelper,
-                audioPlayerController,
-                loadImage = { imageView, url ->
-                    lifecycleScope.launch(dispatchers.mainImmediate) {
+            val job2 = holderScope.launch {
+                setBubbleThreadLayout(
+                    viewState.bubbleThread,
+                    holderJobs,
+                    dispatchers,
+                    holderScope,
+                    userColorsHelper,
+                    colorCache,
+                    audioPlayerController,
+                    loadImage = { imageView, url ->
                         imageLoader.load(
                             imageView,
                             url,
@@ -277,26 +292,26 @@ internal fun LayoutMessageHolderBinding.setView(
                                 .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
                                 .transformation(Transformation.CircleCrop)
                                 .build()
-                        )
-                            .also { disposables.add(it) }
-                    }.let { job ->
-                        holderJobs.add(job)
+                        ).also { disposables.add(it) }
+                    }, lastReplyImage = { imageView, constraintLayout, url, media ->
+                        loadImageAttachment(imageView, constraintLayout, url, media)
                     }
-                }, lastReplyImage = { imageView, constraintLayout, url, media ->
-                    loadImageAttachment(imageView, constraintLayout, url, media)
-                })
+                )
+            }
+            holderJobs.add(job2)
             setBubblePaidMessageLayout(
                 dispatchers,
                 holderJobs,
-                lifecycleScope,
+                holderScope,
                 viewState,
                 onSphinxInteractionListener
             )
             setBubbleMessageLinkPreviewLayout(
                 dispatchers,
                 holderJobs,
+                disposables,
                 imageLoader,
-                lifecycleScope,
+                holderScope,
                 viewState,
                 onRowLayoutListener,
             )
@@ -307,30 +322,26 @@ internal fun LayoutMessageHolderBinding.setView(
 //                viewState.bubbleBotResponse,
 //                onRowLayoutListener
 //            )
-            setBubbleDirectPaymentLayout(
-                viewState.bubbleDirectPayment,
-                holderJobs,
-                dispatchers,
-                lifecycleScope,
-                userColorsHelper
-            ) { imageView, url ->
-                lifecycleScope.launch(dispatchers.mainImmediate) {
-
-                    val disposable: Disposable = imageLoader.load(
+            val job3 = holderScope.launch {
+                setBubbleDirectPaymentLayout(
+                    viewState.bubbleDirectPayment,
+                    holderJobs,
+                    dispatchers,
+                    holderScope,
+                    userColorsHelper,
+                    colorCache
+                ) { imageView, url ->
+                    imageLoader.load(
                         imageView,
                         url,
                         ImageLoaderOptions.Builder()
                             .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
                             .transformation(Transformation.CircleCrop)
                             .build()
-                    )
-
-                    disposables.add(disposable)
-                    disposable.await()
-                }.let { job ->
-                    holderJobs.add(job)
+                    ).also { disposables.add(it) }
                 }
             }
+            holderJobs.add(job3)
             setBubbleInvoiceLayout(
                 viewState.bubbleInvoice
             )
@@ -344,36 +355,35 @@ internal fun LayoutMessageHolderBinding.setView(
             setBubblePaidMessageSentStatusLayout(
                 viewState.bubblePaidMessageSentStatus
             )
-            setBubbleReactionBoosts(
-                viewState.bubbleReactionBoosts,
-                holderJobs,
-                dispatchers,
-                lifecycleScope,
-                userColorsHelper
-            ) { imageView, url ->
-                lifecycleScope.launch(dispatchers.mainImmediate) {
+            val job4 = holderScope.launch {
+                setBubbleReactionBoosts(
+                    viewState.bubbleReactionBoosts,
+                    holderJobs,
+                    dispatchers,
+                    holderScope,
+                    userColorsHelper,
+                    colorCache
+                ) { imageView, url ->
                     imageLoader.load(
-                        imageView, 
+                        imageView,
                         url,
                         ImageLoaderOptions.Builder()
                             .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
                             .transformation(Transformation.CircleCrop)
-                            .build()    
-                    )
-                        .also { disposables.add(it) }
-                }.let { job ->
-                    holderJobs.add(job)
+                            .build()
+                    ).also { disposables.add(it) }
                 }
             }
+            holderJobs.add(job4)
             setBubbleReplyMessage(
                 viewState.bubbleReplyMessage,
                 holderJobs,
                 dispatchers,
-                lifecycleScope,
+                holderScope,
                 userColorsHelper,
+                colorCache
             ) { imageView, url, media ->
-                lifecycleScope.launch(dispatchers.mainImmediate) {
-
+                holderScope.launch(dispatchers.mainImmediate) {
                     val file: File? = media?.localFile
 
                     val options: ImageLoaderOptions? = if (media != null) {
@@ -387,37 +397,35 @@ internal fun LayoutMessageHolderBinding.setView(
                             }
                         )
 
-                        if (file == null) {
-                            media.host?.let { host ->
-                                memeServerTokenHandler.retrieveAuthenticationToken(host)
-                                    ?.let { token ->
-                                        builder.addHeader(token.headerKey, token.headerValue)
-
-                                        media.mediaKeyDecrypted?.value?.let { key ->
-                                            val header = CryptoHeader.Decrypt.Builder()
-                                                .setScheme(CryptoScheme.Decrypt.JNCryptor)
-                                                .setPassword(key)
-                                                .build()
-
-                                            builder.addHeader(header.key, header.value)
-                                        }
-                                    }
-                            }
-                        }
+//                        if (file == null) {
+//                            media.host?.let { host ->
+//                                memeServerTokenHandler.retrieveAuthenticationToken(host)
+//                                    ?.let { token ->
+//                                        builder.addHeader(token.headerKey, token.headerValue)
+//
+//                                        media.mediaKeyDecrypted?.value?.let { key ->
+//                                            val header = CryptoHeader.Decrypt.Builder()
+//                                                .setScheme(CryptoScheme.Decrypt.JNCryptor)
+//                                                .setPassword(key)
+//                                                .build()
+//
+//                                            builder.addHeader(header.key, header.value)
+//                                        }
+//                                    }
+//                            }
+//                        }
 
                         builder.build()
                     } else {
                         null
                     }
 
-                    val disposable: Disposable = if (file != null) {
-                        imageLoader.load(imageView, file, options)
-                    } else {
-                        imageLoader.load(imageView, url, options)
+                    if (file != null) {
+                        imageLoader.load(imageView, file, options).also { disposables.add(it) }
                     }
-
-                    disposables.add(disposable)
-                    disposable.await()
+//                    else {
+//                        imageLoader.load(imageView, url, options).also { disposables.add(it) }
+//                    }
                 }.let { job ->
                     holderJobs.add(job)
                 }
@@ -484,6 +492,7 @@ internal inline fun LayoutMessageHolderBinding.setUnsupportedMessageTypeLayout(
                 MessageType.BotCmd,
                 MessageType.BotInstall,
                 MessageType.ContactKeyRecord,
+                MessageType.EmptyMessageType,
                 is MessageType.Unknown -> {
                     getString(R.string.placeholder_unsupported_message_type_default)
                 }
@@ -504,8 +513,9 @@ internal inline fun LayoutMessageHolderBinding.setBubbleDirectPaymentLayout(
     directPayment: LayoutState.Bubble.ContainerSecond.DirectPayment?,
     holderJobs: ArrayList<Job>,
     dispatchers: CoroutineDispatchers,
-    lifecycleScope: CoroutineScope,
+    holderScope: CoroutineScope,
     userColorsHelper: UserColorsHelper,
+    colorCache: ColorCache,
     loadImage: (ImageView, String) -> Unit
 ) {
     includeMessageHolderBubble.includeMessageTypeDirectPayment.apply {
@@ -531,16 +541,16 @@ internal inline fun LayoutMessageHolderBinding.setBubbleDirectPaymentLayout(
             if (directPayment.isTribe) {
                 imageViewRecipientPicture.gone
 
-                lifecycleScope.launch(dispatchers.mainImmediate) {
-                    val initialsColor = Color.parseColor(
-                        userColorsHelper.getHexCodeForKey(directPayment.recipientColorKey, root.context.getRandomHexCode())
-                    )
+                holderScope.launch(dispatchers.default) {
+                    val initialsColor = colorCache.getColor(directPayment.recipientColorKey, root.context, holderScope, userColorsHelper)
 
-                    textViewRecipientInitials.text = (directPayment.recipientAlias?.value ?: getString(R_common.string.unknown)).getInitials()
-                    textViewRecipientInitials.setInitialsColor(
-                        initialsColor,
-                        R_common.drawable.chat_initials_circle
-                    )
+                    launch(dispatchers.mainImmediate) {
+                        textViewRecipientInitials.text = (directPayment.recipientAlias?.value ?: getString(R_common.string.unknown)).getInitials()
+                        textViewRecipientInitials.setInitialsColor(
+                            initialsColor,
+                            R_common.drawable.chat_initials_circle
+                        )
+                    }
                 }.let { job ->
                     holderJobs.add(job)
                 }
@@ -627,8 +637,7 @@ internal inline fun LayoutMessageHolderBinding.setBubbleInvoiceLayout(
 // TODO: Refactor setting of spaces out of this extension function
 @MainThread
 internal fun LayoutMessageHolderBinding.setBubbleBackground(
-    viewState: MessageHolderViewState,
-    recyclerWidth: Px,
+    viewState: MessageHolderViewState
 ) {
     if (viewState.background is BubbleBackground.Gone) {
         includeMessageHolderBubble.root.gone
@@ -675,100 +684,8 @@ internal fun LayoutMessageHolderBinding.setBubbleBackground(
         }
     }
 
-    val defaultMargins = root.context.resources
-        .getDimensionPixelSize(common_R.dimen.default_layout_margin)
-
-    if (viewState.background is BubbleBackground.Gone && viewState.background.setSpacingEqual) {
-
-        spaceMessageHolderLeft.updateLayoutParams { width = defaultMargins }
-        spaceMessageHolderRight.updateLayoutParams { width = defaultMargins }
-
-    } else {
-        val defaultReceivedLeftMargin = root.context.resources
-            .getDimensionPixelSize(R.dimen.message_holder_space_width_left)
-
-        val defaultSentRightMargin = root.context.resources
-            .getDimensionPixelSize(R.dimen.message_holder_space_width_right)
-
-        val holderWidth = recyclerWidth.value - (defaultMargins * 2)
-        val bubbleFixedWidth = (holderWidth - defaultReceivedLeftMargin - defaultSentRightMargin - (holderWidth * BubbleBackground.SPACE_WIDTH_MULTIPLE)).toInt()
-
-        val messageReactionsWidth = viewState.bubbleReactionBoosts?.let {
-            root.context.resources.getDimensionPixelSize(R.dimen.message_type_boost_width)
-        } ?: 0
-
-        var bubbleWidth: Int = when {
-            viewState.message?.shouldAdaptBubbleWidth == true -> {
-
-                val textWidth = viewState.bubbleMessage?.let { nnBubbleMessage ->
-                    (includeMessageHolderBubble.textViewMessageText.paint.measureText(
-                        nnBubbleMessage.text ?: getString(R_common.string.decryption_error)
-                    ) + (defaultMargins * 2)).toInt()
-                } ?: 0
-
-                val amountWidth = viewState.bubbleDirectPayment?.let { nnBubbleDirectPayment ->
-                    val paymentMargin = root.context.resources.getDimensionPixelSize(
-                        if (nnBubbleDirectPayment.isTribe) {
-                            R.dimen.tribe_payment_row_margin
-                        } else {
-                            R.dimen.payment_row_margin
-                        }
-                    )
-
-                    (includeMessageHolderBubble.includeMessageTypeDirectPayment.textViewSatsAmountReceived.paint.measureText(
-                        nnBubbleDirectPayment.amount.asFormattedString()
-                    ) + paymentMargin).toInt()
-                } ?: 0
-
-                val imageWidth = viewState.bubbleImageAttachment?.let {
-                    (bubbleFixedWidth * 0.8F).toInt()
-                } ?: 0
-
-                textWidth
-                    .coerceAtLeast(amountWidth)
-                    .coerceAtLeast(imageWidth)
-            }
-            viewState.message?.isPodcastBoost == true -> {
-                root.context.resources.getDimensionPixelSize(R.dimen.message_type_podcast_boost_width)
-            }
-            viewState.message?.isExpiredInvoice() == true -> {
-                root.context.resources.getDimensionPixelSize(R.dimen.message_type_expired_invoice_width)
-            }
-            viewState.message?.isSphinxCallLink == true -> {
-                (bubbleFixedWidth * 0.8F).toInt()
-            }
-            else -> {
-                bubbleFixedWidth
-            }
-        }
-
-        bubbleWidth = bubbleWidth
-            .coerceAtLeast(messageReactionsWidth)
-            .coerceAtMost(bubbleFixedWidth)
-
-        @Exhaustive
-        when (viewState) {
-            is MessageHolderViewState.Received -> {
-                spaceMessageHolderLeft.updateLayoutParams {
-                    width = defaultReceivedLeftMargin
-                }
-                spaceMessageHolderRight.updateLayoutParams {
-                    width = (holderWidth - defaultReceivedLeftMargin - bubbleWidth).toInt()
-                }
-            }
-            is MessageHolderViewState.Sent -> {
-                spaceMessageHolderLeft.updateLayoutParams {
-                    width = (holderWidth - defaultSentRightMargin - bubbleWidth).toInt()
-                }
-                spaceMessageHolderRight.updateLayoutParams {
-                    width = defaultSentRightMargin
-                }
-            }
-            is MessageHolderViewState.Separator -> { }
-
-            is MessageHolderViewState.ThreadHeader -> { }
-        }
-    }
+    spaceMessageHolderLeft.updateLayoutParams { width = viewState.spaceLeft ?: 0}
+    spaceMessageHolderRight.updateLayoutParams { width = viewState.spaceRight ?: 0 }
 }
 
 @MainThread
@@ -809,26 +726,13 @@ internal inline fun LayoutMessageHolderBinding.setMessagesSeparator(
 
 @MainThread
 @Suppress("NOTHING_TO_INLINE")
-internal inline fun LayoutMessageHolderBinding.setSearchHighlightedStatus(
-    searchStatus: LayoutState.SearchHighlightedStatus?
-) {
-    root.setBackgroundColor(
-        if (searchStatus != null) {
-            root.context.getColor(R_common.color.lightDivider)
-        } else {
-            root.context.getColor(android.R.color.transparent)
-        }
-    )
-}
-
-@MainThread
-@Suppress("NOTHING_TO_INLINE")
 internal inline fun LayoutMessageHolderBinding.setStatusHeader(
     statusHeader: LayoutState.MessageStatusHeader?,
     holderJobs: ArrayList<Job>,
     dispatchers: CoroutineDispatchers,
-    lifecycleScope: CoroutineScope,
-    userColorsHelper: UserColorsHelper
+    holderScope: CoroutineScope,
+    userColorsHelper: UserColorsHelper,
+    colorCache: ColorCache
 ) {
     includeMessageStatusHeader.apply {
         if (statusHeader == null) {
@@ -847,14 +751,9 @@ internal inline fun LayoutMessageHolderBinding.setStatusHeader(
                     } else {
                         visible
                         text = name
-                        lifecycleScope.launch(dispatchers.mainImmediate) {
+                        holderScope.launch(dispatchers.mainImmediate) {
                             textViewMessageStatusReceivedSenderName.setTextColor(
-                                Color.parseColor(
-                                    userColorsHelper.getHexCodeForKey(
-                                        statusHeader.colorKey,
-                                        root.context.getRandomHexCode()
-                                    )
-                                )
+                                colorCache.getColor(statusHeader.colorKey, root.context, holderScope, userColorsHelper)
                             )
                         }.let { job ->
                             holderJobs.add(job)
@@ -888,9 +787,9 @@ internal inline fun LayoutMessageHolderBinding.setStatusHeader(
 
                 textViewMessageStatusSentBoltIcon.setTextColor(boltColor)
 
-                if (statusHeader.errorMessage?.isNotEmpty() == true) {
-                    textViewMessageStatusSentFailedText.text = statusHeader.errorMessage
-                }
+//                if (statusHeader.errorMessage?.isNotEmpty() == true) {
+//                    textViewMessageStatusSentFailedText.text = statusHeader.errorMessage
+//                }
 
             } else {
                 textViewMessageStatusReceivedTimestamp.text = statusHeader.timestamp
@@ -1004,6 +903,7 @@ internal inline fun LayoutMessageHolderBinding.setDeletedOrFlaggedMessageLayout(
     }
 }
 
+@SuppressLint("SuspiciousIndentation")
 @MainThread
 internal fun LayoutMessageHolderBinding.setInvoiceDottedLinesLayout(
     viewState: MessageHolderViewState
@@ -1065,15 +965,16 @@ internal inline fun LayoutMessageHolderBinding.setInvoicePaymentLayout(
 
 @MainThread
 @Suppress("NOTHING_TO_INLINE")
-internal inline fun LayoutMessageHolderBinding.setBubbleThreadLayout(
+internal suspend inline fun LayoutMessageHolderBinding.setBubbleThreadLayout(
     thread: LayoutState.Bubble.ContainerThird.Thread?,
     holderJobs: ArrayList<Job>,
     dispatchers: CoroutineDispatchers,
-    lifecycleScope: CoroutineScope,
+    holderScope: CoroutineScope,
     userColorsHelper: UserColorsHelper,
+    colorCache: ColorCache,
     audioPlayerController: AudioPlayerController,
-    loadImage: (ImageView, String) -> Unit,
-    lastReplyImage: (ImageView, ConstraintLayout, String, MessageMedia?) -> Unit
+    loadImage: suspend (ImageView, String) -> Unit,
+    lastReplyImage: suspend (ImageView, ConstraintLayout, String, MessageMedia?) -> Unit
 ) {
     includeMessageHolderBubble.includeLayoutMessageThread.apply {
         if (thread == null) {
@@ -1090,11 +991,12 @@ internal inline fun LayoutMessageHolderBinding.setBubbleThreadLayout(
                 layoutLayoutChatImageSmallInitialHolderOne,
                 holderJobs,
                 dispatchers,
-                lifecycleScope,
+                holderScope,
                 userColorsHelper,
                 null,
                 thread.isSentMessage,
                 false,
+                colorCache,
                 loadImage
             )
 
@@ -1105,11 +1007,12 @@ internal inline fun LayoutMessageHolderBinding.setBubbleThreadLayout(
                 layoutLayoutChatImageSmallInitialHolderTwo,
                 holderJobs,
                 dispatchers,
-                lifecycleScope,
+                holderScope,
                 userColorsHelper,
                 null,
                 thread.isSentMessage,
                 false,
+                colorCache,
                 loadImage
             )
 
@@ -1120,11 +1023,12 @@ internal inline fun LayoutMessageHolderBinding.setBubbleThreadLayout(
                 layoutLayoutChatImageSmallInitialHolderFour,
                 holderJobs,
                 dispatchers,
-                lifecycleScope,
+                holderScope,
                 userColorsHelper,
                 null,
                 thread.isSentMessage,
                 true,
+                colorCache,
                 loadImage
             )
 
@@ -1185,8 +1089,9 @@ internal inline fun LayoutMessageHolderBinding.setBubbleThreadLayout(
                         audioPlayerController,
                         dispatchers,
                         holderJobs,
-                        lifecycleScope,
-                        true)
+                        holderScope,
+                        true
+                    )
                 }
                 is LayoutState.Bubble.ContainerSecond.FileAttachment -> {
                     constraintMediaThreadContainer.visible
@@ -1214,6 +1119,7 @@ internal inline fun LayoutMessageHolderBinding.setBubbleThreadLayout(
 @Suppress("NOTHING_TO_INLINE")
 internal inline fun LayoutMessageHolderBinding.setBubbleMessageLayout(
     message: LayoutState.Bubble.ContainerThird.Message?,
+    searchStatus: LayoutState.SearchHighlightedStatus?,
     onSphinxInteractionListener: SphinxUrlSpan.OnInteractionListener?
 ) {
     includeMessageHolderBubble.textViewMessageText.apply {
@@ -1244,6 +1150,7 @@ internal inline fun LayoutMessageHolderBinding.setBubbleMessageLayout(
             SphinxHighlightingTool.addMarkdowns(
                 this,
                 message.highlightedTexts,
+                searchStatus?.highlightedTexts ?: emptyList(),
                 message.boldTexts,
                 message.markdownLinkTexts,
                 onSphinxInteractionListener,
@@ -1259,7 +1166,7 @@ internal inline fun LayoutMessageHolderBinding.setBubbleMessageLayout(
 internal inline fun LayoutMessageHolderBinding.setBubblePaidMessageLayout(
     dispatchers: CoroutineDispatchers,
     holderJobs: ArrayList<Job>,
-    lifecycleScope: CoroutineScope,
+    holderScope: CoroutineScope,
     viewState: MessageHolderViewState,
     onSphinxInteractionListener: SphinxUrlSpan.OnInteractionListener?
 ) {
@@ -1295,9 +1202,10 @@ internal inline fun LayoutMessageHolderBinding.setBubblePaidMessageLayout(
                 }
             }
 
-            lifecycleScope.launch(dispatchers.mainImmediate) {
+            holderScope.launch(dispatchers.mainImmediate) {
                 setBubbleMessageLayout(
                     viewState.retrievePaidTextMessageContent(),
+                    viewState.searchHighlightedStatus,
                     onSphinxInteractionListener
                 )
             }.let { job ->
@@ -1311,20 +1219,22 @@ internal inline fun LayoutMessageHolderBinding.setBubblePaidMessageLayout(
 internal fun LayoutMessageHolderBinding.setBubbleMessageLinkPreviewLayout(
     dispatchers: CoroutineDispatchers,
     holderJobs: ArrayList<Job>,
+    disposables: ArrayList<Disposable>,
     imageLoader: ImageLoader<ImageView>,
-    lifecycleScope: CoroutineScope,
+    holderScope: CoroutineScope,
     viewState: MessageHolderViewState,
     onRowLayoutListener: MessageListAdapter.OnRowLayoutListener?,
 ) {
     includeMessageHolderBubble.apply {
 
-    if (viewState.message?.thread?.isNotEmpty() == true) {
-        includeMessageLinkPreviewContact.root.gone
-        includeMessageLinkPreviewTribe.root.gone
-        includeMessageLinkPreviewUrl.root.gone
+        if (viewState.message?.thread?.isNotEmpty() == true) {
+            includeMessageLinkPreviewContact.root.gone
+            includeMessageLinkPreviewTribe.root.gone
+            includeMessageLinkPreviewUrl.root.gone
 
-        return
-    }
+            return
+        }
+
         val previewLink = viewState.messageLinkPreview
 
         val placeHolderAndTextColor = ContextCompat.getColor(
@@ -1362,7 +1272,7 @@ internal fun LayoutMessageHolderBinding.setBubbleMessageLinkPreviewLayout(
                         if (viewState.isReceived) R.drawable.background_received_rounded_corner_dashed_border_button else R.drawable.background_sent_rounded_corner_dashed_border_button
                     )
 
-                    lifecycleScope.launch(dispatchers.mainImmediate) {
+                    holderScope.launch(dispatchers.mainImmediate) {
                         progressBarLinkPreview.visible
 
                         val state =
@@ -1374,18 +1284,14 @@ internal fun LayoutMessageHolderBinding.setBubbleMessageLinkPreviewLayout(
 
                                 imageViewMessageLinkPreviewContactAvatar.clearColorFilter()
 
-                                launch {
-                                    imageLoader.load(
-                                        imageViewMessageLinkPreviewContactAvatar,
-                                        nnPhotoUrl.value,
-                                        ImageLoaderOptions.Builder()
-                                            .placeholderResId(R_common.drawable.ic_add_contact)
-                                            .transformation(Transformation.CircleCrop)
-                                            .build(),
-                                    )
-                                }.let { job ->
-                                    holderJobs.add(job)
-                                }
+                                imageLoader.load(
+                                    imageViewMessageLinkPreviewContactAvatar,
+                                    nnPhotoUrl.value,
+                                    ImageLoaderOptions.Builder()
+                                        .placeholderResId(R_common.drawable.ic_add_contact)
+                                        .transformation(Transformation.CircleCrop)
+                                        .build(),
+                                ).also { disposables.add(it) }
                             }
                             layoutConstraintLinkPreviewContactDashedBorder.goneIfFalse(state.showBanner)
                             textViewMessageLinkPreviewAddContactBanner.goneIfFalse(state.showBanner)
@@ -1427,7 +1333,7 @@ internal fun LayoutMessageHolderBinding.setBubbleMessageLinkPreviewLayout(
                         if (viewState.isReceived) R.drawable.background_received_rounded_corner_dashed_border_button else R.drawable.background_sent_rounded_corner_dashed_border_button
                     )
 
-                    lifecycleScope.launch(dispatchers.mainImmediate) {
+                    holderScope.launch(dispatchers.mainImmediate) {
                         progressBarLinkPreview.visible
 
                         val state =
@@ -1448,18 +1354,14 @@ internal fun LayoutMessageHolderBinding.setBubbleMessageLinkPreviewLayout(
                             state.imageUrl?.let { url ->
                                 imageViewMessageLinkPreviewTribe.clearColorFilter()
 
-                                launch {
-                                    imageLoader.load(
-                                        imageViewMessageLinkPreviewTribe,
-                                        url.value,
-                                        ImageLoaderOptions.Builder()
-                                            .placeholderResId(R_common.drawable.ic_tribe)
-                                            .transformation(Transformation.RoundedCorners(Px(5f),Px(5f),Px(5f),Px(5f)))
-                                            .build(),
-                                    )
-                                }.let { job ->
-                                    holderJobs.add(job)
-                                }
+                                imageLoader.load(
+                                    imageViewMessageLinkPreviewTribe,
+                                    url.value,
+                                    ImageLoaderOptions.Builder()
+                                        .placeholderResId(R_common.drawable.ic_tribe)
+                                        .transformation(Transformation.RoundedCorners(Px(5f),Px(5f),Px(5f),Px(5f)))
+                                        .build(),
+                                ).also { disposables.add(it) }
 
                                 onRowLayoutListener?.onRowHeightChanged()
                             }
@@ -1491,64 +1393,67 @@ internal fun LayoutMessageHolderBinding.setBubbleMessageLinkPreviewLayout(
 
                     // reset view
                     layoutConstraintUrlLinkPreview.gone
+                    layoutConstraintUrlLinkPreviewNotAvailable.gone
                     textViewMessageLinkPreviewUrlDomain.gone
                     textViewMessageLinkPreviewUrlDescription.gone
                     textViewMessageLinkPreviewUrlTitle.gone
                     imageViewMessageLinkPreviewUrlFavicon.gone
                     imageViewMessageLinkPreviewUrlMainImage.gone
 
-
-                    lifecycleScope.launch(dispatchers.mainImmediate) {
+                    holderScope.launch(dispatchers.mainImmediate) {
                         progressBarLinkPreview.visible
 
-                        val state =
-                            viewState.retrieveLinkPreview() as? LayoutState.Bubble.ContainerThird.LinkPreview.HttpUrlPreview
-
-                        if (state != null) {
-                            textViewMessageLinkPreviewUrlDomain.apply domain@ {
-                                this@domain.text = state.domainHost.value
-                                this@domain.visible
-                            }
-                            textViewMessageLinkPreviewUrlDescription.apply desc@ {
-                                this@desc.text = state.description?.value
-                                this@desc.goneIfTrue(state.description == null)
-                            }
-                            textViewMessageLinkPreviewUrlTitle.apply title@ {
-                                this@title.text = state.title?.value
-                                this@title.goneIfTrue( state.title == null)
-                            }
-                            imageViewMessageLinkPreviewUrlFavicon.apply favIcon@ {
-                                state.favIconUrl?.let { url ->
-                                    launch {
+                        when (val state = viewState.retrieveLinkPreview()) {
+                            is LayoutState.Bubble.ContainerThird.LinkPreview.HttpUrlPreview -> {
+                                textViewMessageLinkPreviewUrlDomain.apply domain@ {
+                                    this@domain.text = state.domainHost.value
+                                    this@domain.visible
+                                }
+                                textViewMessageLinkPreviewUrlDescription.apply desc@ {
+                                    this@desc.text = state.description?.value
+                                    this@desc.goneIfTrue(state.description == null)
+                                }
+                                textViewMessageLinkPreviewUrlTitle.apply title@ {
+                                    this@title.text = state.title?.value
+                                    this@title.goneIfTrue( state.title == null)
+                                }
+                                imageViewMessageLinkPreviewUrlFavicon.apply favIcon@ {
+                                    state.favIconUrl?.let { url ->
                                         imageLoader.load(
                                             imageView = this@favIcon,
                                             url = url.value,
-                                        )
-                                    }.let { job ->
-                                        holderJobs.add(job)
+                                        ).also { disposables.add(it) }
+                                        this@favIcon.visible
                                     }
-                                    this@favIcon.visible
                                 }
-                            }
-                            imageViewMessageLinkPreviewUrlMainImage.apply main@ {
-                                state.imageUrl?.let { url ->
-                                    launch {
+                                imageViewMessageLinkPreviewUrlMainImage.apply main@ {
+                                    state.imageUrl?.let { url ->
                                         imageLoader.load(
                                             imageView = this@main,
                                             url = url.value,
-                                        )
-                                    }.let { job ->
-                                        holderJobs.add(job)
+                                        ).also { disposables.add(it) }
+                                        this@main.visible
                                     }
-                                    this@main.visible
                                 }
+
+                                progressBarLinkPreview.gone
+                                layoutConstraintUrlLinkPreview.visible
                             }
+                            is LayoutState.Bubble.ContainerThird.LinkPreview.NoAvailablePreview -> {
+                                textViewMessageLinkPreviewUrlTitleNotAvailable.visible
 
-                            progressBarLinkPreview.gone
-                            layoutConstraintUrlLinkPreview.visible
+                                textViewMessageLinkPreviewUrlDomainNotAvailable.apply domain@ {
+                                    this@domain.text = state.url
+                                    this@domain.visible
+                                }
 
-                            onRowLayoutListener?.onRowHeightChanged()
+                                progressBarLinkPreview.gone
+                                layoutConstraintUrlLinkPreviewNotAvailable.visible
+                            }
+                            else -> {}
                         }
+
+                        onRowLayoutListener?.onRowHeightChanged()
                     }.let { job ->
                         holderJobs.add(job)
                     }
@@ -1731,10 +1636,10 @@ internal inline fun LayoutMessageHolderBinding.setBubblePaidMessageSentStatusLay
 
 @MainThread
 @Suppress("NOTHING_TO_INLINE")
-internal inline fun LayoutMessageHolderBinding.setBubbleImageAttachment(
+internal suspend inline fun LayoutMessageHolderBinding.setBubbleImageAttachment(
     imageAttachment: LayoutState.Bubble.ContainerSecond.ImageAttachment?,
     isThread: Boolean? = null,
-    loadImage: (ImageView, ConstraintLayout, String, MessageMedia?) -> Unit,
+    loadImage: suspend (ImageView, ConstraintLayout, String, MessageMedia?) -> Unit,
 ) {
     val currentLayout = if (isThread == true) {
         includeMessageHolderBubble.includeLayoutMessageThread.includeMessageTypeImageAttachment
@@ -1780,7 +1685,7 @@ internal inline fun LayoutMessageHolderBinding.setBubbleAudioAttachment(
     audioPlayerController: AudioPlayerController,
     dispatchers: CoroutineDispatchers,
     holderJobs: ArrayList<Job>,
-    lifecycleScope: CoroutineScope,
+    holderScope: CoroutineScope,
     isThread: Boolean? = null
 ) {
     val currentLayout = if (isThread == true) {
@@ -1797,13 +1702,13 @@ internal inline fun LayoutMessageHolderBinding.setBubbleAudioAttachment(
             }
             is LayoutState.Bubble.ContainerSecond.AudioAttachment.FileAvailable -> {
                 root.visible
-                lifecycleScope.launch(dispatchers.io) {
+                holderScope.launch(dispatchers.io) {
                     audioPlayerController.getAudioState(audioAttachment)?.value?.let { state ->
-                        lifecycleScope.launch(dispatchers.mainImmediate) {
+                        holderScope.launch(dispatchers.mainImmediate) {
                             setAudioAttachmentLayoutForState(state)
                         }
                     } ?: run {
-                        lifecycleScope.launch(dispatchers.mainImmediate) {
+                        holderScope.launch(dispatchers.mainImmediate) {
                             setAudioAttachmentLayoutForState(
                                 AudioMessageState(
                                     audioAttachment.messageId,
@@ -1845,7 +1750,6 @@ internal inline fun LayoutMessageHolderBinding.setBubbleAudioAttachment(
 internal inline fun LayoutMessageTypeAttachmentAudioBinding.setAudioAttachmentLayoutForState(
     state: AudioMessageState
 ) {
-
     seekBarAttachmentAudio.progress = state.progress.toInt()
     textViewAttachmentAudioRemainingDuration.text = state.remainingSeconds.getHHMMString()
 
@@ -1887,7 +1791,7 @@ internal inline fun LayoutMessageHolderBinding.setBubblePodcastClip(
     audioPlayerController: AudioPlayerController,
     dispatchers: CoroutineDispatchers,
     holderJobs: ArrayList<Job>,
-    lifecycleScope: CoroutineScope,
+    holderScope: CoroutineScope,
 ) {
     includeMessageHolderBubble.includeMessageTypePodcastClip.apply {
         if (podcastClipViewState == null) {
@@ -1896,13 +1800,13 @@ internal inline fun LayoutMessageHolderBinding.setBubblePodcastClip(
             root.visible
             textViewPodcastEpisodeTitle.text = podcastClipViewState.podcastClip.title
 
-            lifecycleScope.launch(dispatchers.io) {
+            holderScope.launch(dispatchers.io) {
                 audioPlayerController.getAudioState(podcastClipViewState)?.value?.let { state ->
-                    lifecycleScope.launch(dispatchers.mainImmediate) {
+                    holderScope.launch(dispatchers.mainImmediate) {
                         setPodcastClipLayoutForState(state)
                     }
                 } ?: run {
-                    lifecycleScope.launch(dispatchers.mainImmediate) {
+                    holderScope.launch(dispatchers.mainImmediate) {
                         setPodcastClipLayoutForState(
                             AudioMessageState(
                                 podcastClipViewState.messageId,
@@ -2068,6 +1972,9 @@ internal inline fun LayoutMessageHolderBinding.setBubbleFileAttachment(
 
                 textViewAttachmentFileSize.text = "-"
 
+                buttonAttachmentFileDownload.goneIfFalse(
+                    fileAttachment.pendingPayment
+                )
                 progressBarAttachmentFileDownload.goneIfFalse(
                     !fileAttachment.pendingPayment
                 )
@@ -2098,8 +2005,9 @@ internal inline fun LayoutMessageHolderBinding.setBubbleReactionBoosts(
     boost: LayoutState.Bubble.ContainerFourth.Boost?,
     holderJobs: ArrayList<Job>,
     dispatchers: CoroutineDispatchers,
-    lifecycleScope: CoroutineScope,
+    holderScope: CoroutineScope,
     userColorsHelper: UserColorsHelper,
+    colorCache: ColorCache,
     loadImage: (ImageView, String) -> Unit,
 ) {
     includeMessageHolderBubble.includeMessageTypeBoost.apply {
@@ -2150,8 +2058,9 @@ internal inline fun LayoutMessageHolderBinding.setBubbleReactionBoosts(
                     includeBoostReactionImageHolder1,
                     holderJobs,
                     dispatchers,
-                    lifecycleScope,
+                    holderScope,
                     userColorsHelper,
+                    colorCache,
                     loadImage,
                 )
 
@@ -2161,8 +2070,9 @@ internal inline fun LayoutMessageHolderBinding.setBubbleReactionBoosts(
                     includeBoostReactionImageHolder2,
                     holderJobs,
                     dispatchers,
-                    lifecycleScope,
+                    holderScope,
                     userColorsHelper,
+                    colorCache,
                     loadImage,
                 )
 
@@ -2172,8 +2082,9 @@ internal inline fun LayoutMessageHolderBinding.setBubbleReactionBoosts(
                     includeBoostReactionImageHolder3,
                     holderJobs,
                     dispatchers,
-                    lifecycleScope,
+                    holderScope,
                     userColorsHelper,
+                    colorCache,
                     loadImage,
                 )
 
@@ -2196,8 +2107,9 @@ internal inline fun LayoutMessageHolderBinding.setReactionBoostSender(
     imageHolderBinding: LayoutChatImageSmallInitialHolderBinding,
     holderJobs: ArrayList<Job>,
     dispatchers: CoroutineDispatchers,
-    lifecycleScope: CoroutineScope,
+    holderScope: CoroutineScope,
     userColorsHelper: UserColorsHelper,
+    colorCache: ColorCache,
     loadImage: (ImageView, String) -> Unit,
 ) {
     container.let { imageHolderContainer ->
@@ -2212,15 +2124,15 @@ internal inline fun LayoutMessageHolderBinding.setReactionBoostSender(
                 textViewInitialsName.text = (boostSenderHolder.alias?.value ?: root.context.getString(R_common.string.unknown)).getInitials()
                 imageViewChatPicture.gone
 
-                lifecycleScope.launch(dispatchers.mainImmediate) {
-                    textViewInitialsName.setBackgroundRandomColor(
-                        R_common.drawable.chat_initials_circle,
-                        Color.parseColor(
-                            userColorsHelper.getHexCodeForKey(
-                                boostSenderHolder.colorKey,
-                                root.context.getRandomHexCode(),
-                            )
-                        ))
+                holderScope.launch(dispatchers.default) {
+                    val color = colorCache.getColor(boostSenderHolder.colorKey, root.context, holderScope, userColorsHelper)
+
+                    launch(dispatchers.mainImmediate) {
+                        textViewInitialsName.setBackgroundRandomColor(
+                            R_common.drawable.chat_initials_circle,
+                            color
+                        )
+                    }
                 }.let { job ->
                     holderJobs.add(job)
                 }
@@ -2237,19 +2149,20 @@ internal inline fun LayoutMessageHolderBinding.setReactionBoostSender(
 
 @MainThread
 @Suppress("NOTHING_TO_INLINE")
-internal inline fun LayoutMessageHolderBinding.setReplyRow(
+internal suspend inline fun LayoutMessageHolderBinding.setReplyRow(
     replyUserHolder: ReplyUserHolder?,
     container: ConstraintLayout,
     backgroundContainer: ConstraintLayout,
     imageHolderBinding: LayoutChatImageSmallInitialHolderBinding,
     holderJobs: ArrayList<Job>,
     dispatchers: CoroutineDispatchers,
-    lifecycleScope: CoroutineScope,
+    holderScope: CoroutineScope,
     userColorsHelper: UserColorsHelper,
     repliesNumber: String? = null,
     isSentMessage: Boolean,
     isLastReply: Boolean = false,
-    loadImage: (ImageView, String) -> Unit,
+    colorCache: ColorCache,
+    loadImage: suspend (ImageView, String) -> Unit,
 ) {
     container.let { replyContainer ->
         if (replyUserHolder == null) {
@@ -2274,7 +2187,7 @@ internal inline fun LayoutMessageHolderBinding.setReplyRow(
 
                 backgroundContainer.setBackgroundResource(rowBackground)
 
-                val text = (replyUserHolder?.alias?.value ?: root.context.getString(
+                val text = (replyUserHolder.alias?.value ?: root.context.getString(
                     R_common.string.unknown
                 )).getInitials()
 
@@ -2282,21 +2195,20 @@ internal inline fun LayoutMessageHolderBinding.setReplyRow(
                 textViewInitialsName.text = text
                 imageViewChatPicture.gone
 
-                lifecycleScope.launch(dispatchers.mainImmediate) {
-                    textViewInitialsName.setBackgroundRandomColor(
-                        R_common.drawable.chat_initials_circle,
-                        Color.parseColor(
-                            userColorsHelper.getHexCodeForKey(
-                                replyUserHolder!!.colorKey,
-                                root.context.getRandomHexCode(),
-                            )
+                holderScope.launch(dispatchers.default) {
+                    val color = colorCache.getColor(replyUserHolder.colorKey, root.context, holderScope, userColorsHelper)
+
+                    launch(dispatchers.mainImmediate) {
+                        textViewInitialsName.setBackgroundRandomColor(
+                            R_common.drawable.chat_initials_circle,
+                            color
                         )
-                    )
+                    }
                 }.let { job ->
                     holderJobs.add(job)
                 }
 
-                replyUserHolder!!.photoUrl?.let { photoUrl ->
+                replyUserHolder.photoUrl?.let { photoUrl ->
                     textViewInitialsName.gone
                     imageViewChatPicture.visible
                     loadImage(imageViewChatPicture, photoUrl.value)
@@ -2541,8 +2453,9 @@ internal inline fun LayoutMessageHolderBinding.setBubbleReplyMessage(
     replyMessage: LayoutState.Bubble.ContainerFirst.ReplyMessage?,
     holderJobs: ArrayList<Job>,
     dispatchers: CoroutineDispatchers,
-    lifecycleScope: CoroutineScope,
+    holderScope: CoroutineScope,
     userColorsHelper: UserColorsHelper,
+    colorCache: ColorCache,
     loadImage: (ImageView, String, MessageMedia?) -> Unit
 ) {
     includeMessageHolderBubble.includeMessageReply.apply {
@@ -2585,16 +2498,15 @@ internal inline fun LayoutMessageHolderBinding.setBubbleReplyMessage(
 
             textViewReplySenderLabel.text = replyMessage.sender
 
-            lifecycleScope.launch(dispatchers.mainImmediate) {
-                viewReplyBarLeading.setBackgroundRandomColor(
-                    null,
-                    Color.parseColor(
-                        userColorsHelper.getHexCodeForKey(
-                            replyMessage.colorKey,
-                            root.context.getRandomHexCode(),
-                        )
+            holderScope.launch(dispatchers.default) {
+                val color = colorCache.getColor(replyMessage.colorKey, root.context, holderScope, userColorsHelper)
+
+                launch(dispatchers.mainImmediate) {
+                    viewReplyBarLeading.setBackgroundRandomColor(
+                        null,
+                        color
                     )
-                )
+                }
             }.let { job ->
                 holderJobs.add(job)
             }
@@ -2609,6 +2521,43 @@ internal inline fun LayoutMessageHolderBinding.setBubbleReplyMessage(
                 textViewReplyMessageLabel.text = replyMessage.text
                 textViewReplyMessageLabel.goneIfFalse(replyMessage.text.isNotEmpty())
             }
+        }
+    }
+}
+
+class ColorCache(
+    private val dispatchers: CoroutineDispatchers
+) {
+    private val colorCache = mutableMapOf<String, Int>()
+    private val pendingRequests = mutableMapOf<String, Deferred<Int>>()
+
+    suspend fun getColor(
+        colorKey: String,
+        context: Context,
+        scope: CoroutineScope,
+        userColorsHelper: UserColorsHelper
+    ): Int {
+        // Return cached color if available
+        colorCache[colorKey]?.let { return it }
+
+        // Check if there's already a pending request for this key
+        pendingRequests[colorKey]?.let { return it.await() }
+
+        // Create new request
+        val deferred = scope.async(dispatchers.default) {
+            val hexCode = userColorsHelper.getHexCodeForKey(colorKey, context.getRandomHexCode())
+            val color = Color.parseColor(hexCode)
+
+            // Cache the result
+            colorCache[colorKey] = color
+
+            color
+        }
+
+        pendingRequests[colorKey] = deferred
+
+        return deferred.await().also {
+            pendingRequests.remove(colorKey)
         }
     }
 }

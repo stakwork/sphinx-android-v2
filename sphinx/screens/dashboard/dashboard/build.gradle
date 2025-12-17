@@ -52,6 +52,7 @@ dependencies {
     implementation project(path: ':sphinx:application:common:resources')
     implementation project(path: ':sphinx:application:common:swipe-reveal-layout')
     implementation project(path: ':sphinx:application:common:highlighting-tool')
+    implementation project(path: ':sphinx:activity:concepts:concept-grapheneos-manager')
 
     implementation project(path: ':sphinx:application:data:concepts:repositories:concept-repository-actions')
     implementation project(path: ':sphinx:application:data:concepts:repositories:concept-repository-chat')
@@ -82,7 +83,6 @@ dependencies {
     implementation deps.lottie.sdk
     implementation deps.square.moshi
     implementation deps.msgpack.sdk
-    implementation deps.jitsi.sdk
     kapt kaptDeps.google.hilt
 
 

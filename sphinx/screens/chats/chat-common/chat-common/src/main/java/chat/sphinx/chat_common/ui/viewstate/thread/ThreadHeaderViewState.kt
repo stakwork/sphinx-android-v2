@@ -8,7 +8,10 @@ import io.matthewnelson.concept_views.viewstate.ViewState
 sealed class ThreadHeaderViewState: ViewState<ThreadHeaderViewState>() {
 
     object Idle: ThreadHeaderViewState()
-    object BasicHeader: ThreadHeaderViewState()
+
+    data class BasicHeader(
+        val isFullHeaderInitialized: Boolean = false
+    ): ThreadHeaderViewState()
 
     data class FullHeader(
         val senderInfo: Triple<PhotoUrl?, ContactAlias?, String>?,
@@ -18,7 +21,8 @@ sealed class ThreadHeaderViewState: ViewState<ThreadHeaderViewState>() {
         val imageAttachment: LayoutState.Bubble.ContainerSecond.ImageAttachment? = null,
         val videoAttachment: LayoutState.Bubble.ContainerSecond.VideoAttachment? = null,
         val fileAttachment: LayoutState.Bubble.ContainerSecond.FileAttachment? = null,
-        val audioAttachment: LayoutState.Bubble.ContainerSecond.AudioAttachment? = null
+        val audioAttachment: LayoutState.Bubble.ContainerSecond.AudioAttachment? = null,
+        val isFirstTimeShowing: Boolean = true
     ): ThreadHeaderViewState()
 
 }

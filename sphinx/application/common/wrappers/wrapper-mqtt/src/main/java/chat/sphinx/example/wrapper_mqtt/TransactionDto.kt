@@ -19,7 +19,7 @@ data class TransactionDto(
     val amount: Long,
     val payment_hash: String?,
     val payment_request: String?,
-    val date: DateTime?,
+    val ts: Long?,
     val reply_uuid: String?,
     val error_message: String?,
     val message_content: String?

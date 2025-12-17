@@ -9,7 +9,7 @@ import chat.sphinx.kotlin_response.ResponseError
 import chat.sphinx.wrapper_common.feed.FeedType
 import chat.sphinx.wrapper_feed.FeedReferenceId
 import chat.sphinx.wrapper_feed.FeedTitle
-import chat.sphinx.wrapper_podcast.ChapterResponseDto
+import chat.sphinx.wrapper_common.ChapterResponseDto
 import chat.sphinx.wrapper_podcast.PodcastEpisode
 import kotlinx.coroutines.flow.Flow
 
@@ -23,13 +23,19 @@ abstract class NetworkQueryFeedSearch {
         feedType: FeedType,
     ): Flow<LoadResponse<List<FeedSearchResultDto>, ResponseError>>
 
-    abstract fun checkIfEpisodeNodeExists(episode: PodcastEpisode, feedTitle: FeedTitle): Flow<LoadResponse<EpisodeNodeResponseDto, ResponseError>>
+    abstract fun checkIfEpisodeNodeExists(
+        episode: PodcastEpisode?,
+        feedTitle: FeedTitle?,
+        youtubeVideoId: String? = null
+    ): Flow<LoadResponse<EpisodeNodeResponseDto, ResponseError>>
+
     abstract fun createStakworkProject(
-        podcastEpisode: PodcastEpisode,
-        feedTitle: FeedTitle,
+        podcastEpisode: PodcastEpisode?,
+        feedTitle: FeedTitle?,
         workflowId: Int,
         token: String,
-        referenceId: FeedReferenceId
+        referenceId: FeedReferenceId,
+        youtubeVideoId: String? = null
     ): Flow<LoadResponse<CreateProjectResponseDto, ResponseError>>
 
     abstract fun getEpisodeNodeDetails(referenceId: FeedReferenceId): Flow<LoadResponse<EpisodeNodeDetailsDto, ResponseError>>

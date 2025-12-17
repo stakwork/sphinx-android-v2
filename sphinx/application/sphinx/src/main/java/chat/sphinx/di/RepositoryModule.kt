@@ -86,11 +86,13 @@ object RepositoryModule {
             coreDBImpl.getSphinxDatabaseQueries().contactGetOwner()
                 .asFlow()
                 .mapToOneOrNull(dispatchers.io)
-                .map { it?.toContact() }
+                .map {
+                    it?.toContact()
+                }
         )
     }.stateIn(
         applicationScope,
-        SharingStarted.WhileSubscribed(5_000),
+        SharingStarted.Eagerly,
         null
     )
 

@@ -3,4 +3,7 @@
     <string name="label_text_videos_list_header">Videos</string>
     <string name="delete_download">Delete Download</string>
 
+    <string name="video_skip_ad_enabled" translatable="false">SKIP ADS ENABLED</string>
+    <string name="video_skip_ad_disabled" translatable="false">SKIP ADS DISABLED</string>
+    <string name="video_skip_ad_warning">Ad detected — skipping in 5 seconds…</string>
 </resources>

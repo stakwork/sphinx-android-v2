@@ -6,10 +6,10 @@ plugins {
 
 node {
     download = true
-    version = nodeVersion
-    npmVersion = ""
-    workDir = file(nodeWorkDir)
-    nodeProjectDir = file("$projectDir/src/test/resources")
+    version = "18.19.0"
+    // npmVersion = "9.8.1" // Optional: specify npm version
+    workDir = file("${project.buildDir}/nodejs")
+    nodeProjectDir = file("$projectDir")
 }
 
 compileTestJava.dependsOn(npmInstall)

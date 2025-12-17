@@ -10,7 +10,6 @@ import kotlinx.coroutines.withContext
 import okio.base64.decodeBase64ToArray
 import org.cryptonode.jncryptor.AES256JNCryptor
 import org.cryptonode.jncryptor.CryptorException
-import kotlin.jvm.Throws
 
 sealed class RedemptionCode {
 
@@ -70,7 +69,7 @@ sealed class RedemptionCode {
                 return NewInvite(code.trim())
             }
 
-            val words = code.trim().split("\\s+".toRegex())
+            val words = code.trim().split("\\s+".toRegex()).map { it.lowercase() }
             if (words.size == 12 && words.all { it.matches("[a-zA-Z]+".toRegex()) }) {
                 return MnemonicRestoration(words)
             }

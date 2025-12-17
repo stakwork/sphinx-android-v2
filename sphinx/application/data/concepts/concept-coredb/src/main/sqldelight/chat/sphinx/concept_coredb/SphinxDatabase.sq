@@ -13,6 +13,7 @@ import chat.sphinx.wrapper_chat.ChatStatus;
 import chat.sphinx.wrapper_chat.ChatType;
 import chat.sphinx.wrapper_chat.ChatUnlisted;
 import chat.sphinx.wrapper_chat.NotificationLevel;
+import chat.sphinx.wrapper_chat.OwnedTribe;
 import chat.sphinx.wrapper_chat.SecondBrainUrl;
 import chat.sphinx.wrapper_chat.TimezoneEnabled;
 import chat.sphinx.wrapper_chat.TimezoneIdentifier;
@@ -172,7 +173,8 @@ CREATE TABLE chatDbo(
     timezone_enabled            INTEGER         AS TimezoneEnabled DEFAULT 1,
     timezone_identifier         TEXT            AS TimezoneIdentifier DEFAULT NULL,
     remote_timezone_identifier  TEXT            AS RemoteTimezoneIdentifier DEFAULT NULL,
-    timezone_updated            INTEGER         AS TimezoneUpdated DEFAULT 1
+    timezone_updated            INTEGER         AS TimezoneUpdated DEFAULT 1,
+    is_my_tribe                 INTEGER         AS OwnedTribe DEFAULT 0
 );
 
 chatUpdateNameAndStatus:
@@ -189,6 +191,11 @@ WHERE id = ?;
 chatUpdateMuted:
 UPDATE chatDbo
 SET is_muted = :muted
+WHERE id = ?;
+
+chatUpdateOwnedTribe:
+UPDATE chatDbo
+SET is_my_tribe = :is_my_tribe
 WHERE id = ?;
 
 chatUpdateNotificationLevel:
@@ -303,7 +310,8 @@ chatUpsert {
         my_alias = :my_alias,
         pending_contact_ids = :pending_contact_ids,
         notify = :notify,
-        pin_message = :pin_message
+        pin_message = :pin_message,
+        is_my_tribe = :is_my_tribe
     WHERE id = :id;
 
     INSERT OR IGNORE INTO chatDbo(
@@ -329,7 +337,8 @@ chatUpsert {
         my_alias,
         pending_contact_ids,
         notify,
-        pin_message
+        pin_message,
+        is_my_tribe
     )
     VALUES (
         :id,
@@ -354,7 +363,8 @@ chatUpsert {
         :my_alias,
         :pending_contact_ids,
         :notify,
-        :pin_message
+        :pin_message,
+        :is_my_tribe
     );
 }
 
@@ -396,6 +406,16 @@ SET price_per_message = :price_per_message,
     photo_url = :photo_url,
     pin_message = :pin_message,
     second_brain_url = :second_brain_url
+WHERE id = ?;
+
+chatUpdateMyAlias:
+UPDATE chatDbo
+SET my_alias = :my_alias
+WHERE id = ?;
+
+chatUpdateMyPhotoUrl:
+UPDATE chatDbo
+SET my_photo_url = :my_photo_url
 WHERE id = ?;
 
 chatUpdateSeenByLastMessage:
@@ -629,6 +649,11 @@ SELECT *
 FROM inviteDbo
 WHERE id = ?;
 
+inviteGetAllByIds:
+SELECT *
+FROM inviteDbo
+WHERE id IN :invite_ids;
+
 inviteGetByInviteString:
 SELECT *
 FROM inviteDbo
@@ -823,6 +848,15 @@ CREATE TABLE messageDbo(
     remote_timezone_identifier  TEXT            AS RemoteTimezoneIdentifier DEFAULT NULL
 );
 
+messageGetAllCount:
+SELECT COUNT(*)
+FROM messageDbo;
+
+messageGetLowestIndex:
+SELECT MIN(id)
+FROM messageDbo
+WHERE chat_id = ?;
+
 messageGetAllReactionsByUUID:
 SELECT *
 FROM messageDbo
@@ -906,6 +940,13 @@ WHERE uuid = ?
 AND type IN(0, 6)
 LIMIT 1;
 
+messageGetAllToShowByUUID:
+SELECT *
+FROM messageDbo
+WHERE uuid IN ?
+AND type IN(0, 6)
+LIMIT 1;
+
 messageGetLowestProvisionalMessageId:
 SELECT id
 FROM messageDbo
@@ -961,6 +1002,7 @@ FROM messageDbo
 WHERE chat_id = :chat_id
   AND type IN (2, 3, 5, 6, 10, 11, 29);
 
+
 messageGetAllToShowByChatIdWithLimit:
 SELECT *
 FROM messageDbo
@@ -1008,6 +1050,28 @@ AND (
 )
 ORDER BY date DESC;
 
+messageGetAllCountToShowByChatId:
+SELECT COUNT(*)
+FROM messageDbo
+WHERE chat_id = ?
+AND (
+    type = 0 OR
+    type = 2 OR
+    type = 3 OR
+    type = 5 OR
+    type = 6 OR
+    type = 14 OR
+    type = 15 OR
+    type = 16 OR
+    type = 19 OR
+    type = 20 OR
+    type = 21 OR
+    type = 22 OR
+    type = 25 OR
+    (type = 29 AND reply_uuid IS NULL) OR
+    type = 32
+);
+
 messageGetUnseenIncomingMessageCountByChatId:
 SELECT COUNT(*)
 FROM messageDbo
@@ -1031,7 +1095,34 @@ LEFT JOIN chatDbo
 WHERE messageDbo.sender != :ownerId
 AND messageDbo.sender NOT IN :blocked_contact_ids
 AND messageDbo.seen = 0
+AND messageDbo.type NOT IN (10, 11, 33)
 AND chatDbo.type = :chatType;
+
+messageGetUnseenIncomingMessagesByChatType:
+SELECT *
+FROM messageDbo
+LEFT JOIN chatDbo
+    ON chatDbo.id = messageDbo.chat_id
+WHERE messageDbo.sender != :ownerId
+AND messageDbo.sender NOT IN :blocked_contact_ids
+AND messageDbo.seen = 0
+AND messageDbo.type NOT IN (10, 11, 33)
+AND chatDbo.type = :chatType;
+
+messageGetUnseenIncomingMessages:
+SELECT *
+FROM messageDbo
+WHERE messageDbo.sender != :ownerId
+AND messageDbo.seen = 0
+AND messageDbo.type NOT IN (10, 11, 33);
+
+messageGetUnseenIncomingMentions:
+SELECT *
+FROM messageDbo
+WHERE messageDbo.sender != :ownerId
+AND messageDbo.seen = 0
+AND push = 1
+AND messageDbo.type NOT IN (10, 11, 33);
 
 messageGetAmountSumForMessagesStartingWith:
 SELECT SUM(amount)
@@ -1044,10 +1135,21 @@ SELECT *
 FROM messageDbo
 WHERE id IN ?;
 
+messageGetMessagesByUUIDs:
+SELECT *
+FROM messageDbo
+WHERE uuid IN ?;
+
 messageGetByPaymentHashes:
 SELECT *
 FROM messageDbo
 WHERE payment_hash IN :payment_hashes;
+
+messageGetGenericPaymentMessages:
+SELECT *
+FROM messageDbo
+WHERE amount > 3
+AND type != 2;
 
 messagesSearchByTerm:
 SELECT *
@@ -1124,6 +1226,11 @@ UPDATE messageDbo
 SET uuid = :newUuid
 WHERE uuid = ?;
 
+messageUpdatePaymentHash:
+UPDATE messageDbo
+SET payment_hash = :payment_hash
+WHERE id = ?;
+
 messageUpdateSeenByChatIdAndId:
 UPDATE messageDbo
 SET seen = 1
@@ -1135,6 +1242,19 @@ UPDATE messageDbo
 SET remote_timezone_identifier = :remote_timezone_identifier
 WHERE chat_id = ?
 AND id = ?;
+
+messageGetRemoteTimezoneForAliases:
+SELECT m.*
+FROM messageDbo m
+INNER JOIN (
+    SELECT sender_alias, MAX(id) max_id
+    FROM messageDbo
+    WHERE sender_alias IN :aliases
+    AND remote_timezone_identifier IS NOT NULL
+    AND chat_id = :chat_id
+    GROUP BY sender_alias
+) latest ON m.sender_alias = latest.sender_alias AND m.id = latest.max_id
+WHERE m.chat_id = :chat_id;
 
 messageUpsert {
     UPDATE messageDbo
@@ -1226,13 +1346,35 @@ messageDeleteByUUID:
 DELETE FROM messageDbo
 WHERE uuid = ?;
 
-
 messageDeleteByChatId:
 DELETE FROM messageDbo
 WHERE chat_id = ?;
 
 messageDeleteAll:
 DELETE FROM messageDbo;
+
+messageGetRecentMessages:
+SELECT *
+FROM messageDbo
+WHERE chat_id = :chatId
+ORDER BY id DESC
+LIMIT :messageLimit;
+
+messageCountOlderThan:
+SELECT COUNT(*)
+FROM messageDbo
+WHERE chat_id = :chatId AND id < :thresholdId;
+
+messageDeleteOlderThan:
+DELETE FROM messageDbo
+WHERE chat_id = :chatId AND id < :thresholdId;
+
+messageGetIdThreshold:
+SELECT id
+FROM messageDbo
+WHERE chat_id = :chatId
+ORDER BY id DESC
+LIMIT 1 OFFSET :offsetValue;
 
 CREATE TABLE messageMediaDbo(
     id                          INTEGER         AS MessageId NOT NULL PRIMARY KEY,
@@ -1249,6 +1391,11 @@ messageMediaGetById:
 SELECT *
 FROM messageMediaDbo
 WHERE id = ?;
+
+messageMediaGetAllById:
+SELECT *
+FROM messageMediaDbo
+WHERE id IN ?;
 
 messageMediaUpdateMediaKeyDecrypted:
 UPDATE messageMediaDbo
@@ -1280,7 +1427,8 @@ messageMediaUpsert {
     UPDATE messageMediaDbo
     SET media_key = :media_key,
         media_type = :media_type,
-        media_token = :media_token
+        media_token = :media_token,
+        media_key_decrypted = :media_key_decrypted
     WHERE id = :id;
 
     INSERT OR IGNORE INTO messageMediaDbo(
@@ -1330,6 +1478,18 @@ CREATE INDEX idx_message_chat_date ON messageDbo(chat_id, date DESC);
 CREATE INDEX idx_message_sender_chat_type ON messageDbo(sender, chat_id, type);
 CREATE INDEX idx_message_id ON messageDbo(id);
 CREATE INDEX idx_message_muid_original_muid ON messageDbo(muid, original_muid);
+CREATE INDEX IF NOT EXISTS idx_message_status ON messageDbo(status);
+CREATE INDEX IF NOT EXISTS idx_message_status_date ON messageDbo(status, date DESC);
+CREATE INDEX IF NOT EXISTS idx_message_thread_date ON messageDbo(thread_uuid, date ASC);
+CREATE INDEX IF NOT EXISTS idx_message_sender_date ON messageDbo(sender, date DESC);
+CREATE INDEX IF NOT EXISTS idx_message_chat_latest ON messageDbo(chat_id, date DESC, type);
+CREATE INDEX IF NOT EXISTS idx_message_chat_id_date_id ON messageDbo(chat_id, date DESC, id);
+CREATE INDEX IF NOT EXISTS idx_message_chat_seen ON messageDbo(chat_id, seen);
+CREATE INDEX IF NOT EXISTS idx_message_chat_seen_date ON messageDbo(chat_id, seen, date DESC);
+
+CREATE INDEX IF NOT EXISTS idx_message_media_message_id ON messageMediaDbo(id);
+CREATE INDEX IF NOT EXISTS idx_message_media_type ON messageMediaDbo(media_type);
+CREATE INDEX IF NOT EXISTS idx_message_media_chat_type ON messageMediaDbo(chat_id, media_type);
 
 messageMediaDeleteAll:
 DELETE FROM messageMediaDbo;
@@ -1636,7 +1796,8 @@ CREATE TABLE feedItemDbo(
     duration                    INTEGER            AS FeedItemDuration,
     local_file                  TEXT               AS File,
     reference_id                TEXT               AS FeedReferenceId,
-    chapters_data               TEXT               AS FeedChaptersData
+    chapters_data               TEXT               AS FeedChaptersData,
+    downloaded_item_url         TEXT               AS FeedUrl
 );
 
 feedItemUpsert {
@@ -1759,7 +1920,8 @@ WHERE id = :id;
 
 feedItemUpdateChaptersData:
 UPDATE feedItemDbo
-SET chapters_data = :chapters_data
+SET chapters_data = :chapters_data,
+    downloaded_item_url = :downloaded_item_url
 WHERE id = :id;
 
 feedItemDeleteAll:

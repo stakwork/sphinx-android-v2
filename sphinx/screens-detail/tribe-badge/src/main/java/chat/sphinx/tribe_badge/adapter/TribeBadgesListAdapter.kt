@@ -218,7 +218,7 @@ internal class TribeBadgesListAdapter(
                 val tribeBadgeHolder: TribeBadgeHolder? = tribeBadgesListListHolder.getOrNull(position)
 
                 tribeBadgeHolder?.badge?.imageUrl?.let { imageUrl ->
-                    onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+                    onStopSupervisor.scope.launch(viewModel.default) {
                         imageLoader.load(
                             imageViewBadgeImage,
                             imageUrl,
@@ -294,7 +294,7 @@ internal class TribeBadgesListAdapter(
                 val tribeBadgeHolder: TribeBadgeHolder? = tribeBadgesListListHolder.getOrNull(position)
 
                 tribeBadgeHolder?.badgeTemplate?.imageUrl?.let { imageUrl ->
-                    onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+                    onStopSupervisor.scope.launch(viewModel.default) {
                         imageLoader.load(
                             imageViewBadgeImage,
                             imageUrl,

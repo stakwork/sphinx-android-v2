@@ -14,6 +14,7 @@
         android:layout_width="42dp"
         android:layout_height="42dp"
         android:layout_marginStart="@dimen/default_layout_margin"
+        android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"

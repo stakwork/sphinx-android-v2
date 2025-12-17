@@ -4,8 +4,16 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.ImageFormat
+import android.graphics.Matrix
 import android.hardware.camera2.*
+import android.media.ExifInterface
 import android.os.Bundle
+import android.util.Log
+import android.util.Rational
+import android.util.Size
 import android.view.*
 import android.widget.ImageView
 import androidx.activity.result.contract.ActivityResultContracts
@@ -72,17 +80,11 @@ internal class CameraFragment: SideEffectDetailFragment<
     @Volatile
     private var rotationProvider: RotationProvider? = null
     private var lastRotation: Int? = null
-    @SuppressLint("RestrictedApi")
-    private val rotationListener = { rotation: Int  ->
-        lastRotation = rotation
-        imageCapture.targetRotation = rotation
-        videoCapture.targetRotation = rotation
-    }
 
     private lateinit var imageCapture: ImageCapture
     private lateinit var videoCapture: VideoCapture<Recorder>
 
-    private var activeRecording: ActiveRecording? = null
+    private var activeRecording: Recording? = null
     private lateinit var recordingState: VideoRecordEvent
 
     private val mainThreadExecutor by lazy { ContextCompat.getMainExecutor(requireContext()) }
@@ -114,10 +116,10 @@ internal class CameraFragment: SideEffectDetailFragment<
         override fun onImageSaved(output: ImageCapture.OutputFileResults) {
             lifecycleScope.launch(viewModel.io) {
                 output.savedUri?.let { photoUri ->
+                    val imageFile = photoUri.toFile()
+
                     viewModel.updateMediaPreviewViewState(
-                        CapturePreviewViewState.Preview.ImagePreview(
-                            photoUri.toFile()
-                        )
+                        CapturePreviewViewState.Preview.ImagePreview(imageFile)
                     )
                     delay(200L)
                 }
@@ -252,53 +254,60 @@ internal class CameraFragment: SideEffectDetailFragment<
                 .requireLensFacing(cameraItem.lensFacing.toInt())
                 .build()
 
-            val preview = Preview.Builder().setTargetAspectRatio(AspectRatio.RATIO_16_9)
+            val currentRotation = binding.previewViewCamera.display.rotation
+
+            val displayMetrics = requireContext().resources.displayMetrics
+            val screenWidth = displayMetrics.widthPixels
+            val screenHeight = displayMetrics.heightPixels
+            val screenRatio = Rational(screenWidth, screenHeight)
+
+            val viewport = ViewPort.Builder(screenRatio, currentRotation).build()
+
+            val preview = Preview.Builder()
+                .setTargetRotation(currentRotation)
                 .build().apply {
                     setSurfaceProvider(binding.previewViewCamera.surfaceProvider)
                 }
 
             imageCapture = ImageCapture.Builder()
                 .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
-                // We request aspect ratio but no resolution to match preview config, but letting
-                // CameraX optimize for whatever specific resolution best fits our use cases
-                .setTargetAspectRatio(screenAspectRatio())
-                // Set initial target rotation, we will have to call this again if rotation changes
-                // during the lifecycle of this use case
-                .setTargetRotation(lastRotation ?: binding.previewViewCamera.display.rotation)
+                .setTargetRotation(currentRotation)
                 .build()
 
             val recorder = Recorder.Builder().build()
             videoCapture = VideoCapture.withOutput(recorder)
+
+            val useCaseGroup = UseCaseGroup.Builder()
+                .addUseCase(preview)
+                .addUseCase(imageCapture)
+                .addUseCase(videoCapture)
+                .setViewPort(viewport)
+                .build()
 
             try {
                 cameraProvider.unbindAll()
                 cameraProvider.bindToLifecycle(
                     requireParentFragment(),
                     cameraSelector,
-                    videoCapture,
-                    imageCapture,
-                    preview
+                    useCaseGroup
                 )
+
             } catch (exc: Exception) {
-                resetUIAndState()
+                Log.e("CAMERA_SETUP", "Camera binding failed: ${exc.message}")
             }
 
             binding.includeCameraFooter.imageViewCameraFooterShutter.setOnClickListener {
                 lifecycleScope.launch(viewModel.io) {
                     val photoFile = viewModel.createFile(IMAGE_EXTENSION, true)
 
-                    // Setup image capture metadata
                     val metadata = ImageCapture.Metadata().apply {
-                        // Mirror image when using the front camera
                         isReversedHorizontal = cameraItem.lensFacing == LensFacing.Front
                     }
 
-                    // Create output options object which contains file + metadata
                     val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile)
                         .setMetadata(metadata)
                         .build()
 
-                    // Setup image capture listener which is triggered after photo has been taken
                     imageCapture.takePicture(
                         outputOptions,
                         cameraExecutor,
@@ -335,14 +344,19 @@ internal class CameraFragment: SideEffectDetailFragment<
         }
     }
 
-    private fun screenAspectRatio(): Int {
-        // TODO: Get window width and height
-//        width: Int, height: Int
-//        val previewRatio = max(width, height).toDouble() / min(width, height)
-//        if (abs(previewRatio - RATIO_4_3_VALUE) <= abs(previewRatio - RATIO_16_9_VALUE)) {
-//            return AspectRatio.RATIO_4_3
-//        }
-        return AspectRatio.RATIO_16_9
+    @SuppressLint("RestrictedApi")
+    private val rotationListener = { rotation: Int ->
+        Log.d("ROTATION_LISTENER", "Rotation changed from $lastRotation to $rotation")
+
+        // Always update the target rotation for capture
+        if (::imageCapture.isInitialized) {
+            imageCapture.targetRotation = rotation
+        }
+        if (::videoCapture.isInitialized) {
+            videoCapture.targetRotation = rotation
+        }
+
+        lastRotation = rotation
     }
 
 
@@ -370,21 +384,6 @@ internal class CameraFragment: SideEffectDetailFragment<
     }
 
     /**
-     * ResetUI (restart):
-     *    in case binding failed, let's give it another change for re-try. In future cases
-     *    we might fail and user get notified on the status
-     */
-    private fun resetUIAndState() {
-        lifecycleScope.launch(viewModel.mainImmediate) {
-            binding.includeCameraFooter.imageViewCameraFooterShutter.setImageDrawable(
-                AppCompatResources.getDrawable(requireContext(), R_camera.drawable.ic_shutter)
-            )
-
-            // TODO: Prompt user of reset
-        }
-    }
-
-    /**
      * Kick start the video recording
      *   - config Recorder to capture to MediaStoreOutput
      *   - register RecordEvent Listener
@@ -400,14 +399,11 @@ internal class CameraFragment: SideEffectDetailFragment<
             viewModel.createFile(VIDEO_EXTENSION, false)
         ).build()
 
-        // configure Recorder and Start recording to the mediaStoreOutput.
-        activeRecording = videoCapture.output.prepareRecording(requireActivity(), fileOutputOptions)
-            .withEventListener(
-                mainThreadExecutor,
-                captureListener
-            )
+        val pendingRecording = videoCapture.output
+            .prepareRecording(requireActivity(), fileOutputOptions)
             .withAudioEnabled()
-            .start()
+
+        activeRecording = pendingRecording.start(mainThreadExecutor, captureListener)
     }
 
     override suspend fun onSideEffectCollect(sideEffect: CameraSideEffect) {
@@ -421,7 +417,6 @@ internal class CameraFragment: SideEffectDetailFragment<
             is CameraViewState.Active -> {
                 viewState.cameraItem?.let { item ->
 
-                    // disable button to switch between back/front camera
                     binding.includeCameraFooter.imageViewCameraFooterBackFront.isEnabled = false
 
                     try {
@@ -434,9 +429,6 @@ internal class CameraFragment: SideEffectDetailFragment<
         }
     }
 
-    // have to override here to always push
-    // results to onViewStateFlowCollect w/o
-    // comparing to currentViewState
     override fun subscribeToViewStateFlow() {
         onStopSupervisor.scope.launch(viewModel.mainImmediate) {
             viewModel.collectViewState { viewState ->
@@ -513,7 +505,8 @@ internal class CameraFragment: SideEffectDetailFragment<
                                     imageViewVideoPreviewPlayPause.gone
 
                                     textViewCameraMediaPreviewUse.text = getString(R.string.camera_use_photo)
-                                    imageLoader.load(imageViewCameraImagePreview, viewState.media)
+
+                                    loadImageWithCorrectOrientation(imageViewCameraImagePreview, viewState.media)
                                 } else {
                                     viewModel.updateMediaPreviewViewState(CapturePreviewViewState.None)
                                 }
@@ -532,6 +525,40 @@ internal class CameraFragment: SideEffectDetailFragment<
                 }
             }
         }
+    }
+
+    private fun loadImageWithCorrectOrientation(imageView: ImageView, imageFile: File) {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val bitmap = BitmapFactory.decodeFile(imageFile.absolutePath)
+
+                val exif = ExifInterface(imageFile.absolutePath)
+                val orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+
+                val rotatedBitmap = when (orientation) {
+                    ExifInterface.ORIENTATION_ROTATE_90 -> rotateBitmap(bitmap, 90f)
+                    ExifInterface.ORIENTATION_ROTATE_180 -> rotateBitmap(bitmap, 180f)
+                    ExifInterface.ORIENTATION_ROTATE_270 -> rotateBitmap(bitmap, 270f)
+                    else -> bitmap
+                }
+
+                withContext(Dispatchers.Main) {
+                    imageView.setImageBitmap(rotatedBitmap)
+                }
+
+                if (rotatedBitmap != bitmap) {
+                    bitmap.recycle()
+                }
+
+            } catch (e: Exception) {
+                Log.e("IMAGE_ROTATION", "Failed to load image with rotation: ${e.message}")
+            }
+        }
+    }
+
+    private fun rotateBitmap(bitmap: Bitmap, degrees: Float): Bitmap {
+        val matrix = Matrix().apply { postRotate(degrees) }
+        return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
     }
 
     override fun onDestroyView() {

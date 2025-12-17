@@ -13,6 +13,8 @@ class VideoPlayerController(
     private val updateMetaDataCallback: (Int, Int, Int) -> Unit,
     private val updateCurrentTimeCallback: (Int) -> Unit,
     private val completePlaybackCallback: () -> Unit,
+    private val showLoadingCallback: () -> Unit,  // NEW
+    private val hideLoadingCallback: () -> Unit,  // NEW
     dispatchers: CoroutineDispatchers,
 ) : CoroutineDispatchers by dispatchers {
 
@@ -26,6 +28,8 @@ class VideoPlayerController(
         videoUri: Uri,
         videoDuration: Int? = null
     ) {
+        showLoadingCallback()
+
         videoView?.apply {
             setOnCompletionListener {
                 completePlaybackCallback()
@@ -36,7 +40,19 @@ class VideoPlayerController(
                     it.videoWidth,
                     it.videoHeight
                 )
+                hideLoadingCallback()
                 play()
+            }
+            setOnInfoListener { _, what, _ ->
+                when (what) {
+                    android.media.MediaPlayer.MEDIA_INFO_BUFFERING_START -> {
+                        showLoadingCallback()
+                    }
+                    android.media.MediaPlayer.MEDIA_INFO_BUFFERING_END -> {
+                        hideLoadingCallback()
+                    }
+                }
+                false
             }
 
             setVideoURI(videoUri)
@@ -50,7 +66,27 @@ class VideoPlayerController(
     }
 
     fun seekTo(progress: Int) {
+        showLoadingCallback()
         videoView?.seekTo(progress)
+    }
+
+    fun seekToTime(timeMillis: Long) {
+        showLoadingCallback()
+        videoView?.let { video ->
+            if (video.canSeekForward() || video.canSeekBackward()) {
+                video.seekTo(timeMillis.toInt())
+
+                viewModelScope.launch(mainImmediate) {
+                    delay(500L) // Wait for seek to stabilize
+                    hideLoadingCallback()
+                }
+
+                // If video is paused, start playing after seek
+                if (!video.isPlaying) {
+                    play()
+                }
+            }
+        }
     }
 
     fun pause() {
@@ -83,7 +119,6 @@ class VideoPlayerController(
                 while (isActive) {
                     if (video.isPlaying) {
                         updateCurrentTimeCallback(video.currentPosition)
-
                         delay(250L)
                     } else {
                         break

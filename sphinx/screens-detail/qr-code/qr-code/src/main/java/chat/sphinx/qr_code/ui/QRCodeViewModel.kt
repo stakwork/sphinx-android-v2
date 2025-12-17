@@ -70,15 +70,9 @@ internal class QRCodeViewModel @Inject constructor(
     init {
         viewModelScope.launch(default) {
             val writer = QRCodeWriter()
-            val qrText = if (args.qrText.isValidBech32()) {
-                // Bech32 strings must be upper cased when show in QR codes
-                // https://github.com/lightningnetwork/lightning-rfc/blob/master/11-payment-encoding.md#requirements
-                args.qrText.uppercase()
-            } else {
-                args.qrText
-            }
+
             val bitMatrix = writer.encode(
-                qrText,
+                args.qrText,
                 BarcodeFormat.QR_CODE,
                 BITMAP_XY,
                 BITMAP_XY

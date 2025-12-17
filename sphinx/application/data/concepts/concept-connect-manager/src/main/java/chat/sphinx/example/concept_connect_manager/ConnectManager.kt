@@ -4,6 +4,7 @@ import chat.sphinx.example.concept_connect_manager.model.OwnerInfo
 import chat.sphinx.example.concept_connect_manager.model.RestoreState
 import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
 import chat.sphinx.example.wrapper_mqtt.MsgsCounts
+import chat.sphinx.wrapper_common.message.MqttMessage
 import chat.sphinx.wrapper_contact.NewContact
 import chat.sphinx.wrapper_lightning.WalletMnemonic
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,13 +34,22 @@ abstract class ConnectManager {
         routerUrl: String?
     )
     abstract fun restoreFailed()
+    abstract fun finishRestore()
     abstract fun setInviteCode(inviteString: String?)
     abstract fun setMnemonicWords(words: List<String>?)
     abstract fun setNetworkType(isTestEnvironment: Boolean)
     abstract fun setOwnerDeviceId(deviceId: String, pushKey: String)
     abstract fun processChallengeSignature(challenge: String): String?
     abstract fun fetchFirstMessagesPerKey(lastMsgIdx: Long, totalCount: Long?)
-    abstract fun fetchMessagesOnRestoreAccount(totalHighestIndex: Long?, totalMsgsCount: Long?)
+    abstract fun fetchMessagesOnRestoreAccount(
+        totalHighestIndex: Long,
+        chatsTotal: Long,
+        chatsPublicKeys: List<String>
+    )
+    abstract fun fetchMessagesPerContact(
+        minIndex: Long,
+        publicKey: String
+    )
     abstract fun getAllMessagesCount()
     abstract fun initializeMqttAndSubscribe(
         serverUri: String,
@@ -49,6 +59,7 @@ abstract class ConnectManager {
     abstract fun reconnectWithBackOff()
     abstract fun attemptReconnectOnResume()
     abstract fun retrieveLspIp(): String?
+    abstract fun resetMQTT()
 
     // Contact Management Methods
     abstract fun createContact(contact: NewContact)
@@ -85,11 +96,16 @@ abstract class ConnectManager {
         provisionalId: Long,
         messageType: Int,
         amount: Long?,
+        myAlias: String?,
+        myPhotoUrl: String?,
+        date: Long,
         isTribe: Boolean = false
     )
     abstract fun deleteMessage(
         sphinxMessage: String,
         contactPubKey: String,
+        myAlias: String?,
+        myPhotoUrl: String?,
         isTribe: Boolean
     )
     abstract fun deleteContactMessages(
@@ -196,15 +212,16 @@ interface ConnectManagerListener {
     fun onRestoreAccount(isProductionEnvironment: Boolean)
     fun onUpsertContacts(
         contacts: List<Pair<String?, Long?>>,
+        isRestore: Boolean = false,
         callback: (() -> Unit)? = null
     )
     fun onRestoreMessages()
     fun onUpsertTribes(
-        tribes: List<Pair<String?, Boolean?>>,
+        tribeList: List<Triple<String?, Int, Boolean>>,
         isProductionEnvironment: Boolean,
         callback: (() -> Unit)? = null
-    ) // Sender, FromMe
-//    fun onRestoreNextPageMessages(highestIndex: Long, limit: Int)
+    )
+
     fun onNewBalance(balance: Long)
     fun onSignedChallenge(sign: String)
     fun onInitialTribe(tribe: String, isProductionEnvironment: Boolean)
@@ -213,30 +230,16 @@ interface ConnectManagerListener {
     fun onGetNodes()
     fun onConnectManagerError(error: ConnectManagerError)
     fun onRestoreProgress(progress: Int)
-    fun onRestoreFinished()
     fun updatePaidInvoices()
 
-    // Messaging Callbacks
-    fun onMessage(
-        msg: String,
-        msgSender: String,
-        msgType: Int,
-        msgUuid: String,
-        msgIndex: String,
-        msgTimestamp: Long?,
-        sentTo: String,
-        amount: Long?,
-        fromMe: Boolean?,
-        tag: String?,
-        date: Long?,
-        isRestore: Boolean,
-    )
+    fun onMessages(messages: List<MqttMessage>, isRestore: Boolean)
+    fun onMessagesRestoreWith(count: Int, publicKey: String?)
+
     fun onMessageTagAndUuid(tag: String?, msgUUID: String, provisionalId: Long)
+    fun onMessagePaymentHash(paymentHash: String, provisionalId: Long)
     fun onMessagesCounts(msgsCounts: String)
     fun onSentStatus(sentStatus: String)
     fun onMessageTagList(tags: String)
-
-    fun onRestoreMinIndex(minIndex: Long)
 
     // Tribe Management Callbacks
     fun onNewTribeCreated(newTribe: String)

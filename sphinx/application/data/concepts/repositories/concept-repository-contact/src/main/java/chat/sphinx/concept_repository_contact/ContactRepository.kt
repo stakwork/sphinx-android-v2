@@ -36,6 +36,7 @@ interface ContactRepository {
     fun getInviteByContactId(contactId: ContactId): Flow<Invite?>
     fun getInviteById(inviteId: InviteId): Flow<Invite?>
     fun getInviteByString(inviteString: InviteString): Flow<Invite?>
+    fun getInvitesByIds(inviteIds: List<InviteId>): Flow<List<Invite?>>
 
     var updatedContactIds: MutableList<ContactId>
 
@@ -60,15 +61,9 @@ interface ContactRepository {
 
     suspend fun createOwner(okKey: String, routeHint: String, shortChannelId: String)
 
-    suspend fun createNewContact(contact: NewContact)
-
     suspend fun updateOwnerAlias(alias: ContactAlias)
 
     suspend fun getNewContactIndex(): Flow<ContactId?>
-
-    fun saveNewContactRegistered(msgSender: String, date: Long?)
-
-    fun updateNewContactInvited(contact: NewContact)
 
 
     /** Sphinx V1 (likely to be removed) **/

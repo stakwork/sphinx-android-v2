@@ -75,7 +75,7 @@ class MessageMentionsAdapter<ARGS : NavArgs>(
             textViewInitialsName.gone
             imageViewChatPicture.visible
 
-            onStopSupervisor.scope.launch(viewModel.main) {
+            onStopSupervisor.scope.launch(viewModel.default) {
                 imageLoader.load(
                     imageViewChatPicture,
                     photoUrl,

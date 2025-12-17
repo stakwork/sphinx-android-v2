@@ -9,7 +9,7 @@ import chat.sphinx.example.wrapper_mqtt.TransactionDto
 import chat.sphinx.transactions.navigation.TransactionsNavigator
 import chat.sphinx.transactions.ui.viewstate.TransactionHolderViewState
 import chat.sphinx.wrapper_chat.isConversation
-import chat.sphinx.wrapper_chat.isTribeNotOwnedByAccount
+import chat.sphinx.wrapper_chat.isTrue
 import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_common.dashboard.ContactId
 import chat.sphinx.wrapper_common.message.MessageUUID
@@ -54,8 +54,6 @@ internal class TransactionsViewModel @Inject constructor(
     private var loadedItems: Int = 0
     private var lastMessageDate: Long = System.currentTimeMillis()
 
-    private var succeededPaymentHashes: MutableList<String> = mutableListOf()
-
     private suspend fun getOwnerContact(): Contact {
         return contactRepository.accountOwner.value.let { contact ->
             if (contact != null) {
@@ -78,11 +76,6 @@ internal class TransactionsViewModel @Inject constructor(
         }
     }
 
-    private suspend fun getLastMessageDate(): Long? {
-        val lastMsgDate = messageRepository.getLastMessage().firstOrNull()?.date?.value?.time
-        lastMessageDate = lastMsgDate ?: 0L
-        return lastMsgDate
-    }
     init {
         viewModelScope.launch(mainImmediate) {
             loadTransactions(
@@ -92,7 +85,7 @@ internal class TransactionsViewModel @Inject constructor(
         collectTransactions()
     }
 
-    suspend fun loadMoreTransactions() {
+    fun loadMoreTransactions() {
         if (loading) {
             return
         }
@@ -100,7 +93,7 @@ internal class TransactionsViewModel @Inject constructor(
         page += 1
 
         loadTransactions(
-            lastMessageDate
+            lastMessageDate.minus(1)
         )
     }
 
@@ -115,16 +108,11 @@ internal class TransactionsViewModel @Inject constructor(
 
             connectManagerRepository.transactionDtoState.collect { transactionsDto ->
 
-                succeededPaymentHashes += (transactionsDto ?: mutableListOf())
-                    .filter { it.isSucceededPayment() }
-                    .mapNotNull { it.payment_hash }
-
                 val transactionsToShow = (transactionsDto ?: mutableListOf())
-                    .filter { it.isSucceededPayment() || (it.payment_hash == null) || (it.isFailedPayment() && !succeededPaymentHashes.contains(it.payment_hash)) }
 
                 if (transactionsToShow.isNotEmpty()) {
                     val firstPage = (page == 0)
-                    val lastItemDate =  transactionsToShow.lastOrNull()?.date?.value?.time ?: lastMessageDate
+                    val lastItemDate =  transactionsToShow.lastOrNull()?.ts ?: lastMessageDate
 
                     if (lastMessageDate == lastItemDate) {
                         loading = false
@@ -170,8 +158,8 @@ internal class TransactionsViewModel @Inject constructor(
                     }
                 }
                 transaction.isOutgoingWithReceiver(owner.id) -> {
-                    transaction.getSenderId()?.let { senderId ->
-                        contactIdsMap[transaction.id] = senderId
+                    transaction.getReceiverId()?.let { receiverId ->
+                        contactIdsMap[transaction.id] = receiverId
                     }
                 }
                 transaction.isOutgoingMessageBoost(owner.id) -> {
@@ -194,7 +182,7 @@ internal class TransactionsViewModel @Inject constructor(
         chatRepository.getAllChatsByIds(chatIds).let { response ->
             response.forEach { chat ->
                 if (
-                    (chat.isTribeNotOwnedByAccount(owner.nodePubKey) || chat.isConversation()) &&
+                    (chat.ownedTribe?.isTrue() == true || chat.isConversation()) &&
                     chat.contactIds.size == 2
                 ) {
                     chatsIdsMap[chat.id]?.let { transactionIds ->
@@ -258,7 +246,7 @@ internal class TransactionsViewModel @Inject constructor(
                         TransactionHolderViewState.Outgoing(
                             transaction,
                             null,
-                            senderAlias ?: transaction.message_content ?: "-",
+                            senderAlias ?: "-",
                         )
                     )
                 }
@@ -277,7 +265,7 @@ internal class TransactionsViewModel @Inject constructor(
                         TransactionHolderViewState.Failed.Closed(
                             transaction,
                             null,
-                            senderAlias ?: transaction.message_content ?: "-",
+                            senderAlias ?: "-",
                         )
                     )
                 }

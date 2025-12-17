@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="@dimen/message_reply_holder_height"
+    android:layout_height="wrap_content"
     android:visibility="gone"
     tools:visibility="visible"
     tools:background="@color/body">
@@ -21,7 +21,8 @@
             android:id="@+id/view_reply_bar_leading"
             android:layout_width="5dp"
             android:layout_marginHorizontal="@dimen/default_inner_spacing_list_item_title"
-            android:layout_height="@dimen/reply_message_media_image_xy"
+            android:layout_height="0dp"
+            android:layout_marginVertical="4dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
@@ -91,7 +92,6 @@
             app:layout_constraintStart_toEndOf="@id/layout_constraint_media_container"
             app:layout_constraintTop_toTopOf="parent"
             tools:text="Name of Original Sender" />
-
 
         <androidx.appcompat.widget.AppCompatTextView
             android:id="@+id/text_view_reply_message_label"

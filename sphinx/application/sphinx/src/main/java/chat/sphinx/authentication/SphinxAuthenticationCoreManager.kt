@@ -3,7 +3,6 @@ package chat.sphinx.authentication
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.Application
-import android.content.pm.ActivityInfo
 import android.os.Bundle
 import chat.sphinx.feature_coredb.CoreDBImpl
 import chat.sphinx.feature_sphinx_service.ApplicationServiceTracker

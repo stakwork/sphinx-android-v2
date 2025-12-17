@@ -8,6 +8,7 @@ import chat.sphinx.wrapper_feed.DownloadableFeedItem
 import chat.sphinx.wrapper_feed.Feed
 import chat.sphinx.wrapper_message.Message
 import chat.sphinx.wrapper_message_media.MessageMedia
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import java.io.File
 
@@ -16,7 +17,7 @@ interface RepositoryMedia {
     fun downloadMediaIfApplicable(
         message: Message,
         sent: Boolean,
-    )
+    ) : Job
 
     fun downloadMediaIfApplicable(
         feedItem: DownloadableFeedItem,

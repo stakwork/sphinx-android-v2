@@ -13,6 +13,7 @@ import chat.sphinx.wrapper_chat.ChatMuted
 import chat.sphinx.wrapper_chat.NotificationLevel
 import chat.sphinx.wrapper_chat.isConversation
 import chat.sphinx.wrapper_chat.isTribe
+import chat.sphinx.wrapper_chat.isTrue
 import chat.sphinx.wrapper_chat.toChatAlias
 import chat.sphinx.wrapper_chat.toChatGroupKey
 import chat.sphinx.wrapper_chat.toChatHost
@@ -23,6 +24,7 @@ import chat.sphinx.wrapper_chat.toChatStatus
 import chat.sphinx.wrapper_chat.toChatType
 import chat.sphinx.wrapper_chat.toChatUnlisted
 import chat.sphinx.wrapper_chat.toNotificationLevel
+import chat.sphinx.wrapper_chat.toOwnedTribe
 import chat.sphinx.wrapper_chat.toSecondBrainUrl
 import chat.sphinx.wrapper_common.DateTime
 import chat.sphinx.wrapper_common.PhotoUrl
@@ -190,12 +192,13 @@ inline fun TransactionCallbacks.updateChatNewLatestMessage(
     chatId: ChatId,
     latestMessageUpdatedTimeMap: MutableMap<ChatId, DateTime>,
     queries: SphinxDatabaseQueries,
+    forceUpdateOnSend: Boolean = false
 ) {
     val dateTime = message.date
 
     if (
-        message.updateChatNewLatestMessage &&
-        (latestMessageUpdatedTimeMap[chatId]?.time ?: 0L) <= dateTime.time
+        (message.updateChatNewLatestMessage && (latestMessageUpdatedTimeMap[chatId]?.time ?: 0L) <= dateTime.time) ||
+        forceUpdateOnSend
     ){
         queries.chatUpdateLatestMessage(
             message.id,
@@ -206,7 +209,36 @@ inline fun TransactionCallbacks.updateChatNewLatestMessage(
             message.id,
             chatId,
         )
-        latestMessageUpdatedTimeMap[chatId] = dateTime
+        if (!forceUpdateOnSend) {
+            latestMessageUpdatedTimeMap[chatId] = dateTime
+        }
+    }
+}
+
+@Suppress("NOTHING_TO_INLINE")
+inline fun TransactionCallbacks.updateChatNewLatestMessage(
+    messageId: MessageId,
+    chatId: ChatId,
+    dateTime: DateTime,
+    latestMessageUpdatedTimeMap: MutableMap<ChatId, DateTime>,
+    queries: SphinxDatabaseQueries,
+    forceUpdateOnSend: Boolean = false
+) {
+    if (
+        (latestMessageUpdatedTimeMap[chatId]?.time ?: 0L) <= dateTime.time || forceUpdateOnSend
+    ){
+        queries.chatUpdateLatestMessage(
+            messageId,
+            chatId,
+        )
+        queries.dashboardUpdateLatestMessage(
+            dateTime,
+            messageId,
+            chatId,
+        )
+        if (!forceUpdateOnSend) {
+            latestMessageUpdatedTimeMap[chatId] = dateTime
+        }
     }
 }
 
@@ -228,9 +260,24 @@ inline fun TransactionCallbacks.updateChatNewLatestMessage(
     chatId: ChatId,
     latestMessageUpdatedTimeMap: SynchronizedMap<ChatId, DateTime>,
     queries: SphinxDatabaseQueries,
+    forceUpdateOnSend: Boolean = false
 ) {
     latestMessageUpdatedTimeMap.withLock { map ->
-        updateChatNewLatestMessage(message, chatId, map, queries)
+        updateChatNewLatestMessage(message, chatId, map, queries, forceUpdateOnSend)
+    }
+}
+
+@Suppress("NOTHING_TO_INLINE")
+inline fun TransactionCallbacks.updateChatNewLatestMessage(
+    messageId: MessageId,
+    chatId: ChatId,
+    dateTime: DateTime,
+    latestMessageUpdatedTimeMap: SynchronizedMap<ChatId, DateTime>,
+    queries: SphinxDatabaseQueries,
+    forceUpdateOnSend: Boolean = false
+) {
+    latestMessageUpdatedTimeMap.withLock { map ->
+        updateChatNewLatestMessage(messageId, chatId, dateTime, map, queries, forceUpdateOnSend)
     }
 }
 
@@ -354,6 +401,7 @@ inline fun TransactionCallbacks.upsertNewChat(
         chat.pendingContactIds,
         chat.notify,
         pinedMessage,
+        chat.ownedTribe,
         chatId,
         chat.uuid,
         chatType,
@@ -364,7 +412,7 @@ inline fun TransactionCallbacks.upsertNewChat(
 
     if (
         chatType.isTribe() &&
-        (ownerPubKey == adminPubKey) &&
+        chat.ownedTribe?.isTrue() == true &&
         (pricePerMessage != null || escrowAmount != null || pinedMessage != null)
     ) {
         queries.chatUpdateTribeData(
@@ -448,6 +496,7 @@ inline fun TransactionCallbacks.upsertChat(
         dto.pending_contact_ids?.map { ContactId(it) },
         dto.notify?.toNotificationLevel(),
         pinedMessage,
+        dto.isOwnedTribe.toOwnedTribe(),
         chatId,
         ChatUUID(dto.uuid),
         chatType,
@@ -458,7 +507,7 @@ inline fun TransactionCallbacks.upsertChat(
 
     if (
         chatType.isTribe() &&
-        (ownerPubKey == adminPubKey) &&
+        dto.isOwnedTribe &&
         (pricePerMessage != null || escrowAmount != null || pinedMessage != null)
     ) {
         queries.chatUpdateTribeData(
@@ -716,9 +765,9 @@ fun TransactionCallbacks.upsertNewMessage(
             (message.messageMedia?.mediaKey?.value ?: "").toMediaKey(),
             (message.messageMedia?.mediaType?.value ?: "").toMediaType(),
             MediaToken(mediaToken.value),
+            (message.messageMedia?.mediaKeyDecrypted?.value ?: "").toMediaKeyDecrypted(),
             MessageId(message.id.value),
             chatId,
-            (message.messageMedia?.mediaKeyDecrypted?.value ?: "").toMediaKeyDecrypted(),
             message.messageMedia?.localFile,
             fileName
         )
@@ -734,7 +783,7 @@ fun TransactionCallbacks.upsertNewMessage(
         message.type,
         message.recipientAlias,
         message.recipientPic,
-        Push.False,
+        message.push,
         message.person,
         message.threadUUID,
         message.errorMessage,
@@ -785,9 +834,9 @@ fun TransactionCallbacks.upsertMessage(
             (dto.media_key ?: "").toMediaKey(),
             (dto.media_type ?: "").toMediaType(),
             MediaToken(mediaToken),
+            dto.mediaKeyDecrypted?.toMediaKeyDecrypted(),
             MessageId(dto.id),
             chatId,
-            dto.mediaKeyDecrypted?.toMediaKeyDecrypted(),
             dto.mediaLocalFile,
             fileName
         )

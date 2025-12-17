@@ -17,9 +17,13 @@ import chat.sphinx.wrapper_lightning.WalletMnemonic
 import chat.sphinx.wrapper_lightning.toWalletMnemonic
 import com.ensarsarajcic.kotlinx.serialization.msgpack.MsgPack
 import com.ensarsarajcic.kotlinx.serialization.msgpack.MsgPackDynamicSerializer
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import okio.base64.encodeBase64
 import org.eclipse.paho.client.mqttv3.IMqttActionListener
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken
@@ -41,6 +45,7 @@ import uniffi.sphinxrs.codeFromInvite
 import uniffi.sphinxrs.concatRoute
 import uniffi.sphinxrs.deleteMsgs
 import uniffi.sphinxrs.fetchMsgsBatch
+import uniffi.sphinxrs.fetchMsgsBatchPerContact
 import uniffi.sphinxrs.fetchPings
 import uniffi.sphinxrs.findRoute
 import uniffi.sphinxrs.getDefaultTribeServer
@@ -79,6 +84,7 @@ import uniffi.sphinxrs.signBytes
 import uniffi.sphinxrs.signedTimestamp
 import uniffi.sphinxrs.updateTribe
 import uniffi.sphinxrs.xpubFromSeed
+import java.lang.Long.max
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import java.util.Calendar
@@ -111,12 +117,13 @@ class ConnectManagerImpl: ConnectManager()
     private var isMqttConnected: Boolean = false
     private var isAppFirstInit: Boolean = true
 
+    private val userStateScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     companion object {
         const val TEST_V2_SERVER_IP = "75.101.247.127:1883"
         const val TEST_V2_TRIBES_SERVER = "75.101.247.127:8801"
         const val REGTEST_NETWORK = "regtest"
         const val MAINNET_NETWORK = "bitcoin"
-        const val TEST_SERVER_PORT =  1883
         const val PROD_SERVER_PORT = 8883
         const val COMPLETE_STATUS = "COMPLETE"
         const val MSG_BATCH_LIMIT = 100
@@ -132,6 +139,7 @@ class ConnectManagerImpl: ConnectManager()
 
     private val _ownerInfoStateFlow: MutableStateFlow<OwnerInfo> by lazy {
         MutableStateFlow(OwnerInfo(
+            null,
             null,
             null,
             null,
@@ -214,7 +222,7 @@ class ConnectManagerImpl: ConnectManager()
                     subscribeOwnerMQTT()
 
                     notifyListeners {
-                        onNetworkStatusChange(true)
+                        onNetworkStatusChange(false, isLoading = true)
                     }
                     Log.d("MQTT_MESSAGES", "MQTT CONNECTED!")
                 }
@@ -228,9 +236,9 @@ class ConnectManagerImpl: ConnectManager()
                         hasAttemptedReconnect = true
                         reconnectWithBackOff()
                     }
-                    notifyListeners {
-                        onConnectManagerError(ConnectManagerError.MqttConnectError(exception?.message))
-                    }
+//                    notifyListeners {
+//                        onConnectManagerError(ConnectManagerError.MqttConnectError(exception?.message))
+//                    }
                     Log.d("MQTT_MESSAGES", "Failed to connect to MQTT: ${exception?.message}")
                 }
             })
@@ -240,9 +248,9 @@ class ConnectManagerImpl: ConnectManager()
                     isMqttConnected = false
                     reconnectWithBackOff()
 
-                    notifyListeners {
-                        onConnectManagerError(ConnectManagerError.MqttConnectError(cause?.message))
-                    }
+//                    notifyListeners {
+//                        onConnectManagerError(ConnectManagerError.MqttConnectError(cause?.message))
+//                    }
                     Log.d("MQTT_MESSAGES", "MQTT DISCONNECTED! $cause ${cause?.message}")
                 }
 
@@ -268,9 +276,9 @@ class ConnectManagerImpl: ConnectManager()
             })
         } catch (e: MqttException) {
             isMqttConnected = false
-            notifyListeners {
-                onConnectManagerError(ConnectManagerError.MqttConnectError(e.message))
-            }
+//            notifyListeners {
+//                onConnectManagerError(ConnectManagerError.MqttConnectError(e.message))
+//            }
 
             reconnectWithBackOff()
             Log.d("MQTT_MESSAGES", "MQTT DISCONNECTED! exception ${e.printStackTrace()}")
@@ -280,7 +288,6 @@ class ConnectManagerImpl: ConnectManager()
     private fun subscribeOwnerMQTT() {
         try {
             mqttClient?.let { client ->
-
                 notifyListeners {
                     showMnemonic(isRestoreAccount())
                 }
@@ -424,6 +431,10 @@ class ConnectManagerImpl: ConnectManager()
                     onLastReadMessages(lastRead)
                 }
                 Log.d("MQTT_MESSAGES", "=> lastRead $lastRead")
+
+                notifyListeners {
+                    onNetworkStatusChange(true)
+                }
             }
 
             rr.initialTribe?.let { initialTribe ->
@@ -483,7 +494,12 @@ class ConnectManagerImpl: ConnectManager()
                     onUpdateMutes(muteLevels)
                 }
                 Log.d("MQTT_MESSAGES", "=> muteLevels $muteLevels")
+
+                notifyListeners {
+                    onNetworkStatusChange(true)
+                }
             }
+
             rr.ping?.let { ping ->
                 if (ping.isNotEmpty()) {
                     handlePing(ping)
@@ -569,7 +585,11 @@ class ConnectManagerImpl: ConnectManager()
             val tribesToUpdate = msgs.filter {
                 it.type?.toInt() == TYPE_MEMBER_APPROVE || it.type?.toInt() == TYPE_GROUP_JOIN
             }.map {
-                Pair(it.sender, it.fromMe)
+                Triple(
+                    it.sender,
+                    it.type?.toInt() ?: 100 ,
+                    it.fromMe ?: false
+                )
             }
 
             Log.d("RESTORE_PROCESS_TRIBE", "$tribesToUpdate")
@@ -587,12 +607,10 @@ class ConnectManagerImpl: ConnectManager()
                     Log.d("RESTORE_PROCESS_CONTACTS", "$contactsToRestore")
 
                     notifyListeners {
-                        onUpsertContacts(contactsToRestore) {
-                            // Handle new messages
-                            msgs.forEach { msg ->
-                                processMessage(msg)
+                        onUpsertContacts(contactsToRestore, isRestoreAccount()) {
+                            if (!isRestoringContacts()) {
+                                processMessages(msgs)
                             }
-
                             continueRestore(msgs, topic)
                         }
                     }
@@ -605,24 +623,56 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
+    private fun isRestoringContacts() : Boolean {
+        return restoreStateFlow.value is RestoreState.RestoringContacts
+    }
+
+    private fun isRestoringMessages() : Boolean {
+        return restoreStateFlow.value is RestoreState.RestoringMessages
+    }
+
+    private fun isRestoreFinished() : Boolean {
+        return restoreStateFlow.value is RestoreState.RestoreFinished
+    }
+
+    private fun isFetchingMessagesPerContact() : Boolean {
+        return restoreStateFlow.value is RestoreState.FetchingMessagesPerContact
+    }
+
     private fun goToNextPhaseOrFinish() {
-        if (restoreStateFlow.value is RestoreState.RestoringContacts) {
+        if (isRestoringContacts()) {
             notifyListeners { onRestoreProgress(restoreProgress.fixedContactPercentage) }
             notifyListeners { onRestoreMessages() }
         }
 
-        if (restoreStateFlow.value is RestoreState.RestoringMessages || restoreStateFlow.value == null) {
-            if (restoreStateFlow.value is RestoreState.RestoringMessages) {
+        if (
+            isRestoringMessages() ||
+            isRestoreFinished() ||
+            restoreStateFlow.value == null
+        ) {
+            if (
+                isRestoringMessages() ||
+                isRestoreFinished()
+            ) {
                 notifyListeners { onRestoreProgress(restoreProgress.fixedContactPercentage + restoreProgress.fixedMessagesPercentage) }
-                _restoreStateFlow.value = RestoreState.RestoreFinished
-                notifyListeners { onRestoreFinished() }
+                _restoreStateFlow.value = null
+                setMnemonicWords(null)
             }
 
             updatePaidInvoices()
             getReadMessages()
             getMutedChats()
             getPings()
+        } else {
+            // No more messages to restore
+            notifyListeners {
+                onMessagesRestoreWith(0,  null)
+            }
         }
+    }
+
+    override fun finishRestore() {
+        _restoreStateFlow.value = RestoreState.RestoreFinished
     }
 
     private fun updatePaidInvoices() {
@@ -638,34 +688,63 @@ class ConnectManagerImpl: ConnectManager()
         }
 
         if (isRestoreAccount()) {
-
-            if (restoreStateFlow.value is RestoreState.RestoringContacts) {
+            if (isRestoringContacts()) {
                 val highestIndex = msgs.maxByOrNull { it.index?.toLong() ?: 0L }?.index?.toLong()
                 highestIndex?.let { nnHighestIndex ->
                     calculateContactRestore()
 
                     msgsCountsState.value?.first_for_each_scid_highest_index?.let { highestIndex ->
                         if (nnHighestIndex < highestIndex) {
-                            fetchFirstMessagesPerKey(nnHighestIndex.plus(1L), msgsCountsState.value?.ok_key)
+                            fetchFirstMessagesPerKey(
+                                nnHighestIndex.plus(1L),
+                                msgsCountsState.value?.ok_key
+                            )
                         } else {
                             goToNextPhaseOrFinish()
                         }
                     }
                 }
             }
-            // Restore Message Step
-            if (restoreStateFlow.value is RestoreState.RestoringMessages) {
-                val minIndex = msgs.minByOrNull { it.index?.toLong() ?: 0L }?.index?.toULong()
-                minIndex?.let { nnMinIndex ->
-                    calculateMessageRestore()
-                    fetchMessagesOnRestoreAccount(nnMinIndex.minus(1u).toLong(), msgsCountsState.value?.total)
 
-                    notifyListeners {
-                        onRestoreMinIndex(nnMinIndex.toLong())
+            if (isRestoringMessages()) {
+                calculateMessageRestore()
+
+                restoreProgress.currentChatRestoreIndex += 1
+
+                if (restoreProgress.currentChatRestoreIndex == restoreProgress.totalChatsToRestore) {
+                    goToNextPhaseOrFinish()
+                    return
+                }
+
+                fetchMessagesOnRestoreAccount(
+                    restoreProgress.messagesHighestIndex.toLong(),
+                    restoreProgress.totalChatsToRestore.toLong(),
+                    restoreProgress.chatPublicKeys
+                )
+            }
+
+            if (isRestoreFinished()) {
+                goToNextPhaseOrFinish()
+            }
+        } else {
+            if (_restoreStateFlow.value is RestoreState.FetchingMessagesPerContact){
+                (_restoreStateFlow.value as? RestoreState.FetchingMessagesPerContact)?.let { stateFlow ->
+                    val publicKey = stateFlow.publicKey
+                    val allHaveSameSender = msgs.all { it -> it.sender?.contains(publicKey) == true || it.sentTo == publicKey }
+
+                    if (msgs.isNotEmpty() && allHaveSameSender) {
+                        _restoreStateFlow.value = RestoreState.RestoreFinished
+
+                        notifyListeners {
+                            onMessagesRestoreWith(msgs.count(), publicKey)
+                        }
+
+                        getReadMessages()
+                        return
                     }
                 }
             }
-        } else {
+
             val highestIndexReceived = msgs.maxByOrNull { it.index?.toLong() ?: 0L }?.index?.toULong()
 
             highestIndexReceived?.let { nnHighestIndexReceived ->
@@ -674,14 +753,12 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
-    private fun processMessage(msg: Msg) {
-        Log.d("RESTORE_PROCESS_MESSAGE", "${msg.index.orEmpty()}")
-
-        notifyListeners {
-            onMessage(
+    private fun processMessages(msgs: List<Msg>) {
+        val mqttMessages = msgs.map { msg ->
+            chat.sphinx.wrapper_common.message.MqttMessage(
                 msg.message.orEmpty(),
                 msg.sender.orEmpty(),
-                msg.type?.toInt() ?: 0,
+                if (msg.type != null) msg.type!!.toInt() else 100,
                 msg.uuid.orEmpty(),
                 msg.index.orEmpty(),
                 msg.timestamp?.toLong(),
@@ -690,9 +767,17 @@ class ConnectManagerImpl: ConnectManager()
                 msg.fromMe,
                 msg.tag,
                 msg.timestamp?.toLong(),
-                isRestoreAccount()
+                msg.paymentHash
             )
         }
+
+        notifyListeners {
+            onMessages(mqttMessages, isRestoreAccount())
+        }
+
+        _ownerInfoStateFlow.value = ownerInfoStateFlow.value.copy(
+            messageLastIndex = max(_ownerInfoStateFlow.value.messageLastIndex ?: 0, mqttMessages.maxByOrNull { it.msgIndex.toLongOrNull() ?: 0L }?.msgIndex?.toLongOrNull() ?: 0L)
+        )
     }
 
     private fun fetchMessagesWithPagination(
@@ -844,6 +929,10 @@ class ConnectManagerImpl: ConnectManager()
             if (xPub != null) {
                 connectToMQTT(mixerIp!!, xPub, now, sig)
             }
+        } ?: run {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.InvalidMnemonicError)
+            }
         }
     }
 
@@ -950,22 +1039,31 @@ class ConnectManagerImpl: ConnectManager()
     }
 
     override fun fetchMessagesOnRestoreAccount(
-        totalHighestIndex: Long?,
-        totalMsgsCount: Long?
+        totalHighestIndex: Long,
+        chatsTotal: Long,
+        chatsPublicKeys: List<String>
     ) {
         try {
-            if (restoreStateFlow.value !is RestoreState.RestoringMessages) {
+            if (!isRestoringMessages()) {
                 _restoreStateFlow.value = RestoreState.RestoringMessages
-                setMessagesTotal(totalMsgsCount)
+                setChatsRestoreData(
+                    totalHighestIndex,
+                    chatsTotal,
+                    chatsPublicKeys
+                )
             }
 
-            val fetchMessages = fetchMsgsBatch(
+            val currentIndex = restoreProgress.currentChatRestoreIndex
+            val currentPublicKey = chatsPublicKeys[currentIndex]
+
+            val fetchMessages = fetchMsgsBatchPerContact(
                 ownerSeed!!,
                 getTimestampInMilliseconds(),
                 getCurrentUserState(),
-                totalHighestIndex?.toULong() ?: 0.toULong(),
+                totalHighestIndex.toULong(),
                 MSG_BATCH_LIMIT.toUInt(),
                 true,
+                currentPublicKey
             )
             handleRunReturn(fetchMessages)
         } catch (e: Exception) {
@@ -973,6 +1071,32 @@ class ConnectManagerImpl: ConnectManager()
                 onConnectManagerError(ConnectManagerError.FetchMessageError)
             }
             Log.e("MQTT_MESSAGES", "fetchMessagesOnRestoreAccount ${e.message}")
+        }
+    }
+
+    override fun fetchMessagesPerContact(
+        minIndex: Long,
+        publicKey: String
+    ) {
+        _restoreStateFlow.value = RestoreState.FetchingMessagesPerContact(publicKey)
+
+        try {
+            val fetchMessages = fetchMsgsBatchPerContact(
+                ownerSeed!!,
+                getTimestampInMilliseconds(),
+                getCurrentUserState(),
+                minIndex.toULong(),
+                MSG_BATCH_LIMIT.toUInt(),
+                true,
+                publicKey
+            )
+            Log.d("MQTT_MESSAGES", "fetchMessagesPerContact")
+            handleRunReturn(fetchMessages)
+        } catch (e: Exception) {
+            notifyListeners {
+                onConnectManagerError(ConnectManagerError.FetchMessageError)
+            }
+            Log.e("MQTT_MESSAGES", "fetchMessagesPerContact ${e.message}")
         }
     }
 
@@ -1008,6 +1132,7 @@ class ConnectManagerImpl: ConnectManager()
                 ownerInfo.pubkey,
                 ownerInfo.routeHint,
                 ownerInfoStateFlow.value.userState,
+                ownerInfoStateFlow.value.userStateByteArray,
                 ownerInfo.messageLastIndex
             )
 
@@ -1027,7 +1152,7 @@ class ConnectManagerImpl: ConnectManager()
             getMutedChats()
 
             notifyListeners {
-                onNetworkStatusChange(true)
+                onNetworkStatusChange(false, isLoading = true)
             }
 
             return
@@ -1191,7 +1316,7 @@ class ConnectManagerImpl: ConnectManager()
     private fun isProductionServer(): Boolean {
         val ip = mixerIp ?: return false
         val port = ip.substringAfterLast(":").toIntOrNull() ?: return false
-        return port != TEST_SERVER_PORT
+        return port == PROD_SERVER_PORT
     }
 
     private fun isProductionEnvironment(): Boolean {
@@ -1426,10 +1551,8 @@ class ConnectManagerImpl: ConnectManager()
             handleRunReturn(fetchMessages)
 
         } catch (e: Exception) {
-//            notifyListeners {
-//                onConnectManagerError(ConnectManagerError.FetchMessageError)
-//            }
             Log.e("MQTT_MESSAGES", "fetchMessagesOnAppInit ${e.message}")
+            reconnectWithBackOff()
         }
     }
 
@@ -1477,9 +1600,12 @@ class ConnectManagerImpl: ConnectManager()
         provisionalId: Long,
         messageType: Int,
         amount: Long?,
+        myAlias: String?,
+        myPhotoUrl: String?,
+        date: Long,
         isTribe: Boolean
     ) {
-        val now = getTimestampInMilliseconds()
+        val now = date.toString()
 
         // Have to include al least 1 sat for tribe messages
         val nnAmount = when {
@@ -1487,7 +1613,11 @@ class ConnectManagerImpl: ConnectManager()
             isTribe -> amount ?: 1L
             else -> amount ?: 0L
         }
-        val myAlias = if (isTribe) (ownerInfoStateFlow.value.alias ?: "").replace(" ", "_") else (ownerInfoStateFlow.value.alias ?: "")
+
+        val alias = myAlias ?: (ownerInfoStateFlow.value.alias ?: "")
+        val fixedAlias = if (isTribe) alias.replace(" ", "_") else alias
+
+        val fixedPhotoUrl = myPhotoUrl ?: (ownerInfoStateFlow.value.picture ?: "")
 
         try {
             val message = send(
@@ -1497,14 +1627,20 @@ class ConnectManagerImpl: ConnectManager()
                 messageType.toUByte(),
                 sphinxMessage,
                 getCurrentUserState(),
-                myAlias,
-                ownerInfoStateFlow.value.picture ?: "",
+                fixedAlias,
+                fixedPhotoUrl,
                 convertSatsToMillisats(nnAmount),
                 isTribe
             )
             handleRunReturn(message)
 
             message.msgs.firstOrNull()?.let { sentMessage ->
+                sentMessage.paymentHash?.let { paymentHash ->
+                    notifyListeners {
+                        onMessagePaymentHash(paymentHash, provisionalId)
+                    }
+                }
+
                 sentMessage.uuid?.let { msgUuid ->
                     notifyListeners {
                         onMessageTagAndUuid(sentMessage.tag, msgUuid, provisionalId)
@@ -1523,13 +1659,18 @@ class ConnectManagerImpl: ConnectManager()
     override fun deleteMessage(
         sphinxMessage: String,
         contactPubKey: String,
+        myAlias: String?,
+        myPhotoUrl: String?,
         isTribe: Boolean
     ) {
         val now = getTimestampInMilliseconds()
 
         // Have to include al least 1 sat for tribe messages
         val nnAmount = if (isTribe) 1L else 0L
-        val myAlias = if (isTribe) (ownerInfoStateFlow.value.alias ?: "").replace(" ", "_") else (ownerInfoStateFlow.value.alias ?: "")
+        val alias = myAlias ?: (ownerInfoStateFlow.value.alias ?: "")
+        val fixedAlias = if (isTribe) alias.replace(" ", "_") else alias
+
+        val fixedPhotoUrl = myPhotoUrl ?: (ownerInfoStateFlow.value.picture ?: "")
 
         try {
             val message = send(
@@ -1539,8 +1680,8 @@ class ConnectManagerImpl: ConnectManager()
                 17.toUByte(), // Fix this hardcoded value
                 sphinxMessage,
                 getCurrentUserState(),
-                myAlias,
-                ownerInfoStateFlow.value.picture ?: "",
+                fixedAlias,
+                fixedPhotoUrl,
                 convertSatsToMillisats(nnAmount),
                 isTribe
             )
@@ -1860,7 +2001,7 @@ class ConnectManagerImpl: ConnectManager()
                 ownerSeed!!,
                 now,
                 getCurrentUserState(),
-                lastMsgDate.plus(1000).toULong(),
+                lastMsgDate.toULong(),
                 limit.toUInt(),
                 scid?.toULong(),
                 remoteOnly ?: false,
@@ -2089,7 +2230,7 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
-    private fun resetMQTT() {
+    override fun resetMQTT() {
         if (mqttClient?.isConnected == true) {
             mqttClient?.disconnect()
         }
@@ -2102,7 +2243,8 @@ class ConnectManagerImpl: ConnectManager()
                 storeUserStateOnSharedPreferences(it)
             }
 
-        } catch (e: Exception) { }
+        } catch (_: Exception) {
+        }
     }
 
     private fun storeUserStateOnSharedPreferences(newUserState: MutableMap<String, ByteArray>) {
@@ -2110,15 +2252,17 @@ class ConnectManagerImpl: ConnectManager()
         existingUserState.putAll(newUserState)
 
         val encodedString = encodeMapToBase64(existingUserState)
+        val bytesArray = MsgPack.encodeToByteArray(MsgPackDynamicSerializer, existingUserState)
 
-        // Update class var
         _ownerInfoStateFlow.value = ownerInfoStateFlow.value.copy(
-            userState = encodedString
+            userState = encodedString,
+            userStateByteArray = bytesArray
         )
 
-        // Update SharedPreferences
-        notifyListeners {
-            onUpdateUserState(encodedString)
+        userStateScope.launch(Dispatchers.IO) {
+            notifyListeners {
+                onUpdateUserState(encodedString)
+            }
         }
     }
 
@@ -2130,15 +2274,17 @@ class ConnectManagerImpl: ConnectManager()
         }
 
         val encodedString = encodeMapToBase64(existingUserState)
-
-        // Update class var
+        val bytesArray = MsgPack.encodeToByteArray(MsgPackDynamicSerializer, existingUserState)
+        
         _ownerInfoStateFlow.value = ownerInfoStateFlow.value.copy(
-            userState = encodedString
+            userState = encodedString,
+            userStateByteArray = bytesArray
         )
 
-        // Update SharedPreferences
-        notifyListeners {
-            onUpdateUserState(encodedString)
+        userStateScope.launch(Dispatchers.IO) {
+            notifyListeners {
+                onUpdateUserState(encodedString)
+            }
         }
     }
 
@@ -2151,22 +2297,87 @@ class ConnectManagerImpl: ConnectManager()
     }
 
     private fun getCurrentUserState(): ByteArray {
+        ownerInfoStateFlow.value.userStateByteArray?.let { bytes ->
+            return bytes
+        }
         val userStateMap = retrieveUserStateMap(ownerInfoStateFlow.value.userState)
-        Log.d("MQTT_MESSAGES", "getCurrentUserState $userStateMap")
-        return MsgPack.encodeToByteArray(MsgPackDynamicSerializer, userStateMap)
+        val bytesArray = MsgPack.encodeToByteArray(MsgPackDynamicSerializer, userStateMap)
+
+        _ownerInfoStateFlow.value = ownerInfoStateFlow.value.copy(
+            userStateByteArray = bytesArray
+        )
+
+        return bytesArray
+    }
+
+    private fun decodeBase64ToMap(encodedString: String): MutableMap<String, ByteArray> {
+        if (encodedString.isEmpty()) {
+            return mutableMapOf()
+        }
+
+        val decodedMap = mutableMapOf<String, ByteArray>()
+
+        try {
+            val jsonObject = JSONObject(encodedString)
+
+            jsonObject.keys().forEach { key ->
+                try {
+                    val encodedValue = jsonObject.getString(key)
+                    val decodedValue = Base64.decode(encodedValue, Base64.NO_WRAP)
+                    decodedMap[key] = decodedValue
+                } catch (e: Exception) {
+                    Log.w("UserState", "Failed to decode key '$key': ${e.message}")
+                }
+            }
+        } catch (e: JSONException) {
+            Log.e("UserState", "Failed to parse user state JSON", e)
+        }
+
+        return decodedMap
     }
 
     private fun encodeMapToBase64(map: MutableMap<String, ByteArray>): String {
-        val encodedMap = mutableMapOf<String, String>()
+        when {
+            map.isEmpty() -> return "{}"
+            map.size == 1 -> {
+                // Optimize for single entry
+                val (key, value) = map.entries.first()
+                return "{\"${escapeJsonString(key)}\":\"${Base64.encodeToString(value, Base64.NO_WRAP)}\"}"
+            }
+            else -> {
+                return buildString(capacity = estimateJsonSize(map)) {
+                    append("{")
+                    map.entries.forEachIndexed { index, (key, value) ->
+                        if (index > 0) append(",")
 
-        for ((key, value) in map) {
-            encodedMap[key] = Base64.encodeToString(value, Base64.NO_WRAP)
+                        append("\"")
+                        append(escapeJsonString(key))
+                        append("\":\"")
+                        append(Base64.encodeToString(value, Base64.NO_WRAP))
+                        append("\"")
+                    }
+                    append("}")
+                }
+            }
+        }
+    }
+
+    private fun estimateJsonSize(map: MutableMap<String, ByteArray>): Int {
+        return map.entries.sumOf { (key, value) ->
+            key.length + (value.size * 4 / 3) + 6
+        } + 10
+    }
+
+    private fun escapeJsonString(str: String): String {
+        if (str.none { it == '"' || it == '\\' || it < ' ' }) {
+            return str
         }
 
-        val result = (encodedMap as Map<*, *>?)?.let { JSONObject(it).toString() } ?: ""
-
-
-        return result
+        return str.replace("\\", "\\\\")
+            .replace("\"", "\\\"")
+            .replace("\n", "\\n")
+            .replace("\r", "\\r")
+            .replace("\t", "\\t")
     }
 
     private fun extractTagAndStatus(sentStatusJson: String?): Pair<String, Boolean>? {
@@ -2182,28 +2393,6 @@ class ConnectManagerImpl: ConnectManager()
             e.printStackTrace()
         }
         return null
-    }
-
-    private fun decodeBase64ToMap(encodedString: String): MutableMap<String, ByteArray> {
-        if (encodedString.isEmpty()) {
-            return mutableMapOf()
-        }
-
-        val decodedMap = mutableMapOf<String, ByteArray>()
-
-        try {
-            val jsonObject = JSONObject(encodedString)
-            val keys = jsonObject.keys()
-
-            while (keys.hasNext()) {
-                val key = keys.next()
-                val encodedValue = jsonObject.getString(key)
-                val decodedValue = Base64.decode(encodedValue, Base64.NO_WRAP)
-                decodedMap[key] = decodedValue
-            }
-        } catch (e: JSONException) { }
-
-        return decodedMap
     }
 
     private fun convertSatsToMillisats(sats: Long): ULong {
@@ -2348,12 +2537,26 @@ class ConnectManagerImpl: ConnectManager()
     private fun setContactKeyTotal(firstForEachScid: Long?) {
         firstForEachScid?.let {
             restoreProgress.totalContactsKey = it.toInt()
+
+            if (isRestoreAccount()) {
+                restoreProgress.progressPercentage = 1
+
+                notifyListeners {
+                    onRestoreProgress(restoreProgress.progressPercentage)
+                }
+            }
         }
     }
 
-    private fun setMessagesTotal(totalMsgs: Long?) {
-        totalMsgs?.let {
-            restoreProgress.totalMessages = it.toInt()
+    private fun setChatsRestoreData(
+        highestIndex: Long,
+        totalChat: Long?,
+        chatsPublicKeys: List<String>
+    ) {
+        totalChat?.let {
+            restoreProgress.messagesHighestIndex = highestIndex.toInt()
+            restoreProgress.totalChatsToRestore = it.toInt()
+            restoreProgress.chatPublicKeys = chatsPublicKeys
         }
     }
 
@@ -2375,12 +2578,12 @@ class ConnectManagerImpl: ConnectManager()
 
     private fun calculateMessageRestore() {
         try {
-            val restoredMsgs = restoreProgress.restoredMessagesAmount.plus(MSG_BATCH_LIMIT)
-            if (restoredMsgs >= restoreProgress.totalMessages) {
+            val restoredIndex = restoreProgress.currentChatRestoreIndex
+
+            if (restoredIndex >= restoreProgress.totalChatsToRestore) {
                 restoreProgress.progressPercentage = 100
             } else {
-                restoreProgress.restoredMessagesAmount = restoredMsgs
-                restoreProgress.progressPercentage = (restoreProgress.fixedContactPercentage + ((restoredMsgs.toDouble() / restoreProgress.totalMessages.toDouble())) * restoreProgress.fixedMessagesPercentage.toDouble()).roundToInt()
+                restoreProgress.progressPercentage = (restoreProgress.fixedContactPercentage + ((restoredIndex.toDouble() / restoreProgress.totalChatsToRestore.toDouble())) * restoreProgress.fixedMessagesPercentage.toDouble()).roundToInt()
             }
             notifyListeners {
                 onRestoreProgress(restoreProgress.progressPercentage)

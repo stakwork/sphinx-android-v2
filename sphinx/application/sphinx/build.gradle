@@ -4,6 +4,7 @@ plugins {
     id 'dagger.hilt.android.plugin'
     id 'kotlin-android'
     id 'kotlin-kapt'
+    id 'com.google.gms.google-services'
 }
 
 android {
@@ -23,6 +24,10 @@ android {
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         testInstrumentationRunnerArguments disableAnalytics: 'true'
+
+        ndk {
+            abiFilters 'arm64-v8a'
+        }
     }
 
     // Gradle 4.0's introduction of Google analytics to Android App Developers.
@@ -84,6 +89,8 @@ dependencies {
 
     implementation project(path: ':sphinx:application:common:logger')
 
+    implementation project(path: ':sphinx:activity:concepts:concept-grapheneos-manager')
+
     implementation project(path: ':sphinx:application:data:features:feature-background-login')
     implementation project(path: ':sphinx:application:data:features:feature-connect-manager')
     implementation project(path: ':sphinx:application:data:features:feature-coredb')
@@ -109,11 +116,13 @@ dependencies {
     implementation project(path: ':sphinx:application:network:features:queries:feature-network-query-discover-tribes')
     implementation project(path: ':sphinx:application:network:features:queries:feature-network-query-feed-status')
     implementation project(path: ':sphinx:application:network:features:feature-network-relay-call')
-    implementation project(path: ':sphinx:application:network:features:tor:feature-network-tor')
 
     implementation project(path: ':sphinx:screens:onboard:key-restore')
 
     implementation project(path: ':sphinx:service:features:media-player:feature-service-media-player-android')
+
+    api platform('com.google.firebase:firebase-bom:27.1.0')
+    api 'com.google.firebase:firebase-messaging-ktx'
 
     // See `/sphinx/service/features/notifications/README.md`
     if (findProperty("SPHINX_COMPILE_PUSH_NOTIFICATION_TYPE") == "firebase") {
@@ -127,12 +136,11 @@ dependencies {
     kapt kaptDeps.google.hilt
 
     implementation deps.sqlCipher
-    implementation deps.sqlRequery
+//    implementation deps.sqlRequery
     implementation deps.square.sqlDelightAndroid
     implementation deps.jna.sdk
 
     testImplementation project(path: ':kotlin:test:test-concept-coroutines')
-    testImplementation project(path: ':sphinx:test:test-tor-manager')
     testImplementation testDeps.robolectric
     testImplementation testDeps.androidx.core
 

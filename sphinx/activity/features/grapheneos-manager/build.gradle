@@ -1,0 +1,45 @@
+plugins {
+    id 'app.cash.exhaustive'
+    id 'com.android.library'
+    id 'kotlin-android'
+    id 'kotlinx-serialization'
+}
+
+android {
+    compileSdkVersion versions.compileSdk
+    buildToolsVersion versions.buildTools
+
+    defaultConfig {
+        minSdkVersion versions.minSdk
+        targetSdkVersion versions.compileSdk
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunnerArguments disableAnalytics: 'true'
+        consumerProguardFiles "consumer-rules.pro"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+    namespace 'chat.sphinx.grapheneos_manager'
+}
+
+dependencies {
+    implementation fileTree(dir: "libs", include: ["*.jar"])
+    api project(path: ':kotlin:concepts:concept-coroutines')
+
+    implementation project(path: ':kotlin:encoders:base64')
+
+    // Sphinx
+    api project(path: ':sphinx:activity:concepts:concept-grapheneos-manager')
+    implementation project(':sphinx:application:data:concepts:concept-image-loader')
+
+    implementation deps.kotlinx.serialization
+    implementation deps.androidx.recyclerView
+    implementation deps.androidx.viewPager2
+
+
+    testImplementation project(path: ':kotlin:test:test-concept-coroutines')
+}

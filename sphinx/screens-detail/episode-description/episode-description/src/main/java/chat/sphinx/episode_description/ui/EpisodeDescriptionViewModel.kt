@@ -8,7 +8,6 @@ import android.content.Intent
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Build
-import androidx.core.view.ContentInfoCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
@@ -18,7 +17,6 @@ import chat.sphinx.concept_service_media.MediaPlayerServiceController
 import chat.sphinx.concept_service_media.MediaPlayerServiceState
 import chat.sphinx.concept_service_media.UserAction
 import chat.sphinx.create_description.BuildConfig
-import chat.sphinx.create_description.R
 import chat.sphinx.episode_description.model.FeedItemDescription
 import chat.sphinx.episode_description.navigation.EpisodeDescriptionNavigator
 import chat.sphinx.wrapper_common.dashboard.ChatId
@@ -277,8 +275,8 @@ internal class EpisodeDescriptionViewModel @Inject constructor(
                                 feedRepository.checkIfEpisodeNodeExists(
                                     episode,
                                     podcast.title,
-                                    workflowId,
-                                    token
+                                    workflowId = workflowId,
+                                    token = token
                                 )
                             }
                         }

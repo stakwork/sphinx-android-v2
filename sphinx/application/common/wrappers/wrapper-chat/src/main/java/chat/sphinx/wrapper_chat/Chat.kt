@@ -57,14 +57,6 @@ inline fun Chat.isTribe(): Boolean =
 inline fun Chat.isConversation(): Boolean =
     type.isConversation()
 
-@Suppress("NOTHING_TO_INLINE")
-inline fun Chat.isTribeOwnedByAccount(accountOwnerNodePubKey: LightningNodePubKey?): Boolean =
-    type.isTribe() && ownerPubKey == accountOwnerNodePubKey
-
-@Suppress("NOTHING_TO_INLINE")
-inline fun Chat.isTribeNotOwnedByAccount(accountOwnerNodePubKey: LightningNodePubKey?): Boolean =
-    type.isTribe() && ownerPubKey != accountOwnerNodePubKey
-
 data class Chat(
     val id: ChatId,
     val uuid: ChatUUID,
@@ -95,5 +87,6 @@ data class Chat(
     val timezoneEnabled: TimezoneEnabled?,
     val timezoneIdentifier: TimezoneIdentifier?,
     val remoteTimezoneIdentifier: RemoteTimezoneIdentifier?,
-    val timezoneUpdated: TimezoneUpdated?
+    val timezoneUpdated: TimezoneUpdated?,
+    val ownedTribe: OwnedTribe?
 )

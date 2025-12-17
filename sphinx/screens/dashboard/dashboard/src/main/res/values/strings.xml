@@ -163,6 +163,7 @@
     <string name="dashboard_restore_progress_feeds">Restoring Feeds: %s</string>
     <string name="dashboard_restore_progress_messages">Restoring Messages: %s</string>
     <string name="dashboard_stop_restore">Continue later</string>
+    <string name="dashboard_restore_stopping">Finishing restore</string>
 
     <string name="loading_recommendations">Loading Recommendations...</string>
     <string name="refresh_while_loading">You can\'t get new recommendations while playing them. Please stop playing before refreshing</string>

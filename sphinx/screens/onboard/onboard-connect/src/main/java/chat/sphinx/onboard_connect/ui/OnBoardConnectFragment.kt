@@ -96,6 +96,8 @@ internal class OnBoardConnectFragment: SideEffectFragment<
                 )
 
                 hideKeyboardFrom(buttonSubmit.context, buttonSubmit)
+
+                binding.editTextCodeInput.setText("")
             }
 
             layoutConstrainSkipContainer.setOnClickListener {
@@ -211,8 +213,6 @@ internal class OnBoardConnectFragment: SideEffectFragment<
                 binding.apply {
                     textViewOnboardConnectTitle.text = getString(R_onboard_resources.string.on_board_new_user)
                     editTextCodeInput.hint = getString(R_onboard_resources.string.on_board_connect_paste_connection_code)
-                    imageButtonScanner.visible
-//                    layoutConstrainSkipContainer.visible
 
                     if (!viewState.code.isNullOrEmpty()) {
                         editTextCodeInput.setText(viewState.code)
@@ -224,7 +224,6 @@ internal class OnBoardConnectFragment: SideEffectFragment<
                 binding.apply {
                     textViewOnboardConnectTitle.text = getString(R_onboard_resources.string.on_board_connect)
                     editTextCodeInput.hint = getString(R_onboard_resources.string.on_board_connect_paste_keys)
-                    imageButtonScanner.gone
                 }
             }
         }

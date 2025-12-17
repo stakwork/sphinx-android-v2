@@ -39,7 +39,6 @@ import chat.sphinx.tribe.BottomMenuTribe
 import chat.sphinx.tribe_detail.R
 import chat.sphinx.tribe_detail.databinding.FragmentTribeDetailBinding
 import chat.sphinx.wrapper_chat.fixedAlias
-import chat.sphinx.wrapper_chat.isTribeOwnedByAccount
 import chat.sphinx.wrapper_chat.isTrue
 import chat.sphinx.wrapper_common.DateTime
 import chat.sphinx.wrapper_common.eeemmddhmma
@@ -234,7 +233,7 @@ internal class TribeDetailFragment : SideEffectFragment<
                     addAliasFilter()
                     return@setOnFocusChangeListener
                 }
-                viewModel.updateProfileAlias(editTextProfileAliasValue.text.toString())
+                viewModel.updateMyAlias(editTextProfileAliasValue.text.toString())
             }
 
             editTextProfileAliasValue.setOnEditorActionListener(object : OnEditorActionListener {
@@ -381,7 +380,7 @@ internal class TribeDetailFragment : SideEffectFragment<
                         )
                     }
 
-                    if (viewState.chat.isTribeOwnedByAccount(viewModel.getOwner().nodePubKey)) {
+                    if (viewState.chat.ownedTribe?.isTrue() == true) {
                         buttonAdminViewMembers.visible
                         layoutConstraintTribeBadges.visible
                     } else {

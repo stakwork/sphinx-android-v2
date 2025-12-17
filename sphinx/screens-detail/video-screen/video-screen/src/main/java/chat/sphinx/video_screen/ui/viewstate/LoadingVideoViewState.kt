@@ -5,4 +5,5 @@ import io.matthewnelson.concept_views.viewstate.ViewState
 internal sealed class LoadingVideoViewState: ViewState<LoadingVideoViewState>() {
     object Idle: LoadingVideoViewState()
     object MetaDataLoaded: LoadingVideoViewState()
+    object Loading: LoadingVideoViewState()
 }

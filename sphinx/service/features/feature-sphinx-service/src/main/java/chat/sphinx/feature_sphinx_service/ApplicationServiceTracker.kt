@@ -1,8 +1,11 @@
 package chat.sphinx.feature_sphinx_service
 
 import androidx.annotation.MainThread
+import javax.inject.Inject
+import javax.inject.Singleton
 
-abstract class ApplicationServiceTracker {
+@Singleton
+class ApplicationServiceTracker @Inject constructor() {
 
     @Volatile
     var mustCompleteServicesCounter: Int = 0
@@ -16,7 +19,7 @@ abstract class ApplicationServiceTracker {
     }
 
     @MainThread
-    open fun onServiceDestroyed(mustComplete: Boolean) {
+    fun onServiceDestroyed(mustComplete: Boolean) {
         if (mustComplete) {
             mustCompleteServicesCounter--
         }
@@ -32,7 +35,7 @@ abstract class ApplicationServiceTracker {
     }
 
     @MainThread
-    open fun onTaskRemoved() {
+    fun onTaskRemoved() {
         if (!taskIsRemoved) {
             taskIsRemoved = true
         }

@@ -160,6 +160,7 @@
     <string name="dashboard_restore_progress_feeds">Ni-rerestore ang Mga Feed: %s</string>
     <string name="dashboard_restore_progress_messages">Ni-rerestore ang Mga Mensahe: %s</string>
     <string name="dashboard_stop_restore">Ipagpatuloy sa ibang pagkakataon</string>
+    <string name="dashboard_restore_stopping">Tinatapos ang pag-restore</string>
 
     <string name="loading_recommendations">Kinakarga ang Mga Rekomendasyon...</string>
     <string name="refresh_while_loading">Hindi ka makakakuha ng mga bagong rekomendasyon habang pini-play ang mga ito. Itigil ang pag-play bago mag-refresh</string>

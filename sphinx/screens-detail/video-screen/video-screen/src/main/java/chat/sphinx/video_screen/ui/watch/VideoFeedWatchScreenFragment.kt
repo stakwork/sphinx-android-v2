@@ -31,6 +31,7 @@ import chat.sphinx.concept_image_loader.ImageLoaderOptions
 import chat.sphinx.concept_image_loader.Transformation
 import chat.sphinx.insetter_activity.InsetterActivity
 import chat.sphinx.insetter_activity.addNavigationBarPadding
+import chat.sphinx.resources.SphinxToastUtils
 import chat.sphinx.resources.inputMethodManager
 import chat.sphinx.video_screen.R
 import chat.sphinx.resources.R as R_common
@@ -56,9 +57,12 @@ import io.matthewnelson.android_feature_screens.ui.sideeffect.SideEffectFragment
 import io.matthewnelson.android_feature_screens.util.gone
 import io.matthewnelson.android_feature_screens.util.goneIfFalse
 import io.matthewnelson.android_feature_screens.util.visible
+import io.matthewnelson.android_feature_viewmodel.submitSideEffect
 import io.matthewnelson.concept_views.viewstate.collect
 import io.matthewnelson.concept_views.viewstate.value
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import javax.annotation.meta.Exhaustive
 import javax.inject.Inject
@@ -89,10 +93,20 @@ internal class VideoFeedWatchScreenFragment : SideEffectFragment<
     companion object {
         val SLIDER_VALUES = listOf(0,3,3,5,5,8,8,10,10,15,20,20,40,40,80,80,100)
 
-        const val YOUTUBE_URL = "https://www.youtube.com"
+        const val YOUTUBE_URL = "https://www.youtube-nocookie.com"
         const val MIME_TYPE_HTML = "text/html"
         const val ENCODING_UTF = "UTF-8"
     }
+
+    private var isSkipAdEnabled: Boolean = true
+    private var adSkipToastShown = false
+    private var checkAdJob: Job? = null
+    private var lastChaptersVideoId: String? = null
+    private var lastSkipTime = 0L
+    private var lastSkippedChapterIndex = -1
+    private val SKIP_COOLDOWN_MS = 5000L
+    private var adSkipWarningShown = false
+
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -144,14 +158,37 @@ internal class VideoFeedWatchScreenFragment : SideEffectFragment<
     override fun onDestroyView() {
         super.onDestroyView()
 
+        // Cleanup video players
+        binding.includeLayoutVideoPlayer.apply {
+            // Stop VideoView
+            videoViewVideoPlayer.stopPlayback()
+            videoViewVideoPlayer.suspend()
+
+            // Stop WebView
+            webViewYoutubePlayer.loadUrl("about:blank")
+            webViewYoutubePlayer.stopLoading()
+        }
+
         viewModel.createHistoryItem()
         viewModel.trackVideoConsumed()
 
         val a: Activity? = activity
         a?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-
     }
 
+    override fun onPause() {
+        super.onPause()
+
+        // Pause players when fragment is paused
+        binding.includeLayoutVideoPlayer.apply {
+            if (videoViewVideoPlayer.isPlaying) {
+                videoViewVideoPlayer.pause()
+            }
+
+            // Pause YouTube player via JavaScript
+            webViewYoutubePlayer.evaluateJavascript("pauseVideo();", null)
+        }
+    }
     private var draggingSatsSlider: Boolean = false
     private fun setupSeekBar() {
         binding.includeLayoutVideoItemsList.includeLayoutDescriptionBox.apply {
@@ -512,25 +549,86 @@ internal class VideoFeedWatchScreenFragment : SideEffectFragment<
             viewModel.selectedVideoStateContainer.collect { viewState ->
                 @Exhaustive
                 when (viewState) {
-                    is SelectedVideoViewState.Idle -> {}
-
+                    is SelectedVideoViewState.Idle -> {
+                        checkAdJob?.cancel()
+                        checkAdJob = null
+                    }
                     is SelectedVideoViewState.VideoSelected -> {
                         binding.includeLayoutVideoPlayer.apply {
                             binding.includeLayoutVideoItemsList.includeLayoutDescriptionBox.apply {
+
+                                lastSkipTime = 0L
+                                lastSkippedChapterIndex = -1
+                                adSkipToastShown = false
+
                                 textViewVideoTitle.text = viewState.title.value
                                 textViewVideoDescription.text = viewState.description?.value ?: ""
                                 textViewVideoPublishedDate.text = viewState.date?.hhmmElseDate()
 
-                                if (viewState.url.isYoutubeVideo()) {
-                                    viewModel.checkYoutubeVideoAvailable(viewState.id)
+                                // Reset chapters tracking when new video is selected
+                                lastChaptersVideoId = null
+
+                                if (viewState.downloadedItemUrl != null) {
+                                    // WebView player with chapters support
+                                    val videoUri = viewState.downloadedItemUrl.value.toUri()
+
+                                    // Show skip ad button only if video has chapters
+                                    if (viewState.chapters != null) {
+                                        binding.includeLayoutVideoItemsList.buttonSkipAdd.visible
+                                        updateSkipAdButtonUI()
+
+                                        if (lastChaptersVideoId != viewState.id.value) {
+                                            lastChaptersVideoId = viewState.id.value
+                                        }
+                                    } else {
+                                        binding.includeLayoutVideoItemsList.buttonSkipAdd.gone
+                                        checkAdJob?.cancel()
+                                        checkAdJob = null
+                                    }
+
+                                    viewModel.videoPlayerStateContainer.updateViewState(
+                                        VideoPlayerViewState.WebViewPlayer(
+                                            videoUri,
+                                            viewState.duration
+                                        )
+                                    )
+
+                                } else if (viewState.url.isYoutubeVideo()) {
+                                    // YouTube - no skip ad support
+                                    viewModel.videoPlayerStateContainer.updateViewState(
+                                        VideoPlayerViewState.YoutubeVideoIframe(viewState.id)
+                                    )
+                                    binding.includeLayoutVideoItemsList.buttonSkipAdd.gone
+                                    checkAdJob?.cancel()
+                                    checkAdJob = null
                                 } else {
+                                    // Local file or other URL
                                     val videoUri = if (viewState.localFile != null) {
                                         viewState.localFile.toUri()
                                     } else {
                                         viewState.url.value.toUri()
                                     }
 
-                                    viewModel.videoPlayerStateContainer.updateViewState(VideoPlayerViewState.WebViewPlayer(videoUri, viewState.duration))
+                                    // Check for chapters support
+                                    if (viewState.chapters != null) {
+                                        binding.includeLayoutVideoItemsList.buttonSkipAdd.visible
+                                        updateSkipAdButtonUI()
+
+                                        if (lastChaptersVideoId != viewState.id.value) {
+                                            lastChaptersVideoId = viewState.id.value
+                                        }
+                                    } else {
+                                        binding.includeLayoutVideoItemsList.buttonSkipAdd.gone
+                                        checkAdJob?.cancel()
+                                        checkAdJob = null
+                                    }
+
+                                    viewModel.videoPlayerStateContainer.updateViewState(
+                                        VideoPlayerViewState.WebViewPlayer(
+                                            videoUri,
+                                            viewState.duration
+                                        )
+                                    )
                                 }
                             }
                         }
@@ -539,13 +637,18 @@ internal class VideoFeedWatchScreenFragment : SideEffectFragment<
             }
         }
 
+
         onStopSupervisor.scope.launch(viewModel.mainImmediate) {
             viewModel.loadingVideoStateContainer.collect { viewState ->
                 binding.includeLayoutVideoPlayer.apply {
                     @Exhaustive
                     when (viewState) {
-                        is LoadingVideoViewState.Idle -> {}
-
+                        is LoadingVideoViewState.Idle -> {
+                            layoutConstraintLoadingVideo.gone
+                        }
+                        is LoadingVideoViewState.Loading -> {
+                            layoutConstraintLoadingVideo.visible
+                        }
                         is LoadingVideoViewState.MetaDataLoaded -> {
                             layoutConstraintLoadingVideo.gone
                         }
@@ -584,38 +687,221 @@ internal class VideoFeedWatchScreenFragment : SideEffectFragment<
         onStopSupervisor.scope.launch(viewModel.mainImmediate) {
             viewModel.videoPlayerStateContainer.collect { viewState ->
                 binding.includeLayoutVideoPlayer.apply {
-                @Exhaustive
-                when (viewState) {
-                    is VideoPlayerViewState.Idle -> {}
-                    is VideoPlayerViewState.YoutubeVideoIframe -> {
-
+                    @Exhaustive
+                    when (viewState) {
+                        is VideoPlayerViewState.Idle -> {
+                            // Hide both players
                             layoutConstraintVideoViewContainer.gone
+                            layoutConstraintYoutubeIframeContainer.gone
+                            layoutConstraintLoadingVideo.gone
+
+                            checkAdJob?.cancel()
+                            checkAdJob = null
+                        }
+
+                        is VideoPlayerViewState.YoutubeVideoIframe -> {
+                            // Show ONLY YouTube player, hide WebView player
+                            layoutConstraintVideoViewContainer.gone
+                            layoutConstraintLoadingVideo.gone
                             layoutConstraintYoutubeIframeContainer.visible
 
+                            // Stop any video playing in WebView
+                            videoViewVideoPlayer.stopPlayback()
+                            videoViewVideoPlayer.suspend()
+
+                            // Load YouTube video
                             cueYoutubeVideo(viewState.videoId.youtubeVideoId())
 
+                            // Track consumption
                             viewModel.createHistoryItem()
                             viewModel.trackVideoConsumed()
                             viewModel.createVideoRecordConsumed(viewState.videoId)
 
-                    }
-                    is VideoPlayerViewState.WebViewPlayer -> {
+                            checkAdJob?.cancel()
+                            checkAdJob = null
+                        }
 
-                            layoutConstraintLoadingVideo.visible
-                            layoutConstraintVideoViewContainer.visible
+                        is VideoPlayerViewState.WebViewPlayer -> {
+                            // Show ONLY WebView player, hide YouTube player
                             layoutConstraintYoutubeIframeContainer.gone
+                            layoutConstraintVideoViewContainer.visible
+                            layoutConstraintLoadingVideo.visible
 
+                            // Stop YouTube player
+                            webViewYoutubePlayer.loadUrl("about:blank")
+
+                            // Initialize WebView video player
                             viewModel.initializeVideo(
                                 viewState.videoUri,
                                 viewState.duration?.value?.toInt()
                             )
-                        }
 
+                            viewModel.createHistoryItem()
+                            viewModel.trackVideoConsumed()
+
+                            binding.includeLayoutVideoItemsList.buttonSkipAdd.setOnClickListener {
+                                isSkipAdEnabled = !isSkipAdEnabled
+                                updateSkipAdButtonUI()
+                            }
+
+                            if (isSkipAdEnabled) {
+                                startAdChecking()
+                            } else {
+                                checkAdJob?.cancel()
+                                checkAdJob = null
+                            }
+
+                            // Create video record with proper ID
+                            (viewModel.selectedVideoStateContainer.value as? SelectedVideoViewState.VideoSelected)?.let { video ->
+                                viewModel.createVideoRecordConsumed(video.id)
+                            }
+                        }
                     }
                 }
             }
         }
+    }
 
+    private fun startAdChecking() {
+        checkAdJob?.cancel()
+        checkAdJob = onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+            while (isActive && isSkipAdEnabled) {
+                (viewModel.selectedVideoStateContainer.value as? SelectedVideoViewState.VideoSelected)?.let { video ->
+                    checkAndSkipAds(video)
+                }
+                delay(500L) // Check every 500ms
+            }
+        }
+    }
+
+
+    private fun checkAndSkipAds(video: SelectedVideoViewState.VideoSelected) {
+        val chapters = video.chapters?.nodes
+            ?.filter { it.node_type == "Chapter" }
+            ?.mapNotNull { it.properties }
+            ?.filter { !it.timestamp.isNullOrBlank() }
+            ?.sortedBy { viewModel.parseTimestampToMillis(it.timestamp) }
+            ?: return
+
+        if (chapters.isEmpty()) {
+            Log.d("SkipAds", "No chapters found")
+            return
+        }
+
+        val videoView = binding.includeLayoutVideoPlayer.videoViewVideoPlayer
+        if (!videoView.isPlaying) {
+            return
+        }
+
+        val currentTime = videoView.currentPosition.toLong()
+        val videoDuration = video.duration?.value ?: return
+        val now = System.currentTimeMillis()
+
+        // Log chapter structure ONCE
+        if (now % 10000 < 500) { // Every 10 seconds
+            chapters.forEachIndexed { index, chapter ->
+                val startTime = viewModel.parseTimestampToMillis(chapter.timestamp)
+            }
+            Log.i("SkipAds", "===========================")
+        }
+
+        // Prevent rapid re-skipping
+        if (now - lastSkipTime < SKIP_COOLDOWN_MS) {
+            if (now % 1000 < 500) {
+                Log.d("SkipAds", "In cooldown period - ${SKIP_COOLDOWN_MS - (now - lastSkipTime)}ms remaining")
+            }
+            return
+        }
+
+        for (i in chapters.indices) {
+            val chapterStart = viewModel.parseTimestampToMillis(chapters[i].timestamp)
+            val chapterEnd = if (i + 1 < chapters.size) {
+                viewModel.parseTimestampToMillis(chapters[i + 1].timestamp)
+            } else {
+                videoDuration
+            }
+
+            val warnTime = chapterStart - 5000
+
+            if (
+                chapters[i].isAdBoolean &&
+                currentTime in warnTime until chapterStart &&
+                !adSkipWarningShown &&
+                isSkipAdEnabled
+            ) {
+                adSkipWarningShown = true
+
+                lifecycleScope.launch(viewModel.mainImmediate) {
+                    viewModel.submitSideEffect(
+                        VideoFeedScreenSideEffect.Notify(
+                            msg = getString(R.string.video_skip_ad_warning),
+                            notificationLengthLong = false
+                        )
+                    )
+                }
+            }
+
+            // Check if we're currently in an ad chapter
+            if (chapters[i].isAdBoolean &&
+                currentTime in chapterStart until chapterEnd &&
+                currentTime > chapterStart + 200 &&
+                lastSkippedChapterIndex != i) {
+
+                // Find next non-ad chapter
+                var targetIndex = i + 1
+
+                while (targetIndex < chapters.size && chapters[targetIndex].isAdBoolean) {
+                    targetIndex++
+                }
+
+                if (targetIndex >= chapters.size) {
+                    Log.w("SkipAds", "No more chapters after ads, seeking to end of video")
+                    val skipToTime = videoDuration
+
+                    Log.w("SkipAds", "Skip to time: ${skipToTime}ms (${skipToTime/1000}s)")
+                    Log.w("SkipAds", "Skip distance: ${skipToTime - currentTime}ms (${(skipToTime - currentTime)/1000}s)")
+
+                    adSkipToastShown = false
+                    lastSkipTime = now
+                    lastSkippedChapterIndex = i
+
+                    viewModel.seekToVideoTime(skipToTime)
+                } else {
+                    val baseTime = viewModel.parseTimestampToMillis(chapters[targetIndex].timestamp)
+                    val skipToTime = baseTime + 500 // Add 500ms offset
+
+                    adSkipToastShown = false
+                    lastSkipTime = now
+                    lastSkippedChapterIndex = i
+
+                    viewModel.seekToVideoTime(skipToTime)
+
+                    lifecycleScope.launch(viewModel.mainImmediate) {
+                        delay(SKIP_COOLDOWN_MS)
+                        if (System.currentTimeMillis() - lastSkipTime >= SKIP_COOLDOWN_MS) {
+                            lastSkippedChapterIndex = -1
+                        }
+                    }
+                }
+
+                break
+            }
+        }
+    }
+
+
+    private fun updateSkipAdButtonUI() {
+        binding.includeLayoutVideoItemsList.buttonSkipAdd.apply {
+            if (isSkipAdEnabled) {
+                setTextColor(ContextCompat.getColor(requireContext(), android.R.color.white))
+                backgroundTintList = ContextCompat.getColorStateList(requireContext(), chat.sphinx.resources.R.color.primaryGreen)
+                text = getString(R.string.video_skip_ad_enabled)
+            } else {
+                setTextColor(ContextCompat.getColor(requireContext(), chat.sphinx.resources.R.color.secondaryText))
+                backgroundTintList = ContextCompat.getColorStateList(requireContext(), android.R.color.secondary_text_dark)
+                text = getString(R.string.video_skip_ad_disabled)
+            }
+        }
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {

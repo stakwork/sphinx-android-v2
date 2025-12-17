@@ -6,7 +6,9 @@ import chat.sphinx.concept_repository_chat.model.CreateTribe
 import chat.sphinx.kotlin_response.Response
 import chat.sphinx.kotlin_response.ResponseError
 import chat.sphinx.wrapper_chat.Chat
+import chat.sphinx.wrapper_chat.ChatAlias
 import chat.sphinx.wrapper_chat.NotificationLevel
+import chat.sphinx.wrapper_chat.OwnedTribe
 import chat.sphinx.wrapper_common.chat.ChatUUID
 import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_common.dashboard.ContactId
@@ -21,6 +23,7 @@ import chat.sphinx.wrapper_chat.TimezoneIdentifier
 import chat.sphinx.wrapper_chat.TimezoneUpdated
 import chat.sphinx.wrapper_podcast.Podcast
 import kotlinx.coroutines.flow.Flow
+import java.io.File
 
 /**
  * All [Chat]s are cached to the DB such that a network refresh will update
@@ -77,7 +80,6 @@ interface ChatRepository {
 
     suspend fun updateTribeInfo(chat: Chat, isProductionEnvironment: Boolean): NewTribeDto?
     suspend fun storeTribe(createTribe: CreateTribe, chatId: ChatId?)
-    suspend fun updateTribe(chatId: ChatId, createTribe: CreateTribe)
     suspend fun exitAndDeleteTribe(tribe: Chat)
 
     suspend fun pinMessage(
@@ -102,6 +104,21 @@ interface ChatRepository {
     suspend fun upsertLsat(lsat: Lsat)
     suspend fun updateLsatStatus(identifier: LsatIdentifier, status: LsatStatus)
 
+    suspend fun updateChatMyAlias(
+        chatId: ChatId,
+        chatAlias: ChatAlias,
+    )
+
+    suspend fun updateChatOwned(
+        chatId: ChatId,
+        ownedTribe: OwnedTribe
+    )
+
+    suspend fun updateChatMyPhotoUrl(
+        chatId: ChatId,
+        file: File,
+    ): Response<Any, ResponseError>
+
     suspend fun updateTimezoneEnabledStatus(
         isTimezoneEnabled: TimezoneEnabled,
         chatId: ChatId
@@ -119,9 +136,5 @@ interface ChatRepository {
 
     suspend fun updateTimezoneUpdatedOnSystemChange()
 
-    suspend fun updateChatRemoteTimezoneIdentifier(
-        remoteTimezoneIdentifier: RemoteTimezoneIdentifier?,
-        chatId: ChatId,
-        isRestore: Boolean
-    )
+    fun setLatestMessagesDatePerChat()
 }

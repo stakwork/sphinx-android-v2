@@ -103,14 +103,25 @@ internal class VideoFeedWatchScreenViewModel @Inject constructor(
             },
             updateCurrentTimeCallback = { },
             completePlaybackCallback = { },
+            showLoadingCallback = {
+                loadingVideoStateContainer.updateViewState(
+                    LoadingVideoViewState.Loading
+                )
+            },
+            hideLoadingCallback = {
+                loadingVideoStateContainer.updateViewState(
+                    LoadingVideoViewState.MetaDataLoaded
+                )
+            },
             dispatchers
         )
     }
-
     fun initializeVideo(
         videoUri: Uri,
         videoDuration: Int?
     ) {
+        loadingVideoStateContainer.updateViewState(LoadingVideoViewState.Loading)
+
         if (videoDuration != null && videoDuration > 0) {
             videoPlayerController.initializeVideo(
                 videoUri,
@@ -123,6 +134,11 @@ internal class VideoFeedWatchScreenViewModel @Inject constructor(
 
     fun setVideoView(videoView: VideoView) {
         videoPlayerController.setVideo(videoView)
+    }
+
+    override fun seekToVideoTime(timeMillis: Long) {
+        loadingVideoStateContainer.updateViewState(LoadingVideoViewState.Loading)
+        videoPlayerController.seekToTime(timeMillis)
     }
 
     override fun getArgChatId(): ChatId {

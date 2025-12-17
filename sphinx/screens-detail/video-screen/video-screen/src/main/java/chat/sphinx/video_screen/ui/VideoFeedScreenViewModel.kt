@@ -17,7 +17,7 @@ import chat.sphinx.concept_repository_feed.FeedRepository
 import chat.sphinx.concept_repository_lightning.LightningRepository
 import chat.sphinx.concept_repository_media.RepositoryMedia
 import chat.sphinx.concept_repository_message.MessageRepository
-import chat.sphinx.video_screen.R
+import chat.sphinx.create_description.BuildConfig
 import chat.sphinx.resources.R as R_common
 import chat.sphinx.video_screen.navigation.VideoScreenNavigator
 import chat.sphinx.video_screen.ui.viewstate.BoostAnimationViewState
@@ -89,6 +89,7 @@ internal open class VideoFeedScreenViewModel(
     private val serverSettingsSharedPreferences: SharedPreferences =
         app.getSharedPreferences(SERVER_SETTINGS_SHARED_PREFERENCES, Context.MODE_PRIVATE)
 
+    open fun seekToVideoTime(timeMillis: Long) {}
 
     private var videoRecordConsumed: VideoRecordConsumed? = null
     private var videoStreamSatsTimer: VideoStreamSatsTimer? = null
@@ -201,7 +202,9 @@ internal open class VideoFeedScreenViewModel(
                                     video.enclosureUrl,
                                     video.localFile,
                                     video.dateUpdated,
-                                    video.duration
+                                    video.duration,
+                                    video.downloadedItemUrl,
+                                    video.chapters
                                 )
                             )
                         }
@@ -256,12 +259,13 @@ internal open class VideoFeedScreenViewModel(
                     video.enclosureUrl,
                     video.localFile,
                     video.dateUpdated,
-                    video.duration
+                    video.duration,
+                    video.downloadedItemUrl,
+                    video.chapters
                 )
             )
         }
     }
-
     fun updateVideoLastPlayed() {
         (selectedVideoStateContainer.value as? SelectedVideoViewState.VideoSelected)?.let {
             it.feedId?.let { feedId ->
@@ -458,6 +462,17 @@ internal open class VideoFeedScreenViewModel(
         }
     }
 
+    fun checkYoutubeVideoAvailable(videoId: FeedId, downloadedItemUrl: FeedUrl?){
+        viewModelScope.launch(mainImmediate) { // Keep for backend chapter fetching only
+            if (downloadedItemUrl == null) {
+                val workflowId = BuildConfig.GRAPH_MINDSET_WORKFLOW_ID.toInt()
+                val token = BuildConfig.GRAPH_MINDSET_TOKEN
+
+                feedRepository.checkIfEpisodeNodeExists(null, null, videoId, workflowId, token)
+            }
+        }
+    }
+
     fun createVideoRecordConsumed(feedItemId: FeedId){
         if (videoRecordConsumed?.feedItemId == feedItemId){
             return
@@ -499,15 +514,23 @@ internal open class VideoFeedScreenViewModel(
         videoStreamSatsTimer?.stopTimer()
     }
 
+    fun parseTimestampToMillis(timestamp: String?): Long {
+        if (timestamp.isNullOrBlank()) return 0L
+        val parts = timestamp.split(":")
+        if (parts.size != 3) return 0L
+        val hours = parts[0].toLongOrNull() ?: 0L
+        val minutes = parts[1].toLongOrNull() ?: 0L
+        val seconds = parts[2].toLongOrNull() ?: 0L
+        return (hours * 3600 + minutes * 60 + seconds) * 1000L
+    }
+
     fun checkYoutubeVideoAvailable(videoId: FeedId){
         viewModelScope.launch(mainImmediate) {
-            val url = networkQueryFeedStatus.checkYoutubeVideoAvailable(videoId.youtubeVideoId())
+            val workflowId = BuildConfig.GRAPH_MINDSET_WORKFLOW_ID.toInt()
+            val token = BuildConfig.GRAPH_MINDSET_TOKEN
 
-            if (url != null) {
-                videoPlayerStateContainer.updateViewState(VideoPlayerViewState.WebViewPlayer(url.toUri(), null))
-            } else {
-                videoPlayerStateContainer.updateViewState(VideoPlayerViewState.YoutubeVideoIframe(videoId))
-            }
+            videoPlayerStateContainer.updateViewState(VideoPlayerViewState.YoutubeVideoIframe(videoId))
+            feedRepository.checkIfEpisodeNodeExists(null,null, videoId, workflowId, token)
         }
     }
 }

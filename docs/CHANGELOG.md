@@ -1,5 +1,207 @@
 # ChangeLog
 
+## Version 1.0.1-alpha06 (2025-12-09)
+- Adds ability to resend failed or pending messages
+
+## Version 1.0.1-alpha05 (2025-12-09)
+- Fixes crash on authentication caused by SQLCipher upgrade
+
+## Version 1.0.1-alpha04 (2025-12-04)
+- Fixes compatibility issues with 16 KB devices
+- Fixes issues on authorize with sphinx flow
+
+## Version 1.0.1-alpha03 (2025-12-01)
+- Adds support for 16 KB devices
+
+## Version 1.0.1-alpha02 (2025-12-01)
+- Adds YouTube videos processing
+- Adds chapters/ads for YouTube videos
+- Fixes issues and adds improvements
+
+## Version 1.0.1-alpha01 (2025-10-28)
+- Adds support for 16 KB devices
+
+## Version 1.0.0-alpha99 (2025-10-24)
+- Fixes issues on signup
+- Adds loading more messages row on chats
+
+## Version 1.0.0-alpha98 (2025-10-07)
+- Fixes issues on chat
+
+## Version 1.0.0-alpha97 (2025-10-07)
+- Fixes issues on chat
+
+## Version 1.0.0-alpha96 (2025-10-06)
+- Fixes crash on chat navigation
+- Fixes scroll issues on chat
+- Adds "Loading more..." row on chats
+
+## Version 1.0.0-alpha95 (2025-09-26)
+- Improves performance
+
+## Version 1.0.0-alpha94 (2025-09-25)
+- Improves performance
+
+## Version 1.0.0-alpha93 (2025-09-25)
+- Improves performance
+
+## Version 1.0.0-alpha92 (2025-09-24)
+- New restore process
+- Improvements on performance based on db storage
+
+## Version 1.0.0-alpha91 (2025-09-09)
+- Fixes issue related with message media
+- Improves message sending process
+
+## Version 1.0.0-alpha90 (2025-09-08)
+- Improves chat loading performance
+- Improves message media and link preview loading performance
+
+## Version 1.0.0-alpha89 (2025-09-05)
+- Improves chat loading performance 
+- Improves restore process
+
+## Version 1.0.0-alpha88 (2025-09-05)
+- Adds QR code for keys backup on Profile
+- Adds QR code scanner on Restore User form
+
+## Version 1.0.0-alpha87 (2025-09-04)
+- Improves chat media download process
+
+## Version 1.0.0-alpha86 (2025-09-02)
+- Fixes crash on chat video recording
+- Fixes ratio issues on camera pictures
+- Fixes issue for Giphy images not rendering on chat
+
+## Version 1.0.0-alpha85 (2025-09-01)
+- Fixes crash on tribe members list
+
+## Version 1.0.0-alpha84 (2025-09-01)
+- Fixes invoices qr code format issues
+
+## Version 1.0.0-alpha83 (2025-08-21)
+- Improves loading threads list layout
+- Setting alias and picture for tribes implemented
+- Fixes sending tribe messages with custom alias and profile picture
+
+## Version 1.0.0-alpha82 (2025-08-20)
+- Fixes missing tribe members timezones 
+
+## Version 1.0.0-alpha81 (2025-08-20)
+- Fixes scroll initial position on chat view
+
+## Version 1.0.0-alpha80 (2025-08-19)
+- Fixes transactions list issues
+- Fixes crash on camera
+- Fixes video player
+
+## Version 1.0.0-alpha79 (2025-08-15)
+- Threads issues fixed
+- Threads performance improved
+- Unused views hidden from Profile and Contact details view
+
+## Version 1.0.0-alpha78 (2025-08-13)
+- Fixes for mentions count badge
+- Fixes for link previews stuck on loading
+- Libraries upgraded
+
+## Version 1.0.0-alpha77 (2025-08-11)
+- Fixes for images loading
+- Fixes and improvements on threads list images loading
+
+## Version 1.0.0-alpha76 (2025-08-11)
+- Fixes and improvements on chat
+
+## Version 1.0.0-alpha75 (2025-08-08)
+- Fixes images loading issues
+- Fixes empty chat placeholder view
+- Improves scroll behavior on chat view
+
+## Version 1.0.0-alpha74 (2025-08-07)
+- Improves unseen messages logic calculation on chats list
+- Fixes and improvements on chat view
+
+## Version 1.0.0-alpha73 (2025-08-06)
+- Improves messages rows layout
+- Improves user state storage and retrieval logic
+
+## Version 1.0.0-alpha72 (2025-08-05)
+- Fixes attachments issues
+- Improves performance
+
+## Version 1.0.0-alpha71 (2025-08-04)
+- Fixes performance issues on chat view
+- Fixes mute state issues on chats list
+- Fixes message preview issues on chats list
+- Improves thread handling
+
+## Version 1.0.0-alpha70 (2025-08-01)
+- Fixes performance issues on chat view
+
+## Version 1.0.0-alpha69 (2025-08-01)
+- Fixes crash on chat view
+
+## Version 1.0.0-alpha68 (2025-07-31)
+- Performance improvements
+
+## Version 1.0.0-alpha67 (2025-07-30)
+- Fixes dashboard tabs badges
+
+## Version 1.0.0-alpha66 (2025-07-29)
+- Fixes invalid mnemonic restore issue
+
+## Version 1.0.0-alpha65 (2025-07-28)
+- Adds messages pagination
+- Improves chats loading performance
+
+## Version 1.0.0-alpha64 (2025-07-24)
+- Improves chats loading performance
+
+## Version 1.0.0-alpha63 (2025-07-23)
+- Improves images loading
+
+## Version 1.0.0-alpha62 (2025-07-23)
+- Fixes and improves chat view layouts
+
+## Version 1.0.0-alpha61 (2025-07-21)
+- Fixes and improvements on restore and new messages fetch process 
+
+## Version 1.0.0-alpha60 (2025-07-18)
+- Fixes and improvements for GrapheneOS
+
+## Version 1.0.0-alpha59 (2025-07-17)
+- Fixes and improvements for GrapheneOS
+
+## Version 1.0.0-alpha58 (2025-07-16)
+- Fixes and improvements for GrapheneOS
+
+## Version 1.0.0-alpha57 (2025-07-15)
+- Fixes and improvements for GrapheneOS
+
+## Version 1.0.0-alpha56 (2025-07-14)
+- Fixes and improvements for GrapheneOS
+
+## Version 1.0.0-alpha55 (2025-07-11)
+- Fixes and improvements for GrapheneOS
+
+## Version 1.0.0-alpha54 (2025-07-10)
+- Fixes and improvements for GrapheneOS
+
+## Version 1.0.0-alpha53 (2025-07-07)
+- Fixes and improvements for GrapheneOS
+
+## Version 1.0.0-alpha52 (2025-07-03)
+- Fixes and improvements for GrapheneOS
+
+## Version 1.0.0-alpha51 (2025-07-02)
+- Fixes and improvements for GrapheneOS
+
+## Version 1.0.0-alpha50 (2025-07-01)
+- Fixes and improvements for GrapheneOS
+
+## Version 1.0.0-alpha49 (2025-06-30)
+- Fixes and improvements for GrapheneOS
+
 ## Version 1.0.0-alpha48 (2025-05-22)
 - Fixes crash on app launch
 - Handles invite codes received as deep links

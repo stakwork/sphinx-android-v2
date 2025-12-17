@@ -32,5 +32,5 @@ abstract class NetworkQueryAuthorizeExternal {
         host: String,
         person: PersonInfoDto,
         token: String
-    ): Flow<LoadResponse<PersonInfoDto, ResponseError>>
+    ): Flow<LoadResponse<Any, ResponseError>>
 }

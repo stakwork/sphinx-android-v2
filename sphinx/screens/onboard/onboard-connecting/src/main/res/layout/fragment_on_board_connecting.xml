@@ -22,7 +22,7 @@
             android:id="@+id/image_view_on_board_connecting"
             android:layout_width="@dimen/on_board_connecting_image_width"
             android:layout_height="@dimen/on_board_connecting_image_height"
-            android:scaleType="centerInside"
+            android:scaleType="fitCenter"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"

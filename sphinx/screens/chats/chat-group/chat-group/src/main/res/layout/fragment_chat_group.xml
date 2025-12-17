@@ -159,8 +159,7 @@
         layout="@layout/layout_attachment_fullscreen"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        tools:visibility="gone"
-        />
+        tools:visibility="visible" />
 
     <include
         android:id="@+id/include_chat_group_menu"

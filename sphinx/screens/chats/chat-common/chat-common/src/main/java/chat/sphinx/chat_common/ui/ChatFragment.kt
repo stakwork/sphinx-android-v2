@@ -4,29 +4,45 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Color
+import android.graphics.Matrix
 import android.graphics.pdf.PdfRenderer
+import android.media.ExifInterface
+import android.os.Build
 import android.os.Bundle
 import android.os.ParcelFileDescriptor
 import android.text.Editable
 import android.text.InputFilter
+import android.text.Spannable
+import android.text.SpannableString
 import android.text.Spanned
+import android.text.TextPaint
 import android.text.TextWatcher
+import android.text.style.BackgroundColorSpan
+import android.text.style.ForegroundColorSpan
+import android.text.style.MetricAffectingSpan
+import android.text.style.TypefaceSpan
 import android.util.Log
 import android.view.View
+import android.view.ViewTreeObserver
 import android.view.Window
 import android.view.inputmethod.InputMethodManager
 import android.widget.ImageView
+import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.LayoutRes
+import androidx.appcompat.content.res.AppCompatResources
 import androidx.constraintlayout.motion.widget.MotionLayout
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
+import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.isVisible
 import androidx.core.widget.addTextChangedListener
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.LifecycleCoroutineScope
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavArgs
@@ -59,6 +75,7 @@ import chat.sphinx.chat_common.ui.widgets.SlideToCancelImageView
 import chat.sphinx.chat_common.ui.widgets.SphinxFullscreenImageView
 import chat.sphinx.chat_common.util.AudioRecorderController
 import chat.sphinx.chat_common.util.VideoThumbnailUtil
+import chat.sphinx.concept_grapheneos_manager.GrapheneOsManager
 import chat.sphinx.concept_image_loader.Disposable
 import chat.sphinx.concept_image_loader.ImageLoader
 import chat.sphinx.concept_image_loader.ImageLoaderOptions
@@ -81,6 +98,7 @@ import chat.sphinx.menu_bottom.ui.BottomMenu
 import chat.sphinx.menu_bottom.ui.MenuBottomViewState
 import chat.sphinx.resources.*
 import chat.sphinx.wrapper_chat.getColorKey
+import chat.sphinx.wrapper_chat.isApproved
 import chat.sphinx.wrapper_chat.isConversation
 import chat.sphinx.wrapper_chat.isPending
 import chat.sphinx.wrapper_common.FileSize
@@ -105,12 +123,21 @@ import io.matthewnelson.android_feature_screens.util.visible
 import io.matthewnelson.android_feature_viewmodel.submitSideEffect
 import io.matthewnelson.android_feature_viewmodel.updateViewState
 import io.matthewnelson.concept_views.viewstate.collect
+import io.matthewnelson.concept_views.viewstate.value
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+import javax.inject.Inject
 
 abstract class ChatFragment<
         VB: ViewBinding,
@@ -141,6 +168,7 @@ abstract class ChatFragment<
     protected abstract val moreMenuBinding: LayoutMenuBottomBinding
     protected abstract val recyclerView: RecyclerView
     protected abstract val pinHeaderBinding: LayoutChatPinedMessageHeaderBinding?
+    protected abstract val threadHeader: LayoutThreadHeaderBinding?
     protected abstract val threadOriginalMessageBinding: LayoutThreadOriginalMessageBinding?
     protected abstract val scrollDownButtonBinding: LayoutScrollDownButtonBinding
     protected abstract val shimmerBinding: LayoutShimmerContainerBinding
@@ -150,6 +178,7 @@ abstract class ChatFragment<
 
     protected abstract val userColorsHelper: UserColorsHelper
     protected abstract val imageLoader: ImageLoader<ImageView>
+    protected abstract val grapheneOsManager: GrapheneOsManager
 
     protected val sendMessageBuilder = SendMessage.Builder()
 
@@ -163,6 +192,8 @@ abstract class ChatFragment<
 
     override val chatFragmentWindow: Window?
         get() = activity?.window
+
+    private val visibleRange = MutableStateFlow(IntRange.EMPTY)
 
     private val bottomMenuCall: BottomMenu by lazy(LazyThreadSafetyMode.NONE) {
         BottomMenu(
@@ -203,6 +234,9 @@ abstract class ChatFragment<
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        grapheneOsManager.optimizeViewContainer(this)
+
         viewModel.init()
     }
 
@@ -214,14 +248,16 @@ abstract class ChatFragment<
         val insetterActivity = (requireActivity() as InsetterActivity)
         setupMenu(insetterActivity)
         setupFooter(insetterActivity)
-        setupAttachmentPriceView()
-        setupSelectedMessage()
         setupHeader(insetterActivity)
         setupAttachmentSendPreview(insetterActivity)
         setupAttachmentFullscreen(insetterActivity)
-        setupScrollDown()
-        setupRecyclerView()
 
+        view.post {
+            setupAttachmentPriceView()
+            setupSelectedMessage()
+            setupScrollDown()
+            setupRecyclerView()
+        }
         viewModel.screenInit()
     }
 
@@ -233,9 +269,9 @@ abstract class ChatFragment<
 
     private fun handlePushNotification() {
         lifecycleScope.launch(viewModel.mainImmediate) {
-        val pubKey = activity?.intent?.extras?.getString("child") ?: activity?.intent?.extras?.getString("child")
-        val chatId = pubKey?.let { viewModel.getPubKeyByEncryptedChild(it) }
-        chatId?.let { _ ->
+            val pubKey = activity?.intent?.extras?.getString("child") ?: activity?.intent?.extras?.getString("child")
+            val chatId = pubKey?.let { viewModel.getPubKeyByEncryptedChild(it) }
+            chatId?.let { _ ->
                 viewModel.chatNavigator.popBackStack()
             }
         }
@@ -512,7 +548,9 @@ abstract class ChatFragment<
             editTextChatFooter.addTextChangedListener(object : TextWatcher {
                 override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
-                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                    viewModel.shouldProcessMemberMentions(s)
+                }
 
                 override fun afterTextChanged(s: Editable?) {
                     val sendAttachmentViewState = viewModel.getAttachmentSendViewStateFlow().value
@@ -531,17 +569,15 @@ abstract class ChatFragment<
                             )
                         }
                     }
+
+                    if (viewModel.getFooterViewStateFlow().value !is FooterViewState.Attachment) {
+                        textViewChatFooterSend.goneIfTrue(s?.trim().isNullOrEmpty())
+                        imageViewChatFooterMicrophone.goneIfFalse(s?.trim().isNullOrEmpty())
+                    }
                 }
             })
 
             editTextChatFooter.onCommitContentListener = viewModel.onIMEContent
-            editTextChatFooter.addTextChangedListener { editable ->
-                //Do not toggle microphone and send icon if on attachment mode
-                if (viewModel.getFooterViewStateFlow().value !is FooterViewState.Attachment) {
-                    textViewChatFooterSend.goneIfTrue(editable?.trim().isNullOrEmpty())
-                    imageViewChatFooterMicrophone.goneIfFalse(editable?.trim().isNullOrEmpty())
-                }
-            }
         }
 
         searchFooterBinding.apply {
@@ -802,30 +838,16 @@ abstract class ChatFragment<
                 viewModel.navigateToPdfPage(-1)
             }
 
-            imageViewAttachmentFullscreen.onSingleTapListener = object: SphinxFullscreenImageView.OnSingleTapListener {
-                override fun onSingleTapConfirmed() {
-                    layoutConstraintAttachmentFullscreenHeader.goneIfTrue(
-                        layoutConstraintAttachmentFullscreenHeader.isVisible
-                    )
-                }
-            }
-
-            imageViewAttachmentFullscreen.onCloseViewHandler = object: SphinxFullscreenImageView.OnCloseViewHandler() {
-                override fun onCloseView() {
-                    imageViewAttachmentFullscreen.animate()
-                        .scaleY(0f)
-                        .scaleX(0f)
-                        .setDuration(200L)
-                        .withEndAction {
-                            viewModel.updateAttachmentFullscreenViewState(
-                                AttachmentFullscreenViewState.Idle
-                            )
-                        }
-                        .start()
-
-                }
+            imageViewAttachmentFullscreen.setOnClickListener {
+                hideFullScreenAnimated()
             }
         }
+    }
+
+    private fun hideFullScreenAnimated() {
+        viewModel.updateAttachmentFullscreenViewState(
+            AttachmentFullscreenViewState.Idle
+        )
     }
 
     /**
@@ -891,6 +913,7 @@ abstract class ChatFragment<
     private fun setupScrollDown(){
         scrollDownButtonBinding.root.setOnClickListener {
             forceScrollToBottom()
+            viewModel.updateScrollDownButton(false)
         }
     }
 
@@ -899,60 +922,146 @@ abstract class ChatFragment<
         val messageListAdapter = MessageListAdapter(
             recyclerView,
             headerBinding,
+            threadHeader,
             pinHeaderBinding,
             linearLayoutManager,
             viewLifecycleOwner,
             onStopSupervisor,
             viewModel,
             imageLoader,
-            userColorsHelper,
-            isThreadChat = viewModel.isThreadChat()
+            userColorsHelper
         )
         val footerAdapter = MessageListFooterAdapter()
+
+        val chatScrollListener = ChatScrollListener(
+            lifecycleScope,
+            viewModel,
+            linearLayoutManager,
+            updateVisibleRange = {
+                updateVisibleRange()
+            }
+        )
 
         recyclerView.apply {
             setHasFixedSize(false)
             layoutManager = linearLayoutManager
             adapter = ConcatAdapter(messageListAdapter, footerAdapter)
             itemAnimator = null
+            addOnScrollListener(chatScrollListener)
 
-            addOnScrollListener(object : RecyclerView.OnScrollListener() {
-                override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                    super.onScrolled(recyclerView, dx, dy)
-
-                    if (viewModel.isThreadChat()) {
-                        val firstVisiblePosition = linearLayoutManager.findFirstVisibleItemPosition()
-
-                        if (firstVisiblePosition > 0) {
-                            viewModel.changeThreadHeaderState(true)
-                        }
-
-                        if (firstVisiblePosition == 0) {
-                            viewModel.changeThreadHeaderState(false)
-                        }
-                    }
-                }
-
-                override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
-                    super.onScrollStateChanged(recyclerView, newState)
-
-                    if (!recyclerView.canScrollVertically(1) && newState == RecyclerView.SCROLL_STATE_IDLE) {
-                        lifecycleScope.launch(viewModel.mainImmediate) {
-                            viewModel.readMessages()
-                        }
-                    }
-
-                    if (recyclerView.canScrollVertically(1)) {
-                        viewModel.updateScrollDownButton(true)
-                    }
-                    else {
-                        viewModel.updateScrollDownButton(false)
-                    }
+            viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
+                override fun onGlobalLayout() {
+                    viewTreeObserver.removeOnGlobalLayoutListener(this)
                 }
             })
         }
-        Log.d("TimeTracker", "Chat messages were displayed in ${System.currentTimeMillis() - timeTrackerStart} milliseconds")
-        viewModel.sendAppLog("- Chat messages were displayed in ${System.currentTimeMillis() - timeTrackerStart} milliseconds")
+
+        // Listen for loading complete events to reset scroll listener
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.loadingCompleteEvent.collect {
+                chatScrollListener.resetLoadingFlag()
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            visibleRange.collect { range ->
+                viewModel.updateVisibleRange(range)
+            }
+        }
+    }
+
+    class ChatScrollListener<ARGS : NavArgs>(
+        private val lifecycleScope: LifecycleCoroutineScope,
+        private val viewModel: ChatViewModel<ARGS>,
+        private val layoutManager: LinearLayoutManager,
+        private val updateVisibleRange: () -> Unit,
+    ) : RecyclerView.OnScrollListener() {
+
+        private val threshold = 30
+        private var isLoadingTriggered = false
+
+        override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+            super.onScrolled(recyclerView, dx, dy)
+
+            val firstVisiblePosition = layoutManager.findFirstVisibleItemPosition()
+            val yOffset = recyclerView.computeVerticalScrollOffset()
+
+            if (viewModel.isThreadChat()) {
+                if (firstVisiblePosition == 0) {
+                    layoutManager.findViewByPosition(firstVisiblePosition)?.let { view ->
+                        val dp30InPixels = (58 * recyclerView.resources.displayMetrics.density).toInt()
+                        val linePosition = view.height - dp30InPixels
+
+                        if (yOffset > linePosition) {
+                            viewModel.changeThreadHeaderState(true)
+                        } else {
+                            viewModel.changeThreadHeaderState(false)
+                        }
+                    }
+                } else {
+                    viewModel.changeThreadHeaderState(true)
+                }
+            } else {
+                // Load more messages when scrolling up AND near the top
+                // OR when at position 0 (very top)
+                if (dy < 0 && firstVisiblePosition <= threshold) {
+                    if (!isLoadingTriggered) {
+                        isLoadingTriggered = true
+                        viewModel.loadMoreMessages()
+                    }
+                } else if (firstVisiblePosition > threshold + 10) {
+                    // Reset the flag when user scrolls away from top
+                    // Add buffer of 10 to avoid rapid toggling
+                    isLoadingTriggered = false
+                }
+
+                updateVisibleRange()
+            }
+        }
+
+        override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+            super.onScrollStateChanged(recyclerView, newState)
+
+            if (!recyclerView.canScrollVertically(1) && newState == RecyclerView.SCROLL_STATE_IDLE) {
+                lifecycleScope.launch(viewModel.mainImmediate) {
+                    viewModel.readMessages()
+                }
+            }
+
+            if (recyclerView.getItemsDistanceToBottom() > 3) {
+                viewModel.updateScrollDownButton(true)
+            } else {
+                viewModel.updateScrollDownButton(false)
+            }
+
+            // Additional check when scroll stops
+            if (newState == RecyclerView.SCROLL_STATE_IDLE) {
+                val firstVisiblePosition = layoutManager.findFirstVisibleItemPosition()
+
+                // If stopped at the very top, ensure loading is triggered
+                if (firstVisiblePosition == 0 && !viewModel.isThreadChat()) {
+                    if (!isLoadingTriggered) {
+                        isLoadingTriggered = true
+                        viewModel.loadMoreMessages()
+                    }
+                }
+            }
+        }
+
+        // Add method to reset the flag externally if needed
+        fun resetLoadingFlag() {
+            isLoadingTriggered = false
+        }
+    }
+
+    private fun updateVisibleRange() {
+        val layoutManager = recyclerView.layoutManager as? LinearLayoutManager ?: return
+        val firstVisible = layoutManager.findFirstVisibleItemPosition()
+        val lastVisible = layoutManager.findLastVisibleItemPosition()
+
+        if (firstVisible != RecyclerView.NO_POSITION && lastVisible != RecyclerView.NO_POSITION) {
+            visibleRange.value = firstVisible..lastVisible
+        }
     }
 
     protected fun scrollToBottom(
@@ -998,8 +1107,8 @@ abstract class ChatFragment<
     private val messageReplyViewStateDisposables: MutableList<Disposable> = ArrayList(1)
 
     private var headerInitialHolderLastViewState: InitialHolderViewState? = null
-    private val headerInitialHolderViewStateJobs: MutableList<Job> = ArrayList(1)
-    private val headerInitialHolderViewStateDisposables: MutableList<Disposable> = ArrayList(1)
+    private val headerInitialHolderViewStateJobs: MutableList<Job> = ArrayList(2)
+    private val headerInitialHolderViewStateDisposables: MutableList<Disposable> = ArrayList(2)
 
     private var attachmentSendLastViewState: AttachmentSendViewState? = null
     private val attachmentSendViewStateJobs: MutableList<Job> = ArrayList(1)
@@ -1018,7 +1127,7 @@ abstract class ChatFragment<
     override fun subscribeToViewStateFlow() {
         super.subscribeToViewStateFlow()
 
-        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
             viewModel.shimmerViewState.collect { viewState ->
                 shimmerBinding.apply {
                     when (viewState) {
@@ -1035,7 +1144,7 @@ abstract class ChatFragment<
             }
         }
 
-        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
             viewModel.messageReplyViewStateContainer.collect { viewState ->
                 messageReplyLastViewState?.let {
                     if (it == viewState) {
@@ -1183,92 +1292,19 @@ abstract class ChatFragment<
             }
         }
 
-        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
-            viewModel.chatHeaderViewStateContainer.collect { viewState ->
-
-                @Exhaustive
-                when (viewState) {
-                    is ChatHeaderViewState.Idle -> {}
-                    is ChatHeaderViewState.Initialized -> {
-                        headerBinding.apply {
-                            textViewChatHeaderName.text = viewState.chatHeaderName.replacingMarkdown()
-                            textViewChatHeaderLock.goneIfFalse(viewState.showLock)
-
-                            Log.d("TimeTracker", "Chat contact/tribe name was displayed in ${System.currentTimeMillis() - timeTrackerStart} milliseconds")
-                            viewModel.sendAppLog("- Chat contact/tribe name was displayed in ${System.currentTimeMillis() - timeTrackerStart} milliseconds")
-
-                            imageViewChatHeaderMuted.apply {
-                                viewState.isMuted.let { muted ->
-                                    if (muted) {
-                                        imageLoader.load(
-                                            headerBinding.imageViewChatHeaderMuted,
-                                            R_common.drawable.ic_baseline_notifications_off_24
-                                        )
-                                    } else {
-                                        imageLoader.load(
-                                            headerBinding.imageViewChatHeaderMuted,
-                                            R_common.drawable.ic_baseline_notifications_24
-                                        )
-                                    }
-                                } ?: gone
-                            }
-
-                            textViewChatHeaderConnectivity.apply {
-                                viewState.isChatAvailable.let { available ->
-                                    if (available) {
-                                        setTextColorExt(R_common.color.primaryGreen)
-                                        textViewChatHeaderLock.text = getString(R_common.string.material_icon_name_lock)
-                                        recyclerView.visible
-                                        inactiveContactPlaceHolder.root.gone
-                                    } else {
-                                        setTextColorExt(R_common.color.sphinxOrange)
-                                        textViewChatHeaderLock.text = getString(R_common.string.material_icon_name_lock_open)
-
-                                        // Inactive conversation placeholder
-                                        recyclerView.gone
-
-                                        inactiveContactPlaceHolder.apply {
-                                            root.visible
-                                            initialsHolderPlaceholder.textViewInitials.apply {
-                                                visible
-                                                text = viewState.chatHeaderName.getInitials()
-                                                setBackgroundRandomColor(
-                                                    R_common.drawable.chat_initials_circle,
-                                                    Color.parseColor(
-                                                        userColorsHelper.getHexCodeForKey(
-                                                            viewState.colorKey,
-                                                            root.context.getRandomHexCode(),
-                                                        )
-                                                    ),
-                                                )
-                                            }
-                                            textViewPlaceholderName.text = viewState.chatHeaderName
-                                            textViewPlaceholderInvited.text = root.context.getString(
-                                                R.string.chat_placeholder_invited,
-                                                viewState.createdAt ?: "-"
-                                            )
-                                        }
-
-                                    }
-                                }
-                            }
-
-                            textViewChatHeaderClockIcon.apply {
-                                viewModel.clockIconState.collect { showClockIcon ->
-                                    if (showClockIcon) {
-                                        this.visible
-                                    } else {
-                                        this.gone
-                                    }
-                                }
-                            }
-                        }
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+            viewModel.clockIconState.collect { showClockIcon ->
+                headerBinding.textViewChatHeaderClockIcon.apply {
+                    if (showClockIcon) {
+                        this.visible
+                    } else {
+                        this.gone
                     }
                 }
             }
         }
 
-        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
             viewModel.remoteTimezoneStateFlow.collect { viewState ->
                 headerBinding.apply {
                     viewState?.let {
@@ -1283,7 +1319,7 @@ abstract class ChatFragment<
             }
         }
 
-        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
             viewModel.headerInitialHolderSharedFlow.collect { viewState ->
                 headerInitialHolderLastViewState?.let {
                     if (it == viewState) {
@@ -1307,6 +1343,37 @@ abstract class ChatFragment<
                     @Exhaustive
                     when (viewState) {
                         is InitialHolderViewState.Initials -> {
+                            inactiveContactPlaceHolder.apply {
+                                includeEmptyChatHolderInitial.textViewInitials
+                                    .setInitialsColor(
+                                        Color.parseColor(
+                                            userColorsHelper.getHexCodeForKey(
+                                                viewState.colorKey,
+                                                root.context.getRandomHexCode()
+                                            )
+                                        ),
+                                        R_common.drawable.chat_initials_circle_big
+                                    )
+
+                                initialsHolderPlaceholder.textViewInitials.apply {
+                                    setBackgroundRandomColor(
+                                        R_common.drawable.chat_initials_circle,
+                                        Color.parseColor(
+                                            userColorsHelper.getHexCodeForKey(
+                                                viewState.colorKey,
+                                                root.context.getRandomHexCode(),
+                                            )
+                                        ),
+                                    )
+                                }
+
+                                includeEmptyChatHolderInitial.textViewInitials.text = viewState.initials
+                                initialsHolderPlaceholder.textViewInitials.text = viewState.initials
+
+                                includeEmptyChatHolderInitial.textViewInitials.visible
+                                includeEmptyChatHolderInitial.imageViewChatPicture.gone
+                            }
+
                             if (viewState.isPending) {
                                 root.invisible
                                 headerBinding.layoutPendingContactInitialHolder.apply {
@@ -1349,7 +1416,7 @@ abstract class ChatFragment<
                         is InitialHolderViewState.None -> {
                             textViewInitials.gone
                             imageViewChatPicture.visible
-                            lifecycleScope.launch(viewModel.mainImmediate) {
+                            lifecycleScope.launch(viewModel.default) {
                                 val disposable = imageLoader.load(
                                     imageViewChatPicture,
                                     R_common.drawable.ic_profile_avatar_circle,
@@ -1358,11 +1425,21 @@ abstract class ChatFragment<
                             }.let { job ->
                                 headerInitialHolderViewStateJobs.add(job)
                             }
+                            inactiveContactPlaceHolder.apply {
+                                includeEmptyChatHolderInitial.textViewInitials.gone
+                                includeEmptyChatHolderInitial.imageViewChatPicture.gone
+                            }
                         }
                         is InitialHolderViewState.Url -> {
                             textViewInitials.gone
                             imageViewChatPicture.visible
-                            lifecycleScope.launch(viewModel.mainImmediate) {
+
+                            inactiveContactPlaceHolder.apply {
+                                includeEmptyChatHolderInitial.textViewInitials.gone
+                                includeEmptyChatHolderInitial.imageViewChatPicture.visible
+                            }
+
+                            lifecycleScope.launch(viewModel.default) {
                                 val disposable = imageLoader.load(
                                     imageViewChatPicture,
                                     viewState.photoUrl.value,
@@ -1372,99 +1449,122 @@ abstract class ChatFragment<
                             }.let { job ->
                                 headerInitialHolderViewStateJobs.add(job)
                             }
-                        }
-                    }
-                }
-            }
-        }
 
-        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
-            viewModel.messageHolderViewStateFlow.collect { messages ->
-                val chat = viewModel.getChat()
-
-                if (messages.isEmpty() && chat.type.isConversation() && !chat.status.isPending()) {
-                    val url = chat.photoUrl
-
-                    recyclerView.gone
-                    inactiveContactPlaceHolder.apply {
-                        root.visible
-                        initialsHolderPlaceholder.root.invisible
-
-                        textViewPlaceholderName.text = chat.name?.value
-                        textViewPlaceholderInvited.invisible
-                        textViewPlaceholderHint.text = getString(R.string.chat_placeholder_secure)
-
-                        includeEmptyChatHolderInitial.apply {
-                            root.visible
-                            imageViewChatPicture.goneIfFalse(url != null)
-                            textViewInitials.goneIfFalse(url == null)
-                        }
-
-                        if (url != null) {
-                            onStopSupervisor.scope.launch(viewModel.dispatchers.mainImmediate) {
-                                imageLoader.load(
-                                    includeEmptyChatHolderInitial.imageViewChatPicture,
-                                    url.value,
+                            lifecycleScope.launch(viewModel.default) {
+                                val disposable = imageLoader.load(
+                                    inactiveContactPlaceHolder.includeEmptyChatHolderInitial.imageViewChatPicture,
+                                    viewState.photoUrl.value,
                                     imageLoaderOptions
                                 )
-                            }
-                        } else {
-                            includeEmptyChatHolderInitial.textViewInitials.text =
-                                chat.name?.value?.getInitials() ?: ""
-
-                            onStopSupervisor.scope.launch(viewModel.mainImmediate) {
-                                includeEmptyChatHolderInitial.textViewInitials
-                                    .setInitialsColor(
-                                        chat.getColorKey()?.let { colorKey ->
-                                            Color.parseColor(
-                                                userColorsHelper.getHexCodeForKey(
-                                                    colorKey,
-                                                    root.context.getRandomHexCode()
-                                                )
-                                            )
-                                        },
-                                        R_common.drawable.chat_initials_circle
-                                    )
+                                headerInitialHolderViewStateDisposables.add(disposable)
+                            }.let { job ->
+                                headerInitialHolderViewStateJobs.add(job)
                             }
                         }
-                    }
-                } else {
-                    recyclerView.visible
-                    if (chat.type.isConversation() && chat.status.isPending()) {
-                       inactiveContactPlaceHolder.root.visible
-                    } else {
-                        inactiveContactPlaceHolder.root.gone
                     }
                 }
             }
         }
 
-//        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
-//            viewModel.checkRoute.collect { loadResponse ->
-//                headerBinding.textViewChatHeaderConnectivity.apply {
-//                    @Exhaustive
-//                    when (loadResponse) {
-//                        is LoadResponse.Loading -> {
-//                            setTextColorExt(R.color.washedOutReceivedText)
-//                        }
-//                        is Response.Error -> {
-//                            setTextColorExt(R.color.sphinxOrange)
-//                        }
-//                        is Response.Success -> {
-//                            val colorRes = if (loadResponse.value) {
-//                                R.color.primaryGreen
-//                            } else {
-//                                R.color.sphinxOrange
-//                            }
-//
-//                            setTextColorExt(colorRes)
-//                        }
-//                    }
-//                }
-//            }
-//        }
-
         onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+            combine(
+                viewModel.messageHolderViewStateFlow,
+                viewModel.chatHeaderViewStateContainer.viewStateFlow
+            ) { value1, value2 ->
+                Pair(value1, value2)
+            }.collect { result ->
+                if (!isAdded || view == null || isRemoving) return@collect
+
+                val messages = result.first
+                val viewState = result.second
+
+                @Exhaustive
+                when (viewState) {
+                    is ChatHeaderViewState.Idle -> {}
+                    is ChatHeaderViewState.Initialized -> {
+                        headerBinding.apply {
+                            textViewChatHeaderName.text = viewState.chatHeaderName.replacingMarkdown()
+                            textViewChatHeaderLock.goneIfFalse(viewState.showLock)
+
+                            viewModel.sendAppLog("- Chat contact/tribe name was displayed in ${System.currentTimeMillis() - timeTrackerStart} milliseconds")
+
+                            imageViewChatHeaderMuted.apply {
+                                viewState.isMuted.let { muted ->
+                                    headerBinding.imageViewChatHeaderMuted.setImageDrawable(
+                                        AppCompatResources.getDrawable(requireContext(),
+                                            if (muted) {
+                                                R_common.drawable.ic_baseline_notifications_off_24
+                                            } else {
+                                                R_common.drawable.ic_baseline_notifications_24
+                                            }
+                                        )
+                                    )
+                                }
+                            }
+
+                            val isChatAvailable = viewState.isChatAvailable
+                            headerBinding.textViewChatHeaderConnectivity.setTextColorExt(
+                                if (isChatAvailable) {
+                                    R_common.color.primaryGreen
+                                } else {
+                                    R_common.color.sphinxOrange
+                                }
+                            )
+
+                            textViewChatHeaderLock.text = if (isChatAvailable) getString(R_common.string.material_icon_name_lock) else getString(R_common.string.material_icon_name_lock_open)
+
+                            val isTribe = viewState.isTribe
+                            val isChatEmpty = messages.isEmpty()
+
+                            if (isChatEmpty && !isTribe) {
+                                recyclerView.gone
+
+                                if (isChatAvailable) {
+                                    inactiveContactPlaceHolder.apply {
+                                        initialsHolderPlaceholder.root.invisible
+
+                                        textViewPlaceholderName.text = viewState.chatHeaderName
+                                        textViewPlaceholderInvited.invisible
+                                        textViewPlaceholderHint.text = getString(R.string.chat_placeholder_secure)
+
+                                        includeEmptyChatHolderInitial.apply {
+                                            root.visible
+                                        }
+
+                                        root.visible
+                                    }
+                                } else {
+                                    headerBinding.apply {
+                                        textViewChatHeaderConnectivity.apply {
+
+                                            recyclerView.gone
+
+                                            inactiveContactPlaceHolder.apply {
+                                                initialsHolderPlaceholder.textViewInitials.apply {
+                                                    visible
+                                                    text = viewState.chatHeaderName?.getInitials() ?: ""
+                                                }
+                                                textViewPlaceholderName.text = viewState.chatHeaderName ?: ""
+                                                textViewPlaceholderInvited.text = root.context.getString(
+                                                    R.string.chat_placeholder_invited,
+                                                    viewState.createdAt ?: "-"
+                                                )
+                                                root.visible
+                                            }
+                                        }
+                                    }
+                                }
+                            } else {
+                                recyclerView.visible
+                                inactiveContactPlaceHolder.root.gone
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
             viewModel.getSelectedMessageViewStateFlow().collect { viewState ->
                 @Exhaustive
                 when (viewState) {
@@ -1521,6 +1621,7 @@ abstract class ChatFragment<
                                 viewState.recyclerViewWidth,
                                 viewState.messageHolderViewState,
                                 userColorsHelper,
+                                viewModel.colorCache
                             )
                             includeMessageStatusHeader.root.gone
                             includeMessageHolderChatImageInitialHolder.root.gone
@@ -1596,7 +1697,7 @@ abstract class ChatFragment<
             viewModel.updateSelectedMessageViewState(SelectedMessageViewState.None)
         }
 
-        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
             viewModel.getFooterViewStateFlow().collect { viewState ->
                 footerBinding.apply {
                     editTextChatFooter.hint = getString(viewState.hintTextStringId)
@@ -1623,7 +1724,7 @@ abstract class ChatFragment<
             }
         }
 
-        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
             viewModel.getAttachmentSendViewStateFlow().collect { viewState ->
                 attachmentSendLastViewState?.let {
                     if (it == viewState) {
@@ -1661,9 +1762,8 @@ abstract class ChatFragment<
                                     // will load almost immediately b/c it's a file, so
                                     // no need to launch separate coroutine.
                                     viewState.file?.let { nnFile ->
-                                        lifecycleScope.launch(viewModel.mainImmediate) {
-                                            val disposable = imageLoader.load(imageViewAttachmentSendPreview, nnFile)
-                                            attachmentSendViewStateDisposables.add(disposable)
+                                        lifecycleScope.launch(viewModel.default) {
+                                            loadImageWithCorrectOrientation(imageViewAttachmentSendPreview, nnFile)
                                         }.let { job ->
                                             attachmentSendViewStateJobs.add(job)
                                         }
@@ -1757,7 +1857,7 @@ abstract class ChatFragment<
                             }
 
                             viewState.giphyData.retrieveImageUrlAndMessageMedia()?.let {
-                                lifecycleScope.launch(viewModel.mainImmediate) {
+                                lifecycleScope.launch(viewModel.default) {
                                     val disposable = imageLoader.load(imageViewAttachmentSendPreview, it.first)
                                     attachmentSendViewStateDisposables.add(disposable)
                                 }.let { job ->
@@ -1772,7 +1872,7 @@ abstract class ChatFragment<
             }
         }
 
-        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
             viewModel.getAttachmentFullscreenViewStateFlow().collect { viewState ->
                 fullscreenLastViewState?.let {
                     if (it == viewState) {
@@ -1796,6 +1896,7 @@ abstract class ChatFragment<
                     when (viewState) {
                         is AttachmentFullscreenViewState.Idle -> {
                             root.gone
+                            progressBarAttachmentFullscreen.visible
                             imageViewAttachmentFullscreen.setImageDrawable(null)
                         }
                         is AttachmentFullscreenViewState.ImageFullscreen -> {
@@ -1803,18 +1904,23 @@ abstract class ChatFragment<
                             textViewAttachmentNextPage.gone
                             textViewAttachmentPreviousPage.gone
 
-                            imageViewAttachmentFullscreen.resetInteractionProperties()
+                            imageViewAttachmentFullscreen.resetZoom()
                             imageViewAttachmentFullscreen.setBackgroundColor(
                                 getColor(android.R.color.transparent)
                             )
 
                             viewState.media?.localFile?.let { nnLocalFile ->
-                                lifecycleScope.launch(viewModel.mainImmediate) {
-                                    val disposable = imageLoader.load(
-                                        imageViewAttachmentFullscreen,
-                                        nnLocalFile
-                                    )
-                                    fullScreenViewStateDisposables.add(disposable)
+                                lifecycleScope.launch(viewModel.default) {
+                                    if (viewState.media.mediaType.isGif) {
+                                        val disposable = imageLoader.load(
+                                            imageViewAttachmentFullscreen,
+                                            nnLocalFile,
+                                            isGif = viewState.media.mediaType.isGif
+                                        )
+                                        fullScreenViewStateDisposables.add(disposable)
+                                    } else {
+                                        loadImageWithCorrectOrientation(imageViewAttachmentFullscreen, nnLocalFile)
+                                    }
                                 }.let { job ->
                                     fullScreenViewStateJobs.add(job)
                                 }
@@ -1842,7 +1948,8 @@ abstract class ChatFragment<
                                     val disposable = imageLoader.load(
                                         imageViewAttachmentFullscreen,
                                         viewState.url,
-                                        builder.build()
+                                        builder.build(),
+                                        isGif = viewState.media?.mediaType?.isGif == true || viewState.url.contains("gif", ignoreCase = true)
                                     )
                                     fullScreenViewStateDisposables.add(disposable)
                                 }.let { job ->
@@ -1850,7 +1957,10 @@ abstract class ChatFragment<
                                 }
                             }
 
-                            root.visible
+                            imageViewAttachmentFullscreen.onDrawableLoaded = {
+                                progressBarAttachmentFullscreen.gone
+                                root.visible
+                            }
                         }
                         is AttachmentFullscreenViewState.PdfFullScreen -> {
                             val page = viewState.pdfRender.openPage(viewState.currentPage)
@@ -1864,7 +1974,7 @@ abstract class ChatFragment<
                             page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                             page.close()
 
-                            imageViewAttachmentFullscreen.resetInteractionProperties()
+                            imageViewAttachmentFullscreen.resetZoom()
                             imageViewAttachmentFullscreen.setImageBitmap(bitmap)
                             imageViewAttachmentFullscreen.setBackgroundColor(
                                 getColor(android.R.color.white)
@@ -1878,15 +1988,17 @@ abstract class ChatFragment<
                             textViewAttachmentNextPage.goneIfFalse(viewState.currentPage < viewState.pageCount - 1)
                             textViewAttachmentPreviousPage.goneIfFalse(viewState.currentPage > 0)
 
-                            progressBarAttachmentFullscreen.gone
-                            root.visible
+                            imageViewAttachmentFullscreen.onDrawableLoaded = {
+                                progressBarAttachmentFullscreen.gone
+                                root.visible
+                            }
                         }
                     }
                 }
             }
         }
 
-        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
             viewModel.messagesSearchViewStateContainer.collect { viewState ->
                 @Exhaustive
                 when (viewState) {
@@ -1897,7 +2009,7 @@ abstract class ChatFragment<
                         searchHeaderBinding.root.gone
                         searchFooterBinding.root.gone
 
-                        (recyclerView.adapter as ConcatAdapter).adapters.firstOrNull()?.let { messagesListAdapter ->
+                        (recyclerView.adapter as? ConcatAdapter)?.adapters?.firstOrNull()?.let { messagesListAdapter ->
                             (messagesListAdapter as MessageListAdapter<*>).resetHighlighted()
                         }
 
@@ -1908,7 +2020,6 @@ abstract class ChatFragment<
 
                             if (viewState is MessagesSearchViewState.Cancel) {
                                 hideKeyboardFrom(textViewChatSearchDone.context, textViewChatSearchDone )
-                                forceScrollToBottom()
                             }
                         }
                     }
@@ -1916,21 +2027,6 @@ abstract class ChatFragment<
                         searchHeaderBinding.apply {
                             editTextChatSearch.setText("")
                             buttonChatSearchClear.gone
-                        }
-                    }
-                    is MessagesSearchViewState.Loading -> {
-                        headerBinding.root.gone
-                        footerBinding.root.gone
-
-                        searchHeaderBinding.root.visible
-                        searchFooterBinding.root.visible
-
-                        searchHeaderBinding.buttonChatSearchClear.goneIfFalse(viewState.clearButtonVisible)
-
-                        searchFooterBinding.apply {
-                            progressBarLoadingSearch.visible
-                            textViewChatSearchResultsFound.text = getString(R.string.searching_messages)
-                            root.visible
                         }
                     }
                     is MessagesSearchViewState.Searching -> {
@@ -1948,14 +2044,32 @@ abstract class ChatFragment<
                         }
 
                         searchFooterBinding.apply {
-                            progressBarLoadingSearch.gone
+                            val matchesCount = viewState.results.size
+                            val resultsFound = matchesCount > 0
+                            progressBarLoadingSearch.goneIfFalse(viewState.loading)
 
-                            textViewChatSearchResultsFound.text = getString(R.string.results_found, viewState.messages.size)
+                            val matchesText = getString(R.string.search_matches, viewState.index + 1, matchesCount)
+                            textViewChatSearchResultsFound.text = if (resultsFound) matchesText else getString(R.string.results_found, 0)
+
+                            if (resultsFound) {
+                                val spannable: Spannable = SpannableString(matchesText)
+
+                                for (range in matchesText.allRangesOf(getString(R.string.search_matches_highlighted, viewState.index + 1))) {
+                                    spannable.setSpan(
+                                        ForegroundColorSpan(resources.getColor(chat.sphinx.resources.R.color.primaryGreen)),
+                                        range.first,
+                                        range.last + 1,
+                                        Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                                    )
+                                }
+
+                                textViewChatSearchResultsFound.setText(spannable, TextView.BufferType.SPANNABLE)
+                            }
 
                             val enabledColor = ContextCompat.getColor(binding.root.context, R_common.color.text)
                             val disabledColor = ContextCompat.getColor(binding.root.context, R_common.color.secondaryText)
 
-                            val nextButtonEnable = viewState.index < viewState.messages.size - 1
+                            val nextButtonEnable = !viewState.loading && viewState.index < matchesCount - 1
                             textViewChatSearchNext.isEnabled = nextButtonEnable
                             textViewChatSearchNext.setTextColor(
                                 if (nextButtonEnable) {
@@ -1965,7 +2079,7 @@ abstract class ChatFragment<
                                 }
                             )
 
-                            val previousButtonEnable = viewState.index > 0
+                            val previousButtonEnable = !viewState.loading && viewState.index > 0
                             textViewChatSearchPrevious.isEnabled = previousButtonEnable
                             textViewChatSearchPrevious.setTextColor(
                                 if (previousButtonEnable) {
@@ -1974,12 +2088,13 @@ abstract class ChatFragment<
                                     disabledColor
                                 }
                             )
-
+                            root.visible
                         }
 
                         setFocusOnSearchField()
+
                         scrollToResult(
-                            viewState.messages,
+                            viewState.results,
                             viewState.index,
                             if (viewState.navigatingForward) viewState.index - 1 else viewState.index + 1
                         )
@@ -1987,14 +2102,15 @@ abstract class ChatFragment<
                 }
             }
         }
-        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
             viewModel.scrollDownViewStateContainer.collect { viewState ->
                 @Exhaustive
                 when (viewState) {
                     is ScrollDownViewState.On -> {
                         scrollDownButtonBinding.root.visible
-                        scrollDownButtonBinding.textViewChatMessagesCount.goneIfFalse(!viewState.unseenMessagesCount.isNullOrEmpty())
-                        scrollDownButtonBinding.textViewChatMessagesCount.text = viewState.unseenMessagesCount
+                        scrollDownButtonBinding.textViewChatMessagesCount.gone
+//                        scrollDownButtonBinding.textViewChatMessagesCount.goneIfFalse(!viewState.unseenMessagesCount.isNullOrEmpty())
+//                        scrollDownButtonBinding.textViewChatMessagesCount.text = viewState.unseenMessagesCount
                     }
                     is ScrollDownViewState.Off -> {
                         scrollDownButtonBinding.root.gone
@@ -2002,6 +2118,41 @@ abstract class ChatFragment<
                 }
             }
         }
+    }
+
+    private fun loadImageWithCorrectOrientation(imageView: ImageView, imageFile: File) {
+        val job = viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val bitmap = BitmapFactory.decodeFile(imageFile.absolutePath)
+
+                val exif = ExifInterface(imageFile.absolutePath)
+                val orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+
+                val rotatedBitmap = when (orientation) {
+                    ExifInterface.ORIENTATION_ROTATE_90 -> rotateBitmap(bitmap, 90f)
+                    ExifInterface.ORIENTATION_ROTATE_180 -> rotateBitmap(bitmap, 180f)
+                    ExifInterface.ORIENTATION_ROTATE_270 -> rotateBitmap(bitmap, 270f)
+                    else -> bitmap
+                }
+
+                withContext(Dispatchers.Main) {
+                    imageView.setImageBitmap(rotatedBitmap)
+                }
+
+                if (rotatedBitmap != bitmap) {
+                    bitmap.recycle()
+                }
+
+            } catch (e: Exception) {
+                Log.e("IMAGE_ROTATION", "Failed to load image with rotation: ${e.message}")
+            }
+        }
+        holderJobs.add(job)
+    }
+
+    private fun rotateBitmap(bitmap: Bitmap, degrees: Float): Bitmap {
+        val matrix = Matrix().apply { postRotate(degrees) }
+        return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
     }
 
     var searchTextListener: TextWatcher = object : TextWatcher {
@@ -2017,7 +2168,7 @@ abstract class ChatFragment<
      }
 
     private fun scrollToResult(
-        messages: List<Message>,
+        messages: List<Pair<Long, String>>,
         index: Int,
         prevIndex: Int
     ) {
@@ -2054,11 +2205,13 @@ abstract class ChatFragment<
 
     override fun onPause() {
         super.onPause()
+
         viewModel.readMessages()
     }
 
     override fun onStop() {
         super.onStop()
+
         viewModel.audioPlayerController.pauseMediaIfPlaying()
     }
 
@@ -2069,10 +2222,49 @@ abstract class ChatFragment<
     override fun onDestroyView() {
         super.onDestroyView()
 
+        // Cancel all jobs
+        holderJobs.forEach { it.cancel() }
+        holderJobs.clear()
+
+        // Dispose all image loading operations
+        disposables.forEach { it.dispose() }
+        disposables.clear()
+
+        // Clear other job lists
+        messageReplyViewStateJobs.forEach { it.cancel() }
+        messageReplyViewStateJobs.clear()
+
+        headerInitialHolderViewStateJobs.forEach { it.cancel() }
+        headerInitialHolderViewStateJobs.clear()
+
+        attachmentSendViewStateJobs.forEach { it.cancel() }
+        attachmentSendViewStateJobs.clear()
+
+        fullScreenViewStateJobs.forEach { it.cancel() }
+        fullScreenViewStateJobs.clear()
+
+        // Clear disposables for each category
+        messageReplyViewStateDisposables.forEach { it.dispose() }
+        messageReplyViewStateDisposables.clear()
+
+        headerInitialHolderViewStateDisposables.forEach { it.dispose() }
+        headerInitialHolderViewStateDisposables.clear()
+
+        attachmentSendViewStateDisposables.forEach { it.dispose() }
+        attachmentSendViewStateDisposables.clear()
+
+        fullScreenViewStateDisposables.forEach { it.dispose() }
+        fullScreenViewStateDisposables.clear()
+
+        // Clear references
         messageReplyLastViewState = null
         headerInitialHolderLastViewState = null
         fullscreenLastViewState = null
         attachmentSendLastViewState = null
+
+        // Clear RecyclerView to prevent memory leaks
+        recyclerView.adapter = null
+        recyclerView.layoutManager = null
     }
 
     private fun isRecordingPermissionsGranted() = arrayOf(Manifest.permission.RECORD_AUDIO).all {
@@ -2121,4 +2313,33 @@ abstract class ChatFragment<
             }
         }
     }
+}
+
+fun RecyclerView.getItemsDistanceToBottom(): Int {
+    val layoutManager = layoutManager as? LinearLayoutManager ?: return 0
+
+    val lastVisiblePosition = layoutManager.findLastVisibleItemPosition()
+    val totalItems = adapter?.itemCount ?: 0
+
+    return (totalItems - 1) - lastVisiblePosition
+}
+
+fun Context.getScreenWidth(): Int {
+    val displayMetrics = resources.displayMetrics
+    return displayMetrics.widthPixels
+}
+
+fun String.allRangesOf(substring: String): List<IntRange> {
+    val ranges = mutableListOf<IntRange>()
+    var startIndex = 0
+
+    while (true) {
+        val index = this.lowercase().indexOf(substring.lowercase(), startIndex)
+        if (index == -1) break
+
+        ranges.add(index until (index + substring.length))
+        startIndex = index + 1
+    }
+
+    return ranges
 }

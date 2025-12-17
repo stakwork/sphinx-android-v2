@@ -7,7 +7,6 @@ import chat.sphinx.menu_bottom.ui.BottomMenu
 import chat.sphinx.menu_bottom_tribe.R
 import chat.sphinx.resources.getString
 import chat.sphinx.wrapper_chat.Chat
-import chat.sphinx.wrapper_chat.isTribeOwnedByAccount
 import chat.sphinx.wrapper_chat.isTrue
 import chat.sphinx.wrapper_contact.Contact
 import chat.sphinx.resources.R as R_common
@@ -29,7 +28,7 @@ class BottomMenuTribe(
         lifecycleOwner: LifecycleOwner
     ) {
         val menuBottomOptions = ArrayList<MenuBottomOption>()
-        val isTribeOwnedByAccount = chat.isTribeOwnedByAccount(accountOwner.nodePubKey)
+        val isTribeOwnedByAccount = chat.ownedTribe?.isTrue() == true
 
         if (isTribeOwnedByAccount || !chat.privateTribe.isTrue()) {
             menuBottomOptions.add(

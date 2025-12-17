@@ -122,7 +122,7 @@ internal class TribeMembersListAdapter(
                                 DiffUtil.calculateDiff(diff)
                             }.let {
                                 if (!diff.sameList) {
-                                    tribeMembers.removeLast()
+                                    tribeMembers.removeAt(tribeMembers.lastIndex)
                                     tribeMembers.addAll(viewState.list)
                                 }
                             }
@@ -229,7 +229,7 @@ internal class TribeMembersListAdapter(
                 if (!photoUrl.isNullOrEmpty()) {
                     imageViewMemberPicture.visible
 
-                    onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+                    onStopSupervisor.scope.launch(viewModel.default) {
                         imageLoader.load(
                             imageViewMemberPicture,
                             photoUrl,

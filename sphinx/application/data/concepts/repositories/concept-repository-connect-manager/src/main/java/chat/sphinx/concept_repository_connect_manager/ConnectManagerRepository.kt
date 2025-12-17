@@ -28,6 +28,7 @@ interface ConnectManagerRepository {
     val connectionManagerState: MutableStateFlow<OwnerRegistrationState?>
     val networkStatus: MutableStateFlow<NetworkStatus>
     val restoreProcessState: MutableStateFlow<RestoreProcessState?>
+    val fetchProcessState: MutableStateFlow<Pair<Int, String>?>
     val connectManagerErrorState: MutableStateFlow<ConnectManagerError?>
     val transactionDtoState: MutableStateFlow<List<TransactionDto>?>
     val userStateFlow: MutableStateFlow<String?>
@@ -36,7 +37,6 @@ interface ConnectManagerRepository {
     val webViewPaymentHash: MutableStateFlow<String?>
     val processingInvoice: MutableStateFlow<Pair<String, String>?>
     val webViewPreImage: MutableStateFlow<String?>
-    val restoreMinIndex: MutableStateFlow<Long?>
 
     fun connectAndSubscribeToMqtt(userState: String?, mixerIp: String?) {}
     fun createOwnerAccount()

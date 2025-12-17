@@ -468,8 +468,8 @@ internal class PodcastPlayerViewModel @Inject constructor(
                             feedRepository.checkIfEpisodeNodeExists(
                                 episode,
                                 podcast.title,
-                                workflowId,
-                                token
+                                workflowId = workflowId,
+                                token = token
                             )
                         }
                     }

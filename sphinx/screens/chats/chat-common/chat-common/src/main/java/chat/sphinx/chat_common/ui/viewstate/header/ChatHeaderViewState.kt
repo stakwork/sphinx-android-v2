@@ -11,6 +11,7 @@ sealed class ChatHeaderViewState: ViewState<ChatHeaderViewState>() {
         val showLock: Boolean,
         val isMuted: Boolean,
         val isChatAvailable: Boolean,
+        val isTribe: Boolean,
         val createdAt: String?,
         val colorKey: String,
     ): ChatHeaderViewState()

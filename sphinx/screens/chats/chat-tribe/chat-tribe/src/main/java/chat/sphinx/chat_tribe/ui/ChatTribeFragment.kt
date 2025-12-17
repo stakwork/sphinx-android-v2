@@ -48,11 +48,13 @@ import chat.sphinx.chat_tribe.ui.viewstate.BoostAnimationViewState
 import chat.sphinx.chat_tribe.ui.viewstate.TribeMemberDataViewState
 import chat.sphinx.chat_tribe.ui.viewstate.TribeMemberProfileViewState
 import chat.sphinx.chat_tribe.ui.viewstate.*
+import chat.sphinx.concept_grapheneos_manager.GrapheneOsManager
 import chat.sphinx.concept_image_loader.ImageLoader
 import chat.sphinx.concept_image_loader.ImageLoaderOptions
 import chat.sphinx.concept_image_loader.Transformation
 import chat.sphinx.concept_user_colors_helper.UserColorsHelper
 import chat.sphinx.highlighting_tool.SphinxHighlightingTool
+import chat.sphinx.highlighting_tool.SphinxLinkify
 import chat.sphinx.highlighting_tool.SphinxUrlSpan
 import chat.sphinx.highlighting_tool.boldTexts
 import chat.sphinx.highlighting_tool.highlightedTexts
@@ -142,10 +144,10 @@ internal class ChatTribeFragment: ChatFragment<
         get() = binding.includeChatTribeAttachmentFullscreen
     private val mentionMembersPopup: LayoutChatTribeMemberMentionPopupBinding
         get() = binding.includeChatTribeMembersMentionPopup
-    override val pinHeaderBinding: LayoutChatPinedMessageHeaderBinding?
+    override val pinHeaderBinding: LayoutChatPinedMessageHeaderBinding
         get() = binding.includeChatPinedMessageHeader
 
-    override val threadOriginalMessageBinding: LayoutThreadOriginalMessageBinding?
+    override val threadOriginalMessageBinding: LayoutThreadOriginalMessageBinding
         get() = binding.includeLayoutThreadOriginalMessage
 
     private val layoutChatPinPopupBinding: LayoutChatPinPopupBinding
@@ -154,7 +156,8 @@ internal class ChatTribeFragment: ChatFragment<
         get() = binding.includeLayoutBottomPinned
     private val webView: WebView
         get() = tribeAppBinding.includeLayoutTribeAppDetails.webView
-    private val threadHeader: LayoutThreadHeaderBinding
+
+    override val threadHeader: LayoutThreadHeaderBinding
         get() = binding.includeLayoutThreadHeader
 
     override val menuEnablePayments: Boolean
@@ -178,6 +181,12 @@ internal class ChatTribeFragment: ChatFragment<
     protected lateinit var _imageLoader: ImageLoader<ImageView>
     override val imageLoader: ImageLoader<ImageView>
         get() = _imageLoader
+
+    @Inject
+    @Suppress("ProtectedInFinal", "PropertyName")
+    protected lateinit var _grapheneOsManager: GrapheneOsManager
+    override val grapheneOsManager: GrapheneOsManager
+        get() = _grapheneOsManager
 
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -325,16 +334,6 @@ internal class ChatTribeFragment: ChatFragment<
             }
         }
 
-        footerBinding.editTextChatFooter.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                viewModel.processMemberMention(s)
-            }
-
-            override fun afterTextChanged(s: Editable?) {}
-        })
-
         tribeAppBinding.includeLayoutTribeAppDetails.apply {
             (requireActivity() as InsetterActivity).addNavigationBarPadding(layoutConstraintBudget)
 
@@ -353,17 +352,19 @@ internal class ChatTribeFragment: ChatFragment<
         }
 
         mentionMembersPopup.listviewMentionTribeMembers.setOnItemClickListener { parent, _, position, _ ->
-            (parent.adapter as? ArrayAdapter<String>?)?.let {
-                it.getItem(position)?.let { selectedAlias ->
-                    footerBinding.editTextChatFooter.apply {
+            (parent.adapter as? ArrayAdapter<*>?)?.let {
+                it.getItem(position)?.let { selectedMembr ->
+                    (selectedMembr as? Triple<*, *, *>)?.let {
+                        footerBinding.editTextChatFooter.apply {
 
-                        val newText = text.toString().messageWithMention(selectedAlias)
+                            val newText = text.toString().messageWithMention((selectedMembr.first as? String) ?: "")
 
-                        setText(newText)
-                        setSelection(length())
+                            setText(newText)
+                            setSelection(length())
+                        }
+
+                        mentionMembersPopup.root.gone
                     }
-
-                    mentionMembersPopup.root.gone
                 }
             }
         }
@@ -576,6 +577,7 @@ internal class ChatTribeFragment: ChatFragment<
             .build()
     }
 
+    private var isThreadHeaderSet = false
     override fun subscribeToViewStateFlow() {
         super.subscribeToViewStateFlow()
 
@@ -664,6 +666,8 @@ internal class ChatTribeFragment: ChatFragment<
                                 root.visible
                             })
                         }
+
+                        else -> {}
                     }
                 }
             }
@@ -764,6 +768,7 @@ internal class ChatTribeFragment: ChatFragment<
                                     SphinxHighlightingTool.addMarkdowns(
                                         textViewPinnedBottomHeaderText,
                                         viewState.messageContent.highlightedTexts(),
+                                        emptyList(),
                                         viewState.messageContent.boldTexts(),
                                         viewState.messageContent.markDownLinkTexts(),
                                         null,
@@ -791,23 +796,49 @@ internal class ChatTribeFragment: ChatFragment<
 
                             binding.includeChatTribeHeader.root.gone
                             binding.includeChatPinedMessageHeader.root.gone
-                            threadOriginalMessageBinding?.root?.gone
+                            threadOriginalMessageBinding.root.gone
 
                             layoutConstraintThreadContactName.gone
                             textViewHeader.visible
                         }
                         is ThreadHeaderViewState.FullHeader -> {
                             root.visible
+
                             binding.includeChatTribeHeader.root.gone
                             binding.includeChatPinedMessageHeader.root.gone
 
-                            threadOriginalMessageBinding?.root?.visible
+                            threadOriginalMessageBinding.root.visible
 
                             layoutConstraintThreadContactName.visible
                             textViewHeader.gone
 
-                            textViewThreadDate.text = viewState.date
-                            threadOriginalMessageBinding?.textViewThreadMessageContent?.text = viewState.message
+                            if (viewState.isFirstTimeShowing) {
+                                textViewThreadDate.text = viewState.date
+
+                                threadOriginalMessageBinding.textViewThreadMessageContent.let { textView ->
+                                    viewState.message?.let { nnMessage ->
+                                        textView.text = nnMessage
+
+                                        SphinxLinkify.addLinks(
+                                            textView,
+                                            SphinxLinkify.ALL,
+                                            root.context,
+                                            null
+                                        )
+
+                                        SphinxHighlightingTool.addMarkdowns(
+                                            textView,
+                                            nnMessage.highlightedTexts(),
+                                            emptyList(),
+                                            nnMessage.boldTexts(),
+                                            nnMessage.markDownLinkTexts(),
+                                            null,
+                                            resources,
+                                            root.context
+                                        )
+                                    }
+                                }
+                            }
 
                             binding.includeLayoutThreadHeader.layoutContactInitialHolder.apply {
                                 textViewInitialsName.visible
@@ -819,12 +850,12 @@ internal class ChatTribeFragment: ChatFragment<
                                     textViewInitialsName.apply {
                                         text = (senderInfo.second?.value ?: "").getInitials()
 
-                                        senderInfo.third.let { colorKey ->
+                                        if (viewState.isFirstTimeShowing) {
                                             setBackgroundRandomColor(
                                                 R_common.drawable.chat_initials_circle,
                                                 Color.parseColor(
                                                     userColorsHelper.getHexCodeForKey(
-                                                        colorKey,
+                                                        senderInfo.third,
                                                         root.context.getRandomHexCode(),
                                                     )
                                                 ),
@@ -835,73 +866,81 @@ internal class ChatTribeFragment: ChatFragment<
                                             textViewInitialsName.gone
                                             imageViewChatPicture.visible
 
-                                            imageLoader.load(
-                                                layoutContactInitialHolder.imageViewChatPicture,
-                                                photoUrl.value,
-                                                ImageLoaderOptions.Builder()
-                                                    .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
-                                                    .transformation(Transformation.CircleCrop)
-                                                    .build()
-                                            )
+                                            if (viewState.isFirstTimeShowing) {
+                                                imageLoader.load(
+                                                    layoutContactInitialHolder.imageViewChatPicture,
+                                                    photoUrl.value,
+                                                    ImageLoaderOptions.Builder()
+                                                        .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
+                                                        .transformation(Transformation.CircleCrop)
+                                                        .build()
+                                                )
+                                            }
                                         }
                                     }
                                 }
                             }
 
-                            threadOriginalMessageBinding?.apply {
+                            threadOriginalMessageBinding.apply {
                                 layoutConstraintMediaContainer.gone
 
                                 viewState.imageAttachment?.let { imageAttachment ->
                                     layoutConstraintMediaContainer.visible
                                     imageViewThreadCardView.visible
 
-                                    onStopSupervisor.scope.launch(viewModel.mainImmediate) {
-                                        imageAttachment.media?.localFile?.let {
-                                            imageLoader.load(
-                                                imageViewElementPicture,
-                                                it,
-                                                ImageLoaderOptions.Builder().build()
-                                            )
-                                        } ?: imageAttachment.url.let {
-                                            imageLoader.load(
-                                                imageViewElementPicture,
-                                                it,
-                                                ImageLoaderOptions.Builder().build()
-                                            )
+                                    if (viewState.isFirstTimeShowing) {
+                                        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+                                            imageAttachment.media?.localFile?.let {
+                                                imageLoader.load(
+                                                    imageViewElementPicture,
+                                                    it,
+                                                    ImageLoaderOptions.Builder().build()
+                                                )
+                                            } ?: imageAttachment.url.let {
+                                                imageLoader.load(
+                                                    imageViewElementPicture,
+                                                    it,
+                                                    ImageLoaderOptions.Builder().build()
+                                                )
+                                            }
                                         }
                                     }
                                 }
-                                
+
                                 viewState.videoAttachment?.let { videoAttachment ->
                                     layoutConstraintMediaContainer.visible
                                     imageViewThreadCardView.visible
 
-                                    (videoAttachment as? LayoutState.Bubble.ContainerSecond.VideoAttachment.FileAvailable)?.let {
-                                        VideoThumbnailUtil.loadThumbnail(it.file)?.let { thumbnail ->
-                                            imageViewElementPicture.setImageBitmap(thumbnail)
-                                            imageViewAlpha.visible
-                                            textViewAttachmentPlayButton.visible
+                                    if (viewState.isFirstTimeShowing) {
+                                        (videoAttachment as? LayoutState.Bubble.ContainerSecond.VideoAttachment.FileAvailable)?.let {
+                                            VideoThumbnailUtil.loadThumbnail(it.file)
+                                                ?.let { thumbnail ->
+                                                    imageViewElementPicture.setImageBitmap(thumbnail)
+                                                    imageViewAlpha.visible
+                                                    textViewAttachmentPlayButton.visible
+                                                }
                                         }
                                     }
                                 }
-                                
+
                                 viewState.fileAttachment?.let { fileAttachment ->
                                     layoutConstraintMediaContainer.visible
                                     textViewAttachmentFileIcon.visible
                                     textViewAttachmentFileIcon.text = getString(R_common.string.material_icon_name_file_pdf)
 
                                     (fileAttachment as? LayoutState.Bubble.ContainerSecond.FileAttachment.FileAvailable)?.let {
-                                        threadOriginalMessageBinding?.textViewThreadMessageContent?.text = it.fileName?.value ?: "Unnamed File"
+                                        threadOriginalMessageBinding.textViewThreadMessageContent.text = it.fileName?.value ?: "File"
                                     }
                                 }
 
-                                viewState.audioAttachment?.let { audioAttachment ->
+                                viewState.audioAttachment?.let {
                                     layoutConstraintMediaContainer.visible
                                     textViewAttachmentFileIcon.visible
                                     textViewAttachmentFileIcon.text = getString(R_common.string.material_icon_name_volume_up)
-                                    threadOriginalMessageBinding?.textViewThreadMessageContent?.text = "Audio Clip"
+                                    threadOriginalMessageBinding.textViewThreadMessageContent.text = "Audio Clip"
                                 }
                             }
+                            isThreadHeaderSet = true
                         }
                     }
                 }

@@ -104,7 +104,7 @@ class ChatGroupViewModel @Inject constructor(
         emitAll(chatRepository.getChatById(args.chatId))
     }.distinctUntilChanged().shareIn(
         viewModelScope,
-        SharingStarted.WhileSubscribed(2_000),
+        SharingStarted.Lazily,
         replay = 1
     )
 
@@ -154,12 +154,12 @@ class ChatGroupViewModel @Inject constructor(
     }
 
     override fun readMessages() {
-        viewModelScope.launch(mainImmediate) {
+        viewModelScope.launch {
             messageRepository.readMessages(args.chatId)
         }
     }
 
-    override fun reloadPinnedMessage() {}
+    override suspend fun reloadPinnedMessage() {}
 
     override fun getThreadUUID(): ThreadUUID? {
         return null
@@ -180,5 +180,9 @@ class ChatGroupViewModel @Inject constructor(
 
     override fun navigateToNotificationLevel() {
         // We do nothing because Chat Groups are being aren't supported anymore
+    }
+
+    override fun shouldProcessMemberMentions(s: CharSequence?) {
+        // Nothing to do. Only implemented on Tribes
     }
 }

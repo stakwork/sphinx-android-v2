@@ -174,7 +174,7 @@ internal class TribesDiscoverAdapter(
 
                 tribeItem.tribeDto?.let { tribeDto ->
                     tribeDto.img?.let { imageUrl ->
-                        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+                        onStopSupervisor.scope.launch(viewModel.default) {
                             imageLoader.load(
                                 imageViewTribeImage,
                                 imageUrl,

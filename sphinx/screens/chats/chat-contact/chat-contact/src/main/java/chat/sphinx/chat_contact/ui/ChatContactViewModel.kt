@@ -45,6 +45,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import io.matthewnelson.android_feature_navigation.util.navArgs
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
 import io.matthewnelson.concept_media_cache.MediaCacheHandler
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -52,10 +54,12 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 
 internal inline val ChatContactFragmentArgs.chatId: ChatId?
@@ -114,17 +118,20 @@ internal class ChatContactViewModel @Inject constructor(
     moshi,
     LOG,
 ) {
+    private var isViewModelActive = true
+
     override val args: ChatContactFragmentArgs by savedStateHandle.navArgs()
     private var _chatId: ChatId? = args.chatId
     override val chatId: ChatId?
         get() = _chatId
+
     override val contactId: ContactId = args.contactId
 
     private val contactSharedFlow: SharedFlow<Contact?> = flow {
         emitAll(contactRepository.getContactById(contactId))
     }.distinctUntilChanged().shareIn(
         viewModelScope,
-        SharingStarted.WhileSubscribed(2_000),
+        SharingStarted.WhileSubscribed(5_000),
         replay = 1,
     )
 
@@ -132,17 +139,21 @@ internal class ChatContactViewModel @Inject constructor(
         chatId?.let { chatId ->
             emitAll(chatRepository.getChatById(chatId))
         } ?: chatRepository.getConversationByContactId(contactId).collect { chat ->
-            _chatId = chat?.id
-            emit(chat)
+            if (isViewModelActive) {
+                _chatId = chat?.id
+                emit(chat)
+            }
         }
     }.distinctUntilChanged().shareIn(
         viewModelScope,
-        SharingStarted.WhileSubscribed(2_000),
+        SharingStarted.WhileSubscribed(5_000),
         replay = 1
     )
 
     override val headerInitialHolderSharedFlow: SharedFlow<InitialHolderViewState> = flow {
         contactSharedFlow.collect { contact ->
+            if (!isViewModelActive) return@collect
+
             if (contact != null) {
                 contact.photoUrl?.let { photoUrl ->
                     emit(
@@ -167,42 +178,33 @@ internal class ChatContactViewModel @Inject constructor(
         replay = 1
     )
 
-    override suspend fun getChatInfo(): Triple<ChatName?, PhotoUrl?, String>? {
-        contactSharedFlow.replayCache.firstOrNull()?.let { contact ->
-            return Triple(
-                contact.alias?.value?.let { ChatName(it) },
-                contact.photoUrl?.value?.let { PhotoUrl(it) },
-                contact.getColorKey()
-            )
-        } ?: contactSharedFlow.firstOrNull()?.let { contact ->
-            return Triple(
-                contact.alias?.value?.let { ChatName(it) },
-                contact.photoUrl?.value?.let { PhotoUrl(it) },
-                contact.getColorKey()
-            )
-        } ?: let {
-            var alias: ContactAlias? = null
-            var photoUrl: PhotoUrl? = null
-            var colorKey: String = app.getRandomHexCode()
-
-            try {
-                contactSharedFlow.collect { contact ->
-                    if (contact != null) {
-                        alias = contact.alias
-                        photoUrl = contact.photoUrl
-                        colorKey = contact.getColorKey()
-                        throw Exception()
-                    }
-                }
-            } catch (e: Exception) {
+    init {
+        viewModelScope.launch(dispatchers.io) {
+            withTimeoutOrNull(1000) {
+                contactSharedFlow.firstOrNull()
             }
-            delay(25L)
+        }
+    }
 
-            return Triple(
-                alias?.value?.let { ChatName(it) },
-                photoUrl?.value?.let { PhotoUrl(it) },
-                colorKey
+    override suspend fun getChatInfo(): Triple<ChatName?, PhotoUrl?, String>? {
+        if (!isViewModelActive) return null
+
+        return contactSharedFlow.replayCache.firstOrNull()?.let { contact ->
+            Triple(
+                contact.alias?.value?.let { ChatName(it) },
+                contact.photoUrl?.value?.let { PhotoUrl(it) },
+                contact.getColorKey()
             )
+        } ?: withTimeoutOrNull(1000) {
+            contactSharedFlow.first { it != null }?.let { contact ->
+                if (isViewModelActive) {
+                    Triple(
+                        contact.alias?.value?.let { ChatName(it) },
+                        contact.photoUrl?.value?.let { PhotoUrl(it) },
+                        contact.getColorKey()
+                    )
+                } else null
+            }
         }
     }
 
@@ -213,10 +215,13 @@ internal class ChatContactViewModel @Inject constructor(
         TODO("Not yet implemented")
     }
 
+    private var cachedInitialHolder: InitialHolderViewState? = null
     override suspend fun getInitialHolderViewStateForReceivedMessage(
         message: Message,
         owner: Contact
     ): InitialHolderViewState {
+        if (!isViewModelActive) return InitialHolderViewState.None
+
         if (message.sender == owner.id) {
             owner.photoUrl?.let { photoUrl ->
                 return InitialHolderViewState.Url(photoUrl)
@@ -228,62 +233,49 @@ internal class ChatContactViewModel @Inject constructor(
             }
         }
 
-        headerInitialHolderSharedFlow.replayCache.firstOrNull()?.let { initialHolder ->
-            if (initialHolder !is InitialHolderViewState.None) {
-                return initialHolder
-            }
+        cachedInitialHolder?.let {
+            return it
         }
 
-        headerInitialHolderSharedFlow.firstOrNull()?.let { initialHolder ->
-            if (initialHolder !is InitialHolderViewState.None) {
-                return initialHolder
-            }
+        if (isViewModelActive) {
+            cachedInitialHolder = getHeaderInitialHolderOnce()
+            return cachedInitialHolder ?: InitialHolderViewState.None
         }
 
-        var initialHolder: InitialHolderViewState? = null
-
-        try {
-            headerInitialHolderSharedFlow.collect {
-                initialHolder = it
-                throw Exception()
-            }
-        } catch (e: Exception) {
-        }
-        delay(25L)
-
-        return initialHolder ?: InitialHolderViewState.None
+        return InitialHolderViewState.None
     }
 
-    private suspend fun getContact(): Contact? {
-        var contact: Contact? = contactSharedFlow.replayCache.firstOrNull()
-            ?: contactSharedFlow.firstOrNull()
+    private suspend fun getHeaderInitialHolderOnce(): InitialHolderViewState? {
+        if (!isViewModelActive) return InitialHolderViewState.None
 
-        if (contact == null) {
-            try {
-                contactSharedFlow.collect {
-                    if (contact != null) {
-                        contact = it
-                        throw Exception()
-                    }
-                }
-            } catch (e: Exception) {
+        headerInitialHolderSharedFlow.replayCache.firstOrNull()?.let { holder ->
+            if (holder !is InitialHolderViewState.None) {
+                return holder
             }
-            delay(25L)
         }
 
-        return contact
+        return withTimeoutOrNull(500) {
+            headerInitialHolderSharedFlow.first { it !is InitialHolderViewState.None }
+        } ?: InitialHolderViewState.None
     }
 
     override fun readMessages() {
-        val idResolved: ChatId? = chatId ?: chatSharedFlow.replayCache.firstOrNull()?.id
-        if (idResolved != null) {
-            viewModelScope.launch(mainImmediate) {
+        if (!isViewModelActive) return
+
+        viewModelScope.launch(io) {
+            if (!isViewModelActive) return@launch
+
+            val idResolved: ChatId? = chatId ?: withTimeoutOrNull(500) {
+                chatSharedFlow.first { it != null }?.id
+            }
+
+            if (idResolved != null && isViewModelActive) {
                 messageRepository.readMessages(idResolved)
             }
         }
     }
 
-    override fun reloadPinnedMessage() {}
+    override suspend fun reloadPinnedMessage() {}
 
     override fun getThreadUUID(): ThreadUUID? {
         return null
@@ -311,5 +303,16 @@ internal class ChatContactViewModel @Inject constructor(
 
     override fun onSmallProfileImageClick(message: Message) {
         navigateToChatDetailScreen()
+    }
+
+    override fun shouldProcessMemberMentions(s: CharSequence?) {
+        // Nothing to do. Only implemented on Tribes
+    }
+
+    override fun onCleared() {
+        isViewModelActive = false
+        cachedInitialHolder = null
+
+        super.onCleared()
     }
 }

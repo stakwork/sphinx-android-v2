@@ -82,61 +82,34 @@ internal class ChatViewStateContainer(
         dashboardChats: List<DashboardChat>?,
         filter: ChatFilter = ChatFilter.UseCurrent
     ) {
-        lock.withLock {
-            val sortedDashboardChats = if (dashboardChats != null) {
-                withContext(dispatchers.default) {
-                    dashboardChats.sortedByDescending { it.sortBy }
-                }
-            } else {
-                viewStateFlow.value.originalList
-            }
+        val processedData = withContext(dispatchers.default) {
+            val sortedList = dashboardChats?.sortedByDescending { it.sortBy }
+                ?: viewStateFlow.value.originalList
 
-            @Exhaustive
             when (filter) {
                 is ChatFilter.UseCurrent -> {
-                    @Exhaustive
                     when (val viewState = viewStateFlow.value) {
                         is ChatViewState.ListMode -> {
-                            super.updateViewState(
-                                ChatViewState.ListMode(
-                                    sortedDashboardChats,
-                                    sortedDashboardChats
-                                )
-                            )
+                            ChatViewState.ListMode(sortedList, sortedList)
                         }
                         is ChatViewState.SearchMode -> {
-                            super.updateViewState(
-                                ChatViewState.SearchMode(
-                                    viewState.filter,
-                                    withContext(dispatchers.default) {
-                                        sortedDashboardChats
-                                            .filterDashboardChats(viewState.filter.value)
-                                    },
-                                    sortedDashboardChats
-                                )
-                            )
+                            val filtered = sortedList.filterDashboardChats(viewState.filter.value)
+                            ChatViewState.SearchMode(viewState.filter, filtered, sortedList)
                         }
                     }
-
                 }
                 is ChatFilter.ClearFilter -> {
-                    super.updateViewState(
-                        ChatViewState.ListMode(sortedDashboardChats, sortedDashboardChats)
-                    )
+                    ChatViewState.ListMode(sortedList, sortedList)
                 }
                 is ChatFilter.FilterBy -> {
-                    super.updateViewState(
-                        ChatViewState.SearchMode(
-                            filter,
-                            withContext(dispatchers.default) {
-                                sortedDashboardChats
-                                    .filterDashboardChats(filter.value)
-                            },
-                            sortedDashboardChats
-                        )
-                    )
+                    val filtered = sortedList.filterDashboardChats(filter.value)
+                    ChatViewState.SearchMode(filter, filtered, sortedList)
                 }
             }
+        }
+
+        lock.withLock {
+            super.updateViewState(processedData)
         }
     }
 }

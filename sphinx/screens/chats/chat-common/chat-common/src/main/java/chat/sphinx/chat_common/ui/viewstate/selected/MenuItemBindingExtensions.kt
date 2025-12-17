@@ -18,9 +18,8 @@ import io.matthewnelson.android_feature_screens.util.visible
 @Suppress("NOTHING_TO_INLINE")
 internal inline fun LayoutSelectedMessageBinding.setMenuColor(viewState: MessageHolderViewState) {
     includeLayoutSelectedMessageMenu.apply {
-        @Exhaustive
         when (viewState) {
-            is MessageHolderViewState.Received -> {
+            is MessageHolderViewState.Received, is MessageHolderViewState.MessageOnlyTextHolderViewState.Received -> {
                 layoutConstraintSelectedMessageMenuItemContainer
                     .setBackgroundResource(R.drawable.background_selected_received_message_menu)
                 imageViewSelectedMessageMenuArrowTopCenter
@@ -36,7 +35,7 @@ internal inline fun LayoutSelectedMessageBinding.setMenuColor(viewState: Message
                 imageViewSelectedMessageMenuArrowBottomLeft
                     .setBackgroundResource(R.drawable.selected_received_message_bottom_arrow)
             }
-            is MessageHolderViewState.Sent -> {
+            is MessageHolderViewState.Sent, is MessageHolderViewState.MessageOnlyTextHolderViewState.Sent -> {
                 layoutConstraintSelectedMessageMenuItemContainer
                     .setBackgroundResource(R.drawable.background_selected_sent_message_menu)
                 imageViewSelectedMessageMenuArrowTopCenter
@@ -55,6 +54,8 @@ internal inline fun LayoutSelectedMessageBinding.setMenuColor(viewState: Message
             is MessageHolderViewState.Separator -> { }
 
             is MessageHolderViewState.ThreadHeader -> { }
+
+            else -> { }
         }
     }
 }

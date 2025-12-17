@@ -6,7 +6,7 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.recyclerview.widget.RecyclerView
 import chat.sphinx.resources.databinding.LayoutChapterListItemHolderBinding
-import chat.sphinx.wrapper_podcast.ChapterProperties
+import chat.sphinx.wrapper_common.ChapterProperties
 
 class ChapterListAdapter(
     private val lifecycleOwner: LifecycleOwner,

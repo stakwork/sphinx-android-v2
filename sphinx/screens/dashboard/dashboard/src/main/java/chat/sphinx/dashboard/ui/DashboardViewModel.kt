@@ -117,17 +117,19 @@ import io.matthewnelson.android_feature_viewmodel.submitSideEffect
 import io.matthewnelson.build_config.BuildConfigVersionCode
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
 import io.matthewnelson.concept_views.viewstate.ViewStateContainer
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.jitsi.meet.sdk.JitsiMeetActivity
-import org.jitsi.meet.sdk.JitsiMeetConferenceOptions
-import org.jitsi.meet.sdk.JitsiMeetUserInfo
 import org.json.JSONObject
 import javax.inject.Inject
 
@@ -241,8 +243,9 @@ internal class DashboardViewModel @Inject constructor(
 
         actionsRepository.syncActions()
         feedRepository.restoreContentFeedStatuses()
+        chatRepository.setLatestMessagesDatePerChat()
 
-        networkRefresh(true)
+        networkRefresh()
     }
 
     fun processTimezoneChanges() {
@@ -527,33 +530,6 @@ internal class DashboardViewModel @Inject constructor(
                             appContext.startActivity(intent)
                         }
                     }
-                }
-            }
-        } else if (link.isJitsiLink) {
-            link.callServerUrl?.let { nnCallUrl ->
-
-                viewModelScope.launch(mainImmediate) {
-
-                    val owner = getOwner()
-
-                    val userInfo = JitsiMeetUserInfo()
-                    userInfo.displayName = owner.alias?.value ?: ""
-
-                    owner.avatarUrl?.let { nnAvatarUrl ->
-                        userInfo.avatar = nnAvatarUrl
-                    }
-
-                    val options = JitsiMeetConferenceOptions.Builder()
-                        .setServerURL(nnCallUrl)
-                        .setRoom(link.callRoom)
-                        .setAudioMuted(false)
-                        .setVideoMuted(false)
-                        .setFeatureFlag("welcomepage.enabled", false)
-                        .setAudioOnly(audioOnly)
-                        .setUserInfo(userInfo)
-                        .build()
-
-                    JitsiMeetActivity.launch(app, options)
                 }
             }
         } else {
@@ -1076,10 +1052,10 @@ internal class DashboardViewModel @Inject constructor(
             DeepLinkPopupViewState.PopupDismissed
         )
 
-        val url = "https://$host?challenge=$challenge"
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-        val appContext: Context = app.applicationContext
-        appContext.startActivity(intent)
+//        val url = "https://$host?challenge=$challenge"
+//        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+//        val appContext: Context = app.applicationContext
+//        appContext.startActivity(intent)
     }
 
     private suspend fun createProfileFor(
@@ -1182,7 +1158,7 @@ internal class DashboardViewModel @Inject constructor(
                         )
                     }
                     is Response.Success -> {
-//                        networkRefresh(false)
+//                        networkRefresh()
                     }
                 }
             }
@@ -1288,28 +1264,17 @@ internal class DashboardViewModel @Inject constructor(
     suspend fun getAccountBalance(): StateFlow<NodeBalance?> =
         repositoryDashboard.getAccountBalance()
 
-    private var messagesCountJob: Job? = null
-    fun screenInit() {
-        messagesCountJob?.cancel()
-        messagesCountJob = viewModelScope.launch(mainImmediate) {
-            repositoryDashboard.getUnseenActiveConversationMessagesCount()
-                .collect { unseenConversationMessagesCount ->
-                    updateTabsState(
-                        friendsBadgeVisible = (unseenConversationMessagesCount ?: 0) > 0
-                    )
-                }
-        }
-    }
-
     init {
-        viewModelScope.launch(mainImmediate) {
+        viewModelScope.launch(io) {
             repositoryDashboard.getUnseenTribeMessagesCount()
                 .collect { unseenTribeMessagesCount ->
                     updateTabsState(
                         tribesBadgeVisible = (unseenTribeMessagesCount ?: 0) > 0
                     )
                 }
+        }
 
+        viewModelScope.launch(io) {
             repositoryDashboard.getUnseenActiveConversationMessagesCount()
                 .collect { unseenConversationMessagesCount ->
                     updateTabsState(
@@ -1362,27 +1327,30 @@ internal class DashboardViewModel @Inject constructor(
         friendsBadgeVisible: Boolean? = null,
         tribesBadgeVisible: Boolean? = null
     ) {
-        val currentState = tabsViewStateContainer.viewStateFlow.value
+        viewModelScope.launch(mainImmediate) {
+            val currentState = tabsViewStateContainer.viewStateFlow.value
 
-        tabsViewStateContainer.updateViewState(
-            if (currentState is DashboardTabsViewState.TabsState) {
-                DashboardTabsViewState.TabsState(
-                    feedActive = feedActive ?: currentState.feedActive,
-                    friendsActive = friendsActive ?: currentState.friendsActive,
-                    tribesActive = tribesActive ?: currentState.tribesActive,
-                    friendsBadgeVisible = friendsBadgeVisible ?: currentState.friendsBadgeVisible,
-                    tribesBadgeVisible = tribesBadgeVisible ?: currentState.tribesBadgeVisible
-                )
-            } else {
-                DashboardTabsViewState.TabsState(
-                    feedActive = feedActive ?: false,
-                    friendsActive = friendsActive ?: true,
-                    tribesActive = tribesActive ?: false,
-                    friendsBadgeVisible = friendsBadgeVisible ?: false,
-                    tribesBadgeVisible = tribesBadgeVisible ?: false
-                )
-            }
-        )
+            tabsViewStateContainer.updateViewState(
+                if (currentState is DashboardTabsViewState.TabsState) {
+                    DashboardTabsViewState.TabsState(
+                        feedActive = feedActive ?: currentState.feedActive,
+                        friendsActive = friendsActive ?: currentState.friendsActive,
+                        tribesActive = tribesActive ?: currentState.tribesActive,
+                        friendsBadgeVisible = friendsBadgeVisible
+                            ?: currentState.friendsBadgeVisible,
+                        tribesBadgeVisible = tribesBadgeVisible ?: currentState.tribesBadgeVisible
+                    )
+                } else {
+                    DashboardTabsViewState.TabsState(
+                        feedActive = feedActive ?: false,
+                        friendsActive = friendsActive ?: true,
+                        tribesActive = tribesActive ?: false,
+                        friendsBadgeVisible = friendsBadgeVisible ?: false,
+                        tribesBadgeVisible = tribesBadgeVisible ?: false
+                    )
+                }
+            )
+        }
     }
 
     fun getCurrentPagePosition() : Int {
@@ -1568,23 +1536,30 @@ internal class DashboardViewModel @Inject constructor(
     val restoreProgressStateFlow: StateFlow<Int?>
         get() = connectManagerRepository.restoreProgress.asStateFlow()
 
-    private var jobNetworkRefresh: Job? = null
-    private var jobPushNotificationRegistration: Job? = null
+    private var jobNetworkJob: Job? = null
+    private var jobNetworkScope: CoroutineScope? = null
 
-    fun networkRefresh(
-        screenStart: Boolean
-    ) {
-        if (jobNetworkRefresh?.isActive == true) {
+    fun networkRefresh() {
+        if (jobNetworkJob?.isActive == true) {
             return
         }
 
-        jobNetworkRefresh = viewModelScope.launch(dispatchers.mainImmediate) {
+        jobNetworkScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+        jobNetworkJob = jobNetworkScope?.launch {
             connectManagerRepository.reconnectMqtt()
         }
     }
 
     fun cancelRestore() {
-        jobNetworkRefresh?.cancel()
+        jobNetworkScope?.cancel()
+        jobNetworkScope = null
+
+        jobNetworkJob?.cancel()
+        jobNetworkJob = null
+
+        System.gc()
+
         viewModelScope.launch(mainImmediate) {
             repositoryDashboard.didCancelRestore()
         }

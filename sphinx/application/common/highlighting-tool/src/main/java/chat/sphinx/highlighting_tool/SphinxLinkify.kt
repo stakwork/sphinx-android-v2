@@ -117,7 +117,7 @@ object SphinxLinkify {
         text: Spannable,
         @LinkifyMask mask: Int,
         context: Context,
-        onSphinxInteractionListener: SphinxUrlSpan.OnInteractionListener,
+        onSphinxInteractionListener: SphinxUrlSpan.OnInteractionListener?,
     ): Boolean {
         if (mask == 0) {
             return false
@@ -205,7 +205,7 @@ object SphinxLinkify {
         text: TextView,
         @LinkifyMask mask: Int,
         context: Context,
-        onSphinxInteractionListener: SphinxUrlSpan.OnInteractionListener,
+        onSphinxInteractionListener: SphinxUrlSpan.OnInteractionListener?,
     ): Boolean {
         if (mask == 0) {
             return false
@@ -300,7 +300,7 @@ object SphinxLinkify {
         linkSpec: LinkSpec,
         text: Spannable,
         context: Context,
-        onSphinxInteractionListener: SphinxUrlSpan.OnInteractionListener,
+        onSphinxInteractionListener: SphinxUrlSpan.OnInteractionListener?,
     ) {
         val span = SphinxUrlSpan(linkSpec.url, linkSpec.underline, linkSpec.color ?: context.getColor(R_common.color.primaryBlue), onSphinxInteractionListener)
         text.setSpan(span, linkSpec.start, linkSpec.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)

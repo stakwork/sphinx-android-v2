@@ -1,12 +1,12 @@
 package chat.sphinx.dashboard.ui.adapter
 
+import android.annotation.SuppressLint
 import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.widget.ImageView
-import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.*
+import androidx.recyclerview.widget.AsyncListDiffer
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -19,14 +19,12 @@ import chat.sphinx.dashboard.R
 import chat.sphinx.dashboard.databinding.LayoutChatListChatHolderBinding
 import chat.sphinx.dashboard.ui.ChatListViewModel
 import chat.sphinx.dashboard.ui.collectChatViewState
-import chat.sphinx.dashboard.ui.currentChatViewState
 import chat.sphinx.resources.*
 import chat.sphinx.wrapper_chat.*
 import chat.sphinx.wrapper_common.DateTime
 import chat.sphinx.wrapper_common.invite.*
 import chat.sphinx.wrapper_common.lightning.asFormattedString
 import chat.sphinx.wrapper_common.util.getInitials
-import chat.sphinx.wrapper_message.*
 import chat.sphinx.resources.R as R_common
 import io.matthewnelson.android_feature_screens.util.gone
 import io.matthewnelson.android_feature_screens.util.goneIfFalse
@@ -37,9 +35,6 @@ import io.matthewnelson.android_feature_screens.util.visible
 import io.matthewnelson.android_feature_viewmodel.util.OnStopSupervisor
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.util.*
-import kotlin.collections.ArrayList
 
 internal class ChatListAdapter(
     private val recyclerView: RecyclerView,
@@ -51,127 +46,73 @@ internal class ChatListAdapter(
     private val userColorsHelper: UserColorsHelper
 ): RecyclerView.Adapter<ChatListAdapter.ChatViewHolder>(), DefaultLifecycleObserver {
 
-    private inner class Diff(
-        private val oldList: List<DashboardChat>,
-        private val newList: List<DashboardChat>,
-    ): DiffUtil.Callback() {
-
-        override fun getOldListSize(): Int {
-            return oldList.size
-        }
-
-        override fun getNewListSize(): Int {
-            return newList.size
-        }
-
-        @Volatile
-        var sameList: Boolean = oldListSize == newListSize
-
-        override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-            return try {
-                val old = oldList[oldItemPosition]
-                val new = newList[newItemPosition]
-
-                val same: Boolean = when {
-                    old is DashboardChat.Active && new is DashboardChat.Active -> {
-                        old.chat.id                 == new.chat.id                  &&
-                        old.chat.latestMessageId    == new.chat.latestMessageId
-                    }
-                    old is DashboardChat.Inactive.Invite && new is DashboardChat.Inactive.Invite -> {
-                        old.invite?.status == new.invite?.status &&
-                        old.invite?.id              == new.invite?.id               &&
-                        old.contact.status          == new.contact.status
-                    }
-                    old is DashboardChat.Inactive && new is DashboardChat.Inactive -> {
-                        old.chatName                == new.chatName
-                    }
-                    else -> {
-                        false
-                    }
+    // AsyncListDiffer setup
+    private val diffCallback = object : DiffUtil.ItemCallback<DashboardChat>() {
+        override fun areItemsTheSame(oldItem: DashboardChat, newItem: DashboardChat): Boolean {
+            return when {
+                oldItem is DashboardChat.Active && newItem is DashboardChat.Active -> {
+                    oldItem.chat.id == newItem.chat.id
                 }
-
-                if (sameList) {
-                    sameList = same
+                oldItem is DashboardChat.Inactive.Invite && newItem is DashboardChat.Inactive.Invite -> {
+                    oldItem.invite?.id == newItem.invite?.id &&
+                    oldItem.contact.id == newItem.contact.id
                 }
-
-                same
-            } catch (e: IndexOutOfBoundsException) {
-                sameList = false
-                false
+                oldItem is DashboardChat.Inactive.Conversation && newItem is DashboardChat.Inactive.Conversation -> {
+                    oldItem.chatName == newItem.chatName &&
+                    oldItem.contact.id == newItem.contact.id
+                }
+                else -> false
             }
         }
 
-        override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-            return try {
-                val old = oldList[oldItemPosition]
-                val new = newList[newItemPosition]
-
-                val same: Boolean = when {
-                    old is DashboardChat.Active && new is DashboardChat.Active -> {
-                        old.chat.type               == new.chat.type                &&
-                        old.chatName                == new.chatName                 &&
-                        old.chat.notify             == new.chat.notify              &&
-                        old.chat.seen               == new.chat.seen                &&
-                        old.chat.photoUrl           == new.chat.photoUrl
-                    }
-                    old is DashboardChat.Inactive.Invite && new is DashboardChat.Inactive.Invite -> {
-                        old.invite?.status == new.invite?.status &&
-                        old.invite?.id              == new.invite?.id               &&
-                        old.contact.status          == new.contact.status
-                    }
-                    old is DashboardChat.Inactive && new is DashboardChat.Inactive -> {
-                        old.chatName                == new.chatName
-                    }
-                    else -> {
-                        false
-                    }
+        override fun areContentsTheSame(oldItem: DashboardChat, newItem: DashboardChat): Boolean {
+            return when {
+                oldItem is DashboardChat.Active && newItem is DashboardChat.Active -> {
+                    oldItem.chat.type == newItem.chat.type &&
+                    oldItem.chatName == newItem.chatName &&
+                    oldItem.chat.notify == newItem.chat.notify &&
+                    oldItem.chat.seen == newItem.chat.seen &&
+                    oldItem.chat.photoUrl == newItem.chat.photoUrl &&
+                    oldItem.chat.latestMessageId?.value == newItem.chat.latestMessageId?.value &&
+                    oldItem.message?.seen == newItem.message?.seen &&
+                    oldItem.unseenMessagesCount == newItem.unseenMessagesCount &&
+                    oldItem.unseenMentionsCount == newItem.unseenMentionsCount
                 }
-
-                if (sameList) {
-                    sameList = same
+                oldItem is DashboardChat.Inactive.Invite && newItem is DashboardChat.Inactive.Invite -> {
+                    oldItem.invite?.status == newItem.invite?.status &&
+                    oldItem.contact.status == newItem.contact.status
                 }
-
-                same
-            } catch (e: IndexOutOfBoundsException) {
-                sameList = false
-                false
+                oldItem is DashboardChat.Inactive.Conversation && newItem is DashboardChat.Inactive.Conversation -> {
+                    oldItem.chatName == newItem.chatName
+                }
+                else -> false
             }
         }
-
     }
 
-    private val dashboardChats = ArrayList<DashboardChat>(viewModel.currentChatViewState.list)
+    private val differ = AsyncListDiffer(this, diffCallback)
 
     override fun onStart(owner: LifecycleOwner) {
         super.onStart(owner)
         onStopSupervisor.scope.launch(viewModel.mainImmediate) {
             viewModel.collectChatViewState { viewState ->
-
-                if (dashboardChats.isEmpty()) {
-                    dashboardChats.addAll(viewState.list)
-                    this@ChatListAdapter.notifyDataSetChanged()
+                if (viewModel.isFirstLoad() && differ.currentList.isEmpty() && viewState.list.isNotEmpty()) {
+                    viewModel.markAsLoaded()
+                    differ.submitList(viewState.list) {
+                        recyclerView.scrollToPosition(0)
+                    }
                 } else {
+                    val firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
 
-                    val diff = Diff(dashboardChats, viewState.list)
-
-                    withContext(viewModel.dispatchers.default) {
-                        DiffUtil.calculateDiff(diff)
-                    }.let { result ->
-
-                        if (!diff.sameList) {
-                            val firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
-
-                            dashboardChats.clear()
-                            dashboardChats.addAll(viewState.list)
-                            result.dispatchUpdatesTo(this@ChatListAdapter)
-
-                            if (
-                                firstVisibleItemPosition == 0                               &&
-                                recyclerView.scrollState == RecyclerView.SCROLL_STATE_IDLE
-                            ) {
-                                recyclerView.scrollToPosition(0)
-                            }
+                    if (
+                        firstVisibleItemPosition == 0                               &&
+                        recyclerView.scrollState == RecyclerView.SCROLL_STATE_IDLE
+                    ) {
+                        differ.submitList(viewState.list) {
+                            recyclerView.scrollToPosition(0)
                         }
+                    } else {
+                        differ.submitList(viewState.list)
                     }
                 }
             }
@@ -179,7 +120,7 @@ internal class ChatListAdapter(
     }
 
     override fun getItemCount(): Int {
-        return dashboardChats.size
+        return differ.currentList.size
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ChatListAdapter.ChatViewHolder {
@@ -212,8 +153,6 @@ internal class ChatListAdapter(
 
         private var disposable: Disposable? = null
         private var dChat: DashboardChat? = null
-        private var badgeJob: Job? = null
-        private var mentionsJob: Job? = null
 
         init {
             binding.layoutConstraintChatHolder.setOnClickListener {
@@ -221,28 +160,23 @@ internal class ChatListAdapter(
                     @Exhaustive
                     when (dashboardChat) {
                         is DashboardChat.Active.Conversation -> {
-                            lifecycleOwner.lifecycleScope.launch {
-                                viewModel.dashboardNavigator.toChatContact(
-                                    dashboardChat.chat.id,
-                                    dashboardChat.contact.id
+                            viewModel.navigateToChatContact(
+                                dashboardChat.contact.id,
+                                dashboardChat.chat.id
+                            )
+                        }
+                        is DashboardChat.Active.GroupOrTribe -> {
+                            if (dashboardChat.chat.type.isTribe()) {
+                                viewModel.navigateToChatTribe(
+                                    dashboardChat.chat.id
                                 )
                             }
                         }
-                        is DashboardChat.Active.GroupOrTribe -> {
-                            lifecycleOwner.lifecycleScope.launch {
-                                if (dashboardChat.chat.type.isTribe()) {
-                                    viewModel.dashboardNavigator.toChatTribe(dashboardChat.chat.id)
-                                }
-
-                            }
-                        }
                         is DashboardChat.Inactive.Conversation -> {
-                            lifecycleOwner.lifecycleScope.launch {
-                                    viewModel.dashboardNavigator.toChatContact(
-                                        null,
-                                        dashboardChat.contact.id
-                                    )
-                                }
+                            viewModel.navigateToChatContact(
+                                dashboardChat.contact.id,
+                                null
+                            )
                         }
                         is DashboardChat.Inactive.Invite -> {
                             dashboardChat.invite?.let { invite ->
@@ -264,30 +198,31 @@ internal class ChatListAdapter(
         @OptIn(ExperimentalStdlibApi::class)
         fun bind(position: Int) {
             binding.apply {
-                val dashboardChat: DashboardChat = dashboardChats.getOrNull(position) ?: let {
+                val dashboardChat: DashboardChat = differ.currentList.getOrNull(position) ?: let {
                     dChat = null
                     return
                 }
                 dChat = dashboardChat
                 disposable?.dispose()
-                badgeJob?.cancel()
-                mentionsJob?.cancel()
 
                 val isPending = dashboardChat is DashboardChat.Inactive.Conversation
 
                 // Set Defaults
-                layoutConstraintChatHolderBorder.goneIfFalse(position != dashboardChats.lastIndex)
+                layoutConstraintChatHolderBorder.goneIfFalse(position != differ.currentList.lastIndex)
                 textViewDashboardChatHolderName.setTextColorExt(android.R.color.white)
                 textViewChatHolderMessage.setTextColorExt(R_common.color.placeholderText)
                 textViewChatHolderMessage.setTextFont(R_common.font.roboto_regular)
                 textViewDashboardChatHolderBadgeCount.invisibleIfFalse(false)
 
+                includeDashboardChatHolderInitial.root.visible
+                initialsDashboardPendingChatHolder.root.gone
+                imageViewDashboardChatHolderPicture.gone
+
                 // Image
                 dashboardChat.photoUrl.let { url ->
                     if (isPending) {
-                        includeDashboardChatHolderInitial.root.invisible
-
                         onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+                            includeDashboardChatHolderInitial.root.gone
                             initialsDashboardPendingChatHolder.apply {
                                 root.visible
                                 iconClock.gone
@@ -310,12 +245,13 @@ internal class ChatListAdapter(
                         }
                     } else {
                         includeDashboardChatHolderInitial.apply {
+                            root.visible
                             imageViewChatPicture.goneIfFalse(url != null)
                             textViewInitials.goneIfFalse(url == null)
                         }
 
                         if (url != null) {
-                            onStopSupervisor.scope.launch(viewModel.dispatchers.mainImmediate) {
+                            onStopSupervisor.scope.launch(viewModel.dispatchers.default) {
                                 imageLoader.load(
                                     includeDashboardChatHolderInitial.imageViewChatPicture,
                                     url.value,
@@ -363,12 +299,18 @@ internal class ChatListAdapter(
                 val activeChatOrInvite = ((dashboardChat is DashboardChat.Active && chatHasMessages)
                         || dashboardChat is DashboardChat.Inactive.Invite
                         || isPending)
-                layoutConstraintDashboardChatHolderMessage.invisibleIfFalse(activeChatOrInvite)
-                layoutConstraintDashboardChatNoMessageHolder.invisibleIfFalse(!activeChatOrInvite)
+
+                textViewDashboardChatHolderName.invisibleIfFalse(activeChatOrInvite)
+                imageViewChatHolderLock.invisibleIfFalse(activeChatOrInvite)
+                textViewChatHolderMessageIcon.invisibleIfFalse(activeChatOrInvite)
+                startIconClock.invisibleIfFalse(activeChatOrInvite)
+                textViewChatHolderMessage.invisibleIfFalse(activeChatOrInvite)
+                textViewChatHolderTime.invisibleIfFalse(activeChatOrInvite)
+
+                textViewChatHolderCenteredName.invisibleIfFalse(!activeChatOrInvite)
+                imageViewChatHolderCenteredLock.invisibleIfFalse(!activeChatOrInvite)
 
                 if (dashboardChat is DashboardChat.Active.Conversation) {
-                    imageViewChatHolderLock.visible
-                    imageViewChatHolderCenteredLock.visible
                     imageViewChatHolderLock.text = getString(R_common.string.material_icon_name_lock)
                     imageViewChatHolderCenteredLock.text = getString(R_common.string.material_icon_name_lock)
                 }
@@ -379,14 +321,10 @@ internal class ChatListAdapter(
                 }
 
                 if (dashboardChat is DashboardChat.Inactive.Conversation) {
-                    imageViewChatHolderLock.visible
-                    imageViewChatHolderCenteredLock.visible
                     imageViewChatHolderLock.text = getString(R_common.string.material_icon_name_lock_open)
                     imageViewChatHolderCenteredLock.text = getString(R_common.string.material_icon_name_lock_open)
                 }
                 if (dashboardChat is DashboardChat.Active.GroupOrTribe) {
-                    imageViewChatHolderLock.visible
-                    imageViewChatHolderCenteredLock.visible
                     imageViewChatHolderLock.text = getString(R_common.string.material_icon_name_lock)
                     imageViewChatHolderCenteredLock.text = getString(R_common.string.material_icon_name_lock)
                 }
@@ -395,35 +333,22 @@ internal class ChatListAdapter(
                 textViewChatHolderTime.text = dashboardChat.getDisplayTime(today00)
 
                 // Message
-
                 val messageText = if (isPending) getString(R_common.string.waiting_for_approval) else dashboardChat.getMessageText(root.context)
                 val hasUnseenMessages = dashboardChat.hasUnseenMessages()
+                val isChatMuted = (dChat as? DashboardChat.Active)?.chat?.isMuted() == true
 
                 if (messageText == root.context.getString(R_common.string.decryption_error)) {
                     textViewChatHolderMessage.setTextColorExt(R_common.color.primaryRed)
                 } else {
-                    textViewChatHolderMessage.setTextColorExt(if (hasUnseenMessages) R_common.color.text else R_common.color.placeholderText)
+                    textViewChatHolderMessage.setTextColorExt(if (hasUnseenMessages && !isChatMuted) R_common.color.text else R_common.color.placeholderText)
                 }
-
-                textViewChatHolderMessage.setTextFont(if (hasUnseenMessages) R_common.font.roboto_bold else R_common.font.roboto_regular)
+                textViewChatHolderMessage.setTextFont(if (hasUnseenMessages && !isChatMuted) R_common.font.roboto_bold else R_common.font.roboto_regular)
 
                 textViewChatHolderMessage.text = messageText
                 textViewChatHolderMessage.goneIfTrue(messageText.isEmpty())
 
-                if (isPending) {
-                    startIconClock.visible
-                    val layoutParams = textViewChatHolderMessage.layoutParams as ConstraintLayout.LayoutParams
-                    layoutParams.startToEnd = R.id.start_icon_clock
-                    layoutParams.startToStart = ConstraintLayout.LayoutParams.UNSET
-                    layoutParams.startToStart = ConstraintLayout.LayoutParams.UNSET
-                    textViewChatHolderMessage.layoutParams = layoutParams
-                } else {
-                    val layoutParams = textViewChatHolderMessage.layoutParams as ConstraintLayout.LayoutParams
-                    layoutParams.startToEnd = R.id.text_view_chat_holder_message_icon
-                    layoutParams.startToStart = ConstraintLayout.LayoutParams.UNSET
-                    layoutParams.startToStart = ConstraintLayout.LayoutParams.UNSET
-                    textViewChatHolderMessage.layoutParams = layoutParams
-                }
+                startIconClock.goneIfFalse(isPending)
+                iconReferenceView.goneIfFalse(isPending)
 
                 handleInviteLayouts()
 
@@ -444,19 +369,20 @@ internal class ChatListAdapter(
                 binding.apply {
                     textViewChatHolderTime.visible
                     textViewChatHolderMessageIcon.gone
-                    layoutConstraintDashboardChatHolderContact.visible
-                    layoutConstraintDashboardChatHolderInvite.gone
-                    layoutConstraintDashboardChatHolderInvitePrice.gone
 
                     if (nnDashboardChat is DashboardChat.Inactive.Invite) {
                         textViewChatHolderTime.gone
                         textViewChatHolderMessage.setTextFont(R_common.font.roboto_bold)
                         textViewChatHolderMessage.setTextColorExt(R_common.color.text)
 
-                        layoutConstraintDashboardChatHolderContact.gone
-                        layoutConstraintDashboardChatHolderInvite.visible
+                        includeDashboardChatHolderInitial.root.gone
+                        initialsDashboardPendingChatHolder.root.gone
+                        imageViewDashboardChatHolderPicture.gone
+                        textViewDashboardChatHolderInvitePrice.gone
+                        imageViewDashboardChatHolderPicture.visible
 
                         nnDashboardChat.getInviteIconAndColor()?.let { iconAndColor ->
+                            iconReferenceView.invisible
                             textViewChatHolderMessageIcon.visible
                             textViewChatHolderMessageIcon.text = getString(iconAndColor.first)
                             textViewChatHolderMessageIcon.setTextColor(getColor(iconAndColor.second))
@@ -464,7 +390,7 @@ internal class ChatListAdapter(
 
                         nnDashboardChat.getInvitePrice()?.let { price ->
                             val paymentPending = nnDashboardChat.invite?.status?.isPaymentPending() == true
-                            layoutConstraintDashboardChatHolderInvitePrice.goneIfFalse(paymentPending)
+                            textViewDashboardChatHolderInvitePrice.goneIfFalse(paymentPending)
                             textViewDashboardChatHolderInvitePrice.text = price.asFormattedString()
                         }
                     }
@@ -472,75 +398,97 @@ internal class ChatListAdapter(
             }
         }
 
+        @SuppressLint("SetTextI18n")
         private fun handleUnseenMessageCount() {
             dChat?.let { nnDashboardChat ->
-                badgeJob = onStopSupervisor.scope.launch(viewModel.mainImmediate) {
-                    nnDashboardChat.unseenMessageFlow?.collect { unseen ->
+                binding.textViewDashboardChatHolderBadgeCount.apply {
+                    val unseen = nnDashboardChat.unseenMessagesCount
 
-                        binding.textViewDashboardChatHolderBadgeCount.apply {
-                            if (unseen != null && unseen > 0) {
-                                text = unseen.toString()
-                            }
-
-                            if (nnDashboardChat is DashboardChat.Active) {
-                                val chatIsMutedOrOnlyMentions = (nnDashboardChat.chat.isMuted() || nnDashboardChat.chat.isOnlyMentions())
-
-                                alpha = if (chatIsMutedOrOnlyMentions) 0.2f else 1.0f
-
-                                backgroundTintList = binding.getColorStateList(if (chatIsMutedOrOnlyMentions) {
-                                        R_common.color.washedOutReceivedText
-                                    } else {
-                                        R_common.color.primaryBlue
-                                    }
-                                )
-                            }
-
-                            goneIfFalse(nnDashboardChat.hasUnseenMessages())
-                        }
+                    if (unseen != null && unseen > 0) {
+                        text = unseen.toString()
                     }
+
+                    if (nnDashboardChat is DashboardChat.Active) {
+                        val chatIsMutedOrOnlyMentions = (nnDashboardChat.chat.isMuted() || nnDashboardChat.chat.isOnlyMentions())
+
+                        alpha = if (chatIsMutedOrOnlyMentions) 0.5f else 1.0f
+
+                        backgroundTintList = binding.getColorStateList(
+                            if (chatIsMutedOrOnlyMentions) {
+                                R_common.color.washedOutReceivedText
+                            } else {
+                                R_common.color.primaryBlue
+                            }
+                        )
+                    }
+
+                    goneIfFalse(nnDashboardChat.hasUnseenMessages())
                 }
             }
         }
 
         private fun handleUnseenMentionsCount() {
             dChat?.let { nnDashboardChat ->
-                mentionsJob = onStopSupervisor.scope.launch(viewModel.mainImmediate) {
-                    nnDashboardChat.unseenMentionsFlow?.collect { unseenMentions ->
+                binding.textViewDashboardChatHolderMentionsCount.apply {
+                    val unseenMentions = nnDashboardChat.unseenMentionsCount
 
-                        binding.textViewDashboardChatHolderMentionsCount.apply {
-                            if (unseenMentions != null && unseenMentions > 0) {
-                                text = "@ $unseenMentions"
-                            }
-                            goneIfFalse((unseenMentions ?: 0) > 0)
-                        }
+                    if (unseenMentions != null && unseenMentions > 0) {
+                        text = "@ $unseenMentions"
                     }
+
+                    if (nnDashboardChat is DashboardChat.Active) {
+                        val chatIsMuted = nnDashboardChat.chat.isMuted()
+
+                        alpha = if (chatIsMuted) 0.5f else 1.0f
+
+                        backgroundTintList = binding.getColorStateList(
+                            if (chatIsMuted) {
+                                R_common.color.washedOutReceivedText
+                            } else {
+                                R_common.color.primaryBlue
+                            }
+                        )
+                    }
+
+                    goneIfFalse(nnDashboardChat.hasUnseenMessages() && (unseenMentions ?: 0) > 0)
                 }
             }
         }
 
-        override fun onStart(owner: LifecycleOwner) {
-            super.onStart(owner)
-
-            badgeJob?.let {
-                if (!it.isActive) {
-                    handleUnseenMessageCount()
-                }
-            }
-
-            mentionsJob?.let {
-                if (!it.isActive) {
-                    handleUnseenMentionsCount()
-                }
-            }
-        }
+//        override fun onStart(owner: LifecycleOwner) {
+//            super.onStart(owner)
+//
+//            badgeJob?.let {
+//                if (!it.isActive) {
+//                    handleUnseenMessageCount()
+//                }
+//            }
+//
+//            mentionsJob?.let {
+//                if (!it.isActive) {
+//                    handleUnseenMentionsCount()
+//                }
+//            }
+//        }
 
         init {
             lifecycleOwner.lifecycle.addObserver(this)
         }
-
     }
 
     init {
         lifecycleOwner.lifecycle.addObserver(this)
+
+        recyclerView.apply {
+            setHasFixedSize(true)
+            setItemViewCacheSize(10)
+
+            recycledViewPool.setMaxRecycledViews(0, 20)
+
+            (layoutManager as? LinearLayoutManager)?.apply {
+                isItemPrefetchEnabled = true
+                initialPrefetchItemCount = 4
+            }
+        }
     }
 }

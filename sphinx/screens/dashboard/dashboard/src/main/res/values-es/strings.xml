@@ -164,6 +164,7 @@
     <string name="dashboard_restore_progress_feeds">Restaurando Feeds: %s</string>
     <string name="dashboard_restore_progress_messages">Restaurando Mensajes: %s</string>
     <string name="dashboard_stop_restore">Continuar más tarde</string>
+    <string name="dashboard_restore_stopping">Finalizando la restauración</string>
 
     <string name="loading_recommendations">Cargando Recomendaciones...</string>
     <string name="refresh_while_loading">No puedes obtener nuevas recomendaciones mientras las estás reproduciendo. Detén la reproducción antes de actualizar.</string>

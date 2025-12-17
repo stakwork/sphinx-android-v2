@@ -790,6 +790,7 @@ internal abstract class MediaPlayerService: SphinxService() {
 
     @JvmSynthetic
     fun shutDownService() {
+        mediaPlayerHolder.clear()
         rebindJob?.cancel()
         wifiLock?.let { lock ->
             if (lock.isHeld) {

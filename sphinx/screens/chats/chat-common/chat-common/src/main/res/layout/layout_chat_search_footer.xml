@@ -22,9 +22,8 @@
             android:text="@string/material_icon_name_expand_more"
             android:textColor="@color/secondaryText"
             android:textSize="40sp"
-            android:layout_marginLeft="@dimen/default_layout_margin"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/text_view_chat_search_next"
             app:layout_constraintTop_toTopOf="parent" />
 
         <androidx.appcompat.widget.AppCompatTextView
@@ -36,8 +35,9 @@
             android:text="@string/material_icon_name_expand_less"
             android:textColor="@color/secondaryText"
             android:textSize="40sp"
+            android:layout_marginLeft="@dimen/default_layout_margin"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toEndOf="@+id/text_view_chat_search_previous"
+            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
         <androidx.appcompat.widget.AppCompatTextView

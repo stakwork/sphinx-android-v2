@@ -161,7 +161,7 @@ class BadgesItemAdapter (
                 holderJob?.cancel()
 
                 badgeItem.icon?.let { imageUrl ->
-                    onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+                    onStopSupervisor.scope.launch(viewModel.default) {
                         imageLoader.load(
                             imageViewBadgeImage,
                             imageUrl,

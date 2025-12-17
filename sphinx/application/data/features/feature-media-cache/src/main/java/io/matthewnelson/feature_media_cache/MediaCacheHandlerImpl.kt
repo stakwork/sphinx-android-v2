@@ -5,6 +5,8 @@ import io.matthewnelson.concept_coroutines.CoroutineDispatchers
 import io.matthewnelson.concept_media_cache.MediaCacheHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import okio.*
 import java.io.File
@@ -239,6 +241,18 @@ class MediaCacheHandlerImpl(
                     } catch (e: IOException) {}
 
                 }
+            }
+        }
+    }
+
+    override suspend fun copyToWithCancellation(inputStream: InputStream, targetFile: File) {
+        targetFile.outputStream().use { outputStream ->
+            val buffer = ByteArray(8192)
+            var bytesRead: Int
+
+            while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                currentCoroutineContext()[Job]?.ensureActive()
+                outputStream.write(buffer, 0, bytesRead)
             }
         }
     }

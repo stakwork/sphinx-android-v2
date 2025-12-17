@@ -78,15 +78,16 @@ class NetworkQueryAuthorizeExternalImpl(
         host: String,
         person: PersonInfoDto,
         token: String
-    ): Flow<LoadResponse<PersonInfoDto, ResponseError>> =
+    ): Flow<LoadResponse<Any, ResponseError>> =
         networkRelayCall.post(
             url = String.format(
                 ENDPOINT_CREATE_PROFILE,
                 host,
                 token
             ),
-            responseJsonClass = PersonInfoDto::class.java,
+            responseJsonClass = Any::class.java,
             requestBodyJsonClass = PersonInfoDto::class.java,
             requestBody = person,
+            accept400AsSuccess = true
         )
 }

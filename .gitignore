@@ -30,3 +30,5 @@ proguard/
 site/
 Pipfile
 
+Sphinx/application/sphinx/release
+

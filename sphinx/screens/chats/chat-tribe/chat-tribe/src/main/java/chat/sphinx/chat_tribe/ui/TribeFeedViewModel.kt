@@ -21,7 +21,7 @@ import chat.sphinx.kotlin_response.Response
 import chat.sphinx.podcast_player.ui.getMediaDuration
 import chat.sphinx.podcast_player_view_model_coordinator.request.PodcastPlayerRequest
 import chat.sphinx.podcast_player_view_model_coordinator.response.PodcastPlayerResponse
-import chat.sphinx.wrapper_chat.isTribeOwnedByAccount
+import chat.sphinx.wrapper_chat.isTrue
 import chat.sphinx.wrapper_common.feed.isPodcast
 import chat.sphinx.wrapper_common.feed.toSubscribed
 import chat.sphinx.wrapper_common.lightning.*
@@ -86,7 +86,7 @@ internal class TribeFeedViewModel @Inject constructor(
 
                                 messageRepository.getPaymentsTotalFor(podcastViewState.podcast.id).collect { paymentsTotal ->
                                     if (paymentsTotal != null) {
-                                        val isMyTribe = chat.isTribeOwnedByAccount(owner.nodePubKey)
+                                        val isMyTribe = chat.ownedTribe?.isTrue() == true
                                         val label = app.getString(
                                             if (isMyTribe) {
                                                 R_chat_common.string.chat_tribe_earned

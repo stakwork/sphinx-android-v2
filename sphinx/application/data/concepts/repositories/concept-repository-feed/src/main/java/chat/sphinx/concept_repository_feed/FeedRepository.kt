@@ -23,21 +23,22 @@ interface FeedRepository {
     fun getPodcastByChatId(chatId: ChatId): Flow<Podcast?>
     fun getPodcastById(feedId: FeedId): Flow<Podcast?>
     suspend fun checkIfEpisodeNodeExists(
-        podcastEpisode: PodcastEpisode,
-        podcastTitle: FeedTitle,
+        podcastEpisode: PodcastEpisode?,
+        podcastTitle: FeedTitle?,
+        videoId: FeedId? = null,
         workflowId: Int?,
         token: String?
     )
     suspend fun getEpisodeNodeDetails(
-        podcastEpisode: PodcastEpisode,
-        podcastTitle: FeedTitle,
+        podcastEpisode: PodcastEpisode?,
+        podcastTitle: FeedTitle?,
         referenceId: FeedReferenceId,
         workflowId: Int?,
         token: String?
     )
     suspend fun getChaptersData(
-        podcastEpisode: PodcastEpisode,
-        podcastTitle: FeedTitle,
+        podcastEpisode: PodcastEpisode?,
+        podcastTitle: FeedTitle?,
         referenceId: FeedReferenceId,
         id: FeedId,
         workflowId: Int?,

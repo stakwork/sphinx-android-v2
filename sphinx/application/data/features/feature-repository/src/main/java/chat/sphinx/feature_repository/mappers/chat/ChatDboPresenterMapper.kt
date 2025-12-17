@@ -1,10 +1,49 @@
 package chat.sphinx.feature_repository.mappers.chat
 
 import chat.sphinx.conceptcoredb.ChatDbo
+import chat.sphinx.conceptcoredb.ContactDbo
 import chat.sphinx.feature_repository.mappers.ClassMapper
 import chat.sphinx.wrapper_chat.Chat
+import chat.sphinx.wrapper_contact.Contact
+import chat.sphinx.wrapper_contact.ContactFromGroup
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
 import java.text.ParseException
+
+@Suppress("NOTHING_TO_INLINE")
+inline fun ChatDbo.toChat(): Chat =
+    Chat(
+        id = id,
+        uuid = uuid,
+        name = name,
+        photoUrl = photo_url,
+        type = type,
+        status = status,
+        contactIds = contact_ids,
+        isMuted = is_muted,
+        createdAt = created_at,
+        groupKey = group_key,
+        host = host,
+        pricePerMessage = price_per_message,
+        escrowAmount = escrow_amount,
+        unlisted = unlisted,
+        privateTribe = private_tribe,
+        ownerPubKey = owner_pub_key,
+        seen = seen,
+        metaData = meta_data,
+        myPhotoUrl = my_photo_url,
+        myAlias = my_alias,
+        pendingContactIds = pending_contact_ids,
+        latestMessageId = latest_message_id,
+        contentSeenAt = content_seen_at,
+        notify = notify,
+        pinedMessage = pin_message,
+        secondBrainUrl = second_brain_url,
+        timezoneEnabled = timezone_enabled,
+        timezoneIdentifier = timezone_identifier,
+        remoteTimezoneIdentifier = remote_timezone_identifier,
+        timezoneUpdated = timezone_updated,
+        ownedTribe = is_my_tribe,
+    )
 
 internal class ChatDboPresenterMapper(
     dispatchers: CoroutineDispatchers
@@ -45,7 +84,8 @@ internal class ChatDboPresenterMapper(
             timezoneEnabled = value.timezone_enabled,
             timezoneIdentifier = value.timezone_identifier,
             remoteTimezoneIdentifier = value.remote_timezone_identifier,
-            timezoneUpdated = value.timezone_updated
+            timezoneUpdated = value.timezone_updated,
+            ownedTribe = value.is_my_tribe,
         )
     }
 
@@ -80,7 +120,8 @@ internal class ChatDboPresenterMapper(
             timezone_enabled = value.timezoneEnabled,
             timezone_identifier = value.timezoneIdentifier,
             remote_timezone_identifier = value.remoteTimezoneIdentifier,
-            timezone_updated = value.timezoneUpdated
+            timezone_updated = value.timezoneUpdated,
+            is_my_tribe = value.ownedTribe,
         )
     }
 }

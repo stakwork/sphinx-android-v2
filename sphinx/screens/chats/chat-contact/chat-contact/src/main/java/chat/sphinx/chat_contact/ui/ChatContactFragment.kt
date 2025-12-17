@@ -11,6 +11,7 @@ import chat.sphinx.chat_common.ui.ChatFragment
 import chat.sphinx.chat_contact.R
 import chat.sphinx.chat_common.R as R_chat_common
 import chat.sphinx.chat_contact.databinding.FragmentChatContactBinding
+import chat.sphinx.concept_grapheneos_manager.GrapheneOsManager
 import chat.sphinx.concept_image_loader.ImageLoader
 import chat.sphinx.concept_user_colors_helper.UserColorsHelper
 import chat.sphinx.menu_bottom.databinding.LayoutMenuBottomBinding
@@ -91,6 +92,9 @@ internal class ChatContactFragment : ChatFragment<
     override val pinHeaderBinding: LayoutChatPinedMessageHeaderBinding?
         get() = null
 
+    override val threadHeader: LayoutThreadHeaderBinding?
+        get() = null
+
     override val threadOriginalMessageBinding: LayoutThreadOriginalMessageBinding?
         get() = null
 
@@ -113,4 +117,10 @@ internal class ChatContactFragment : ChatFragment<
     protected lateinit var _imageLoader: ImageLoader<ImageView>
     override val imageLoader: ImageLoader<ImageView>
         get() = _imageLoader
+
+    @Inject
+    @Suppress("ProtectedInFinal", "PropertyName")
+    protected lateinit var _grapheneOsManager: GrapheneOsManager
+    override val grapheneOsManager: GrapheneOsManager
+        get() = _grapheneOsManager
 }

@@ -2,52 +2,37 @@ package chat.sphinx.threads.ui
 
 import android.app.Application
 import android.content.*
-import android.graphics.pdf.PdfRenderer
-import android.os.ParcelFileDescriptor
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
-import chat.sphinx.chat_common.ui.viewstate.messageholder.ReplyUserHolder
+import chat.sphinx.chat_common.util.AudioPlayerController
+import chat.sphinx.chat_common.util.AudioPlayerControllerImpl
+import chat.sphinx.concept_meme_server.MemeServerTokenHandler
 import chat.sphinx.concept_repository_chat.ChatRepository
 import chat.sphinx.concept_repository_contact.ContactRepository
+import chat.sphinx.concept_repository_media.RepositoryMedia
 import chat.sphinx.concept_repository_message.MessageRepository
-import chat.sphinx.highlighting_tool.boldTexts
-import chat.sphinx.highlighting_tool.highlightedTexts
-import chat.sphinx.highlighting_tool.markDownLinkTexts
-import chat.sphinx.highlighting_tool.replacingHighlightedDelimiters
-import chat.sphinx.highlighting_tool.replacingMarkdown
-import chat.sphinx.threads.R
+import chat.sphinx.logger.SphinxLogger
 import chat.sphinx.resources.R as R_common
-import chat.sphinx.threads.model.FileAttachment
-import chat.sphinx.threads.model.ThreadItem
+import chat.sphinx.threads.model.ThreadItemViewState
 import chat.sphinx.threads.navigation.ThreadsNavigator
 import chat.sphinx.threads.viewstate.ThreadsViewState
 import chat.sphinx.wrapper_chat.Chat
-import chat.sphinx.wrapper_common.FileSize
-import chat.sphinx.wrapper_common.chatTimeFormat
 import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_common.message.toMessageUUID
 import chat.sphinx.wrapper_common.timeAgo
 import chat.sphinx.wrapper_contact.Contact
-import chat.sphinx.wrapper_contact.getColorKey
-import chat.sphinx.wrapper_contact.toContactAlias
 import chat.sphinx.wrapper_message.Message
 import chat.sphinx.wrapper_message.ThreadUUID
-import chat.sphinx.wrapper_message.getColorKey
-import chat.sphinx.wrapper_message.retrieveImageUrlAndMessageMedia
-import chat.sphinx.wrapper_message_media.isAudio
-import chat.sphinx.wrapper_message_media.isImage
-import chat.sphinx.wrapper_message_media.isPdf
-import chat.sphinx.wrapper_message_media.isUnknown
-import chat.sphinx.wrapper_message_media.isVideo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.matthewnelson.android_feature_navigation.util.navArgs
 import io.matthewnelson.android_feature_viewmodel.SideEffectViewModel
 import io.matthewnelson.android_feature_viewmodel.updateViewState
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import java.io.File
 import javax.inject.Inject
 
 @HiltViewModel
@@ -57,8 +42,11 @@ internal class ThreadsViewModel @Inject constructor(
     private val messageRepository: MessageRepository,
     private val contactRepository: ContactRepository,
     private val chatRepository: ChatRepository,
+    val memeServerTokenHandler: MemeServerTokenHandler,
+    private val repositoryMedia: RepositoryMedia,
     dispatchers: CoroutineDispatchers,
     savedStateHandle: SavedStateHandle,
+    protected val LOG: SphinxLogger,
 ): SideEffectViewModel<
         Context,
         ThreadsSideEffect,
@@ -66,6 +54,8 @@ internal class ThreadsViewModel @Inject constructor(
         >(dispatchers, ThreadsViewState.Idle)
 {
     private val args: ThreadsFragmentArgs by savedStateHandle.navArgs()
+
+    private val activeDownloadJobs = mutableSetOf<Job>()
 
     private val _ownerStateFlow: MutableStateFlow<Contact?> by lazy {
         MutableStateFlow(null)
@@ -128,6 +118,15 @@ internal class ThreadsViewModel @Inject constructor(
         return chat!!
     }
 
+    internal val audioPlayerController: AudioPlayerController by lazy {
+        AudioPlayerControllerImpl(
+            app,
+            viewModelScope,
+            dispatchers,
+            LOG,
+        )
+    }
+
     init {
         initializeOwner()
         updateThreads()
@@ -141,26 +140,54 @@ internal class ThreadsViewModel @Inject constructor(
 
     private fun updateThreads() {
         viewModelScope.launch(mainImmediate) {
-            messageRepository.getThreadUUIDMessagesByChatId(ChatId(args.argChatId)).collect { messages ->
+            messageRepository.getThreadUUIDMessagesByChatId(ChatId(args.argChatId))
+                .distinctUntilChanged()
+                .flatMapLatest { threadMessages ->
+                    val groupedMessagesByThread = threadMessages.groupBy { it.threadUUID }.filter {
+                        it.value.size > 1
+                    }
 
-                val threadItems = generateThreadItemsList(messages)
+                    val uuids = groupedMessagesByThread.keys.mapNotNull { it?.value?.toMessageUUID() }
 
-                updateViewState(ThreadsViewState.ThreadList(threadItems))
-            }
+                    if (uuids.isEmpty()) {
+                        flowOf(Triple(threadMessages, groupedMessagesByThread, emptyList()))
+                    } else {
+                        messageRepository.getAllMessagesByUUIDFlow(uuids)
+                            .distinctUntilChanged()
+                            .map { allMessages ->
+                                Triple(threadMessages, groupedMessagesByThread, allMessages)
+                            }
+                    }
+                }
+                .flowOn(Dispatchers.IO)
+                .collect { result ->
+                    val threadItems = generateThreadItemsList(result.second, result.third)
+
+                    if (threadItems.isNotEmpty()) {
+                        updateViewState(ThreadsViewState.ThreadList(threadItems))
+                    } else {
+                        updateViewState(ThreadsViewState.NoThreadsFound)
+                    }
+                }
         }
     }
 
-    private suspend fun generateThreadItemsList(messages: List<Message>): List<ThreadItem> {
-        // Group messages by their ThreadUUID
-        val groupedMessagesByThread = messages.groupBy { it.threadUUID }.filter {
-            it.value.size > 1
-        }
-
-        // Fetch the header messages based on the message UUIDs
-        val headerMessages = messageRepository.getAllMessagesByUUID(groupedMessagesByThread.keys.mapNotNull { it?.value?.toMessageUUID() })
+    private suspend fun generateThreadItemsList(
+        groupedMessagesByThread: Map<ThreadUUID?, List<Message>>,
+        headerMessages: List<Message>
+    ): List<ThreadItemViewState> {
         val headerMessagesMappedByUUID = headerMessages.associateBy { it.uuid?.value }
 
-        // Generate a map of complete threads, where each thread includes its header message and its other messages
+        val memberTimezones: MutableMap<String, String> = mutableMapOf()
+
+        headerMessages.forEach { message ->
+            val alias = message.senderAlias?.value
+            val tz = message.remoteTimezoneIdentifier?.value
+            if (!alias.isNullOrEmpty() && !tz.isNullOrEmpty()) {
+                memberTimezones[alias] = tz
+            }
+        }
+
         val completeThreads = groupedMessagesByThread.mapValues { entry ->
             val threadUUID = entry.key
             val threadMessages = entry.value
@@ -174,17 +201,25 @@ internal class ThreadsViewModel @Inject constructor(
             }
         }
 
-        // Prepare thread items from the complete threads
-        return completeThreads.keys.map { uuid ->
+        return completeThreads.keys.mapNotNull { uuid ->
 
             val owner = ownerStateFlow?.value
             val messagesForThread = completeThreads[uuid]
 
-            val originalMessage = messagesForThread?.get(0)
-            val chat = getChat()
-            val isSenderOwner: Boolean = originalMessage?.sender == chat.contactIds.firstOrNull()
+            messagesForThread?.get(0)?.let { message ->
+                val chat = getChat()
+                val isSenderOwner: Boolean = message.sender == chat.contactIds.firstOrNull()
 
-            createThreadItem(uuid?.value, owner, messagesForThread, originalMessage, chat, isSenderOwner)
+                createThreadItem(
+                    uuid?.value,
+                    owner,
+                    messagesForThread,
+                    message,
+                    memberTimezones,
+                    chat,
+                    isSenderOwner
+                )
+            }
         }
     }
 
@@ -192,98 +227,35 @@ internal class ThreadsViewModel @Inject constructor(
         uuid: String?,
         owner: Contact?,
         messagesForThread: List<Message>?,
-        originalMessage: Message?,
-        chat: Chat?,
+        originalMessage: Message,
+        memberTimezones: MutableMap<String, String>,
+        chat: Chat,
         isSenderOwner: Boolean
-    ): ThreadItem {
+    ): ThreadItemViewState {
 
-        val senderInfo = if (isSenderOwner) {
-            Pair(owner?.alias, owner?.getColorKey())
-        } else {
-            Pair(
-                originalMessage?.senderAlias?.value?.toContactAlias(),
-                originalMessage?.getColorKey()
-            )
-        }
+        val sent = originalMessage.sender == chat.contactIds.firstOrNull()
+        val repliesList = messagesForThread?.drop(1)?.distinctBy { it.senderAlias } ?: emptyList()
 
-        val senderPhotoUrl = if (isSenderOwner) owner?.photoUrl else originalMessage?.senderPic
-
-        val repliesList = messagesForThread?.drop(1)?.distinctBy { it.senderAlias }
-
-        val imageAttachment = originalMessage?.retrieveImageUrlAndMessageMedia()?.let { mediaData ->
-            Pair(mediaData.first, mediaData.second?.localFile)
-        }
-        val videoAttachment: File? = originalMessage?.messageMedia?.let { nnMessageMedia ->
-            if (nnMessageMedia.mediaType.isVideo) { nnMessageMedia.localFile } else null
-        }
-        val fileAttachment: FileAttachment? = originalMessage?.messageMedia?.let { nnMessageMedia ->
-            if (nnMessageMedia.mediaType.isImage || nnMessageMedia.mediaType.isAudio) {
-                null
-            } else {
-                nnMessageMedia.localFile?.let { nnFile ->
-                    val pageCount = if (nnMessageMedia.mediaType.isPdf) {
-                        val fileDescriptor =
-                            ParcelFileDescriptor.open(nnFile, ParcelFileDescriptor.MODE_READ_ONLY)
-                        val renderer = PdfRenderer(fileDescriptor)
-                        renderer.pageCount
-                    } else {
-                        0
-                    }
-
-                    FileAttachment(
-                        nnMessageMedia.fileName,
-                        FileSize(nnFile.length()),
-                        nnMessageMedia.mediaType.isPdf,
-                        pageCount
-                    )
-                }
-            }
-        }
-
-        val audioAttachment: Boolean? = originalMessage?.messageMedia?.let { nnMessageMedia ->
-            if (nnMessageMedia.mediaType.isAudio) {
-                true
-            } else {
-                null
-            }
-        }
-
-        val threadMessage = originalMessage?.messageContentDecrypted?.value ?: ""
-
-        return ThreadItem(
-            aliasAndColorKey = senderInfo,
-            photoUrl = senderPhotoUrl,
-            date = originalMessage?.date?.chatTimeFormat() ?: "",
-            message = threadMessage.replacingMarkdown(),
-            highlightedTexts = threadMessage.highlightedTexts(),
-            boldTexts = threadMessage.boldTexts(),
-            markdownLinkTexts = threadMessage.markDownLinkTexts(),
-            usersReplies = createReplyUserHolders(repliesList, chat, owner),
+        return ThreadItemViewState(
+            message = originalMessage,
+            threadMessages = messagesForThread ?: emptyList(),
+            chat = chat,
+            sent = sent,
+            owner = owner,
             usersCount = repliesList?.size ?: 0,
             repliesAmount = String.format(app.getString(R_common.string.replies_amount), messagesForThread?.drop(1)?.size?.toString() ?: "0"),
             lastReplyDate = messagesForThread?.first()?.date?.timeAgo(),
             uuid = uuid ?: "",
-            imageAttachment = imageAttachment,
-            videoAttachment = videoAttachment,
-            fileAttachment = fileAttachment,
-            audioAttachment = audioAttachment
+            memberTimezoneIdentifier = if (originalMessage.senderAlias != null) memberTimezones[originalMessage.senderAlias!!.value] else null,
+            onBindDownloadMedia = {
+                val job = repositoryMedia.downloadMediaIfApplicable(originalMessage, isSenderOwner)
+                activeDownloadJobs.add(job)
+
+                job.invokeOnCompletion {
+                    activeDownloadJobs.remove(job)
+                }
+            }
         )
-    }
-
-    private fun createReplyUserHolders(
-        repliesList: List<Message>?,
-        chat: Chat?,
-        owner: Contact?
-    ): List<ReplyUserHolder>? {
-        return repliesList?.take(6)?.map {
-            val isSenderOwner: Boolean = it.sender == chat?.contactIds?.firstOrNull()
-
-            ReplyUserHolder(
-                photoUrl = if (isSenderOwner) owner?.photoUrl else it.senderPic,
-                alias = if (isSenderOwner) owner?.alias else it.senderAlias?.value?.toContactAlias(),
-                colorKey = if (isSenderOwner) owner?.getColorKey() ?: "" else it.getColorKey()
-            )
-        }
     }
 
     fun navigateToThreadDetail(uuid: String) {

@@ -5,18 +5,41 @@ import chat.sphinx.dashboard.R
 import chat.sphinx.dashboard.ui.adapter.DashboardChat.Active
 import chat.sphinx.dashboard.ui.adapter.DashboardChat.Inactive
 import chat.sphinx.highlighting_tool.replacingMarkdown
-import chat.sphinx.wrapper_chat.*
-import chat.sphinx.wrapper_common.*
+import chat.sphinx.wrapper_chat.Chat
+import chat.sphinx.wrapper_chat.getColorKey
+import chat.sphinx.wrapper_chat.isConversation
+import chat.sphinx.wrapper_chat.isTribe
+import chat.sphinx.wrapper_chat.isTrue
+import chat.sphinx.wrapper_common.DateTime
+import chat.sphinx.wrapper_common.PhotoUrl
+import chat.sphinx.wrapper_common.chatTimeFormat
 import chat.sphinx.wrapper_common.dashboard.ContactId
-import chat.sphinx.wrapper_common.invite.InviteStatus
+import chat.sphinx.wrapper_common.isTrue
 import chat.sphinx.wrapper_common.lightning.Sat
 import chat.sphinx.wrapper_common.lightning.asFormattedString
+import chat.sphinx.wrapper_common.time
 import chat.sphinx.wrapper_contact.Contact
 import chat.sphinx.wrapper_contact.getColorKey
-import chat.sphinx.wrapper_message.*
+import chat.sphinx.wrapper_message.Message
+import chat.sphinx.wrapper_message.isAttachment
+import chat.sphinx.wrapper_message.isBoost
+import chat.sphinx.wrapper_message.isCallLink
+import chat.sphinx.wrapper_message.isDeleted
+import chat.sphinx.wrapper_message.isDirectPayment
+import chat.sphinx.wrapper_message.isGroupJoin
+import chat.sphinx.wrapper_message.isGroupKick
+import chat.sphinx.wrapper_message.isGroupLeave
+import chat.sphinx.wrapper_message.isInvoice
+import chat.sphinx.wrapper_message.isInvoicePayment
+import chat.sphinx.wrapper_message.isMemberApprove
+import chat.sphinx.wrapper_message.isMemberReject
+import chat.sphinx.wrapper_message.isMemberRequest
+import chat.sphinx.wrapper_message.isMessage
+import chat.sphinx.wrapper_message.isSphinxCallLink
+import chat.sphinx.wrapper_message.isTribeDelete
 import chat.sphinx.wrapper_message_media.MediaType
-import chat.sphinx.resources.R as R_common
 import kotlinx.coroutines.flow.Flow
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.wrapper_invite.Invite as InviteWrapper
 
 /**
@@ -28,11 +51,12 @@ sealed class DashboardChat {
 
     abstract val chatName: String?
     abstract val photoUrl: PhotoUrl?
-    abstract val sortBy: Long
 
-    abstract val unseenMessageFlow: Flow<Long?>?
+    open val sortBy: Long? = null
 
-    abstract val unseenMentionsFlow: Flow<Long?>?
+    abstract val unseenMessagesCount: Int?
+
+    abstract val unseenMentionsCount: Int?
 
     abstract fun getDisplayTime(today00: DateTime): String
 
@@ -56,17 +80,6 @@ sealed class DashboardChat {
 
         open val owner: Contact? = null
 
-        override val sortBy: Long
-            get() {
-                val lastContentSeenDate = chat.contentSeenAt?.time
-                val lastMessageActionDate = message?.date?.time ?: chat.createdAt.time
-
-                if (lastContentSeenDate != null && lastContentSeenDate > lastMessageActionDate) {
-                    return lastContentSeenDate
-                }
-                return lastMessageActionDate
-            }
-
         override fun getDisplayTime(today00: DateTime): String {
             return message?.date?.chatTimeFormat(today00) ?: ""
         }
@@ -76,8 +89,8 @@ sealed class DashboardChat {
 
         abstract fun getMessageSender(message: Message, context: Context, withColon: Boolean = true): String
 
-        fun isMyTribe(owner: Contact?): Boolean =
-            chat.isTribeOwnedByAccount(owner?.nodePubKey)
+        fun isMyTribe(): Boolean =
+            chat.ownedTribe?.isTrue() == true
 
         override fun hasUnseenMessages(): Boolean {
             val ownerId: ContactId? = chat.contactIds.firstOrNull()
@@ -135,7 +148,7 @@ sealed class DashboardChat {
                     )
                 }
                 message.type.isMemberReject() -> {
-                    if (isMyTribe(owner)) {
+                    if (isMyTribe()) {
                         context.getString(
                             R.string.last_message_description_declined_request_from,
                             getMessageSender(message, context, false)
@@ -145,7 +158,7 @@ sealed class DashboardChat {
                     }
                 }
                 message.type.isMemberApprove() -> {
-                    if (isMyTribe(owner)) {
+                    if (isMyTribe()) {
                         context.getString(
                             R.string.last_message_description_approved_request_from,
                             getMessageSender(message, context, false)
@@ -298,7 +311,8 @@ sealed class DashboardChat {
             override val chat: Chat,
             override val message: Message?,
             val contact: Contact,
-            override val unseenMessageFlow: Flow<Long?>,
+            override val unseenMessagesCount: Int,
+            override val sortBy: Long
         ): Active() {
 
             init {
@@ -310,7 +324,7 @@ sealed class DashboardChat {
                 }
             }
 
-            override val unseenMentionsFlow: Flow<Long?>?
+            override val unseenMentionsCount: Int?
                 get() = null
 
             override val chatName: String?
@@ -340,8 +354,9 @@ sealed class DashboardChat {
             override val chat: Chat,
             override val message: Message?,
             override val owner: Contact?,
-            override val unseenMessageFlow: Flow<Long?>,
-            override val unseenMentionsFlow: Flow<Long?>
+            override val unseenMessagesCount: Int,
+            override val unseenMentionsCount: Int,
+            override val sortBy: Long
         ): Active() {
 
             override val chatName: String?
@@ -374,7 +389,8 @@ sealed class DashboardChat {
         }
 
         class Conversation(
-            val contact: Contact
+            val contact: Contact,
+            override val sortBy: Long
         ): Inactive() {
 
             override val chatName: String?
@@ -383,13 +399,10 @@ sealed class DashboardChat {
             override val photoUrl: PhotoUrl?
                 get() = contact.photoUrl
 
-            override val sortBy: Long
-                get() = contact.createdAt.time
-
-            override val unseenMessageFlow: Flow<Long?>?
+            override val unseenMessagesCount: Int?
                 get() = null
 
-            override val unseenMentionsFlow: Flow<Long?>?
+            override val unseenMentionsCount: Int?
                 get() = null
 
             @ExperimentalStdlibApi
@@ -413,7 +426,8 @@ sealed class DashboardChat {
 
         class Invite(
             val contact: Contact,
-            val invite: InviteWrapper?
+            val invite: InviteWrapper?,
+            override val sortBy: Long
         ): Inactive() {
 
             override val chatName: String?
@@ -422,13 +436,10 @@ sealed class DashboardChat {
             override val photoUrl: PhotoUrl?
                 get() = contact.photoUrl
 
-            override val sortBy: Long
-                get() = Long.MAX_VALUE
-
-            override val unseenMessageFlow: Flow<Long?>?
+            override val unseenMessagesCount: Int?
                 get() = null
 
-            override val unseenMentionsFlow: Flow<Long?>?
+            override val unseenMentionsCount: Int?
                 get() = null
 
             fun getChatName(context: Context): String {

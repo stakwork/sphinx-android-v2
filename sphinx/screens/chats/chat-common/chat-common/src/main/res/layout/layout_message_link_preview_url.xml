@@ -44,6 +44,7 @@
         android:layout_height="wrap_content"
         android:layout_margin="2dp"
         android:padding="@dimen/default_layout_margin"
+        tools:visibility="gone"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent">
 
@@ -116,6 +117,49 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             tools:srcCompat="@tools:sample/backgrounds/scenic" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/layout_constraint_url_link_preview_not_available"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="2dp"
+        android:padding="@dimen/default_layout_margin"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/text_view_message_link_preview_url_title_not_available"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/roboto_bold"
+            android:paddingVertical="@dimen/default_small_layout_margin"
+            android:layout_marginEnd="@dimen/default_half_layout_margin"
+            android:textColor="@color/text"
+            android:textSize="@dimen/default_text_size_headline"
+            android:maxLines="2"
+            android:text="@string/link_preview_not_available"
+            app:layout_constraintBottom_toTopOf="@+id/text_view_message_link_preview_url_domain_not_available"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"/>
+
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/text_view_message_link_preview_url_domain_not_available"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/roboto_regular"
+            android:textColor="@color/blueTextAccent"
+            android:textSize="@dimen/default_text_size_caption2"
+            android:paddingVertical="2dp"
+            android:maxLines="1"
+            android:layout_marginEnd="@dimen/default_half_layout_margin"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/text_view_message_link_preview_url_title_not_available"
+            tools:text="spacex.com" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

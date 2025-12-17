@@ -8,7 +8,6 @@ import chat.sphinx.concept_network_query_invite.NetworkQueryInvite
 import chat.sphinx.concept_network_query_verify_external.NetworkQueryAuthorizeExternal
 import chat.sphinx.concept_network_query_people.NetworkQueryPeople
 import chat.sphinx.concept_network_relay_call.NetworkRelayCall
-import chat.sphinx.concept_network_tor.*
 import chat.sphinx.concept_relay.RelayDataHandler
 import chat.sphinx.feature_crypto_rsa.RSAAlgorithm
 import chat.sphinx.feature_crypto_rsa.RSAImpl
@@ -22,7 +21,6 @@ import chat.sphinx.feature_network_relay_call.NetworkRelayCallImpl
 import chat.sphinx.feature_relay.RelayDataHandlerImpl
 import chat.sphinx.logger.LogType
 import chat.sphinx.logger.SphinxLogger
-import chat.sphinx.test_tor_manager.TestTorManager
 import chat.sphinx.wrapper_relay.AuthorizationToken
 import chat.sphinx.wrapper_relay.RelayUrl
 import chat.sphinx.wrapper_relay.TransportToken
@@ -109,10 +107,6 @@ abstract class NetworkQueryTestHelper: AuthenticationCoreDefaultsTestHelper() {
         }
     }
 
-    private val testTorManager: TorManager by lazy {
-        TestTorManager()
-    }
-
     private val testRSA: RSA by lazy {
         RSAImpl(RSAAlgorithm.RSA)
     }
@@ -178,7 +172,6 @@ abstract class NetworkQueryTestHelper: AuthenticationCoreDefaultsTestHelper() {
             okHttpCache,
             dispatchers,
             null,
-            testTorManager,
             testLogger,
         )
     }
@@ -189,7 +182,6 @@ abstract class NetworkQueryTestHelper: AuthenticationCoreDefaultsTestHelper() {
             testCoreManager,
             dispatchers,
             testHandler,
-            testTorManager,
             testRSA
         )
     }

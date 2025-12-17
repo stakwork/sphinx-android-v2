@@ -20,6 +20,7 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import androidx.viewpager2.widget.ViewPager2
 import app.cash.exhaustive.Exhaustive
 import by.kirich1409.viewbindingdelegate.viewBinding
+import chat.sphinx.concept_grapheneos_manager.GrapheneOsManager
 import chat.sphinx.concept_image_loader.Disposable
 import chat.sphinx.concept_image_loader.ImageLoader
 import chat.sphinx.concept_image_loader.ImageLoaderOptions
@@ -74,6 +75,10 @@ internal class DashboardFragment : MotionLayoutFragment<
     @Suppress("ProtectedInFinal")
     protected lateinit var signerManager: SignerManager
 
+    @Inject
+    @Suppress("ProtectedInFinal")
+    protected lateinit var grapheneOsManager: GrapheneOsManager
+
     override val viewModel: DashboardViewModel by viewModels()
     private val dashboardPodcastViewModel: DashboardPodcastViewModel by viewModels()
 
@@ -95,7 +100,7 @@ internal class DashboardFragment : MotionLayoutFragment<
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        viewModel.screenInit()
+        grapheneOsManager.optimizeViewContainer(this)
 
         findNavController().addOnDestinationChangedListener(CloseDrawerOnDestinationChange())
 
@@ -153,7 +158,7 @@ internal class DashboardFragment : MotionLayoutFragment<
 
     override fun onRefresh() {
         binding.swipeRefreshLayoutDataReload.isRefreshing = false
-        viewModel.networkRefresh(true)
+        viewModel.networkRefresh()
     }
 
     private fun setupSignerManager(){
@@ -369,7 +374,11 @@ internal class DashboardFragment : MotionLayoutFragment<
     private fun setupRestorePopup() {
         binding.layoutDashboardRestore.layoutDashboardRestoreProgress.apply {
             buttonStopRestore.setOnClickListener {
-                binding.layoutDashboardRestore.root.gone
+
+                buttonStopRestore.isEnabled = false
+                buttonStopRestore.backgroundTintList = ContextCompat.getColorStateList(root.context, R_common.color.secondaryTextInverted)
+                buttonStopRestore.text = getString(R.string.dashboard_restore_stopping)
+
                 isRestoreCancelled = true
                 viewModel.cancelRestore()
             }
@@ -540,7 +549,6 @@ internal class DashboardFragment : MotionLayoutFragment<
         onStopSupervisor.scope.launch(viewModel.mainImmediate) {
             viewModel.networkStatusStateFlow.collect { networkStatus ->
                 binding.layoutDashboardHeader.let { dashboardHeader ->
-
                     when (networkStatus) {
                         is NetworkStatus.Loading -> {
                             showProgressBar()
@@ -622,20 +630,21 @@ internal class DashboardFragment : MotionLayoutFragment<
 
                             textViewRestoreProgress.text = getString(label, progressString)
                             progressBarRestore.progress = response
-                            buttonStopRestore.isEnabled = false
+                            buttonStopRestore.isEnabled = response > 10
                             buttonStopRestore.backgroundTintList =
-                                if (false) ContextCompat.getColorStateList(root.context, R_common.color.primaryBlue)
+                                if (response > 10) ContextCompat.getColorStateList(root.context, R_common.color.primaryBlue)
                                 else ContextCompat.getColorStateList(root.context, R_common.color.secondaryTextInverted)
                         }
                         root.visible
                     } else {
                         viewModel.fetchDeletedMessagesOnDb()
-                        root.gone
 
                         if (response != null) {
                             ///Did finish restore
                             viewModel.finishSettingUpPersonalInfo()
                         }
+                        
+                        root.gone
                     }
                 }
             }
@@ -645,13 +654,19 @@ internal class DashboardFragment : MotionLayoutFragment<
             viewModel.accountOwnerStateFlow.collect { contactOwner ->
                 contactOwner?.let { owner ->
                     owner.photoUrl?.value?.let { url ->
-                        imageLoader.load(
-                            binding.layoutDashboardNavDrawer.navDrawerImageViewUserProfilePicture,
-                            url,
-                            ImageLoaderOptions.Builder()
-                                .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
-                                .build()
-                        )
+                        lifecycleScope.launch(viewModel.default) {
+                            imageLoader.load(
+                                binding.layoutDashboardNavDrawer.navDrawerImageViewUserProfilePicture,
+                                url,
+                                ImageLoaderOptions.Builder()
+                                    .placeholderResId(R_common.drawable.ic_profile_avatar_circle)
+                                    .build()
+                            ).also {
+                                disposable = it
+                            }
+                        }.let { job ->
+                            imageJob = job
+                        }
                     } ?: binding.layoutDashboardNavDrawer
                         .navDrawerImageViewUserProfilePicture
                         .setImageDrawable(
@@ -774,13 +789,19 @@ internal class DashboardFragment : MotionLayoutFragment<
                             textViewContributorTitle.text = viewState.subtitle
 
                             viewState.imageUrl?.let { imageUrl ->
-                                imageLoader.load(
-                                    imageViewPodcastEpisode,
-                                    imageUrl,
-                                    ImageLoaderOptions.Builder()
-                                        .placeholderResId(R_common.drawable.ic_podcast_placeholder)
-                                        .build()
-                                )
+                                lifecycleScope.launch(viewModel.default) {
+                                    imageLoader.load(
+                                        imageViewPodcastEpisode,
+                                        imageUrl,
+                                        ImageLoaderOptions.Builder()
+                                            .placeholderResId(R_common.drawable.ic_podcast_placeholder)
+                                            .build()
+                                    ).also {
+                                        disposable = it
+                                    }
+                                }.let { job ->
+                                    imageJob = job
+                                }
                             }
 
                             imageViewForward30Button.goneIfFalse(!viewState.showLoading)
@@ -907,7 +928,7 @@ internal class DashboardFragment : MotionLayoutFragment<
 
                             viewState.photoUrl?.let { url ->
 
-                                lifecycleScope.launch {
+                                lifecycleScope.launch(viewModel.default) {
                                     imageLoader.load(
                                         imageViewProfilePicture,
                                         url,

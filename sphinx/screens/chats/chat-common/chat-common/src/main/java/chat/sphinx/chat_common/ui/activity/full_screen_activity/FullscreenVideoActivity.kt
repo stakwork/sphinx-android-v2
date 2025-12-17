@@ -8,6 +8,9 @@ import android.view.OrientationEventListener
 import android.widget.MediaController
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updatePadding
 import by.kirich1409.viewbindingdelegate.viewBinding
 import chat.sphinx.chat_common.R
 import chat.sphinx.chat_common.databinding.ActivityFullscreenVideoBinding
@@ -37,6 +40,10 @@ FullscreenVideoActivity : AppCompatActivity() {
         setContentView(R.layout.activity_fullscreen_video)
 
         binding.apply {
+            textViewNavBack.setOnClickListener {
+                finish()
+            }
+
             orientationListener =  object : OrientationEventListener(this@FullscreenVideoActivity) {
                 override fun onOrientationChanged(orientation: Int) {
                     val rotation = when {
@@ -69,6 +76,20 @@ FullscreenVideoActivity : AppCompatActivity() {
             videoViewContent.setMediaController(controller)
 
             viewModel.initializeVideo(videoViewContent)
+        }
+
+        handleSystemBars()
+    }
+
+    private fun handleSystemBars() {
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { view, windowInsets ->
+            val statusInsets = windowInsets.getInsets(WindowInsetsCompat.Type.statusBars())
+
+            binding.textViewNavBack.updatePadding(
+                top = statusInsets.top
+            )
+
+            windowInsets
         }
     }
 

@@ -217,7 +217,7 @@ internal class AddressBookListAdapter(
                     }
 
                     if (url != null) {
-                        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+                        onStopSupervisor.scope.launch(viewModel.default) {
                             imageLoader.load(
                                 layoutAddressBookInitialHolder.imageViewChatPicture,
                                 url.value,

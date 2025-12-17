@@ -2,4 +2,5 @@
 <resources>
     <string name="label_text_videos_list_header">Mga Video</string>
     <string name="delete_download">Tanggalin ang Pag-download</string>
+    <string name="video_skip_ad_warning">Ad detected — skipping in 5 seconds…</string>
 </resources>

@@ -38,7 +38,8 @@ data class ChatDto(
     val timezone_enabled: Any?,
     val timezone_identifier: String?,
     val remote_timezone_identifier: String?,
-    val timezone_updated: Any?
+    val timezone_updated: Any?,
+    val is_my_tribe: Any?
 ) {
     @Transient
     val isMutedActual: Boolean =
@@ -48,6 +49,20 @@ data class ChatDto(
             }
             is Double -> {
                 is_muted.toInt() == 1
+            }
+            else -> {
+                false
+            }
+        }
+
+    @Transient
+    val isOwnedTribe: Boolean =
+        when (is_my_tribe) {
+            is Boolean -> {
+                is_my_tribe
+            }
+            is Double -> {
+                is_my_tribe.toInt() == 1
             }
             else -> {
                 false

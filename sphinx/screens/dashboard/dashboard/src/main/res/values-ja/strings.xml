@@ -46,7 +46,7 @@
     <string name="last_message_description_invoice_sent">請求書を送信: %s</string>
     <string name="last_message_description_invoice_receive">請求書の受信: %s</string>
     <string name="last_message_description_payment_sent">支払いの送信: %s</string>
-    <string name="last_message_description_tribe_payment_sent">%sから%sへ%sの支払い送信</string>
+    <string name="last_message_description_tribe_payment_sent">%sを%sに送金しました</string>
     <string name="last_message_description_payment_received">支払いの受信: %s</string>
     <string name="last_message_description_tribe_payment">%sが %s から %s への支払い送信</string>
 
@@ -159,6 +159,7 @@
     <string name="dashboard_restore_progress_feeds">フィードの復元中: %s</string>
     <string name="dashboard_restore_progress_messages">メッセージの復元中: %s</string>
     <string name="dashboard_stop_restore">後ほど続行</string>
+    <string name="dashboard_restore_stopping">復元を完了しています</string>
 
     <string name="loading_recommendations">おすすめをロードしています...</string>
     <string name="refresh_while_loading">再生中は新しいおすすめを取得できません。リフレッシュする前に再生を停止してください</string>

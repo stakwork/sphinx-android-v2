@@ -24,11 +24,38 @@ internal class FirebasePushNotificationRegistrar(
     companion object {
         const val TAG = "FirebasePushNotificationRegistrar"
     }
+
+    init {
+        // Remove all manual Firebase initialization code
+        LOG.d(TAG, "Firebase Push Notification Registrar initialized")
+
+        // Optional: Add debug logging to verify Firebase is available
+        debugFirebaseAvailability()
+    }
+
+    private fun debugFirebaseAvailability() {
+        try {
+            val firebaseApps = FirebaseApp.getApps(app.applicationContext)
+            LOG.d(TAG, "Firebase apps available: ${firebaseApps.size}")
+
+            if (firebaseApps.isEmpty()) {
+                LOG.w(TAG, "No Firebase apps found - Firebase may not be initialized yet")
+            } else {
+                firebaseApps.forEach { app ->
+                    LOG.d(TAG, "Firebase app available: ${app.name}")
+                }
+            }
+        } catch (e: Exception) {
+            LOG.w(TAG, "Error checking Firebase availability", e)
+        }
+    }
+
     override suspend fun register(): Response<Any, ResponseError> {
         val tokenFetchResponse: MutableStateFlow<Response<String, ResponseError>?> =
             MutableStateFlow(null)
 
         try {
+            // No need to check Firebase initialization - let it fail naturally if not ready
             FirebaseMessaging.getInstance().token.addOnCompleteListener(OnCompleteListener { task ->
                 if (!task.isSuccessful) {
                     val msg = "Fetching FCM registration token failed"
@@ -38,35 +65,36 @@ internal class FirebasePushNotificationRegistrar(
                 }
 
                 val token = task.result
-
                 tokenFetchResponse.value = if (token != null) {
-                    LOG.d(TAG, "FCM token: $token")
+                    LOG.d(TAG, "FCM token retrieved successfully: $token")
                     Response.Success(token)
                 } else {
-                    val msg = "Fetching FCM registration token succeeded, but token was null"
-                    LOG.w(TAG, msg, task.exception)
-                    Response.Error(ResponseError(msg, task.exception))
+                    val msg = "FCM registration token was null"
+                    LOG.w(TAG, msg)
+                    Response.Error(ResponseError(msg))
                 }
             })
-        }
-        catch (e: Exception) {
-            val msg = "Unexpected error occurred while fetching the Firebase Cloud Messaging registration token"
+        } catch (e: Exception) {
+            val msg = "Unexpected error occurred while fetching FCM registration token"
             LOG.w(TAG, msg, e)
+            return Response.Error(ResponseError(msg, e))
         }
 
         try {
-            // need to wait for the listener to complete
+            // Wait for the listener to complete
             tokenFetchResponse.collect { response ->
                 @Exhaustive
                 when (response) {
                     null -> {}
                     is Response.Error,
                     is Response.Success -> {
-                        throw Exception()
+                        throw Exception() // Break out of collect loop
                     }
                 }
             }
-        } catch (e: Exception) {}
+        } catch (e: Exception) {
+            // Expected exception to break out of collect
+        }
 
         return tokenFetchResponse.value?.let { response ->
             @Exhaustive
@@ -79,16 +107,6 @@ internal class FirebasePushNotificationRegistrar(
                     Response.Success(response.value)
                 }
             }
-        } ?: Response.Error(ResponseError("NotificationToken retrieved was null"))
-    }
-
-    init {
-        try {
-            FirebaseApp.initializeApp(app.applicationContext)
-        } catch (e: IllegalStateException) {
-            val msg = "Default FirebaseApp is not initialized in this process..."
-            LOG.w(TAG, msg, e)
-        }
-        LOG.d(TAG, "Project compiled with Firebase notifications")
+        } ?: Response.Error(ResponseError("FCM token fetch completed but no response was received"))
     }
 }

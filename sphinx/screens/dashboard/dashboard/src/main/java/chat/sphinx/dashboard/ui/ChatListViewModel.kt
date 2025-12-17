@@ -5,7 +5,11 @@ import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import chat.sphinx.concept_repository_chat.ChatRepository
+import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
+import chat.sphinx.concept_repository_connect_manager.model.NetworkStatus
+import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.concept_repository_dashboard_android.RepositoryDashboardAndroid
+import chat.sphinx.concept_repository_message.MessageRepository
 import chat.sphinx.concept_view_model_coordinator.ViewModelCoordinator
 import chat.sphinx.dashboard.R
 import chat.sphinx.dashboard.navigation.DashboardNavDrawerNavigator
@@ -20,7 +24,10 @@ import chat.sphinx.wrapper_chat.ChatStatus
 import chat.sphinx.wrapper_chat.ChatType
 import chat.sphinx.wrapper_chat.isConversation
 import chat.sphinx.wrapper_common.chat.ChatUUID
+import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_common.dashboard.ContactId
+import chat.sphinx.wrapper_common.isTrue
+import chat.sphinx.wrapper_common.time
 import chat.sphinx.wrapper_common.tribe.TribeJoinLink
 import chat.sphinx.wrapper_common.tribe.toTribeJoinLink
 import chat.sphinx.wrapper_contact.*
@@ -68,6 +75,9 @@ internal class ChatListViewModel @Inject constructor(
     dispatchers: CoroutineDispatchers,
     private val repositoryDashboard: RepositoryDashboardAndroid<Any>,
     private val chatRepository: ChatRepository,
+    private val messageRepository: MessageRepository,
+    private val contactRepository: ContactRepository,
+    private val connectManagerRepository: ConnectManagerRepository,
     private val tribesDiscoverCoordinator: ViewModelCoordinator<TribesDiscoverRequest, TribesDiscoverResponse>,
 ): SideEffectViewModel<
         Context,
@@ -112,11 +122,29 @@ internal class ChatListViewModel @Inject constructor(
     private var contactsCollectionInitialized: Boolean = false
     private var chatsCollectionInitialized: Boolean = false
 
+    private var hasLoadedOnce = false
+
+    fun markAsLoaded() {
+        hasLoadedOnce = true
+    }
+
+    fun isFirstLoad(): Boolean = !hasLoadedOnce
+
+    val networkStatusStateFlow: StateFlow<NetworkStatus>
+        get() = connectManagerRepository.networkStatus.asStateFlow()
+
     init {
         if (args.isChatListTypeConversation) {
             viewModelScope.launch(mainImmediate) {
                 repositoryDashboard.getAllNotBlockedContacts.distinctUntilChanged().collect { contacts ->
-                    updateChatListContacts(contacts)
+
+                    val unseenMessages = repositoryDashboard.getUnseenReceivedMessages().firstOrNull()
+                    val unseenMessagesByChatId: Map<ChatId, List<Message>> = unseenMessages?.groupBy { it.chatId } ?: mapOf()
+
+                    updateChatListContacts(
+                        contacts,
+                        unseenMessagesByChatId
+                    )
                 }
             }
         }
@@ -137,77 +165,92 @@ internal class ChatListViewModel @Inject constructor(
             }
 
             allChats.collect { chats ->
-                collectionLock.withLock {
-                    chatsCollectionInitialized = true
-                    val newList = ArrayList<DashboardChat>(chats.size)
-                    val contactsAdded = mutableListOf<ContactId>()
+                val unseenMessages = repositoryDashboard.getUnseenReceivedMessages().firstOrNull()
+                val unseenMessagesByChatId: Map<ChatId, List<Message>> = unseenMessages?.groupBy { it.chatId } ?: mapOf()
 
-                    withContext(default) {
-                        for (chat in chats) {
-                            val message: Message? = chat.latestMessageId?.let {
-                                repositoryDashboard.getMessageById(it).firstOrNull()
-                            }
+                val unseenMentions = repositoryDashboard.getUnseenReceivedMentions().firstOrNull()
+                val unseenMentionsByChatId: Map<ChatId, List<Message>> = unseenMentions?.groupBy { it.chatId } ?: mapOf()
 
-                            if (chat.type.isConversation()) {
-                                val contactId: ContactId = chat.contactIds.lastOrNull() ?: continue
+                chatsCollectionInitialized = true
+                val newList = ArrayList<DashboardChat>(chats.size)
+                val contactsAdded = mutableListOf<ContactId>()
 
-                                val contact: Contact = repositoryDashboard.getContactById(contactId)
-                                    .firstOrNull() ?: continue
+                val messageIds = chats.mapNotNull { it.latestMessageId }
+                val contactIds = chats.mapNotNull { it.contactIds.lastOrNull() }
 
-                                if (contact.status is ContactStatus.Pending) {
-                                    if (contact.isInviteContact()) {
-                                        var contactInvite: Invite? = null
+                val messagesMap = messageRepository.getMessagesByIds(messageIds).first().associateBy { it?.id }
+                val contactsMap = contactRepository.getAllContactsByIds(contactIds).associateBy { it.id }
 
-                                        contact.inviteId?.let { inviteId ->
-                                            contactInvite = withContext(io) {
-                                                repositoryDashboard.getInviteById(inviteId).firstOrNull()
-                                            }
-                                        }
-                                        if (contactInvite != null) {
-                                            newList.add(
-                                                DashboardChat.Inactive.Invite(contact, contactInvite)
-                                            )
-                                        }
-                                    } else {
+                val inviteIds = contactsMap.mapNotNull { it.value.inviteId }
+                val invitesMap = contactRepository.getInvitesByIds(inviteIds).first().associateBy { it?.id }
+
+                withContext(mainImmediate) {
+                    for (chat in chats) {
+                        val message: Message? = chat.latestMessageId?.let {
+                            messagesMap[it]
+                        }
+
+                        val chatUnseenMessages = if (!chat.seen.isTrue()) unseenMessagesByChatId[chat.id] else emptyList()
+                        val chatUnseenMentions = if (!chat.seen.isTrue()) unseenMentionsByChatId[chat.id] else emptyList()
+
+                        if (chat.type.isConversation()) {
+                            val contactId: ContactId = chat.contactIds.lastOrNull() ?: continue
+
+                            val contact: Contact = contactsMap[contactId] ?: continue
+
+                            if (contact.status is ContactStatus.Pending) {
+                                if (contact.isInviteContact()) {
+                                    var contactInvite: Invite? = null
+
+                                    contact.inviteId?.let { inviteId ->
+                                        contactInvite = invitesMap[inviteId]
+                                    }
+                                    if (contactInvite != null) {
                                         newList.add(
-                                            DashboardChat.Inactive.Conversation(contact)
+                                            DashboardChat.Inactive.Invite(contact, contactInvite, Long.MAX_VALUE)
                                         )
                                     }
-                                }
-
-                                if (!contact.isBlocked() && chat.status is ChatStatus.Approved) {
-                                    contactsAdded.add(contactId)
-                                    
+                                } else {
                                     newList.add(
-                                        DashboardChat.Active.Conversation(
-                                            chat,
-                                            message,
-                                            contact,
-                                            repositoryDashboard.getUnseenMessagesByChatId(chat.id),
-                                        )
+                                        DashboardChat.Inactive.Conversation(contact, contact.createdAt.time)
                                     )
                                 }
-                            } else {
+                            }
+
+                            if (!contact.isBlocked() && chat.status is ChatStatus.Approved) {
+                                contactsAdded.add(contactId)
+
                                 newList.add(
-                                    DashboardChat.Active.GroupOrTribe(
+                                    DashboardChat.Active.Conversation(
                                         chat,
                                         message,
-                                        accountOwnerStateFlow.value ?: getOwner(),
-                                        repositoryDashboard.getUnseenMessagesByChatId(chat.id),
-                                        repositoryDashboard.getUnseenMentionsByChatId(chat.id)
+                                        contact,
+                                        chatUnseenMessages?.size ?: 0,
+                                        chat.contentSeenAt?.time ?: message?.date?.time ?: chat.createdAt.time
                                     )
                                 )
                             }
+                        } else {
+                            newList.add(
+                                DashboardChat.Active.GroupOrTribe(
+                                    chat,
+                                    message,
+                                    accountOwnerStateFlow.value ?: getOwner(),
+                                    chatUnseenMessages?.size ?: 0,
+                                    chatUnseenMentions?.size ?: 0,
+                                    chat.contentSeenAt?.time ?: message?.date?.time ?: chat.createdAt.time
+                                )
+                            )
                         }
                     }
+                }
+                collectionLock.withLock {
                     chatViewStateContainer.updateDashboardChats(newList)
                 }
             }
         }
 
         viewModelScope.launch(mainImmediate) {
-            val owner = getOwner()
-
             chatListFooterButtonsViewStateContainer.updateViewState(
                 ChatListFooterButtonsViewState.ButtonsVisibility(
                     addFriendVisible = args.argChatListType == ChatType.CONVERSATION,
@@ -215,6 +258,30 @@ internal class ChatListViewModel @Inject constructor(
                     discoverTribesVisible = args.argChatListType == ChatType.TRIBE,
                 )
             )
+        }
+    }
+
+    fun navigateToChatContact(
+        contactId: ContactId,
+        chatId: ChatId?
+    ) {
+        viewModelScope.launch(mainImmediate) {
+            dashboardNavigator.toChatContact(
+                chatId,
+                contactId
+            )
+        }
+    }
+
+    fun navigateToChatTribe(
+        chatId: ChatId
+    ) {
+        if (networkStatusStateFlow.value is NetworkStatus.Loading) {
+            return
+        }
+
+        viewModelScope.launch(mainImmediate) {
+            dashboardNavigator.toChatTribe(chatId)
         }
     }
 
@@ -240,7 +307,10 @@ internal class ChatListViewModel @Inject constructor(
         }
     }
 
-    private suspend fun updateChatListContacts(contacts: List<Contact>) {
+    private suspend fun updateChatListContacts(
+        contacts: List<Contact>,
+        unseenMessagesByChatId: Map<ChatId, List<Message>>
+    ) {
         collectionLock.withLock {
             contactsCollectionInitialized = true
 
@@ -333,22 +403,26 @@ internal class ChatListViewModel @Inject constructor(
                             }
                             if (contactInvite != null) {
                                 currentChats.add(
-                                    DashboardChat.Inactive.Invite(contact, contactInvite)
+                                    DashboardChat.Inactive.Invite(contact, contactInvite, Long.MAX_VALUE)
                                 )
                                 continue
                             }
                         }
 
-                        var updatedContactChat: DashboardChat = DashboardChat.Inactive.Conversation(contact)
+                        var updatedContactChat: DashboardChat = DashboardChat.Inactive.Conversation(contact, contact.createdAt.time)
 
                         for (chat in currentChatViewState.originalList) {
                             if (chat is DashboardChat.Active.Conversation) {
                                 if (chat.contact.id == contact.id) {
+
+                                    val chatUnseenMessages = if (!chat.chat.seen.isTrue()) unseenMessagesByChatId[chat.chat.id] else emptyList()
+
                                     updatedContactChat = DashboardChat.Active.Conversation(
                                         chat.chat,
                                         chat.message,
                                         contact,
-                                        chat.unseenMessageFlow
+                                        chatUnseenMessages?.size ?: 0,
+                                        chat.chat.contentSeenAt?.time ?: chat.message?.date?.time ?: chat.chat.createdAt.time
                                     )
                                 }
                             }
@@ -361,11 +435,14 @@ internal class ChatListViewModel @Inject constructor(
                                     repositoryDashboard.getMessageById(it).firstOrNull()
                                 }
 
+                                val chatUnseenMessages = if (!contactChat.seen.isTrue()) unseenMessagesByChatId[contactChat.id] else emptyList()
+
                                 updatedContactChat = DashboardChat.Active.Conversation(
                                     contactChat,
                                     message,
                                     contact,
-                                    repositoryDashboard.getUnseenMessagesByChatId(contactChat.id)
+                                    chatUnseenMessages?.size ?: 0,
+                                    contactChat.contentSeenAt?.time ?: message?.date?.time ?: contactChat.createdAt.time
                                 )
                             }
                         }

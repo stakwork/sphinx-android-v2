@@ -13,6 +13,7 @@ import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import app.cash.exhaustive.Exhaustive
 import by.kirich1409.viewbindingdelegate.viewBinding
+import chat.sphinx.concept_grapheneos_manager.GrapheneOsManager
 import chat.sphinx.concept_image_loader.ImageLoader
 import chat.sphinx.dashboard.R
 import chat.sphinx.dashboard.databinding.FragmentFeedBinding
@@ -54,11 +55,17 @@ internal class FeedFragment : SideEffectFragment<
     @Suppress("ProtectedInFinal")
     protected lateinit var imageLoader: ImageLoader<ImageView>
 
+    @Inject
+    @Suppress("ProtectedInFinal")
+    protected lateinit var grapheneOsManager: GrapheneOsManager
+
     override val viewModel: FeedViewModel by viewModels()
     override val binding: FragmentFeedBinding by viewBinding(FragmentFeedBinding::bind)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        grapheneOsManager.optimizeViewContainer(this)
 
         setupSearch()
         setupFeedViewPager()
@@ -152,15 +159,21 @@ internal class FeedFragment : SideEffectFragment<
 
     private fun setupFeedViewPager() {
         binding.apply {
+
+
             val feedFragmentsAdapter = FeedFragmentsAdapter(
                 this@FeedFragment
             )
 
             chipAll.isChecked = true
 
+            viewPagerFeedFragments.isSaveEnabled = false
+            viewPagerFeedFragments.isSaveFromParentEnabled = false
+
             viewPagerFeedFragments.adapter = feedFragmentsAdapter
             viewPagerFeedFragments.isUserInputEnabled = false
             viewPagerFeedFragments.currentItem = FeedFragmentsAdapter.CHIP_ALL_POSITION
+
 
             chipAll.setOnClickListener {
                 viewModel.feedChipsViewStateContainer.updateViewState(
@@ -221,6 +234,8 @@ internal class FeedFragment : SideEffectFragment<
     }
 
     companion object {
+        private const val KEY_CURRENT_CHIP = "current_chip_position"
+
         fun newInstance(): FeedFragment {
             return FeedFragment()
         }
@@ -307,6 +322,43 @@ internal class FeedFragment : SideEffectFragment<
 //                                FeedFragmentsAdapter.CHIP_PLAY_POSITION
 //                        }
                     }
+                }
+            }
+        }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+
+        // Clear adapter to prevent state restoration issues
+        binding.viewPagerFeedFragments.adapter = null
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+
+        if (view != null) {
+            // Save only the current chip position if needed
+            outState.putInt(KEY_CURRENT_CHIP, binding.viewPagerFeedFragments.currentItem)
+        }
+    }
+
+    override fun onViewStateRestored(savedInstanceState: Bundle?) {
+        super.onViewStateRestored(savedInstanceState)
+
+        savedInstanceState?.let { bundle ->
+            val position = bundle.getInt(KEY_CURRENT_CHIP, FeedFragmentsAdapter.CHIP_ALL_POSITION)
+
+            // Restore position after setup
+            binding.viewPagerFeedFragments.post {
+                binding.viewPagerFeedFragments.setCurrentItem(position, false)
+
+                // Update chip selection
+                when (position) {
+                    FeedFragmentsAdapter.CHIP_ALL_POSITION -> binding.chipAll.isChecked = true
+                    FeedFragmentsAdapter.CHIP_LISTEN_POSITION -> binding.chipListen.isChecked = true
+                    FeedFragmentsAdapter.CHIP_WATCH_POSITION -> binding.chipWatch.isChecked = true
+                    FeedFragmentsAdapter.CHIP_READ_POSITION -> binding.chipRead.isChecked = true
                 }
             }
         }

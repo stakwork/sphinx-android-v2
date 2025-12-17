@@ -54,6 +54,7 @@
     <!-- Link Previews -->
     <string name="link_preview_add_contact_banner_label">友だちを追加</string>
     <string name="link_preview_see_tribe_banner_label">Tribeを見る</string>
+    <string name="link_preview_not_available">リンクプレビューが利用できません</string>
 
     <!-- Replies -->
     <string name="reply_message_media_content_description">元のメッセージのメディアコンテンツ</string>
@@ -171,6 +172,7 @@
 
     <string name="searching_messages">検索中...</string>
     <string name="results_found">%d 件の結果が見つかりました</string>
+    <string name="search_matches">%d/%d の一致</string>
 
     <string name="slide_to_cancel">&lt;&lt; キャンセルする為スワイプ</string>
     <string name="recording_permission_granted">録音許可が付与されました</string>
@@ -185,6 +187,8 @@
     <string name="pin_message_error">エラーが発生しました。後でもう一度お試しください</string>
     <string name="chat_placeholder_invited">Invited on %s</string>
     <string name="chat_placeholder_secure">Messages and calls are secured\nwith end to end encryption</string>
+
+    <string name="loading_messages">Loading messages…</string>
 
     <string name="cancel_search">キャンセル</string>
 </resources>

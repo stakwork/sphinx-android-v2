@@ -180,7 +180,7 @@ internal class TransactionsListAdapter(
                 disposable?.dispose()
 
                 val amount = t.transaction?.amount?.toSat()?.asFormattedString() ?: "0"
-                val date = t.transaction?.date?.value ?: Date(System.currentTimeMillis())
+                val date = Date(t.transaction?.ts ?: System.currentTimeMillis())
 
                 val hourString = DateTime.getFormathmma().format(date)
                 val dayOfMonthString = DateTime.getFormatEEEdd().format(date)

@@ -98,7 +98,7 @@ internal class PaymentTemplateAdapter(
 
                             val token = AuthenticationToken(paymentTemplate.token)
 
-                            lifecycleOwner.lifecycleScope.launch(viewModel.dispatchers.mainImmediate) {
+                            lifecycleOwner.lifecycleScope.launch(viewModel.dispatchers.default) {
                                 imageLoader.load(
                                     imageViewTemplate,
                                     url,
@@ -112,7 +112,7 @@ internal class PaymentTemplateAdapter(
                             }
                         }
                     } ?: run {
-                        lifecycleOwner.lifecycleScope.launch(viewModel.dispatchers.mainImmediate) {
+                        lifecycleOwner.lifecycleScope.launch(viewModel.dispatchers.default) {
                             imageLoader.load(
                                 imageViewTemplate,
                                 -1,

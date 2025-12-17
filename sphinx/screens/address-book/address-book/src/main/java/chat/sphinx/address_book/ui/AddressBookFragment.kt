@@ -18,6 +18,7 @@ import chat.sphinx.address_book.R
 import chat.sphinx.address_book.ui.adapter.AddressBookListAdapter
 import chat.sphinx.address_book.databinding.FragmentAddressBookBinding
 import chat.sphinx.address_book.ui.adapter.AddressBookFooterAdapter
+import chat.sphinx.concept_grapheneos_manager.GrapheneOsManager
 import chat.sphinx.concept_image_loader.ImageLoader
 import chat.sphinx.concept_user_colors_helper.UserColorsHelper
 import chat.sphinx.insetter_activity.InsetterActivity
@@ -47,6 +48,10 @@ internal class AddressBookFragment: SideEffectFragment<
     @Suppress("ProtectedInFinal")
     protected lateinit var userColorsHelper: UserColorsHelper
 
+    @Inject
+    @Suppress("ProtectedInFinal")
+    protected lateinit var grapheneOsManager: GrapheneOsManager
+
     override val viewModel: AddressBookViewModel by viewModels()
     override val binding: FragmentAddressBookBinding by viewBinding(FragmentAddressBookBinding::bind)
 
@@ -57,6 +62,8 @@ internal class AddressBookFragment: SideEffectFragment<
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        grapheneOsManager.optimizeViewContainer(this)
 
         headerNavBack.setOnClickListener {
             lifecycleScope.launch {
@@ -73,6 +80,8 @@ internal class AddressBookFragment: SideEffectFragment<
         setupAddressBookHeader()
         setupContacts()
         setupSearch()
+
+//        performanceManager.optimizeViewContainer(this)
     }
 
     private fun setupAddressBookHeader() {

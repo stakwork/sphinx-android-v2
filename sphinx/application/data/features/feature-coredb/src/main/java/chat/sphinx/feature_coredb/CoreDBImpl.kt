@@ -35,6 +35,7 @@ import chat.sphinx.feature_coredb.adapters.chat.ChatTypeAdapter
 import chat.sphinx.feature_coredb.adapters.chat.ChatUUIDAdapter
 import chat.sphinx.feature_coredb.adapters.chat.ChatUnlistedAdapter
 import chat.sphinx.feature_coredb.adapters.chat.NotifyAdapter
+import chat.sphinx.feature_coredb.adapters.chat.OwnedTribeAdapter
 import chat.sphinx.feature_coredb.adapters.chat.RemoteTimezoneIdentifierAdapter
 import chat.sphinx.feature_coredb.adapters.chat.SecondBrainUrlAdapter
 import chat.sphinx.feature_coredb.adapters.chat.TimezoneEnabledAdapter
@@ -126,6 +127,7 @@ import com.squareup.moshi.Moshi
 import com.squareup.sqldelight.db.SqlDriver
 import io.matthewnelson.concept_encryption_key.EncryptionKey
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 
 abstract class CoreDBImpl(private val moshi: Moshi): CoreDB() {
@@ -191,7 +193,8 @@ abstract class CoreDBImpl(private val moshi: Moshi): CoreDB() {
                     timezone_enabledAdapter = TimezoneEnabledAdapter(),
                     timezone_updatedAdapter = TimezoneUpdatedAdapter(),
                     remote_timezone_identifierAdapter = RemoteTimezoneIdentifierAdapter(),
-                    timezone_identifierAdapter = TimezoneIdentifierAdapter()
+                    timezone_identifierAdapter = TimezoneIdentifierAdapter(),
+                    is_my_tribeAdapter = OwnedTribeAdapter(),
                 ),
                 contactDboAdapter = ContactDbo.Adapter(
                     idAdapter = ContactIdAdapter.getInstance(),
@@ -325,6 +328,7 @@ abstract class CoreDBImpl(private val moshi: Moshi): CoreDB() {
                     local_fileAdapter = FileAdapter.getInstance(),
                     reference_idAdapter = FeedReferenceIdAdapter(),
                     chapters_dataAdapter = FeedChapterDataAdapter(),
+                    downloaded_item_urlAdapter = FeedUrlAdapter.getInstance()
                 ),
                 feedModelDboAdapter = FeedModelDbo.Adapter(
                     idAdapter = FeedIdAdapter(),

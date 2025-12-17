@@ -4,6 +4,7 @@ import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
 import android.os.ParcelFileDescriptor.MODE_READ_ONLY
 import chat.sphinx.chat_common.model.MessageLinkPreview
+import chat.sphinx.chat_common.ui.allRangesOf
 import chat.sphinx.chat_common.ui.viewstate.InitialHolderViewState
 import chat.sphinx.chat_common.ui.viewstate.selected.MenuItemState
 import chat.sphinx.highlighting_tool.SphinxLinkify
@@ -14,7 +15,7 @@ import chat.sphinx.highlighting_tool.replacingMarkdown
 import chat.sphinx.wrapper_chat.Chat
 import chat.sphinx.wrapper_chat.isConversation
 import chat.sphinx.wrapper_chat.isTribe
-import chat.sphinx.wrapper_chat.isTribeOwnedByAccount
+import chat.sphinx.wrapper_chat.isTrue
 import chat.sphinx.wrapper_common.*
 import chat.sphinx.wrapper_common.dashboard.ContactId
 import chat.sphinx.wrapper_common.lightning.Sat
@@ -40,39 +41,55 @@ inline val Message.shouldAdaptBubbleWidth: Boolean
             !isSphinxCallLink &&
             podcastClip == null &&
             replyUUID == null &&
+            giphyData == null &&
             !isCopyLinkAllowed &&
             (thread == null || thread!!.isEmpty()) &&
             !status.isDeleted() &&
             !flagged.isTrue()) ||
             type.isDirectPayment()
 
+inline val Message.isOnlyTextMessage: Boolean
+    get() = (type.isMessage() &&
+            !isSphinxCallLink &&
+            podcastClip == null &&
+            replyUUID == null &&
+            giphyData == null &&
+            !isCopyLinkAllowed &&
+            (thread == null || thread!!.isEmpty()) &&
+            !status.isDeleted() &&
+            !flagged.isTrue() &&
+            (reactions ?: emptyList()).isEmpty())
+
 internal inline val MessageHolderViewState.isReceived: Boolean
-    get() = this is MessageHolderViewState.Received
+    get() = this is MessageHolderViewState.Received || this is MessageHolderViewState.MessageOnlyTextHolderViewState.Received
 
 internal inline val MessageHolderViewState.showReceivedBubbleArrow: Boolean
-    get() = background is BubbleBackground.First && this is MessageHolderViewState.Received
+    get() = background is BubbleBackground.First && (this is MessageHolderViewState.Received || this is MessageHolderViewState.MessageOnlyTextHolderViewState.Received)
 
 internal val MessageHolderViewState.showSentBubbleArrow: Boolean
-    get() = background is BubbleBackground.First && this is MessageHolderViewState.Sent
+    get() = background is BubbleBackground.First && (this is MessageHolderViewState.Sent || this is MessageHolderViewState.MessageOnlyTextHolderViewState.Sent)
 
 internal sealed class MessageHolderViewState(
     val message: Message?,
     val chat: Chat,
     private val tribeAdmin: Contact?,
     val messageHolderType: MessageHolderType,
-    private val separatorDate: DateTime?,
+    val separatorDate: DateTime?,
     val background: BubbleBackground,
     val invoiceLinesHolderViewState: InvoiceLinesHolderViewState,
     val initialHolder: InitialHolderViewState,
     var highlightedText: String?,
+    var index: Int,
     private val messageSenderInfo: (Message) -> Triple<PhotoUrl?, ContactAlias?, String>?,
     private val accountOwner: () -> Contact,
     private val urlLinkPreviewsEnabled: Boolean,
-    private val previewProvider: suspend (link: MessageLinkPreview) -> LayoutState.Bubble.ContainerThird.LinkPreview?,
+    private val previewProvider: suspend (link: MessageLinkPreview, index: Int) -> LayoutState.Bubble.ContainerThird.LinkPreview?,
     private val paidTextAttachmentContentProvider: suspend (message: Message) -> LayoutState.Bubble.ContainerThird.Message?,
-    private val onBindDownloadMedia: () -> Unit,
-    private val onBindThreadDownloadMedia: () -> Unit,
+    private val onBindDownloadMedia: (index: Int) -> Unit,
+    private val onBindThreadDownloadMedia: (index: Int) -> Unit,
     private val memberTimezoneIdentifier: String?,
+    val spaceLeft: Int? = null,
+    val spaceRight: Int? = null,
 ) {
 
     val isPinned: Boolean by lazy(LazyThreadSafetyMode.NONE) {
@@ -81,19 +98,20 @@ internal sealed class MessageHolderViewState(
 
     val searchHighlightedStatus: LayoutState.SearchHighlightedStatus?
     get() = if (highlightedText != null && highlightedText?.isEmpty() == false) {
-                LayoutState.SearchHighlightedStatus(
-                    highlightedText!!
-                )
-            } else {
-                null
-            }
+        val matches = message?.retrieveTextToShow()?.replacingMarkdown()?.allRangesOf(highlightedText!!) ?: emptyList()
 
-
-    val unsupportedMessageType: LayoutState.Bubble.ContainerThird.UnsupportedMessageType? by lazy(LazyThreadSafetyMode.NONE) {
+        LayoutState.SearchHighlightedStatus(
+            matches.map { Pair(highlightedText!!, it) }
+        )
+    } else {
         null
     }
 
-    val messagesSeparator: LayoutState.Separator? by lazy(LazyThreadSafetyMode.NONE) {
+    val unsupportedMessageType: LayoutState.Bubble.ContainerThird.UnsupportedMessageType? by lazy(LazyThreadSafetyMode.PUBLICATION) {
+        null
+    }
+
+    val messagesSeparator: LayoutState.Separator? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message != null) {
             null
         } else {
@@ -104,7 +122,37 @@ internal sealed class MessageHolderViewState(
         }
     }
 
-    val statusHeader: LayoutState.MessageStatusHeader? by lazy(LazyThreadSafetyMode.NONE) {
+
+
+    val threadHeader: ThreadHeaderHolder? by lazy(LazyThreadSafetyMode.PUBLICATION) {
+        if (message == null) {
+            null
+        } else {
+            var messageTimestamp = message.date.chatTimeFormat()
+
+            if (chat.isTribe()) {
+                if (!((message.remoteTimezoneIdentifier?.value ?: memberTimezoneIdentifier).isNullOrEmpty())) {
+                    (message.remoteTimezoneIdentifier?.value ?: memberTimezoneIdentifier)?.let {
+                        messageTimestamp = "$messageTimestamp / ${DateTime.getLocalTimeFor(it, message.date)}"
+                    }
+                }
+            }
+
+            val owner = accountOwner()
+            val ownerAlias = message.senderAlias?.value ?: owner.alias?.value
+            val ownerPhotoUrl = message.senderPic?.value ?: owner.photoUrl?.value
+            val sent = message.sender == chat.contactIds.firstOrNull()
+
+            ThreadHeaderHolder(
+                if (sent) ownerAlias else message.senderAlias?.value,
+                message.getColorKey(),
+                if (sent) ownerPhotoUrl else message.senderPic?.value,
+                messageTimestamp
+            )
+        }
+    }
+
+    val statusHeader: LayoutState.MessageStatusHeader? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null) {
             null
         } else {
@@ -123,14 +171,16 @@ internal sealed class MessageHolderViewState(
                     } else null
                 } else null
 
+                val isSent = this is Sent || this is MessageOnlyTextHolderViewState.Sent
+
                 LayoutState.MessageStatusHeader(
                     if (chat.type.isConversation()) null else message.senderAlias?.value,
                     if (initialHolder is InitialHolderViewState.Initials) initialHolder.colorKey else message.getColorKey(),
-                    this is Sent,
-                    this is Sent && message.id.isProvisionalMessage && message.status.isPending(),
-                    (this is Sent && (message.status.isReceived() || message.status.isConfirmed())) || (this !is Sent && message.type.isInvoice()),
+                    isSent,
+                    isSent && message.id.isProvisionalMessage && message.status.isPending(),
+                    (isSent && (message.status.isReceived() || message.status.isConfirmed())) || (!isSent && message.type.isInvoice()),
                     message.isPaymentConfirmed(),
-                    this is Sent && message.status.isFailed(),
+                    isSent && message.status.isFailed(),
                     message.messageContentDecrypted != null || message.messageMedia?.mediaKeyDecrypted != null,
                     message.date.messageTimeFormat(),
                     message.errorMessage?.value?.trim(),
@@ -144,7 +194,7 @@ internal sealed class MessageHolderViewState(
         }
     }
 
-    val invoiceExpirationHeader: LayoutState.InvoiceExpirationHeader? by lazy(LazyThreadSafetyMode.NONE) {
+    val invoiceExpirationHeader: LayoutState.InvoiceExpirationHeader? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null) {
             null
         } else {
@@ -162,7 +212,7 @@ internal sealed class MessageHolderViewState(
         }
     }
 
-    val deletedOrFlaggedMessage: LayoutState.DeletedOrFlaggedMessage? by lazy(LazyThreadSafetyMode.NONE) {
+    val deletedOrFlaggedMessage: LayoutState.DeletedOrFlaggedMessage? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null) {
             null
         } else {
@@ -179,7 +229,7 @@ internal sealed class MessageHolderViewState(
         }
     }
 
-    val invoicePayment: LayoutState.InvoicePayment? by lazy(LazyThreadSafetyMode.NONE) {
+    val invoicePayment: LayoutState.InvoicePayment? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null) {
             null
         } else {
@@ -195,7 +245,7 @@ internal sealed class MessageHolderViewState(
         }
     }
 
-    val bubbleDirectPayment: LayoutState.Bubble.ContainerSecond.DirectPayment? by lazy(LazyThreadSafetyMode.NONE) {
+    val bubbleDirectPayment: LayoutState.Bubble.ContainerSecond.DirectPayment? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null) {
             null
         } else {
@@ -217,7 +267,7 @@ internal sealed class MessageHolderViewState(
         }
     }
 
-    val bubbleInvoice: LayoutState.Bubble.ContainerSecond.Invoice? by lazy(LazyThreadSafetyMode.NONE) {
+    val bubbleInvoice: LayoutState.Bubble.ContainerSecond.Invoice? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null) {
             null
         } else {
@@ -240,7 +290,7 @@ internal sealed class MessageHolderViewState(
         }
     }
 
-    val bubbleMessage: LayoutState.Bubble.ContainerThird.Message? by  lazy(LazyThreadSafetyMode.NONE) {
+    val bubbleMessage: LayoutState.Bubble.ContainerThird.Message? by  lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null) {
             null
         } else {
@@ -259,7 +309,7 @@ internal sealed class MessageHolderViewState(
                 } else {
                     null
                 }
-            } ?: message.messageDecryptionError?.let { decryptionError ->
+            } ?: message.messageDecryptionError.let { decryptionError ->
                 if (decryptionError) {
                     LayoutState.Bubble.ContainerThird.Message(
                         text = null,
@@ -276,7 +326,7 @@ internal sealed class MessageHolderViewState(
         }
     }
 
-    val bubbleThread: LayoutState.Bubble.ContainerThird.Thread? by lazy(LazyThreadSafetyMode.NONE) {
+    val bubbleThread: LayoutState.Bubble.ContainerThird.Thread? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null) {
             null
         } else {
@@ -365,7 +415,7 @@ internal sealed class MessageHolderViewState(
     }
 
 
-    val bubblePaidMessage: LayoutState.Bubble.ContainerThird.PaidMessage? by lazy(LazyThreadSafetyMode.NONE) {
+    val bubblePaidMessage: LayoutState.Bubble.ContainerThird.PaidMessage? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null || message.retrieveTextToShow() != null || !message.isPaidTextMessage) {
             null
         } else {
@@ -385,7 +435,7 @@ internal sealed class MessageHolderViewState(
         }
     }
 
-    val bubbleCallInvite: LayoutState.Bubble.ContainerSecond.CallInvite? by lazy(LazyThreadSafetyMode.NONE) {
+    val bubbleCallInvite: LayoutState.Bubble.ContainerSecond.CallInvite? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null) {
             null
         } else {
@@ -395,7 +445,7 @@ internal sealed class MessageHolderViewState(
         }
     }
 
-    val bubbleBotResponse: LayoutState.Bubble.ContainerSecond.BotResponse? by lazy(LazyThreadSafetyMode.NONE) {
+    val bubbleBotResponse: LayoutState.Bubble.ContainerSecond.BotResponse? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null) {
             null
         } else {
@@ -413,7 +463,7 @@ internal sealed class MessageHolderViewState(
         }
     }
 
-    val bubblePaidMessageReceivedDetails: LayoutState.Bubble.ContainerFourth.PaidMessageReceivedDetails? by lazy(LazyThreadSafetyMode.NONE) {
+    val bubblePaidMessageReceivedDetails: LayoutState.Bubble.ContainerFourth.PaidMessageReceivedDetails? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null || !message.isPaidMessage || this is Sent) {
             null
         } else {
@@ -433,7 +483,7 @@ internal sealed class MessageHolderViewState(
         }
     }
 
-    val bubblePaidMessageSentStatus: LayoutState.Bubble.ContainerSecond.PaidMessageSentStatus? by lazy(LazyThreadSafetyMode.NONE) {
+    val bubblePaidMessageSentStatus: LayoutState.Bubble.ContainerSecond.PaidMessageSentStatus? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null || !message.isPaidMessage || this !is Sent) {
             null
         } else {
@@ -446,7 +496,7 @@ internal sealed class MessageHolderViewState(
         }
     }
 
-    val bubbleAudioAttachment: LayoutState.Bubble.ContainerSecond.AudioAttachment? by lazy(LazyThreadSafetyMode.NONE) {
+    val bubbleAudioAttachment: LayoutState.Bubble.ContainerSecond.AudioAttachment? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null) {
             null
         } else {
@@ -454,7 +504,7 @@ internal sealed class MessageHolderViewState(
         }
     }
 
-    val bubblePodcastClip: LayoutState.Bubble.ContainerSecond.PodcastClip? by lazy(LazyThreadSafetyMode.NONE) {
+    val bubblePodcastClip: LayoutState.Bubble.ContainerSecond.PodcastClip? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null) {
             null
         } else {
@@ -468,7 +518,7 @@ internal sealed class MessageHolderViewState(
         }
     }
 
-    val bubbleImageAttachment: LayoutState.Bubble.ContainerSecond.ImageAttachment? by lazy(LazyThreadSafetyMode.NONE) {
+    val bubbleImageAttachment: LayoutState.Bubble.ContainerSecond.ImageAttachment? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null) {
             null
         } else {
@@ -476,7 +526,7 @@ internal sealed class MessageHolderViewState(
         }
     }
 
-    val bubbleVideoAttachment: LayoutState.Bubble.ContainerSecond.VideoAttachment? by lazy(LazyThreadSafetyMode.NONE) {
+    val bubbleVideoAttachment: LayoutState.Bubble.ContainerSecond.VideoAttachment? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null) {
             null
         } else {
@@ -485,7 +535,7 @@ internal sealed class MessageHolderViewState(
     }
 
 
-    val bubbleFileAttachment: LayoutState.Bubble.ContainerSecond.FileAttachment? by lazy(LazyThreadSafetyMode.NONE) {
+    val bubbleFileAttachment: LayoutState.Bubble.ContainerSecond.FileAttachment? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null){
             null
         } else {
@@ -493,7 +543,7 @@ internal sealed class MessageHolderViewState(
         }
     }
 
-    val bubblePodcastBoost: LayoutState.Bubble.ContainerSecond.PodcastBoost? by lazy(LazyThreadSafetyMode.NONE) {
+    val bubblePodcastBoost: LayoutState.Bubble.ContainerSecond.PodcastBoost? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null) {
             null
         } else {
@@ -593,7 +643,7 @@ internal sealed class MessageHolderViewState(
         }
     }
 
-    val groupActionIndicator: LayoutState.GroupActionIndicator? by lazy(LazyThreadSafetyMode.NONE) {
+    val groupActionIndicator: LayoutState.GroupActionIndicator? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (message == null) {
             null
         } else {
@@ -603,11 +653,7 @@ internal sealed class MessageHolderViewState(
             } else {
                 LayoutState.GroupActionIndicator(
                     actionType = type,
-                    isAdminView = if (chat.ownerPubKey == null || accountOwner().nodePubKey == null) {
-                        false
-                    } else {
-                        chat.ownerPubKey == accountOwner().nodePubKey
-                    },
+                    isAdminView = chat.ownedTribe?.isTrue() == true,
                     chatType = chat.type,
                     subjectName = message.senderAlias?.value ?: ""
                 )
@@ -628,7 +674,7 @@ internal sealed class MessageHolderViewState(
     suspend fun retrieveLinkPreview(): LayoutState.Bubble.ContainerThird.LinkPreview? {
         return messageLinkPreview?.let { nnPreview ->
             linkPreviewLayoutState ?: previewLock.withLock {
-                linkPreviewLayoutState ?: previewProvider.invoke(nnPreview)
+                linkPreviewLayoutState ?: previewProvider.invoke(nnPreview, index)
                     ?.also { linkPreviewLayoutState = it }
             }
         }
@@ -645,7 +691,7 @@ internal sealed class MessageHolderViewState(
         }
     }
 
-    val selectionMenuItems: List<MenuItemState>? by lazy(LazyThreadSafetyMode.NONE) {
+    val selectionMenuItems: List<MenuItemState>? by lazy(LazyThreadSafetyMode.PUBLICATION) {
         if (
             message != null &&
             (background is BubbleBackground.Gone         ||
@@ -658,7 +704,7 @@ internal sealed class MessageHolderViewState(
             val list = ArrayList<MenuItemState>(4)
             val nnMessage = message!!
 
-            if (this is Received && nnMessage.isBoostAllowed) {
+            if ((this is Received || this is MessageOnlyTextHolderViewState.Received) && nnMessage.isBoostAllowed) {
                 list.add(MenuItemState.Boost)
             }
 
@@ -682,15 +728,15 @@ internal sealed class MessageHolderViewState(
                 list.add(MenuItemState.Resend)
             }
 
-            if (this is Sent || chat.isTribeOwnedByAccount(accountOwner().nodePubKey)) {
+            if ((this is Sent || this is MessageOnlyTextHolderViewState.Sent) || chat.ownedTribe?.isTrue() == true) {
                 list.add(MenuItemState.Delete)
             }
 
-            if (this is Received) {
+            if (this is Received || this is MessageOnlyTextHolderViewState.Received) {
                 list.add(MenuItemState.Flag)
             }
 
-            if(chat.isTribeOwnedByAccount(accountOwner().nodePubKey)) {
+            if(chat.ownedTribe?.isTrue() == true) {
                 if (nnMessage.isPinAllowed(chat.pinedMessage)) {
                     list.add(MenuItemState.PinMessage)
                 }
@@ -714,24 +760,32 @@ internal sealed class MessageHolderViewState(
         message: Message,
         isThread: Boolean = false
     ): LayoutState.Bubble.ContainerSecond.ImageAttachment? {
-        val pendingPayment = this is Received && message.isPaidPendingMessage
+        return message.messageMedia?.let { nnMessageMedia ->
+            if (nnMessageMedia.mediaType.isImage) {
+                val pendingPayment = this is Received && message.isPaidPendingMessage
+                val imageUrlAndMedia = message.retrieveImageUrlAndMessageMedia()
 
-        if (!pendingPayment) {
-            if (isThread) {
-                onBindThreadDownloadMedia.invoke()
+                if (!pendingPayment && imageUrlAndMedia?.second?.localFile == null) {
+                    if (isThread) {
+                        onBindThreadDownloadMedia.invoke(index)
+                    } else {
+                        onBindDownloadMedia.invoke(index)
+                    }
+                }
+
+                val isMessageThread = message.thread?.isNotEmpty() ?: false
+
+                message.retrieveImageUrlAndMessageMedia()?.let { mediaData ->
+                    LayoutState.Bubble.ContainerSecond.ImageAttachment(
+                        mediaData.first,
+                        mediaData.second,
+                        pendingPayment,
+                        isMessageThread
+                    )
+                }
             } else {
-                onBindDownloadMedia.invoke()
+                null
             }
-        }
-        val isThread = message.thread?.isNotEmpty() ?: false
-
-        return message.retrieveImageUrlAndMessageMedia()?.let { mediaData ->
-            LayoutState.Bubble.ContainerSecond.ImageAttachment(
-                mediaData.first,
-                mediaData.second,
-                pendingPayment,
-                isThread
-            )
         }
     }
 
@@ -750,9 +804,9 @@ internal sealed class MessageHolderViewState(
                     // data to view.
                     if (!pendingPayment) {
                         if (isThread) {
-                            onBindThreadDownloadMedia.invoke()
+                            onBindThreadDownloadMedia.invoke(index)
                         } else {
-                            onBindDownloadMedia.invoke()
+                            onBindDownloadMedia.invoke(index)
                         }
                     }
 
@@ -794,9 +848,9 @@ internal sealed class MessageHolderViewState(
 
                     if (!pendingPayment) {
                         if (isThread) {
-                            onBindThreadDownloadMedia.invoke()
+                            onBindThreadDownloadMedia.invoke(index)
                         } else {
-                            onBindDownloadMedia.invoke()
+                            onBindDownloadMedia.invoke(index)
                         }
                     }
 
@@ -832,9 +886,9 @@ internal sealed class MessageHolderViewState(
                     // data to view.
                     if (!pendingPayment) {
                         if (isThread) {
-                            onBindThreadDownloadMedia.invoke()
+                            onBindThreadDownloadMedia.invoke(index)
                         } else {
-                            onBindDownloadMedia.invoke()
+                            onBindDownloadMedia.invoke(index)
                         }
                     }
 
@@ -857,14 +911,17 @@ internal sealed class MessageHolderViewState(
         background: BubbleBackground,
         invoiceLinesHolderViewState: InvoiceLinesHolderViewState,
         highlightedText: String?,
+        index: Int,
         messageSenderInfo: (Message) -> Triple<PhotoUrl?, ContactAlias?, String>,
         accountOwner: () -> Contact,
         urlLinkPreviewsEnabled: Boolean,
-        previewProvider: suspend (link: MessageLinkPreview) -> LayoutState.Bubble.ContainerThird.LinkPreview?,
+        previewProvider: suspend (link: MessageLinkPreview, index: Int) -> LayoutState.Bubble.ContainerThird.LinkPreview?,
         paidTextMessageContentProvider: suspend (message: Message) -> LayoutState.Bubble.ContainerThird.Message?,
-        onBindDownloadMedia: () -> Unit,
-        onBindThreadDownloadMedia: () -> Unit,
+        onBindDownloadMedia: (index: Int) -> Unit,
+        onBindThreadDownloadMedia: (index: Int) -> Unit,
         memberTimezoneIdentifier: String?,
+        spaceLeft: Int,
+        spaceRight: Int,
     ) : MessageHolderViewState(
         message,
         chat,
@@ -875,6 +932,7 @@ internal sealed class MessageHolderViewState(
         invoiceLinesHolderViewState,
         InitialHolderViewState.None,
         highlightedText,
+        index,
         messageSenderInfo,
         accountOwner,
         urlLinkPreviewsEnabled,
@@ -882,7 +940,9 @@ internal sealed class MessageHolderViewState(
         paidTextMessageContentProvider,
         onBindDownloadMedia,
         onBindThreadDownloadMedia,
-        memberTimezoneIdentifier
+        memberTimezoneIdentifier,
+        spaceLeft,
+        spaceRight
     )
 
     class Received(
@@ -893,14 +953,17 @@ internal sealed class MessageHolderViewState(
         invoiceLinesHolderViewState: InvoiceLinesHolderViewState,
         initialHolder: InitialHolderViewState,
         highlightedText: String?,
+        index: Int,
         messageSenderInfo: (Message) -> Triple<PhotoUrl?, ContactAlias?, String>,
         accountOwner: () -> Contact,
         urlLinkPreviewsEnabled: Boolean,
-        previewProvider: suspend (link: MessageLinkPreview) -> LayoutState.Bubble.ContainerThird.LinkPreview?,
+        previewProvider: suspend (link: MessageLinkPreview, index: Int) -> LayoutState.Bubble.ContainerThird.LinkPreview?,
         paidTextMessageContentProvider: suspend (message: Message) -> LayoutState.Bubble.ContainerThird.Message?,
-        onBindDownloadMedia: () -> Unit,
-        onBindThreadDownloadMedia: () -> Unit,
+        onBindDownloadMedia: (index: Int) -> Unit,
+        onBindThreadDownloadMedia: (index: Int) -> Unit,
         memberTimezoneIdentifier: String?,
+        spaceLeft: Int,
+        spaceRight: Int,
     ) : MessageHolderViewState(
         message,
         chat,
@@ -911,6 +974,7 @@ internal sealed class MessageHolderViewState(
         invoiceLinesHolderViewState,
         initialHolder,
         highlightedText,
+        index,
         messageSenderInfo,
         accountOwner,
         urlLinkPreviewsEnabled,
@@ -918,7 +982,9 @@ internal sealed class MessageHolderViewState(
         paidTextMessageContentProvider,
         onBindDownloadMedia,
         onBindThreadDownloadMedia,
-        memberTimezoneIdentifier
+        memberTimezoneIdentifier,
+        spaceLeft,
+        spaceRight
     )
 
     class Separator(
@@ -927,6 +993,7 @@ internal sealed class MessageHolderViewState(
         chat: Chat,
         tribeAdmin: Contact?,
         background: BubbleBackground,
+        index: Int,
         invoiceLinesHolderViewState: InvoiceLinesHolderViewState,
         initialHolder: InitialHolderViewState,
         accountOwner: () -> Contact,
@@ -940,10 +1007,11 @@ internal sealed class MessageHolderViewState(
         invoiceLinesHolderViewState,
         initialHolder,
         null,
+        index,
         messageSenderInfo = { null },
         accountOwner,
         false,
-        previewProvider = { null },
+        previewProvider = { _, _ -> null },
         paidTextAttachmentContentProvider = { null },
         onBindDownloadMedia = {},
         onBindThreadDownloadMedia = {},
@@ -956,6 +1024,7 @@ internal sealed class MessageHolderViewState(
         chat: Chat,
         val tribeAdmin: Contact?,
         initialHolder: InitialHolderViewState,
+        index: Int,
         val messageSenderInfo: (Message) -> Triple<PhotoUrl?, ContactAlias?, String>?,
         val accountOwner: () -> Contact,
         val timestamp: String,
@@ -970,10 +1039,11 @@ internal sealed class MessageHolderViewState(
         InvoiceLinesHolderViewState(false, false),
         initialHolder,
         null,
+        index,
         messageSenderInfo,
         accountOwner,
         false,
-        { null },
+        previewProvider = { _, _ -> null },
         { null },
         {},
         {},
@@ -986,6 +1056,7 @@ internal sealed class MessageHolderViewState(
                 chat,
                 tribeAdmin,
                 initialHolder,
+                index,
                 messageSenderInfo,
                 accountOwner,
                 timestamp,
@@ -994,11 +1065,127 @@ internal sealed class MessageHolderViewState(
         }
     }
 
-    data class FileAttachment(
-        val fileName: FileName?,
-        val fileSize: FileSize,
-        val isPdf: Boolean,
-        val pageCount: Int
+    open class MessageOnlyTextHolderViewState(
+        message: Message?,
+        messageHolderType: MessageHolderType,
+        chat: Chat,
+        background: BubbleBackground,
+        initialHolder: InitialHolderViewState,
+        highlightedText: String?,
+        index: Int,
+        messageSenderInfo: (Message) -> Triple<PhotoUrl?, ContactAlias?, String>?,
+        accountOwner: () -> Contact,
+        memberTimezoneIdentifier: String?,
+        spaceLeft: Int,
+        spaceRight: Int,
+    ) : MessageHolderViewState(
+        message,
+        chat,
+        null,
+        messageHolderType,
+        null,
+        background,
+        InvoiceLinesHolderViewState(false, false),
+        initialHolder,
+        highlightedText,
+        index,
+        messageSenderInfo,
+        accountOwner,
+        false,
+        previewProvider = { _, _ -> null },
+        { null },
+        {},
+        {},
+        memberTimezoneIdentifier,
+        spaceLeft,
+        spaceRight
+    ) {
+
+        class Sent(
+            message: Message,
+            chat: Chat,
+            background: BubbleBackground,
+            highlightedText: String?,
+            index: Int,
+            messageSenderInfo: (Message) -> Triple<PhotoUrl?, ContactAlias?, String>,
+            accountOwner: () -> Contact,
+            memberTimezoneIdentifier: String?,
+            spaceLeft: Int,
+            spaceRight: Int,
+        ) : MessageOnlyTextHolderViewState(
+            message,
+            MessageHolderType.OnlyTextMessage,
+            chat,
+            background,
+            InitialHolderViewState.None,
+            highlightedText,
+            index,
+            messageSenderInfo,
+            accountOwner,
+            memberTimezoneIdentifier,
+            spaceLeft,
+            spaceRight
+        )
+
+        class Received(
+            message: Message,
+            chat: Chat,
+            background: BubbleBackground,
+            initialHolder: InitialHolderViewState,
+            highlightedText: String?,
+            index: Int,
+            messageSenderInfo: (Message) -> Triple<PhotoUrl?, ContactAlias?, String>,
+            accountOwner: () -> Contact,
+            memberTimezoneIdentifier: String?,
+            spaceLeft: Int,
+            spaceRight: Int,
+        ) : MessageOnlyTextHolderViewState(
+            message,
+            MessageHolderType.OnlyTextMessage,
+            chat,
+            background,
+            initialHolder,
+            highlightedText,
+            index,
+            messageSenderInfo,
+            accountOwner,
+            memberTimezoneIdentifier,
+            spaceLeft,
+            spaceRight
+        )
+    }
+    class LoadingIndicator(
+        val isLoading: Boolean,
+        chat: Chat,
+        index: Int,
+    ) : MessageHolderViewState(
+        message = null,
+        chat = chat,
+        tribeAdmin = null,
+        messageHolderType = MessageHolderType.LoadingIndicator,
+        separatorDate = null,
+        background = BubbleBackground.Gone(setSpacingEqual = true),
+        invoiceLinesHolderViewState = InvoiceLinesHolderViewState(false, false),
+        initialHolder = InitialHolderViewState.None,
+        highlightedText = null,
+        index = index,
+        messageSenderInfo = { null },
+        accountOwner = { throw IllegalStateException("Loading indicator has no account owner") },
+        urlLinkPreviewsEnabled = false,
+        previewProvider = { _, _ -> null },
+        paidTextAttachmentContentProvider = { null },
+        onBindDownloadMedia = {},
+        onBindThreadDownloadMedia = {},
+        memberTimezoneIdentifier = null
     )
 
+
+
+
+//    data class FileAttachment(
+//        val fileName: FileName?,
+//        val fileSize: FileSize,
+//        val isPdf: Boolean,
+//        val pageCount: Int
+//    )
 }

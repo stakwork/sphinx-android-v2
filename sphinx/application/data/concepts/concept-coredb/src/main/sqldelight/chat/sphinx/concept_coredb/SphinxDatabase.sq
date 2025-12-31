@@ -28,6 +28,9 @@ import chat.sphinx.wrapper_common.dashboard.ChatId;
 import chat.sphinx.wrapper_common.dashboard.ContactId;
 import chat.sphinx.wrapper_common.dashboard.DashboardItemId;
 import chat.sphinx.wrapper_common.dashboard.InviteId;
+import chat.sphinx.wrapper_common.datasync.DataSyncIdentifier;
+import chat.sphinx.wrapper_common.datasync.DataSyncKey;
+import chat.sphinx.wrapper_common.datasync.DataSyncValue;
 import chat.sphinx.wrapper_common.feed.FeedId;
 import chat.sphinx.wrapper_common.feed.FeedType;
 import chat.sphinx.wrapper_common.feed.FeedUrl;
@@ -2296,5 +2299,48 @@ lsatUpsert {
         :preimage,
         :status,
         :created_at
+    );
+}
+
+CREATE TABLE dataSyncDbo(
+    sync_key                 TEXT                 AS DataSyncKey NOT NULL,
+    identifier               TEXT                 AS DataSyncIdentifier NOT NULL,
+    date                     INTEGER              AS DateTime NOT NULL,
+    sync_value               TEXT                 AS DataSyncValue NOT NULL,
+    PRIMARY KEY (sync_key, identifier)
+);
+
+CREATE INDEX idx_data_sync_date ON dataSyncDbo(date DESC);
+
+dataSyncGetAll:
+SELECT *
+FROM dataSyncDbo
+ORDER BY date DESC;
+
+dataSyncGetByKeyAndIdentifier:
+SELECT *
+FROM dataSyncDbo
+WHERE sync_key = ? AND identifier = ?
+LIMIT 1;
+
+dataSyncDeleteAll:
+DELETE FROM dataSyncDbo;
+
+dataSyncDeleteByKeyAndIdentifier:
+DELETE FROM dataSyncDbo
+WHERE sync_key = ? AND identifier = ?;
+
+dataSyncUpsert {
+    INSERT OR REPLACE INTO dataSyncDbo(
+        sync_key,
+        identifier,
+        date,
+        sync_value
+    )
+    VALUES (
+        :sync_key,
+        :identifier,
+        :date,
+        :sync_value
     );
 }

@@ -1,0 +1,12 @@
+import chat.sphinx.wrapper_common.DateTime;
+import chat.sphinx.wrapper_common.datasync.DataSyncIdentifier;
+import chat.sphinx.wrapper_common.datasync.DataSyncKey;
+import chat.sphinx.wrapper_common.datasync.DataSyncValue;
+
+CREATE TABLE dataSyncDbo(
+    sync_key                 TEXT                 AS DataSyncKey NOT NULL,
+    identifier               TEXT                 AS DataSyncIdentifier NOT NULL,
+    date                     INTEGER              AS DateTime NOT NULL,
+    sync_value               TEXT                 AS DataSyncValue NOT NULL,
+    PRIMARY KEY (sync_key, identifier)
+);

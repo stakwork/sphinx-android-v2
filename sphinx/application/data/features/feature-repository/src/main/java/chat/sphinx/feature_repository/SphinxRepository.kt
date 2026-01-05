@@ -32,6 +32,7 @@ import chat.sphinx.concept_repository_connect_manager.model.OwnerRegistrationSta
 import chat.sphinx.concept_repository_connect_manager.model.RestoreProcessState
 import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.concept_repository_dashboard.RepositoryDashboard
+import chat.sphinx.concept_repository_data_sync.DataSyncRepository
 import chat.sphinx.concept_repository_feed.FeedRepository
 import chat.sphinx.concept_repository_lightning.LightningRepository
 import chat.sphinx.concept_repository_media.RepositoryMedia
@@ -67,6 +68,7 @@ import chat.sphinx.feature_repository.mappers.chat.ChatDboPresenterMapper
 import chat.sphinx.feature_repository.mappers.chat.toChat
 import chat.sphinx.feature_repository.mappers.contact.ContactDboPresenterMapper
 import chat.sphinx.feature_repository.mappers.contact.toContact
+import chat.sphinx.feature_repository.mappers.data_sync.DataSyncDboPresenterMapper
 import chat.sphinx.feature_repository.mappers.feed.*
 import chat.sphinx.feature_repository.mappers.feed.podcast.FeedDboFeedSearchResultPresenterMapper
 import chat.sphinx.feature_repository.mappers.feed.podcast.FeedDboPodcastPresenterMapper
@@ -140,6 +142,9 @@ import chat.sphinx.wrapper_message.MsgSender.Companion.toMsgSenderNull
 import chat.sphinx.wrapper_message_media.*
 import chat.sphinx.wrapper_message_media.token.MediaHost
 import chat.sphinx.wrapper_common.ChapterResponseDto
+import chat.sphinx.wrapper_common.datasync.DataSync
+import chat.sphinx.wrapper_common.datasync.DataSyncIdentifier
+import chat.sphinx.wrapper_common.datasync.DataSyncValue
 import chat.sphinx.wrapper_podcast.FeedRecommendation
 import chat.sphinx.wrapper_podcast.FeedSearchResultRow
 import chat.sphinx.wrapper_podcast.Podcast
@@ -173,6 +178,7 @@ import kotlin.math.max
 import kotlinx.coroutines.ensureActive
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.absoluteValue
+import chat.sphinx.wrapper_common.datasync.DataSyncKey as DataSyncKey1
 
 
 abstract class SphinxRepository(
@@ -211,6 +217,7 @@ abstract class SphinxRepository(
     ActionsRepository,
     FeedRepository,
     ConnectManagerRepository,
+    DataSyncRepository,
     CoroutineDispatchers by dispatchers,
     ConnectManagerListener
 {
@@ -288,6 +295,56 @@ abstract class SphinxRepository(
     init {
         connectManager.addListener(this)
         memeServerTokenHandler.addListener(this)
+    }
+
+    override val getAllDataSync: Flow<List<DataSync>> = flow {
+        emitAll(
+            coreDB.getSphinxDatabaseQueries().dataSyncGetAll()
+                .asFlow()
+                .mapToList(io)
+                .map { list ->
+                    list.map { dataSyncDboPresenterMapper.mapFrom(it) }
+                }
+                .distinctUntilChanged()
+        )
+    }
+
+    override fun getDataSyncByKeyAndIdentifier(
+        key: DataSyncKey1,
+        identifier: DataSyncIdentifier
+    ): Flow<DataSync?> = flow {
+        emitAll(
+            coreDB.getSphinxDatabaseQueries().dataSyncGetByKeyAndIdentifier(key, identifier)
+                .asFlow()
+                .mapToOneOrNull(io)
+                .map { it?.let { dataSyncDboPresenterMapper.mapFrom(it) } }
+                .distinctUntilChanged()
+        )
+    }
+
+    override suspend fun upsertDataSync(
+        key: DataSyncKey1,
+        identifier: DataSyncIdentifier,
+        date: DateTime,
+        value: DataSyncValue
+    ) {
+        coreDB.getSphinxDatabaseQueries().dataSyncUpsert(
+            sync_key = key,
+            identifier = identifier,
+            date = date,
+            sync_value = value
+        )
+    }
+
+    override suspend fun deleteDataSync(
+        key: DataSyncKey1,
+        identifier: DataSyncIdentifier
+    ) {
+        coreDB.getSphinxDatabaseQueries().dataSyncDeleteByKeyAndIdentifier(key, identifier)
+    }
+
+    override suspend fun deleteAllDataSync() {
+        coreDB.getSphinxDatabaseQueries().dataSyncDeleteAll()
     }
 
     override fun connectAndSubscribeToMqtt(userState: String?, mixerIp: String?) {
@@ -6243,6 +6300,10 @@ abstract class SphinxRepository(
     }
     private val contentEpisodeStatusDboPresenterMapper: ContentEpisodeStatusDboPresenterMapper by lazy {
         ContentEpisodeStatusDboPresenterMapper(dispatchers)
+    }
+
+    private val dataSyncDboPresenterMapper: DataSyncDboPresenterMapper by lazy {
+        DataSyncDboPresenterMapper(dispatchers)
     }
 
     override fun getAllFeedsOfType(feedType: FeedType): Flow<List<Feed>> = flow {

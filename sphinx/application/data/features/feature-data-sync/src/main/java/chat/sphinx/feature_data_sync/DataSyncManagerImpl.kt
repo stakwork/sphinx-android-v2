@@ -36,14 +36,13 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.util.*
 import java.util.concurrent.CopyOnWriteArraySet
-import javax.inject.Inject
 
-class DataSyncManagerImpl @Inject constructor(
+class DataSyncManagerImpl (
     private val moshi: Moshi,
     private val dispatchers: CoroutineDispatchers,
     private val networkQueryMemeServer: NetworkQueryMemeServer,
     private val memeServerTokenHandler: MemeServerTokenHandler,
-    ) : DataSyncManager() {
+    ): DataSyncManager() {
 
     private var dataSyncRepository: DataSyncRepository? = null
     private var accountOwner: StateFlow<Contact?>? = null

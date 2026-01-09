@@ -53,4 +53,9 @@ abstract class NetworkQueryMemeServer {
         contentLength: Long?,
         memeServerHost: MediaHost = MediaHost.DEFAULT,
     ): Response<PostMemeServerUploadDto, ResponseError>
+
+    abstract suspend fun getDataSyncFile(
+        authenticationToken: AuthenticationToken,
+        memeServerHost: MediaHost = MediaHost.DEFAULT,
+    ): Flow<LoadResponse<DataSyncResponseDto, ResponseError>>
 }

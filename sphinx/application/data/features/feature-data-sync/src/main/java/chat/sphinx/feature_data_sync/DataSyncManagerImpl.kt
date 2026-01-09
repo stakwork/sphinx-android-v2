@@ -3,8 +3,16 @@ package chat.sphinx.feature_data_sync
 import chat.sphinx.concept_data_sync.DataSyncManager
 import chat.sphinx.concept_data_sync.DataSyncManagerListener
 import chat.sphinx.concept_data_sync.model.SyncStatus
+import chat.sphinx.concept_meme_server.MemeServerTokenHandler
+import chat.sphinx.concept_network_query_meme_server.NetworkQueryMemeServer
 import chat.sphinx.concept_repository_data_sync.DataSyncRepository
+import chat.sphinx.kotlin_response.LoadResponse
+import chat.sphinx.kotlin_response.Response
+import chat.sphinx.kotlin_response.ResponseError
+import chat.sphinx.kotlin_response.message
+import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_common.DateTime
+import chat.sphinx.wrapper_common.dashboard.ContactId
 import chat.sphinx.wrapper_common.datasync.DataSync
 import chat.sphinx.wrapper_common.datasync.DataSyncIdentifier
 import chat.sphinx.wrapper_common.datasync.DataSyncKey
@@ -15,28 +23,37 @@ import chat.sphinx.wrapper_common.datasync.ItemsResponse
 import chat.sphinx.wrapper_common.datasync.ItemsResponse.Companion.toItemsResponse
 import chat.sphinx.wrapper_common.datasync.SettingItem
 import chat.sphinx.wrapper_common.datasync.TimezoneSetting
+import chat.sphinx.wrapper_common.lightning.Sat
+import chat.sphinx.wrapper_contact.Contact
+import chat.sphinx.wrapper_meme_server.AuthenticationToken
+import chat.sphinx.wrapper_message_media.token.MediaHost
+import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import java.io.File
 import java.util.*
 import java.util.concurrent.CopyOnWriteArraySet
+import javax.inject.Inject
 
-class DataSyncManagerImpl(
+class DataSyncManagerImpl @Inject constructor(
     private val moshi: Moshi,
     private val dispatchers: CoroutineDispatchers,
-) : DataSyncManager() {
+    private val networkQueryMemeServer: NetworkQueryMemeServer,
+    private val memeServerTokenHandler: MemeServerTokenHandler,
+    ) : DataSyncManager() {
 
     private var dataSyncRepository: DataSyncRepository? = null
+    private var accountOwner: StateFlow<Contact?>? = null
 
     fun setRepository(repository: DataSyncRepository) {
         this.dataSyncRepository = repository
+    }
+
+    fun setAccountOwner(owner: StateFlow<Contact?>) {
+        this.accountOwner = owner
     }
 
     private val syncMutex = Mutex()
@@ -129,6 +146,9 @@ class DataSyncManagerImpl(
         identifier: String,
         value: String
     ) {
+        // First, fetch existing data from server
+        val serverDataString = getFileFromServer()
+
         dataSyncRepository?.upsertDataSync(
             key = DataSyncKey(key),
             identifier = DataSyncIdentifier(identifier),
@@ -138,6 +158,7 @@ class DataSyncManagerImpl(
 
         syncWithServer()
     }
+
     override suspend fun syncWithServer() = syncMutex.withLock {
         withContext(dispatchers.io) {
             try {
@@ -158,54 +179,6 @@ class DataSyncManagerImpl(
                 for (item in missingItems) {
                     notifyListenersOfRemoteChange(item)
                 }
-
-                // Merge local and server items
-                val updatedItems = itemsResponse.items.toMutableList()
-
-//                for (dbItem in dbItems) {
-//                    val serverItemIndex = updatedItems.indexOfFirst {
-//                        it.key == dbItem.key && it.identifier == dbItem.identifier
-//                    }
-//
-//                    if (serverItemIndex != -1) {
-//                        val serverItem = updatedItems[serverItemIndex]
-//
-//                        if (serverItem.dateTime.time < dbItem.date.time) {
-//                            // Local is newer - update server
-//                            val jsonValue = JsonValue.fromString(dbItem.value, dbItem.key)
-//                            if (jsonValue != null) {
-//                                updatedItems[serverItemIndex] = SettingItem(
-//                                    key = dbItem.key,
-//                                    identifier = dbItem.identifier,
-//                                    date = (dbItem.date.time / 1000.0).toString(),
-//                                    value = jsonValue
-//                                )
-//                            }
-//                        } else {
-//                            // Server is newer - notify listeners
-//                            notifyListenersOfRemoteChange(serverItem)
-//                        }
-//                    } else {
-//                        // Doesn't exist on server - add it
-//                        val jsonValue = JsonValue.fromString(dbItem.value, dbItem.key)
-//                        if (jsonValue != null) {
-//                            updatedItems.add(
-//                                SettingItem(
-//                                key = dbItem.key,
-//                                identifier = dbItem.identifier,
-//                                date = (dbItem.date.time / 1000.0).toString(),
-//                                value = jsonValue
-//                            )
-//                            )
-//                        }
-//                    }
-//
-//                    // Delete local item after processing
-//                    dataSyncRepository.deleteDataSync(dbItem.key, dbItem.identifier)
-//                }
-
-                // Save updated file to server
-//                saveFileToServer(ItemsResponse(updatedItems))
 
                 _syncStatusStateFlow.value = SyncStatus.Success(System.currentTimeMillis())
 
@@ -288,36 +261,51 @@ class DataSyncManagerImpl(
         }
     }
 
-    // File operations (plain text - no encryption)
-    private fun getFileFromServer(): String? {
-        // TODO: Implement actual server fetch with encryption/decryption
-//        val file = File(context.filesDir, "datasync.txt")
-//
-//        if (!file.exists()) {
-//            val defaultContent = createDefaultFile()
-//            file.writeText(defaultContent)
-//            return defaultContent
-//        }
-//
-//        return try {
-//            file.readText()
-//        } catch (e: Exception) {
-//            null
-//        }
-        return null
+    // File operations - fetch from meme server
+    private suspend fun getFileFromServer(): String? {
+        return try {
+            val token = getAuthenticationToken() ?: return null
+
+            // Make network request to fetch data sync file
+            var resultJson: String? = null
+
+            networkQueryMemeServer.getDataSyncFile(
+                authenticationToken = token,
+                memeServerHost = MediaHost.DEFAULT
+            ).collect { loadResponse ->
+                when (loadResponse) {
+                    is LoadResponse.Loading -> {
+                    }
+                    is Response.Error -> {
+                        println("Error fetching data sync: ${loadResponse.message}")
+                    }
+                    is Response.Success -> {
+                        resultJson = loadResponse.value.toJson()
+                    }
+                }
+            }
+
+            resultJson
+        } catch (e: Exception) {
+            println("Exception fetching data sync: ${e.message}")
+            null
+        }
     }
 
+    private suspend fun getAuthenticationToken(): AuthenticationToken? {
+        return try {
+            val memeServerHost = MediaHost.DEFAULT
+            val token = memeServerTokenHandler.retrieveAuthenticationToken(memeServerHost)
+                ?: return null
+
+            token
+        } catch (e: Exception) {
+            println("Exception retrieving authentication token: ${e.message}")
+            null
+        }
+    }
     private fun saveFileToServer(itemsResponse: ItemsResponse) {
-//        val jsonString = itemsResponse.toOriginalFormatJson(moshi) ?: return
-//
-//        // TODO: Implement encryption here
-//        // val encrypted = yourEncryptionMethod(jsonString)
-//
-//        val file = File(context.filesDir, "datasync.txt")
-//        file.writeText(jsonString) // Currently plain text
-//
-//        // TODO: Upload encrypted content to memes server
-        // networkClient.uploadDataSyncFile(encrypted)
+        // TODO: Implement upload to meme server
     }
 
     private fun createDefaultFile(): String {

@@ -3,6 +3,9 @@ package chat.sphinx.feature_repository
 import app.cash.exhaustive.Exhaustive
 import chat.sphinx.concept_coredb.CoreDB
 import chat.sphinx.concept_crypto_rsa.RSA
+import chat.sphinx.concept_data_sync.DataSyncManager
+import chat.sphinx.concept_data_sync.DataSyncManagerListener
+import chat.sphinx.concept_data_sync.model.DataSyncError
 import chat.sphinx.concept_meme_input_stream.MemeInputStreamHandler
 import chat.sphinx.concept_meme_server.MemeServerTokenHandler
 import chat.sphinx.concept_network_query_chat.NetworkQueryChat
@@ -145,6 +148,9 @@ import chat.sphinx.wrapper_common.ChapterResponseDto
 import chat.sphinx.wrapper_common.datasync.DataSync
 import chat.sphinx.wrapper_common.datasync.DataSyncIdentifier
 import chat.sphinx.wrapper_common.datasync.DataSyncValue
+import chat.sphinx.wrapper_common.datasync.FeedItemStatus
+import chat.sphinx.wrapper_common.datasync.FeedStatus
+import chat.sphinx.wrapper_common.datasync.TimezoneSetting
 import chat.sphinx.wrapper_podcast.FeedRecommendation
 import chat.sphinx.wrapper_podcast.FeedSearchResultRow
 import chat.sphinx.wrapper_podcast.Podcast
@@ -203,6 +209,7 @@ abstract class SphinxRepository(
     private val networkQueryFeedSearch: NetworkQueryFeedSearch,
     private val networkQueryFeedStatus: NetworkQueryFeedStatus,
     private val connectManager: ConnectManager,
+    private val dataSyncManager: DataSyncManager,
     private val walletDataHandler: WalletDataHandler,
     private val rsa: RSA,
     private val sphinxNotificationManager: SphinxNotificationManager,
@@ -219,7 +226,8 @@ abstract class SphinxRepository(
     ConnectManagerRepository,
     DataSyncRepository,
     CoroutineDispatchers by dispatchers,
-    ConnectManagerListener
+    ConnectManagerListener,
+    DataSyncManagerListener
 {
 
     companion object {
@@ -295,6 +303,7 @@ abstract class SphinxRepository(
     init {
         connectManager.addListener(this)
         memeServerTokenHandler.addListener(this)
+        dataSyncManager.addListener(this)
     }
 
     override val getAllDataSync: Flow<List<DataSync>> = flow {
@@ -1768,6 +1777,43 @@ abstract class SphinxRepository(
             delay(1000L)
             connectManager.reconnectWithBackOff()
         }
+    }
+
+    override suspend fun onRemoteTipAmountChanged(tipAmount: Long) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun onRemotePrivatePhotoChanged(isPrivate: Boolean) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun onRemoteTimezoneChanged(
+        chatPubkey: String,
+        timezoneEnabled: Boolean,
+        timezoneIdentifier: String
+    ) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun onRemoteFeedStatusChanged(
+        feedId: String,
+        chatPubkey: String,
+        feedUrl: String,
+        subscribed: Boolean,
+        satsPerMinute: Int,
+        playerSpeed: Double,
+        itemId: String
+    ) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun onRemoteFeedItemStatusChanged(
+        feedId: String,
+        itemId: String,
+        duration: Int,
+        currentTime: Int
+    ) {
+        TODO("Not yet implemented")
     }
 
     fun extractUrlParts(url: String): Pair<String?, String?> {

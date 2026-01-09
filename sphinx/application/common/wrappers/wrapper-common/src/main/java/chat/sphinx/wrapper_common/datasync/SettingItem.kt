@@ -1,0 +1,16 @@
+package chat.sphinx.wrapper_common.datasync
+
+import chat.sphinx.wrapper_common.DateTime
+import chat.sphinx.wrapper_common.toDateTime
+import com.squareup.moshi.JsonClass
+
+@JsonClass(generateAdapter = true)
+data class SettingItem(
+    val key: String,
+    val identifier: String,
+    val date: String,
+    val value: JsonValue
+) {
+    val dateTime: DateTime
+        get() = (date.toDoubleOrNull()?.times(1000)?.toLong() ?: System.currentTimeMillis()).toDateTime()
+}

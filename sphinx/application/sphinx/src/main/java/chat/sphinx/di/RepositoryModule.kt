@@ -2,6 +2,7 @@ package chat.sphinx.di
 
 import android.content.Context
 import chat.sphinx.concept_crypto_rsa.RSA
+import chat.sphinx.concept_data_sync.DataSyncManager
 import chat.sphinx.concept_meme_input_stream.MemeInputStreamHandler
 import chat.sphinx.concept_meme_server.MemeServerTokenHandler
 import chat.sphinx.concept_network_query_chat.NetworkQueryChat
@@ -19,6 +20,7 @@ import chat.sphinx.concept_repository_chat.ChatRepository
 import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
 import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.concept_repository_dashboard_android.RepositoryDashboardAndroid
+import chat.sphinx.concept_repository_data_sync.DataSyncRepository
 import chat.sphinx.concept_repository_feed.FeedRepository
 import chat.sphinx.concept_repository_lightning.LightningRepository
 import chat.sphinx.concept_repository_media.RepositoryMedia
@@ -145,6 +147,7 @@ object RepositoryModule {
         networkQueryFeedSearch: NetworkQueryFeedSearch,
         networkQueryFeedStatus: NetworkQueryFeedStatus,
         connectManager: ConnectManager,
+        dataSyncManager: DataSyncManager,
         walletDataHandler: WalletDataHandler,
         rsa: RSA,
         sphinxNotificationManager: SphinxNotificationManager,
@@ -172,6 +175,7 @@ object RepositoryModule {
             networkQueryFeedSearch,
             networkQueryFeedStatus,
             connectManager,
+            dataSyncManager,
             walletDataHandler,
             rsa,
             sphinxNotificationManager,
@@ -237,6 +241,12 @@ object RepositoryModule {
     fun provideActionsRepository(
         sphinxRepositoryAndroid: SphinxRepositoryAndroid
     ): ActionsRepository =
+        sphinxRepositoryAndroid
+
+    @Provides
+    fun provideDataSyncRepository(
+        sphinxRepositoryAndroid: SphinxRepositoryAndroid
+    ): DataSyncRepository =
         sphinxRepositoryAndroid
 
 }

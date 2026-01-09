@@ -1,0 +1,25 @@
+plugins {
+    id 'app.cash.exhaustive'
+    id 'java-library'
+    id 'kotlin'
+}
+
+dependencies {
+    // KotlinAndroid
+    api project(path: ':kotlin:concepts:authentication:concept-authentication')
+    api project(path: ':kotlin:concepts:concept-coroutines')
+
+    // Sphinx
+    api project(path: ':sphinx:application:common:logger')
+    api project(path: ':sphinx:application:common:wrappers:wrapper-contact')
+    api project(path: ':sphinx:application:data:concepts:concept-meme-server')
+    api project(path: ':sphinx:application:network:concepts:queries:concept-network-query-meme-server')
+    api project(path: ':sphinx:application:data:concepts:repositories:concept-repository-connect-manager')
+    implementation project(':sphinx:application:data:concepts:concept-data-sync')
+    implementation project(':sphinx:application:data:concepts:repositories:concept-repository-data-sync')
+    implementation project(":kotlin:encoders:base64")
+    implementation project(':sphinx:application:network:concepts:queries:concept-network-query-chat')
+
+    implementation deps.kotlin.reflect
+    implementation deps.square.moshi
+}

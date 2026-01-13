@@ -6,9 +6,9 @@ import com.squareup.moshi.JsonReader
 import com.squareup.moshi.JsonWriter
 import com.squareup.moshi.ToJson
 
-sealed class JsonValue {
-    data class StringValue(val value: String) : JsonValue()
-    data class ObjectValue(val value: Map<String, String>) : JsonValue()
+sealed class DataSyncJson {
+    data class StringValue(val value: String) : DataSyncJson()
+    data class ObjectValue(val value: Map<String, String>) : DataSyncJson()
 
     fun asString(): String? = (this as? StringValue)?.value
     fun asInt(): Int? = asString()?.toIntOrNull()
@@ -52,7 +52,7 @@ sealed class JsonValue {
     }
 
     companion object {
-        fun fromString(string: String, forKey: String): JsonValue? {
+        fun fromString(string: String, forKey: String): DataSyncJson? {
             return when (forKey) {
                 "tip_amount", "private_photo" -> StringValue(string)
                 "timezone", "feed_status", "feed_item_status" -> {
@@ -87,10 +87,10 @@ sealed class JsonValue {
 
 class JsonValueAdapter {
     @FromJson
-    fun fromJson(reader: JsonReader): JsonValue {
+    fun fromJson(reader: JsonReader): DataSyncJson {
         return when (reader.peek()) {
             JsonReader.Token.STRING -> {
-                JsonValue.StringValue(reader.nextString())
+                DataSyncJson.StringValue(reader.nextString())
             }
             JsonReader.Token.BEGIN_OBJECT -> {
                 val map = mutableMapOf<String, String>()
@@ -101,17 +101,17 @@ class JsonValueAdapter {
                     map[name] = value
                 }
                 reader.endObject()
-                JsonValue.ObjectValue(map)
+                DataSyncJson.ObjectValue(map)
             }
             else -> throw JsonDataException("Unexpected JSON token: ${reader.peek()}")
         }
     }
 
     @ToJson
-    fun toJson(writer: JsonWriter, value: JsonValue?) {
+    fun toJson(writer: JsonWriter, value: DataSyncJson?) {
         when (value) {
-            is JsonValue.StringValue -> writer.value(value.value)
-            is JsonValue.ObjectValue -> {
+            is DataSyncJson.StringValue -> writer.value(value.value)
+            is DataSyncJson.ObjectValue -> {
                 writer.beginObject()
                 value.value.forEach { (k, v) ->
                     writer.name(k).value(v)

@@ -4,10 +4,11 @@ import com.squareup.sqldelight.ColumnAdapter
 import chat.sphinx.wrapper_common.datasync.DataSyncIdentifier
 import chat.sphinx.wrapper_common.datasync.DataSyncKey
 import chat.sphinx.wrapper_common.datasync.DataSyncValue
+import chat.sphinx.wrapper_common.datasync.toDataSyncKey
 
 internal class DataSyncKeyAdapter : ColumnAdapter<DataSyncKey, String> {
     override fun decode(databaseValue: String): DataSyncKey {
-        return DataSyncKey(value = databaseValue)
+        return databaseValue.toDataSyncKey()
     }
 
     override fun encode(value: DataSyncKey): String {

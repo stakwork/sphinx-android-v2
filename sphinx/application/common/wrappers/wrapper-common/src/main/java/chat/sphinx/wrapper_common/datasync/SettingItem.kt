@@ -9,7 +9,7 @@ data class SettingItem(
     val key: String,
     val identifier: String,
     val date: String,
-    val value: JsonValue
+    val value: DataSyncJson
 ) {
     val dateTime: DateTime
         get() = (date.toDoubleOrNull()?.times(1000)?.toLong() ?: System.currentTimeMillis()).toDateTime()

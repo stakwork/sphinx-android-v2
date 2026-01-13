@@ -58,13 +58,6 @@ class DataSyncManagerImpl (
     override val syncStatusStateFlow: StateFlow<SyncStatus>
         get() = _syncStatusStateFlow.asStateFlow()
 
-    enum class SettingKey(val value: String) {
-        TIP_AMOUNT("tip_amount"),
-        PRIVATE_PHOTO("private_photo"),
-        TIMEZONE("timezone"),
-        FEED_STATUS("feed_status"),
-        FEED_ITEM_STATUS("feed_item_status")
-    }
 
     // Listener Management
     private inner class SynchronizedListenerHolder {
@@ -106,7 +99,7 @@ class DataSyncManagerImpl (
     // Save methods
     override suspend fun saveTipAmount(value: String) {
         saveDataSyncItem(
-            key = SettingKey.TIP_AMOUNT.value,
+            key = DataSyncKey.TIP_AMOUNT,
             identifier = "0",
             value = value
         )
@@ -114,7 +107,7 @@ class DataSyncManagerImpl (
 
     override suspend fun savePrivatePhoto(value: String) {
         saveDataSyncItem(
-            key = SettingKey.PRIVATE_PHOTO.value,
+            key = DataSyncKey.PRIVATE_PHOTO,
             identifier = "0",
             value = value
         )
@@ -128,7 +121,7 @@ class DataSyncManagerImpl (
         val timezone = TimezoneSetting(timezoneEnabled, timezoneIdentifier)
         val jsonString = timezone.toJson(moshi)
         saveDataSyncItem(
-            key = SettingKey.TIMEZONE.value,
+            key = DataSyncKey.TIMEZONE,
             identifier = chatPubkey,
             value = jsonString
         )
@@ -146,7 +139,7 @@ class DataSyncManagerImpl (
         val feedStatus = FeedStatus(chatPubkey, feedUrl, feedId, subscribed, satsPerMinute, playerSpeed, itemId)
         val jsonString = feedStatus.toJson(moshi)
         saveDataSyncItem(
-            key = SettingKey.FEED_STATUS.value,
+            key = DataSyncKey.FEED_STATUS,
             identifier = feedId,
             value = jsonString
         )
@@ -161,7 +154,7 @@ class DataSyncManagerImpl (
         val feedItemStatus = FeedItemStatus(duration, currentTime)
         val jsonString = feedItemStatus.toJson(moshi)
         saveDataSyncItem(
-            key = SettingKey.FEED_ITEM_STATUS.value,
+            key = DataSyncKey.FEED_ITEM_STATUS,
             identifier = "$feedId-$itemId",
             value = jsonString
         )
@@ -228,65 +221,65 @@ class DataSyncManagerImpl (
     }
 
     private suspend fun notifyListenersOfRemoteChange(item: SettingItem) {
-        when (SettingKey.values().find { it.value == item.key }) {
-            SettingKey.TIP_AMOUNT -> {
-                item.value.asInt()?.let { tipAmount ->
-                    listeners.forEach { it.onRemoteTipAmountChanged(tipAmount.toLong()) }
-                }
-            }
-
-            SettingKey.PRIVATE_PHOTO -> {
-                item.value.asBool()?.let { isPrivate ->
-                    listeners.forEach { it.onRemotePrivatePhotoChanged(isPrivate) }
-                }
-            }
-
-            SettingKey.TIMEZONE -> {
-                item.value.asTimezone()?.let { timezone ->
-                    listeners.forEach {
-                        it.onRemoteTimezoneChanged(
-                            item.identifier,
-                            timezone.timezoneEnabled,
-                            timezone.timezoneIdentifier
-                        )
-                    }
-                }
-            }
-
-            SettingKey.FEED_STATUS -> {
-                item.value.asFeedStatus()?.let { feedStatus ->
-                    listeners.forEach {
-                        it.onRemoteFeedStatusChanged(
-                            feedStatus.feedId,
-                            feedStatus.chatPubkey,
-                            feedStatus.feedUrl,
-                            feedStatus.subscribed,
-                            feedStatus.satsPerMinute,
-                            feedStatus.playerSpeed,
-                            feedStatus.itemId
-                        )
-                    }
-                }
-            }
-
-            SettingKey.FEED_ITEM_STATUS -> {
-                item.value.asFeedItemStatus()?.let { feedItemStatus ->
-                    val parts = item.identifier.split("-")
-                    if (parts.size == 2) {
-                        listeners.forEach {
-                            it.onRemoteFeedItemStatusChanged(
-                                parts[0],
-                                parts[1],
-                                feedItemStatus.duration,
-                                feedItemStatus.currentTime
-                            )
-                        }
-                    }
-                }
-            }
-
-            null -> {}
-        }
+//        when (SettingKey.values().find { it.value == item.key }) {
+//            SettingKey.TIP_AMOUNT -> {
+//                item.value.asInt()?.let { tipAmount ->
+//                    listeners.forEach { it.onRemoteTipAmountChanged(tipAmount.toLong()) }
+//                }
+//            }
+//
+//            SettingKey.PRIVATE_PHOTO -> {
+//                item.value.asBool()?.let { isPrivate ->
+//                    listeners.forEach { it.onRemotePrivatePhotoChanged(isPrivate) }
+//                }
+//            }
+//
+//            SettingKey.TIMEZONE -> {
+//                item.value.asTimezone()?.let { timezone ->
+//                    listeners.forEach {
+//                        it.onRemoteTimezoneChanged(
+//                            item.identifier,
+//                            timezone.timezoneEnabled,
+//                            timezone.timezoneIdentifier
+//                        )
+//                    }
+//                }
+//            }
+//
+//            SettingKey.FEED_STATUS -> {
+//                item.value.asFeedStatus()?.let { feedStatus ->
+//                    listeners.forEach {
+//                        it.onRemoteFeedStatusChanged(
+//                            feedStatus.feedId,
+//                            feedStatus.chatPubkey,
+//                            feedStatus.feedUrl,
+//                            feedStatus.subscribed,
+//                            feedStatus.satsPerMinute,
+//                            feedStatus.playerSpeed,
+//                            feedStatus.itemId
+//                        )
+//                    }
+//                }
+//            }
+//
+//            SettingKey.FEED_ITEM_STATUS -> {
+//                item.value.asFeedItemStatus()?.let { feedItemStatus ->
+//                    val parts = item.identifier.split("-")
+//                    if (parts.size == 2) {
+//                        listeners.forEach {
+//                            it.onRemoteFeedItemStatusChanged(
+//                                parts[0],
+//                                parts[1],
+//                                feedItemStatus.duration,
+//                                feedItemStatus.currentTime
+//                            )
+//                        }
+//                    }
+//                }
+//            }
+//
+//            null -> {}
+//        }
     }
 
     // File operations - fetch from meme server

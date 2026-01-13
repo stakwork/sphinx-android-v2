@@ -3185,6 +3185,14 @@ abstract class SphinxRepository(
             )
         }
 
+        tipAmount?.let {
+            dataSyncManager.saveTipAmount(it.value.toString())
+        }
+
+        privatePhoto?.let {
+            dataSyncManager.savePrivatePhoto(it.toString())
+        }
+
         return Response.Success(Any())
     }
 

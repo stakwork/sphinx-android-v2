@@ -1779,15 +1779,15 @@ abstract class SphinxRepository(
         }
     }
 
-    override suspend fun onRemoteTipAmountChanged(tipAmount: Long) {
+    override fun onRemoteTipAmountChanged(tipAmount: Long) {
         TODO("Not yet implemented")
     }
 
-    override suspend fun onRemotePrivatePhotoChanged(isPrivate: Boolean) {
+    override fun onRemotePrivatePhotoChanged(isPrivate: Boolean) {
         TODO("Not yet implemented")
     }
 
-    override suspend fun onRemoteTimezoneChanged(
+    override fun onRemoteTimezoneChanged(
         chatPubkey: String,
         timezoneEnabled: Boolean,
         timezoneIdentifier: String
@@ -1795,7 +1795,7 @@ abstract class SphinxRepository(
         TODO("Not yet implemented")
     }
 
-    override suspend fun onRemoteFeedStatusChanged(
+    override fun onRemoteFeedStatusChanged(
         feedId: String,
         chatPubkey: String,
         feedUrl: String,
@@ -1807,11 +1807,20 @@ abstract class SphinxRepository(
         TODO("Not yet implemented")
     }
 
-    override suspend fun onRemoteFeedItemStatusChanged(
+    override fun onRemoteFeedItemStatusChanged(
         feedId: String,
         itemId: String,
         duration: Int,
         currentTime: Int
+    ) {
+        TODO("Not yet implemented")
+    }
+
+    override fun onSaveDataSyncItem(
+        key: String,
+        identifier: String,
+        value: String,
+        timestamp: Long
     ) {
         TODO("Not yet implemented")
     }

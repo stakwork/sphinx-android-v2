@@ -44,18 +44,14 @@ class DataSyncManagerImpl (
     private val memeServerTokenHandler: MemeServerTokenHandler,
     ): DataSyncManager() {
 
-    private var dataSyncRepository: DataSyncRepository? = null
     private var accountOwner: StateFlow<Contact?>? = null
-
-    fun setRepository(repository: DataSyncRepository) {
-        this.dataSyncRepository = repository
-    }
 
     fun setAccountOwner(owner: StateFlow<Contact?>) {
         this.accountOwner = owner
     }
 
     private val syncMutex = Mutex()
+    private val synchronizedListeners = SynchronizedListenerHolder()
     private val listeners = CopyOnWriteArraySet<DataSyncManagerListener>()
 
     private val _syncStatusStateFlow = MutableStateFlow<SyncStatus>(SyncStatus.Idle)
@@ -70,11 +66,42 @@ class DataSyncManagerImpl (
         FEED_ITEM_STATUS("feed_item_status")
     }
 
+    // Listener Management
+    private inner class SynchronizedListenerHolder {
+        private val listeners: LinkedHashSet<DataSyncManagerListener> = LinkedHashSet()
+
+        fun addListener(listener: DataSyncManagerListener): Boolean = synchronized(this) {
+            listeners.add(listener)
+        }
+
+        fun removeListener(listener: DataSyncManagerListener): Boolean = synchronized(this) {
+            listeners.remove(listener)
+        }
+
+        fun forEachListener(action: (DataSyncManagerListener) -> Unit) {
+            synchronized(this) {
+                listeners.forEach(action)
+            }
+        }
+
+        suspend fun getFirstAvailableListener(): DataSyncManagerListener? {
+            return synchronized(this) {
+                listeners.firstOrNull()
+            }
+        }
+    }
+
     override fun addListener(listener: DataSyncManagerListener): Boolean =
-        listeners.add(listener)
+        synchronizedListeners.addListener(listener)
 
     override fun removeListener(listener: DataSyncManagerListener): Boolean =
-        listeners.remove(listener)
+        synchronizedListeners.removeListener(listener)
+
+    private  fun notifyListeners(action: DataSyncManagerListener.() -> Unit) {
+        synchronizedListeners.forEachListener { listener ->
+            action(listener)
+        }
+    }
 
     // Save methods
     override suspend fun saveTipAmount(value: String) {
@@ -148,12 +175,14 @@ class DataSyncManagerImpl (
         // First, fetch existing data from server
         val serverDataString = getFileFromServer()
 
-        dataSyncRepository?.upsertDataSync(
-            key = DataSyncKey(key),
-            identifier = DataSyncIdentifier(identifier),
-            date = DateTime(Date()),
-            value = DataSyncValue(value)
-        )
+        notifyListeners {
+            onSaveDataSyncItem(
+                key = key,
+                identifier = identifier,
+                value = value,
+                timestamp = 0
+            )
+        }
 
         syncWithServer()
     }
@@ -163,21 +192,21 @@ class DataSyncManagerImpl (
             try {
                 _syncStatusStateFlow.value = SyncStatus.Syncing
 
-                val serverDataString = getFileFromServer() ?: run {
-                    _syncStatusStateFlow.value = SyncStatus.Error("Failed to fetch server file")
-                    return@withContext
-                }
-
-                val itemsResponse = serverDataString.toItemsResponse(moshi)
-                val dbItems = dataSyncRepository?.getAllDataSync?.firstOrNull() ?: emptyList()
-
-                // Find items that exist on server but not locally
-                val missingItems = findMissingItems(dbItems, itemsResponse.items)
-
-                // Notify listeners of remote changes
-                for (item in missingItems) {
-                    notifyListenersOfRemoteChange(item)
-                }
+//                val serverDataString = getFileFromServer() ?: run {
+//                    _syncStatusStateFlow.value = SyncStatus.Error("Failed to fetch server file")
+//                    return@withContext
+//                }
+//
+//                val itemsResponse = serverDataString.toItemsResponse(moshi)
+//                val dbItems = dataSyncRepository?.getAllDataSync?.firstOrNull() ?: emptyList()
+//
+//                // Find items that exist on server but not locally
+//                val missingItems = findMissingItems(dbItems, itemsResponse.items)
+//
+//                // Notify listeners of remote changes
+//                for (item in missingItems) {
+//                    notifyListenersOfRemoteChange(item)
+//                }
 
                 _syncStatusStateFlow.value = SyncStatus.Success(System.currentTimeMillis())
 

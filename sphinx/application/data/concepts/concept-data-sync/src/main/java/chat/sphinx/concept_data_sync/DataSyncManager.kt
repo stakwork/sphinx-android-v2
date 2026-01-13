@@ -38,11 +38,11 @@ abstract class DataSyncManager {
 }
 
 interface DataSyncManagerListener {
-    // Called when server has newer data
-    suspend fun onRemoteTipAmountChanged(tipAmount: Long)
-    suspend fun onRemotePrivatePhotoChanged(isPrivate: Boolean)
-    suspend fun onRemoteTimezoneChanged(chatPubkey: String, timezoneEnabled: Boolean, timezoneIdentifier: String)
-    suspend fun onRemoteFeedStatusChanged(
+    // Called when server has newer data that should be applied locally
+    fun onRemoteTipAmountChanged(tipAmount: Long)
+    fun onRemotePrivatePhotoChanged(isPrivate: Boolean)
+    fun onRemoteTimezoneChanged(chatPubkey: String, timezoneEnabled: Boolean, timezoneIdentifier: String)
+    fun onRemoteFeedStatusChanged(
         feedId: String,
         chatPubkey: String,
         feedUrl: String,
@@ -51,5 +51,9 @@ interface DataSyncManagerListener {
         playerSpeed: Double,
         itemId: String
     )
-    suspend fun onRemoteFeedItemStatusChanged(feedId: String, itemId: String, duration: Int, currentTime: Int)
+    fun onRemoteFeedItemStatusChanged(feedId: String, itemId: String, duration: Int, currentTime: Int)
+
+    // Called when manager needs to save data locally
+    fun onSaveDataSyncItem(key: String, identifier: String, value: String, timestamp: Long)
+
 }

@@ -8,7 +8,7 @@ import com.squareup.moshi.ToJson
 
 sealed class DataSyncJson {
     data class StringValue(val value: String) : DataSyncJson()
-    data class ObjectValue(val value: Map<String, String>) : DataSyncJson()
+    data class ObjectValue(val value: Map<String, Any>) : DataSyncJson()
 
     fun asString(): String? = (this as? StringValue)?.value
     fun asInt(): Int? = asString()?.toIntOrNull()
@@ -24,8 +24,8 @@ sealed class DataSyncJson {
     fun asFeedItemStatus(): FeedItemStatus? = (this as? ObjectValue)?.toFeedItemStatus()
 
     private fun ObjectValue.toTimezoneSetting(): TimezoneSetting? {
-        val enabled = value["timezoneEnabled"] ?: return null
-        val identifier = value["timezoneIdentifier"] ?: return null
+        val enabled = value["timezoneEnabled"]?.toString() ?: return null
+        val identifier = value["timezoneIdentifier"]?.toString() ?: return null
         return TimezoneSetting(
             timezoneEnabled = enabled.lowercase() == "true",
             timezoneIdentifier = identifier
@@ -34,20 +34,20 @@ sealed class DataSyncJson {
 
     private fun ObjectValue.toFeedStatus(): FeedStatus? {
         return FeedStatus(
-            chatPubkey = value["chat_pubkey"] ?: return null,
-            feedUrl = value["feed_url"] ?: return null,
-            feedId = value["feed_id"] ?: return null,
-            subscribed = value["subscribed"]?.lowercase() == "true",
-            satsPerMinute = value["sats_per_minute"]?.toIntOrNull() ?: 0,
-            playerSpeed = value["player_speed"]?.toDoubleOrNull() ?: 1.0,
-            itemId = value["item_id"] ?: ""
+            chatPubkey = value["chat_pubkey"]?.toString() ?: return null,
+            feedUrl = value["feed_url"]?.toString() ?: return null,
+            feedId = value["feed_id"]?.toString() ?: return null,
+            subscribed = value["subscribed"]?.toString()?.lowercase() == "true",
+            satsPerMinute = value["sats_per_minute"]?.toString()?.toIntOrNull() ?: 0,
+            playerSpeed = value["player_speed"]?.toString()?.toDoubleOrNull() ?: 1.0,
+            itemId = value["item_id"]?.toString() ?: ""
         )
     }
 
     private fun ObjectValue.toFeedItemStatus(): FeedItemStatus? {
         return FeedItemStatus(
-            duration = value["duration"]?.toIntOrNull() ?: return null,
-            currentTime = value["current_time"]?.toIntOrNull() ?: return null
+            duration = value["duration"]?.toString()?.toIntOrNull() ?: return null,
+            currentTime = value["current_time"]?.toString()?.toIntOrNull() ?: return null
         )
     }
 
@@ -67,58 +67,29 @@ sealed class DataSyncJson {
             }
         }
 
-        private fun parseJsonObject(json: String): Map<String, String> {
-            val map = mutableMapOf<String, String>()
+        private fun parseJsonObject(json: String): Map<String, Any> {
+            val map = mutableMapOf<String, Any>()
             val cleaned = json.trim().removePrefix("{").removeSuffix("}")
 
             cleaned.split(",").forEach { pair ->
-                val parts = pair.split(":")
+                val parts = pair.split(":", limit = 2)
                 if (parts.size == 2) {
                     val key = parts[0].trim().removeSurrounding("\"")
-                    val value = parts[1].trim().removeSurrounding("\"")
+                    val valueStr = parts[1].trim().removeSurrounding("\"")
+
+                    // Try to parse as number or boolean, otherwise keep as string
+                    val value: Any = valueStr.toIntOrNull()
+                        ?: valueStr.toDoubleOrNull()
+                        ?: when(valueStr.lowercase()) {
+                            "true" -> true
+                            "false" -> false
+                            else -> valueStr
+                        }
                     map[key] = value
                 }
             }
 
             return map
-        }
-    }
-}
-
-class JsonValueAdapter {
-    @FromJson
-    fun fromJson(reader: JsonReader): DataSyncJson {
-        return when (reader.peek()) {
-            JsonReader.Token.STRING -> {
-                DataSyncJson.StringValue(reader.nextString())
-            }
-            JsonReader.Token.BEGIN_OBJECT -> {
-                val map = mutableMapOf<String, String>()
-                reader.beginObject()
-                while (reader.hasNext()) {
-                    val name = reader.nextName()
-                    val value = reader.nextString()
-                    map[name] = value
-                }
-                reader.endObject()
-                DataSyncJson.ObjectValue(map)
-            }
-            else -> throw JsonDataException("Unexpected JSON token: ${reader.peek()}")
-        }
-    }
-
-    @ToJson
-    fun toJson(writer: JsonWriter, value: DataSyncJson?) {
-        when (value) {
-            is DataSyncJson.StringValue -> writer.value(value.value)
-            is DataSyncJson.ObjectValue -> {
-                writer.beginObject()
-                value.value.forEach { (k, v) ->
-                    writer.name(k).value(v)
-                }
-                writer.endObject()
-            }
-            null -> writer.nullValue()
         }
     }
 }

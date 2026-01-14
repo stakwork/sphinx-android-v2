@@ -151,6 +151,7 @@ import chat.sphinx.wrapper_common.datasync.DataSyncValue
 import chat.sphinx.wrapper_common.datasync.FeedItemStatus
 import chat.sphinx.wrapper_common.datasync.FeedStatus
 import chat.sphinx.wrapper_common.datasync.TimezoneSetting
+import chat.sphinx.wrapper_common.datasync.toDataSyncKey
 import chat.sphinx.wrapper_podcast.FeedRecommendation
 import chat.sphinx.wrapper_podcast.FeedSearchResultRow
 import chat.sphinx.wrapper_podcast.Podcast
@@ -1830,7 +1831,16 @@ abstract class SphinxRepository(
         value: String,
         timestamp: Long
     ) {
-        TODO("Not yet implemented")
+        applicationScope.launch(io) {
+            val dataSyncKey = key.toDataSyncKey()
+
+            upsertDataSync(
+                key = dataSyncKey,
+                identifier = DataSyncIdentifier(identifier),
+                date = timestamp.toDateTime(),
+                value = DataSyncValue(value)
+            )
+        }
     }
 
     fun extractUrlParts(url: String): Pair<String?, String?> {
@@ -3198,7 +3208,7 @@ abstract class SphinxRepository(
         }
 
         privatePhoto?.let {
-            dataSyncManager.savePrivatePhoto(it.toString())
+            dataSyncManager.savePrivatePhoto(it.isTrue().toString())
         }
 
         return Response.Success(Any())

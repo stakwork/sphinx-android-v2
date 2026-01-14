@@ -169,15 +169,12 @@ class DataSyncManagerImpl (
         identifier: String,
         value: String
     ) {
-        val timestamp = System.currentTimeMillis()
-
-        // Notify listeners (repository) to save to DB
         notifyListeners {
             onSaveDataSyncItem(
                 key = key,
                 identifier = identifier,
                 value = value,
-                timestamp = timestamp
+                timestamp = getTimestampInMilliseconds()
             )
         }
 
@@ -189,9 +186,6 @@ class DataSyncManagerImpl (
         withContext(dispatchers.io) {
             try {
                 _syncStatusStateFlow.value = SyncStatus.Syncing
-
-                // Request local items from repository via listener
-                val localItems = requestLocalDataSyncItems()
 
                 // Get server items
                 val serverDataString = getFileFromServer()
@@ -205,7 +199,7 @@ class DataSyncManagerImpl (
 //                    }
 
                     // Upload local changes to server
-                    uploadLocalDataToServer(localItems)
+//                    uploadLocalDataToServer(localItems)
                 }
 
                 _syncStatusStateFlow.value = SyncStatus.Success(System.currentTimeMillis())
@@ -280,6 +274,9 @@ class DataSyncManagerImpl (
             null
         }
     }
+
+    private fun getTimestampInMilliseconds(): Long =
+        System.currentTimeMillis()
 
     private suspend fun getAuthenticationToken(): AuthenticationToken? {
         return try {

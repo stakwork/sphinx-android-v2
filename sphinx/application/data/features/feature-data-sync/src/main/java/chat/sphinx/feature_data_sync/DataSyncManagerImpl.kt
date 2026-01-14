@@ -42,7 +42,7 @@ class DataSyncManagerImpl (
     private val dispatchers: CoroutineDispatchers,
     private val networkQueryMemeServer: NetworkQueryMemeServer,
     private val memeServerTokenHandler: MemeServerTokenHandler,
-    ): DataSyncManager() {
+): DataSyncManager() {
 
     private var accountOwner: StateFlow<Contact?>? = null
 
@@ -58,6 +58,16 @@ class DataSyncManagerImpl (
     override val syncStatusStateFlow: StateFlow<SyncStatus>
         get() = _syncStatusStateFlow.asStateFlow()
 
+    private val _dataSyncStateFlow: MutableStateFlow<List<DataSync>> by lazy {
+        MutableStateFlow(emptyList())
+    }
+
+    override val dataSyncStateFlow: StateFlow<List<DataSync>>
+        get() = _dataSyncStateFlow.asStateFlow()
+
+    override fun updateDataSyncList(dataSyncList: List<DataSync>) {
+        _dataSyncStateFlow.value = dataSyncList
+    }
 
     // Listener Management
     private inner class SynchronizedListenerHolder {
@@ -76,12 +86,6 @@ class DataSyncManagerImpl (
                 listeners.forEach(action)
             }
         }
-
-        suspend fun getFirstAvailableListener(): DataSyncManagerListener? {
-            return synchronized(this) {
-                listeners.firstOrNull()
-            }
-        }
     }
 
     override fun addListener(listener: DataSyncManagerListener): Boolean =
@@ -90,13 +94,13 @@ class DataSyncManagerImpl (
     override fun removeListener(listener: DataSyncManagerListener): Boolean =
         synchronizedListeners.removeListener(listener)
 
-    private  fun notifyListeners(action: DataSyncManagerListener.() -> Unit) {
+    private fun notifyListeners(action: DataSyncManagerListener.() -> Unit) {
         synchronizedListeners.forEachListener { listener ->
             action(listener)
         }
     }
 
-    // Save methods
+    // Save methods - notify listeners to save to DB
     override suspend fun saveTipAmount(value: String) {
         saveDataSyncItem(
             key = DataSyncKey.TIP_AMOUNT,
@@ -165,18 +169,19 @@ class DataSyncManagerImpl (
         identifier: String,
         value: String
     ) {
-        // First, fetch existing data from server
-        val serverDataString = getFileFromServer()
+        val timestamp = System.currentTimeMillis()
 
+        // Notify listeners (repository) to save to DB
         notifyListeners {
             onSaveDataSyncItem(
                 key = key,
                 identifier = identifier,
                 value = value,
-                timestamp = 0
+                timestamp = timestamp
             )
         }
 
+        // Then sync with server
         syncWithServer()
     }
 
@@ -185,21 +190,23 @@ class DataSyncManagerImpl (
             try {
                 _syncStatusStateFlow.value = SyncStatus.Syncing
 
-//                val serverDataString = getFileFromServer() ?: run {
-//                    _syncStatusStateFlow.value = SyncStatus.Error("Failed to fetch server file")
-//                    return@withContext
-//                }
-//
-//                val itemsResponse = serverDataString.toItemsResponse(moshi)
-//                val dbItems = dataSyncRepository?.getAllDataSync?.firstOrNull() ?: emptyList()
-//
-//                // Find items that exist on server but not locally
-//                val missingItems = findMissingItems(dbItems, itemsResponse.items)
-//
-//                // Notify listeners of remote changes
-//                for (item in missingItems) {
-//                    notifyListenersOfRemoteChange(item)
-//                }
+                // Request local items from repository via listener
+                val localItems = requestLocalDataSyncItems()
+
+                // Get server items
+                val serverDataString = getFileFromServer()
+
+                if (serverDataString != null) {
+                    val itemsResponse = serverDataString.toItemsResponse(moshi)
+
+                    // Notify listeners to merge server data
+//                    notifyListeners {
+//                        onServerDataReceived(itemsResponse.items)
+//                    }
+
+                    // Upload local changes to server
+                    uploadLocalDataToServer(localItems)
+                }
 
                 _syncStatusStateFlow.value = SyncStatus.Success(System.currentTimeMillis())
 
@@ -209,85 +216,47 @@ class DataSyncManagerImpl (
         }
     }
 
-    private fun findMissingItems(
-        localItems: List<DataSync>,
-        serverItems: List<SettingItem>
-    ): List<SettingItem> {
-        val localSet = localItems.map { "${it.sync_key}-${it.identifier}" }.toSet()
-        return serverItems.filter { item ->
-            val combinedKey = "${item.key}-${item.identifier}"
-            !localSet.contains(combinedKey)
+    private suspend fun requestLocalDataSyncItems(): List<SettingItem> {
+        // Request from listener (repository will provide)
+        var items: List<SettingItem> = emptyList()
+
+//        notifyListeners {
+//            items = onRequestLocalDataSyncItems()
+//        }
+
+        return items
+    }
+
+    private suspend fun uploadLocalDataToServer(localItems: List<SettingItem>) {
+        try {
+            val token = getAuthenticationToken() ?: return
+
+            val itemsResponse = ItemsResponse(items = localItems)
+
+//            networkQueryMemeServer.uploadDataSyncFile(
+//                authenticationToken = token,
+//                memeServerHost = MediaHost.DEFAULT,
+//                data = itemsResponse.toJson(moshi)
+//            ).collect { loadResponse ->
+//                when (loadResponse) {
+//                    is LoadResponse.Loading -> {}
+//                    is Response.Error -> {
+//                        println("Error uploading data sync: ${loadResponse.message}")
+//                    }
+//                    is Response.Success -> {
+//                        println("Successfully uploaded data sync")
+//                    }
+//                }
+//            }
+        } catch (e: Exception) {
+            println("Exception uploading data sync: ${e.message}")
         }
     }
 
-    private suspend fun notifyListenersOfRemoteChange(item: SettingItem) {
-//        when (SettingKey.values().find { it.value == item.key }) {
-//            SettingKey.TIP_AMOUNT -> {
-//                item.value.asInt()?.let { tipAmount ->
-//                    listeners.forEach { it.onRemoteTipAmountChanged(tipAmount.toLong()) }
-//                }
-//            }
-//
-//            SettingKey.PRIVATE_PHOTO -> {
-//                item.value.asBool()?.let { isPrivate ->
-//                    listeners.forEach { it.onRemotePrivatePhotoChanged(isPrivate) }
-//                }
-//            }
-//
-//            SettingKey.TIMEZONE -> {
-//                item.value.asTimezone()?.let { timezone ->
-//                    listeners.forEach {
-//                        it.onRemoteTimezoneChanged(
-//                            item.identifier,
-//                            timezone.timezoneEnabled,
-//                            timezone.timezoneIdentifier
-//                        )
-//                    }
-//                }
-//            }
-//
-//            SettingKey.FEED_STATUS -> {
-//                item.value.asFeedStatus()?.let { feedStatus ->
-//                    listeners.forEach {
-//                        it.onRemoteFeedStatusChanged(
-//                            feedStatus.feedId,
-//                            feedStatus.chatPubkey,
-//                            feedStatus.feedUrl,
-//                            feedStatus.subscribed,
-//                            feedStatus.satsPerMinute,
-//                            feedStatus.playerSpeed,
-//                            feedStatus.itemId
-//                        )
-//                    }
-//                }
-//            }
-//
-//            SettingKey.FEED_ITEM_STATUS -> {
-//                item.value.asFeedItemStatus()?.let { feedItemStatus ->
-//                    val parts = item.identifier.split("-")
-//                    if (parts.size == 2) {
-//                        listeners.forEach {
-//                            it.onRemoteFeedItemStatusChanged(
-//                                parts[0],
-//                                parts[1],
-//                                feedItemStatus.duration,
-//                                feedItemStatus.currentTime
-//                            )
-//                        }
-//                    }
-//                }
-//            }
-//
-//            null -> {}
-//        }
-    }
-
-    // File operations - fetch from meme server
     private suspend fun getFileFromServer(): String? {
         return try {
             val token = getAuthenticationToken() ?: return null
 
-            // Make network request to fetch data sync file
             var resultJson: String? = null
 
             networkQueryMemeServer.getDataSyncFile(
@@ -295,8 +264,7 @@ class DataSyncManagerImpl (
                 memeServerHost = MediaHost.DEFAULT
             ).collect { loadResponse ->
                 when (loadResponse) {
-                    is LoadResponse.Loading -> {
-                    }
+                    is LoadResponse.Loading -> {}
                     is Response.Error -> {
                         println("Error fetching data sync: ${loadResponse.message}")
                     }
@@ -324,13 +292,5 @@ class DataSyncManagerImpl (
             println("Exception retrieving authentication token: ${e.message}")
             null
         }
-    }
-    private fun saveFileToServer(itemsResponse: ItemsResponse) {
-        // TODO: Implement upload to meme server
-    }
-
-    private fun createDefaultFile(): String {
-        val timestamp = (System.currentTimeMillis() / 1000.0) - 3600
-        return """{"items": [{"key": "tip_amount", "identifier": "0", "date": "$timestamp", "value": "12"}]}"""
     }
 }

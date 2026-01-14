@@ -345,6 +345,14 @@ abstract class SphinxRepository(
         )
     }
 
+    override fun startDataSyncObservation() {
+        applicationScope.launch(io) {
+            getAllDataSync.collect { dataSyncList ->
+                dataSyncManager.updateDataSyncList(dataSyncList)
+            }
+        }
+    }
+
     override suspend fun deleteDataSync(
         key: DataSyncKey1,
         identifier: DataSyncIdentifier

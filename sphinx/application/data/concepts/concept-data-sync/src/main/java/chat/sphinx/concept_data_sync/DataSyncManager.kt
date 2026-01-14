@@ -3,6 +3,7 @@ package chat.sphinx.concept_data_sync
 import chat.sphinx.concept_data_sync.model.DataSyncError
 import chat.sphinx.concept_data_sync.model.DataSyncState
 import chat.sphinx.concept_data_sync.model.SyncStatus
+import chat.sphinx.wrapper_common.datasync.DataSync
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -12,7 +13,10 @@ import kotlinx.coroutines.flow.StateFlow
 
 abstract class DataSyncManager {
 
+    abstract val dataSyncStateFlow: StateFlow<List<DataSync>>
     abstract val syncStatusStateFlow: StateFlow<SyncStatus>
+
+    abstract fun updateDataSyncList(dataSyncList: List<DataSync>)
 
     // Save methods - called when local data changes
     abstract suspend fun saveTipAmount(value: String)

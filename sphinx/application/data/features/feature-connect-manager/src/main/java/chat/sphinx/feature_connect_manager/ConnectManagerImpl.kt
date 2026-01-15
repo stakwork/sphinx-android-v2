@@ -17,6 +17,7 @@ import chat.sphinx.wrapper_lightning.WalletMnemonic
 import chat.sphinx.wrapper_lightning.toWalletMnemonic
 import com.ensarsarajcic.kotlinx.serialization.msgpack.MsgPack
 import com.ensarsarajcic.kotlinx.serialization.msgpack.MsgPackDynamicSerializer
+import io.matthewnelson.crypto_common.annotations.RawPasswordAccess
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -25,6 +26,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import okio.base64.encodeBase64
+import org.cryptonode.jncryptor.AES256JNCryptorOutputStream
 import org.eclipse.paho.client.mqttv3.IMqttActionListener
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken
 import org.eclipse.paho.client.mqttv3.IMqttToken
@@ -67,6 +69,7 @@ import uniffi.sphinxrs.makeMediaTokenWithPrice
 import uniffi.sphinxrs.mnemonicFromEntropy
 import uniffi.sphinxrs.mnemonicToSeed
 import uniffi.sphinxrs.mute
+import uniffi.sphinxrs.nodeKeys
 import uniffi.sphinxrs.parseInvite
 import uniffi.sphinxrs.parseInvoice
 import uniffi.sphinxrs.pay
@@ -93,6 +96,7 @@ import javax.net.ssl.SSLContext
 import javax.net.ssl.X509TrustManager
 import kotlin.math.min
 import kotlin.math.roundToInt
+import org.cryptonode.jncryptor.JNCryptor
 
 class ConnectManagerImpl: ConnectManager()
 {
@@ -575,6 +579,52 @@ class ConnectManagerImpl: ConnectManager()
 
     override fun saveMessagesCounts(msgsCounts: MsgsCounts) {
         msgsCountsState.value = msgsCounts
+    }
+
+    @OptIn(RawPasswordAccess::class)
+    override fun encryptDataSync(value: String): String? {
+        return try {
+            val mnemonicWords = walletMnemonic?.value ?: return null
+            val seed = mnemonicToSeed(mnemonicWords)
+            val keys = nodeKeys(net = network, seed = seed)
+            val secretKey = keys.secret
+            val dataBytes = value.toByteArray(Charsets.UTF_8)
+
+            // Encrypt the data using AES256JNCryptor
+            val cryptor = org.cryptonode.jncryptor.AES256JNCryptor()
+            val encryptedBytes = cryptor.encryptData(dataBytes, secretKey.toCharArray())
+
+            // Encode to Base64
+            val encryptedString = Base64.encodeToString(encryptedBytes, Base64.NO_WRAP)
+
+            encryptedString
+        } catch (e: Exception) {
+            Log.e("ConnectManagerImpl", "Encryption failed: ${e.message}", e)
+            null
+        }
+    }
+
+    @OptIn(RawPasswordAccess::class)
+    override fun decryptDataSync(value: String): String? {
+        return try {
+            val mnemonicWords = walletMnemonic?.value ?: return null
+            val seed = mnemonicToSeed(mnemonicWords)
+            val keys = nodeKeys(net = MAINNET_NETWORK, seed = seed)
+//            val secretKey = keys.secret
+            val secretKey = "test"
+
+            val encryptedBytes = Base64.decode(value, Base64.NO_WRAP)
+
+            val cryptor = org.cryptonode.jncryptor.AES256JNCryptor()
+            val decryptedBytes = cryptor.decryptData(encryptedBytes, secretKey.toCharArray())
+
+            val decryptedString = String(decryptedBytes, Charsets.UTF_8)
+
+            decryptedString
+        } catch (e: Exception) {
+            Log.e("ConnectManagerImpl", "Decryption failed: ${e.message}", e)
+            null
+        }
     }
 
     private fun processMessages(

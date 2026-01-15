@@ -5,7 +5,6 @@ import chat.sphinx.concept_coredb.CoreDB
 import chat.sphinx.concept_crypto_rsa.RSA
 import chat.sphinx.concept_data_sync.DataSyncManager
 import chat.sphinx.concept_data_sync.DataSyncManagerListener
-import chat.sphinx.concept_data_sync.model.DataSyncError
 import chat.sphinx.concept_meme_input_stream.MemeInputStreamHandler
 import chat.sphinx.concept_meme_server.MemeServerTokenHandler
 import chat.sphinx.concept_network_query_chat.NetworkQueryChat
@@ -148,9 +147,6 @@ import chat.sphinx.wrapper_common.ChapterResponseDto
 import chat.sphinx.wrapper_common.datasync.DataSync
 import chat.sphinx.wrapper_common.datasync.DataSyncIdentifier
 import chat.sphinx.wrapper_common.datasync.DataSyncValue
-import chat.sphinx.wrapper_common.datasync.FeedItemStatus
-import chat.sphinx.wrapper_common.datasync.FeedStatus
-import chat.sphinx.wrapper_common.datasync.TimezoneSetting
 import chat.sphinx.wrapper_common.datasync.toDataSyncKey
 import chat.sphinx.wrapper_podcast.FeedRecommendation
 import chat.sphinx.wrapper_podcast.FeedSearchResultRow
@@ -1841,6 +1837,14 @@ abstract class SphinxRepository(
                 value = DataSyncValue(value)
             )
         }
+    }
+
+    override suspend fun onEncryptDataSync(value: String): String? = withContext(io) {
+        connectManager.encryptDataSync(value)
+    }
+
+    override suspend fun onDecryptDataSync(value: String): String? = withContext(io) {
+        connectManager.decryptDataSync(value)
     }
 
     fun extractUrlParts(url: String): Pair<String?, String?> {

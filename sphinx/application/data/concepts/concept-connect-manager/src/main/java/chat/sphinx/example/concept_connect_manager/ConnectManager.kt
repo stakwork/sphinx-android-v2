@@ -185,6 +185,9 @@ abstract class ConnectManager {
     abstract fun removeListener(listener: ConnectManagerListener): Boolean
 
     abstract fun saveMessagesCounts(msgsCounts: MsgsCounts)
+
+    abstract fun encryptDataSync(value: String): String?
+    abstract fun decryptDataSync(value: String): String?
 }
 
 /**

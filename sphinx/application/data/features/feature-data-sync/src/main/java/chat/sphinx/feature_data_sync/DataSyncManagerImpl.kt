@@ -52,7 +52,6 @@ class DataSyncManagerImpl (
 
     private val syncMutex = Mutex()
     private val synchronizedListeners = SynchronizedListenerHolder()
-    private val listeners = CopyOnWriteArraySet<DataSyncManagerListener>()
 
     private val _syncStatusStateFlow = MutableStateFlow<SyncStatus>(SyncStatus.Idle)
     override val syncStatusStateFlow: StateFlow<SyncStatus>
@@ -81,6 +80,24 @@ class DataSyncManagerImpl (
             listeners.remove(listener)
         }
 
+        // NEW: Suspend version for result-returning operations
+        suspend fun <T> requestFromFirstListener(
+            block: suspend (DataSyncManagerListener) -> T?
+        ): T? {
+            val listenersCopy = synchronized(this) {
+                listeners.toList()
+            }
+
+            for (listener in listenersCopy) {
+                val result = block(listener)
+                if (result != null) {
+                    return result
+                }
+            }
+
+            return null
+        }
+
         fun forEachListener(action: (DataSyncManagerListener) -> Unit) {
             synchronized(this) {
                 listeners.forEach(action)
@@ -94,10 +111,18 @@ class DataSyncManagerImpl (
     override fun removeListener(listener: DataSyncManagerListener): Boolean =
         synchronizedListeners.removeListener(listener)
 
+    // For fire-and-forget notifications
     private fun notifyListeners(action: DataSyncManagerListener.() -> Unit) {
         synchronizedListeners.forEachListener { listener ->
             action(listener)
         }
+    }
+
+    // NEW: Generic helper for suspend operations that need results
+    private suspend fun <T> requestFromListener(
+        block: suspend (DataSyncManagerListener) -> T?
+    ): T? {
+        return synchronizedListeners.requestFromFirstListener(block)
     }
 
     // Save methods - notify listeners to save to DB
@@ -169,17 +194,35 @@ class DataSyncManagerImpl (
         identifier: String,
         value: String
     ) {
-        notifyListeners {
-            onSaveDataSyncItem(
-                key = key,
-                identifier = identifier,
-                value = value,
-                timestamp = getTimestampInMilliseconds()
-            )
+        // Notify listeners to save (fire-and-forget)
+        withContext(dispatchers.io) {
+            requestFromListener { listener ->
+                listener.onSaveDataSyncItem(
+                    key = key,
+                    identifier = identifier,
+                    value = value,
+                    timestamp = getTimestampInMilliseconds()
+                )
+                Unit // Return Unit since we don't need a result
+            }
         }
 
         // Then sync with server
         syncWithServer()
+    }
+
+    // NEW: Encrypt value using listener
+    private suspend fun encryptValue(value: String): String? {
+        return requestFromListener { listener ->
+            listener.onEncryptDataSync(value)
+        }
+    }
+
+    // NEW: Decrypt value using listener
+    private suspend fun decryptValue(value: String): String? {
+        return requestFromListener { listener ->
+            listener.onDecryptDataSync(value)
+        }
     }
 
     override suspend fun syncWithServer() = syncMutex.withLock {
@@ -187,19 +230,19 @@ class DataSyncManagerImpl (
             try {
                 _syncStatusStateFlow.value = SyncStatus.Syncing
 
-                // Get server items
+                // Get server items (encrypted)
                 val serverDataString = getFileFromServer()
 
                 if (serverDataString != null) {
-                    val itemsResponse = serverDataString.toItemsResponse(moshi)
+                    // Decrypt the data using listener
+                    val decryptedData = decryptValue(serverDataString)
 
-                    // Notify listeners to merge server data
-//                    notifyListeners {
-//                        onServerDataReceived(itemsResponse.items)
-//                    }
+                    if (decryptedData != null) {
+                        val itemsResponse = decryptedData.toItemsResponse(moshi)
 
-                    // Upload local changes to server
-//                    uploadLocalDataToServer(localItems)
+                    } else {
+                        println("Failed to decrypt server data")
+                    }
                 }
 
                 _syncStatusStateFlow.value = SyncStatus.Success(System.currentTimeMillis())
@@ -210,38 +253,29 @@ class DataSyncManagerImpl (
         }
     }
 
-    private suspend fun requestLocalDataSyncItems(): List<SettingItem> {
-        // Request from listener (repository will provide)
-        var items: List<SettingItem> = emptyList()
-
-//        notifyListeners {
-//            items = onRequestLocalDataSyncItems()
-//        }
-
-        return items
-    }
-
     private suspend fun uploadLocalDataToServer(localItems: List<SettingItem>) {
         try {
             val token = getAuthenticationToken() ?: return
 
             val itemsResponse = ItemsResponse(items = localItems)
+            val jsonData = itemsResponse.toJson(moshi)
 
-//            networkQueryMemeServer.uploadDataSyncFile(
-//                authenticationToken = token,
-//                memeServerHost = MediaHost.DEFAULT,
-//                data = itemsResponse.toJson(moshi)
-//            ).collect { loadResponse ->
-//                when (loadResponse) {
-//                    is LoadResponse.Loading -> {}
-//                    is Response.Error -> {
-//                        println("Error uploading data sync: ${loadResponse.message}")
-//                    }
-//                    is Response.Success -> {
-//                        println("Successfully uploaded data sync")
-//                    }
-//                }
-//            }
+            // Encrypt the data before uploading using listener
+            val encryptedData = encryptValue(jsonData)
+
+            if (encryptedData == null) {
+                println("Failed to encrypt data")
+                return
+            }
+
+            // TODO: Upload encrypted data
+            // networkQueryMemeServer.uploadDataSyncFile(
+            //     authenticationToken = token,
+            //     memeServerHost = MediaHost.DEFAULT,
+            //     data = encryptedData
+            // ).collect { loadResponse ->
+            //     // Handle response
+            // }
         } catch (e: Exception) {
             println("Exception uploading data sync: ${e.message}")
         }
@@ -263,7 +297,8 @@ class DataSyncManagerImpl (
                         println("Error fetching data sync: ${loadResponse.message}")
                     }
                     is Response.Success -> {
-                        resultJson = loadResponse.value.toJson()
+                        val response = loadResponse.value
+                        resultJson = response.toJson()
                     }
                 }
             }

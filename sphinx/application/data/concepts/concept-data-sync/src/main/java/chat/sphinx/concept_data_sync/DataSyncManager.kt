@@ -60,4 +60,7 @@ interface DataSyncManagerListener {
     // Called when manager needs to save data locally
     fun onSaveDataSyncItem(key: String, identifier: String, value: String, timestamp: Long)
 
+    suspend fun onEncryptDataSync(value: String): String?
+    suspend fun onDecryptDataSync(value: String): String?
+
 }

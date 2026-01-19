@@ -4,7 +4,6 @@ import chat.sphinx.wrapper_common.DateTime
 import chat.sphinx.wrapper_common.toDateTime
 import com.squareup.moshi.JsonClass
 
-@JsonClass(generateAdapter = true)
 data class SettingItem(
     val key: String,
     val identifier: String,

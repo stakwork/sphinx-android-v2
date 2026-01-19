@@ -1828,10 +1828,9 @@ abstract class SphinxRepository(
         timestamp: Long
     ) {
         applicationScope.launch(io) {
-            val dataSyncKey = key.toDataSyncKey()
 
             upsertDataSync(
-                key = dataSyncKey,
+                key = key.toDataSyncKey(),
                 identifier = DataSyncIdentifier(identifier),
                 date = timestamp.toDateTime(),
                 value = DataSyncValue(value)

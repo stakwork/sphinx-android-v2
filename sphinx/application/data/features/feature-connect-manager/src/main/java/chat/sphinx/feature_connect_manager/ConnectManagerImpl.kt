@@ -610,8 +610,7 @@ class ConnectManagerImpl: ConnectManager()
             val mnemonicWords = walletMnemonic?.value ?: return null
             val seed = mnemonicToSeed(mnemonicWords)
             val keys = nodeKeys(net = MAINNET_NETWORK, seed = seed)
-//            val secretKey = keys.secret
-            val secretKey = "test"
+            val secretKey = keys.secret
 
             val encryptedBytes = Base64.decode(value, Base64.NO_WRAP)
 

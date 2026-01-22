@@ -7165,14 +7165,54 @@ abstract class SphinxRepository(
         currentSubscribeState: Subscribed
     ) {
         val queries = coreDB.getSphinxDatabaseQueries()
-        val newValue = if (currentSubscribeState.isTrue()) Subscribed.False else Subscribed.True
 
-        queries.transaction {
-            updateSubscriptionStatus(
-                queries,
-                newValue,
-                feedId
+        val newSubscribeState = if (currentSubscribeState.isTrue()) {
+            Subscribed.False
+        } else {
+            Subscribed.True
+        }
+
+        feedLock.withLock {
+            queries.transaction {
+                updateSubscriptionStatus(
+                    queries,
+                    newSubscribeState,
+                    feedId
+                )
+            }
+        }
+
+        syncFeedSubscriptionStatus(feedId, newSubscribeState)
+    }
+
+    private suspend fun syncFeedSubscriptionStatus(
+        feedId: FeedId,
+        subscribed: Subscribed
+    ) = withContext(io) {
+        try {
+            val feed = getFeedById(feedId).firstOrNull() ?: return@withContext
+            val chat = feed.chat
+
+            val contentFeedStatus = coreDB.getSphinxDatabaseQueries()
+                .contentFeedStatusGetByFeedId(feedId)
+                .executeAsOneOrNull()
+
+            val chatPubkey = chat?.ownerPubKey?.value ?: ""
+            val satsPerMinute = contentFeedStatus?.sats_per_minute?.value?.toInt() ?: 0
+            val playerSpeed = contentFeedStatus?.player_speed?.value ?: 1.0
+            val itemId = contentFeedStatus?.item_id?.value ?: ""
+
+            dataSyncManager.saveFeedStatus(
+                feedId = feedId.value,
+                chatPubkey = chatPubkey,
+                feedUrl = feed.feedUrl.value,
+                subscribed = subscribed.isTrue(),
+                satsPerMinute = satsPerMinute,
+                playerSpeed = playerSpeed,
+                itemId = itemId
             )
+        } catch (e: Exception) {
+            LOG.e(TAG, "Error syncing feed subscription status", e)
         }
     }
 
@@ -9026,10 +9066,46 @@ abstract class SphinxRepository(
             }
 
             if (shouldSync) {
-                saveContentFeedStatusFor(feedId)
+                syncContentFeedStatus(
+                    feedId = feedId,
+                    feedUrl = feedUrl,
+                    subscriptionStatus = subscriptionStatus,
+                    chatId = chatId,
+                    itemId = itemId,
+                    satsPerMinute = satsPerMinute,
+                    playerSpeed = playerSpeed
+                )
             }
         }
     }
+
+    private suspend fun syncContentFeedStatus(
+        feedId: FeedId,
+        feedUrl: FeedUrl,
+        subscriptionStatus: Subscribed,
+        chatId: ChatId?,
+        itemId: FeedId?,
+        satsPerMinute: Sat?,
+        playerSpeed: FeedPlayerSpeed?
+    ) = withContext(io) {
+        try {
+            val chat = chatId?.let { getChatById(it).firstOrNull() }
+            val chatPubkey = chat?.ownerPubKey?.value ?: ""
+
+            dataSyncManager.saveFeedStatus(
+                feedId = feedId.value,
+                chatPubkey = chatPubkey,
+                feedUrl = feedUrl.value,
+                subscribed = subscriptionStatus.isTrue(),
+                satsPerMinute = satsPerMinute?.value?.toInt() ?: 0,
+                playerSpeed = playerSpeed?.value ?: 1.0,
+                itemId = itemId?.value ?: ""
+            )
+        } catch (e: Exception) {
+            LOG.e(TAG, "Error syncing content feed status", e)
+        }
+    }
+
     private val contentEpisodeLock = Mutex()
     override fun updateContentEpisodeStatus(
         feedId: FeedId,
@@ -9053,15 +9129,38 @@ abstract class SphinxRepository(
                     duration = duration,
                     current_time = currentTime,
                     played = played
-
                 )
             }
 
             if (shouldSync) {
-                saveContentFeedStatusFor(feedId)
+                syncContentEpisodeStatus(
+                    feedId = feedId,
+                    itemId = itemId,
+                    duration = duration,
+                    currentTime = currentTime
+                )
             }
         }
     }
+
+    private suspend fun syncContentEpisodeStatus(
+        feedId: FeedId,
+        itemId: FeedId,
+        duration: FeedItemDuration,
+        currentTime: FeedItemDuration
+    ) = withContext(io) {
+        try {
+            dataSyncManager.saveFeedItemStatus(
+                feedId = feedId.value,
+                itemId = itemId.value,
+                duration = duration.value.toInt(),
+                currentTime = currentTime.value.toInt()
+            )
+        } catch (e: Exception) {
+            LOG.e(TAG, "Error syncing content episode status", e)
+        }
+    }
+
 
     private fun updateContentEpisodeStatusDuration(
         itemId: FeedId,

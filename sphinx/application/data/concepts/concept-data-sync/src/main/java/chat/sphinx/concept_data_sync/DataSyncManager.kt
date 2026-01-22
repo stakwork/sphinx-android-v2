@@ -31,8 +31,13 @@ abstract class DataSyncManager {
         playerSpeed: Double,
         itemId: String
     )
-    abstract suspend fun saveFeedItemStatus(feedId: String, itemId: String, duration: Int, currentTime: Int)
 
+    abstract suspend fun saveFeedItemStatus(
+        feedId: String,
+        itemId: String,
+        duration: Int,
+        currentTime: Int
+    )
     // Sync trigger - called after saves or on app init
     abstract suspend fun syncWithServer()
 

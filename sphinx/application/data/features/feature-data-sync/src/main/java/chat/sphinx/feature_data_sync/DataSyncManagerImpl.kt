@@ -178,6 +178,7 @@ class DataSyncManagerImpl (
     ) {
         val feedStatus = FeedStatus(chatPubkey, feedUrl, feedId, subscribed, satsPerMinute, playerSpeed, itemId)
         val jsonString = feedStatus.toJson(moshi)
+
         saveDataSyncItem(
             key = DataSyncKey.FEED_STATUS,
             identifier = feedId,
@@ -193,6 +194,7 @@ class DataSyncManagerImpl (
     ) {
         val feedItemStatus = FeedItemStatus(duration, currentTime)
         val jsonString = feedItemStatus.toJson(moshi)
+
         saveDataSyncItem(
             key = DataSyncKey.FEED_ITEM_STATUS,
             identifier = "$feedId-$itemId",

@@ -21,7 +21,13 @@ abstract class DataSyncManager {
     // Save methods - called when local data changes
     abstract suspend fun saveTipAmount(value: String)
     abstract suspend fun savePrivatePhoto(value: String)
-    abstract suspend fun saveTimezoneForChat(chatPubkey: String, timezoneEnabled: Boolean, timezoneIdentifier: String)
+
+    abstract suspend fun saveTimezoneForChat(
+        chatPubkey: String,
+        timezoneEnabled: Boolean,
+        timezoneIdentifier: String
+    )
+
     abstract suspend fun saveFeedStatus(
         feedId: String,
         chatPubkey: String,
@@ -38,6 +44,7 @@ abstract class DataSyncManager {
         duration: Int,
         currentTime: Int
     )
+
     // Sync trigger - called after saves or on app init
     abstract suspend fun syncWithServer()
 
@@ -50,7 +57,13 @@ interface DataSyncManagerListener {
     // Called when server has newer data that should be applied locally
     fun onRemoteTipAmountChanged(tipAmount: Long)
     fun onRemotePrivatePhotoChanged(isPrivate: Boolean)
-    fun onRemoteTimezoneChanged(chatPubkey: String, timezoneEnabled: Boolean, timezoneIdentifier: String)
+
+    fun onRemoteTimezoneChanged(
+        chatPubkey: String,
+        timezoneEnabled: Boolean,
+        timezoneIdentifier: String
+    )
+
     fun onRemoteFeedStatusChanged(
         feedId: String,
         chatPubkey: String,
@@ -60,10 +73,20 @@ interface DataSyncManagerListener {
         playerSpeed: Double,
         itemId: String
     )
-    fun onRemoteFeedItemStatusChanged(feedId: String, itemId: String, duration: Int, currentTime: Int)
+
+    fun onRemoteFeedItemStatusChanged(
+        feedId: String,
+        itemId: String,
+        duration: Int, currentTime: Int
+    )
 
     // Called when manager needs to save data locally
-    fun onSaveDataSyncItem(key: String, identifier: String, value: String, timestamp: Long)
+    fun onSaveDataSyncItem(
+        key: String,
+        identifier: String,
+        value: String,
+        timestamp: Long
+    )
 
     suspend fun onEncryptDataSync(value: String): String?
     suspend fun onDecryptDataSync(value: String): String?

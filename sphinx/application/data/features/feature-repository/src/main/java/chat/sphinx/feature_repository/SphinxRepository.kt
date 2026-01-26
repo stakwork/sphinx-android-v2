@@ -2289,6 +2289,21 @@ abstract class SphinxRepository(
                     id = chatId
                 )
             }
+
+            val chat = queries.chatGetById(chatId).executeAsOneOrNull()
+            chat?.owner_pub_key?.value?.let { pubKey ->
+                val timezoneIdentifier = if (isTimezoneEnabled.isTrue()) {
+                    chat.timezone_identifier?.value ?: ""
+                } else {
+                    ""
+                }
+
+                dataSyncManager.saveTimezoneForChat(
+                    chatPubkey = pubKey,
+                    timezoneEnabled = isTimezoneEnabled.isTrue(),
+                    timezoneIdentifier = timezoneIdentifier
+                )
+            }
         } catch (ex: Exception) {
             LOG.e(TAG, ex.printStackTrace().toString(), ex)
         }
@@ -2305,6 +2320,17 @@ abstract class SphinxRepository(
                 queries.chatUpdateTimezoneIdentifier(
                     timezone_identifier = timezoneIdentifier,
                     id = chatId
+                )
+            }
+
+            val chat = queries.chatGetById(chatId).executeAsOneOrNull()
+            chat?.owner_pub_key?.value?.let { pubKey ->
+                val isEnabled = chat.timezone_enabled?.isTrue() ?: false
+
+                dataSyncManager.saveTimezoneForChat(
+                    chatPubkey = pubKey,
+                    timezoneEnabled = isEnabled,
+                    timezoneIdentifier = timezoneIdentifier?.value ?: ""
                 )
             }
         } catch (ex: Exception) {

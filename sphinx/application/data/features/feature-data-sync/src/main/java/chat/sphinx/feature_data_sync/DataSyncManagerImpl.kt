@@ -158,8 +158,17 @@ class DataSyncManagerImpl (
         timezoneEnabled: Boolean,
         timezoneIdentifier: String
     ) {
-        val timezone = TimezoneSetting(timezoneEnabled, timezoneIdentifier)
+        if (chatPubkey.isEmpty()) {
+            return
+        }
+
+        val timezone = TimezoneSetting(
+            timezoneEnabled = timezoneEnabled,
+            timezoneIdentifier = if (timezoneEnabled) timezoneIdentifier else ""
+        )
+
         val jsonString = timezone.toJson(moshi)
+
         saveDataSyncItem(
             key = DataSyncKey.TIMEZONE,
             identifier = chatPubkey,
@@ -270,7 +279,6 @@ class DataSyncManagerImpl (
                                     is DataSyncJson.StringValue -> "\"${value.value}\""
                                     is DataSyncJson.ObjectValue -> value.value.toString()
                                 }
-                                println("  - ${item.key} (${item.identifier}): $valueStr")
                             }
 
                             val mergedItems = mergeDataSyncItems(localItems, serverItems)

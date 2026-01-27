@@ -623,6 +623,21 @@ SET alias = :alias,
     tip_amount = :tip_amount
 WHERE owner = 1;
 
+contactUpdateOwnerTipAmount:
+UPDATE contactDbo
+SET tip_amount = :tip_amount
+WHERE owner = 1;
+
+contactUpdateOwnerPrivatePhoto:
+UPDATE contactDbo
+SET private_photo = :private_photo
+WHERE owner = 1;
+
+contactUpdateOwnerAlias:
+UPDATE contactDbo
+SET alias = :alias
+WHERE owner = 1;
+
 contactUpdateOwnerDeviceId:
 UPDATE contactDbo
 SET device_id = :device_id

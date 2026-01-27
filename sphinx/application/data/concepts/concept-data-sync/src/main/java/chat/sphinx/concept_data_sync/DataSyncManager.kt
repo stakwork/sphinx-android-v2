@@ -88,6 +88,12 @@ interface DataSyncManagerListener {
         timestamp: Long
     )
 
+    suspend fun onApplySyncedData(
+        key: String,
+        identifier: String,
+        value: String
+    )
+
     suspend fun onEncryptDataSync(value: String): String?
     suspend fun onDecryptDataSync(value: String): String?
 

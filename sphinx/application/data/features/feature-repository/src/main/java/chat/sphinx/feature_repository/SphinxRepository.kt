@@ -146,6 +146,7 @@ import chat.sphinx.wrapper_message_media.token.MediaHost
 import chat.sphinx.wrapper_common.ChapterResponseDto
 import chat.sphinx.wrapper_common.datasync.DataSync
 import chat.sphinx.wrapper_common.datasync.DataSyncIdentifier
+import chat.sphinx.wrapper_common.datasync.DataSyncKey
 import chat.sphinx.wrapper_common.datasync.DataSyncValue
 import chat.sphinx.wrapper_common.datasync.toDataSyncKey
 import chat.sphinx.wrapper_podcast.FeedRecommendation
@@ -1837,6 +1838,211 @@ abstract class SphinxRepository(
             )
         }
     }
+
+    override suspend fun onApplySyncedData(
+        key: String,
+        identifier: String,
+        value: String
+    ) {
+        withContext(io) {
+            try {
+                when (key) {
+                    DataSyncKey.TIP_AMOUNT -> {
+                        applyTipAmountSync(value)
+                    }
+                    DataSyncKey.PRIVATE_PHOTO -> {
+                        applyPrivatePhotoSync(value)
+                    }
+                    DataSyncKey.TIMEZONE -> {
+                        applyTimezoneSync(identifier, value)
+                    }
+                    DataSyncKey.FEED_STATUS -> {
+                        applyFeedStatusSync(identifier, value)
+                    }
+                    DataSyncKey.FEED_ITEM_STATUS -> {
+                        applyFeedItemStatusSync(identifier, value)
+                    }
+                }
+            } catch (e: Exception) {
+                LOG.e(TAG, "Error applying synced data for key: $key", e)
+            }
+        }
+    }
+    private suspend fun applyTipAmountSync(value: String) {
+        val tipAmount = value.toLongOrNull()?.toSat() ?: return
+
+        val queries = coreDB.getSphinxDatabaseQueries()
+
+        contactLock.withLock {
+            queries.contactUpdateOwnerTipAmount(
+                tip_amount = tipAmount
+            )
+        }
+
+        LOG.d(TAG, "Applied tip_amount sync: $tipAmount")
+    }
+
+    private suspend fun applyPrivatePhotoSync(value: String) {
+        val privatePhoto = when (value.lowercase()) {
+            "true", "1" -> PrivatePhoto.True
+            "false", "0" -> PrivatePhoto.False
+            else -> return
+        }
+
+        val queries = coreDB.getSphinxDatabaseQueries()
+
+        contactLock.withLock {
+            queries.contactUpdateOwnerPrivatePhoto(
+                private_photo = privatePhoto
+            )
+        }
+
+        LOG.d(TAG, "Applied private_photo sync: ${privatePhoto.isTrue()}")
+    }
+
+    private suspend fun applyTimezoneSync(chatPubkey: String, value: String) {
+        if (chatPubkey.isEmpty()) return
+
+        try {
+            // Parse the timezone JSON object
+            val timezoneData = parseTimezoneJson(value)
+            val timezoneEnabled = timezoneData["timezoneEnabled"]?.lowercase() == "true"
+            val timezoneIdentifier = timezoneData["timezoneIdentifier"] ?: ""
+
+            val queries = coreDB.getSphinxDatabaseQueries()
+
+            val chat = queries.chatGetAll()
+                .executeAsList()
+                .firstOrNull { it.owner_pub_key?.value == chatPubkey }
+                ?: return
+
+            chatLock.withLock {
+                queries.chatUpdateTimezoneEnabled(
+                    timezone_enabled = timezoneEnabled.toTimezoneEnabled(),
+                    id = chat.id
+                )
+
+                if (timezoneEnabled && timezoneIdentifier.isNotEmpty()) {
+                    queries.chatUpdateTimezoneIdentifier(
+                        timezone_identifier = timezoneIdentifier.toTimezoneIdentifier(),
+                        chat.id
+                    )
+                }
+            }
+
+            LOG.d(TAG, "Applied timezone sync for chat ${chat.id}: enabled=$timezoneEnabled, identifier=$timezoneIdentifier")
+        } catch (e: Exception) {
+            LOG.e(TAG, "Error applying timezone sync", e)
+        }
+    }
+
+    private suspend fun applyFeedStatusSync(feedId: String, value: String) {
+        try {
+            val feedStatusData = parseFeedStatusJson(value)
+
+            val queries = coreDB.getSphinxDatabaseQueries()
+
+            val feedIdValue = feedId.toFeedId() ?: return
+            val feedUrl = feedStatusData["feedUrl"]?.toFeedUrl() ?: return
+            val subscribed = (feedStatusData["subscribed"]?.lowercase() == "true").toSubscribed()
+            val satsPerMinute = feedStatusData["satsPerMinute"]?.toLongOrNull()?.toSat()
+            val playerSpeed = feedStatusData["playerSpeed"]?.toDoubleOrNull()?.toFeedPlayerSpeed()
+            val itemId = feedStatusData["itemId"]?.toFeedId()
+
+            // Get chat_id if chatPubkey is provided
+            val chatPubkey = feedStatusData["chatPubkey"]
+            val chatId = if (!chatPubkey.isNullOrEmpty()) {
+                queries.chatGetAll()
+                    .executeAsList()
+                    .firstOrNull { it.owner_pub_key?.value == chatPubkey }
+                    ?.id
+            } else {
+                null
+            }
+
+            contentFeedStatusLock.withLock {
+                queries.contentFeedStatusUpsert(
+                    feed_id = feedIdValue,
+                    feed_url = feedUrl,
+                    subscription_status = subscribed,
+                    chat_id = chatId,
+                    item_id = itemId,
+                    sats_per_minute = satsPerMinute,
+                    player_speed = playerSpeed
+                )
+            }
+
+            LOG.d(TAG, "Applied feed_status sync for feed $feedId: subscribed=${subscribed.isTrue()}")
+        } catch (e: Exception) {
+            LOG.e(TAG, "Error applying feed_status sync", e)
+        }
+    }
+
+    private suspend fun applyFeedItemStatusSync(identifier: String, value: String) {
+        try {
+            // identifier format: "feedId-itemId"
+            val parts = identifier.split("-", limit = 2)
+            if (parts.size != 2) return
+
+            val feedId = parts[0].toFeedId() ?: return
+            val itemId = parts[1].toFeedId() ?: return
+
+            val feedItemStatusData = parseFeedItemStatusJson(value)
+
+            val duration = feedItemStatusData["duration"]?.toLongOrNull()?.toFeedItemDuration() ?: return
+            val currentTime = feedItemStatusData["currentTime"]?.toLongOrNull()?.toFeedItemDuration() ?: return
+
+            val queries = coreDB.getSphinxDatabaseQueries()
+
+            contentEpisodeLock.withLock {
+                queries.contentEpisodeStatusUpsert(
+                    feed_id = feedId,
+                    item_id = itemId,
+                    duration = duration,
+                    current_time = currentTime,
+                    played = false
+                )
+            }
+
+            LOG.d(TAG, "Applied feed_item_status sync for $identifier: currentTime=$currentTime/$duration")
+        } catch (e: Exception) {
+            LOG.e(TAG, "Error applying feed_item_status sync", e)
+        }
+    }
+
+    // JSON parsing helpers
+    private fun parseTimezoneJson(json: String): Map<String, String> {
+        return parseSimpleJsonObject(json)
+    }
+
+    private fun parseFeedStatusJson(json: String): Map<String, String> {
+        return parseSimpleJsonObject(json)
+    }
+
+    private fun parseFeedItemStatusJson(json: String): Map<String, String> {
+        return parseSimpleJsonObject(json)
+    }
+
+    private fun parseSimpleJsonObject(json: String): Map<String, String> {
+        val map = mutableMapOf<String, String>()
+        val cleaned = json.trim().removePrefix("{").removeSuffix("}")
+
+        if (cleaned.isEmpty()) return map
+
+        // Handle JSON with quoted or unquoted values
+        cleaned.split(",").forEach { pair ->
+            val parts = pair.split(":", limit = 2)
+            if (parts.size == 2) {
+                val key = parts[0].trim().removeSurrounding("\"")
+                val value = parts[1].trim().removeSurrounding("\"")
+                map[key] = value
+            }
+        }
+
+        return map
+    }
+
+    private val contentFeedStatusLock = Mutex()
 
     override suspend fun onEncryptDataSync(value: String): String? = withContext(io) {
         connectManager.encryptDataSync(value)

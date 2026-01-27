@@ -5,35 +5,24 @@ import chat.sphinx.concept_data_sync.DataSyncManagerListener
 import chat.sphinx.concept_data_sync.model.SyncStatus
 import chat.sphinx.concept_meme_server.MemeServerTokenHandler
 import chat.sphinx.concept_network_query_meme_server.NetworkQueryMemeServer
-import chat.sphinx.concept_repository_data_sync.DataSyncRepository
 import chat.sphinx.feature_data_sync.adapter.SettingItemRawAdapter
 import chat.sphinx.kotlin_response.LoadResponse
 import chat.sphinx.kotlin_response.Response
-import chat.sphinx.kotlin_response.ResponseError
 import chat.sphinx.kotlin_response.message
-import chat.sphinx.wrapper_common.dashboard.ChatId
-import chat.sphinx.wrapper_common.DateTime
-import chat.sphinx.wrapper_common.dashboard.ContactId
 import chat.sphinx.wrapper_common.datasync.DataSync
-import chat.sphinx.wrapper_common.datasync.DataSyncIdentifier
 import chat.sphinx.wrapper_common.datasync.DataSyncJson
 import chat.sphinx.wrapper_common.datasync.DataSyncKey
-import chat.sphinx.wrapper_common.datasync.DataSyncValue
 import chat.sphinx.wrapper_common.datasync.FeedItemStatus
 import chat.sphinx.wrapper_common.datasync.FeedStatus
-import chat.sphinx.wrapper_common.datasync.ItemsResponse
-import chat.sphinx.wrapper_common.datasync.ItemsResponse.Companion.toItemsResponse
 import chat.sphinx.wrapper_common.datasync.ItemsResponseRaw
 import chat.sphinx.wrapper_common.datasync.SettingItem
 import chat.sphinx.wrapper_common.datasync.TimezoneSetting
 import chat.sphinx.wrapper_common.datasync.toItemsResponseRaw
 import chat.sphinx.wrapper_common.datasync.toSettingItems
-import chat.sphinx.wrapper_common.lightning.Sat
 import chat.sphinx.wrapper_common.time
 import chat.sphinx.wrapper_contact.Contact
 import chat.sphinx.wrapper_meme_server.AuthenticationToken
 import chat.sphinx.wrapper_message_media.token.MediaHost
-import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
 import kotlinx.coroutines.flow.*
@@ -41,7 +30,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.util.*
-import java.util.concurrent.CopyOnWriteArraySet
 
 class DataSyncManagerImpl (
     private val moshi: Moshi,
@@ -388,28 +376,60 @@ class DataSyncManagerImpl (
             val localItem = localMap[key]
 
             if (localItem == null) {
-                // New item from server - save to local DB
-                saveItemToLocal(mergedItem)
+                saveDataSyncItem(mergedItem)
+                applyItemToActualTables(mergedItem)
             } else {
                 // Item exists locally - check if server version is newer
                 val localDate = parseDate(localItem.date)
                 val mergedDate = parseDate(mergedItem.date)
 
                 if (mergedDate > localDate) {
-                    // Server version is newer - update local DB
-                    saveItemToLocal(mergedItem)
+                    // Server version is newer - update local DB and actual tables
+                    saveDataSyncItem(mergedItem)
+                    applyItemToActualTables(mergedItem)
                 }
             }
         }
     }
 
+    private suspend fun applyItemToActualTables(item: SettingItem) {
+        val valueString = when (val value = item.value) {
+            is DataSyncJson.StringValue -> value.value
+            is DataSyncJson.ObjectValue -> {
+                value.value.entries.joinToString(
+                    prefix = "{",
+                    postfix = "}",
+                    separator = ","
+                ) { (k, v) -> "\"$k\":\"$v\"" }
+            }
+        }
 
-    private suspend fun saveItemToLocal(item: SettingItem) {
+        requestFromListener { listener ->
+            listener.onApplySyncedData(
+                key = item.key,
+                identifier = item.identifier,
+                value = valueString
+            )
+        }
+    }
+
+    private suspend fun saveDataSyncItem(item: SettingItem) {
+        val valueString = when (val value = item.value) {
+            is DataSyncJson.StringValue -> value.value
+            is DataSyncJson.ObjectValue -> {
+                value.value.entries.joinToString(
+                    prefix = "{",
+                    postfix = "}",
+                    separator = ","
+                ) { (k, v) -> "\"$k\":\"$v\"" }
+            }
+        }
+
         requestFromListener { listener ->
             listener.onSaveDataSyncItem(
                 key = item.key,
                 identifier = item.identifier,
-                value = item.value.toString(),
+                value = valueString,
                 timestamp = convertSecondsToMilliseconds(item.date)
             )
         }

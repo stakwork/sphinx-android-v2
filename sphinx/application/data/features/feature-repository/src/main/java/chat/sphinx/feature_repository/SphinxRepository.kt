@@ -146,6 +146,7 @@ import chat.sphinx.wrapper_podcast.Podcast
 import chat.sphinx.wrapper_podcast.PodcastEpisode
 import chat.sphinx.wrapper_rsa.RsaPrivateKey
 import chat.sphinx.wrapper_rsa.RsaPublicKey
+import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.squareup.sqldelight.TransactionWithoutReturn
@@ -223,6 +224,10 @@ abstract class SphinxRepository(
         const val REPOSITORY_PUSH_KEY = "REPOSITORY_PUSH_KEY"
 
         const val MEDIA_KEY_SIZE = 32
+
+        // Cache size limits to prevent unbounded memory growth
+        private const val MSG_SENDER_CACHE_MAX_SIZE = 500
+        private const val FLOW_CACHE_MAX_SIZE = 100
     }
 
     var lastMessageIndex: Long? = null
@@ -1166,7 +1171,15 @@ abstract class SphinxRepository(
         }
     }
 
-    private val msgSenderCache: MutableMap<String, MsgSender?> = mutableMapOf()
+    // Bounded LRU cache to prevent unbounded memory growth
+    private val msgSenderCache: MutableMap<String, MsgSender?> = object : LinkedHashMap<String, MsgSender?>(
+        MSG_SENDER_CACHE_MAX_SIZE, 0.75f, true
+    ) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, MsgSender?>?): Boolean {
+            return size > MSG_SENDER_CACHE_MAX_SIZE
+        }
+    }
+
     private val emptyMsg = Msg(null, null, null, null, null, null, null, null, null, null, null, null)
 
     private data class MessageComponents(
@@ -2614,7 +2627,14 @@ abstract class SphinxRepository(
         )
     }
 
-    private val unseenFlowCache = mutableMapOf<ChatId, Flow<Long?>>()
+    // Bounded LRU cache for Flow references
+    private val unseenFlowCache: MutableMap<ChatId, Flow<Long?>> = object : LinkedHashMap<ChatId, Flow<Long?>>(
+        FLOW_CACHE_MAX_SIZE, 0.75f, true
+    ) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<ChatId, Flow<Long?>>?): Boolean {
+            return size > FLOW_CACHE_MAX_SIZE
+        }
+    }
     override fun getUnseenMessagesByChatIdCache(chatId: ChatId): Flow<Long?> {
         return unseenFlowCache.getOrPut(chatId) {
             getUnseenMessagesByChatId(chatId).distinctUntilChanged()
@@ -2637,7 +2657,14 @@ abstract class SphinxRepository(
         )
     }
 
-    private val unseenMentionsFlowCache = mutableMapOf<ChatId, Flow<Long?>>()
+    // Bounded LRU cache for Flow references
+    private val unseenMentionsFlowCache: MutableMap<ChatId, Flow<Long?>> = object : LinkedHashMap<ChatId, Flow<Long?>>(
+        FLOW_CACHE_MAX_SIZE, 0.75f, true
+    ) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<ChatId, Flow<Long?>>?): Boolean {
+            return size > FLOW_CACHE_MAX_SIZE
+        }
+    }
     override fun getUnseenMentionsByChatIdCache(chatId: ChatId): Flow<Long?> {
         return unseenMentionsFlowCache.getOrPut(chatId) {
             getUnseenMentionsByChatId(chatId).distinctUntilChanged()
@@ -5249,12 +5276,11 @@ abstract class SphinxRepository(
                 callback?.invoke()
                 processingInvoice.value = Pair(paymentRequest.value, it)
 
-                val timer = Timer("OneTimeTimer", true)
-                timer.schedule(object : TimerTask() {
-                    override fun run() {
-                        processingInvoice.value = null
-                    }
-                }, 60000)
+                // Use coroutine instead of Timer to avoid creating unnecessary threads
+                applicationScope.launch(io) {
+                    delay(60000L)
+                    processingInvoice.value = null
+                }
             }
         }
     }
@@ -6052,6 +6078,11 @@ abstract class SphinxRepository(
         ContentEpisodeStatusDboPresenterMapper(dispatchers)
     }
 
+    // Reusable Moshi adapter for ChapterResponseDto to avoid repeated instance creation
+    private val chapterResponseAdapter: JsonAdapter<ChapterResponseDto> by lazy {
+        moshi.adapter(ChapterResponseDto::class.java).lenient()
+    }
+
     override fun getAllFeedsOfType(feedType: FeedType): Flow<List<Feed>> = flow {
         val queries = coreDB.getSphinxDatabaseQueries()
 
@@ -6292,14 +6323,12 @@ abstract class SphinxRepository(
 
         val feed = feedDboPresenterMapper.mapFrom(feedDbo)
 
+        // Use Map for O(1) lookup instead of O(n²) nested loop
+        val episodeStatusMap = contentEpisodeStatus.associateBy { it.itemId }
+
         items.forEach { feedItem ->
             feedItem.feed = feed
-
-            contentEpisodeStatus.forEach { contentEpisodeStatus ->
-                if (feedItem.id == contentEpisodeStatus.itemId) {
-                    feedItem.contentEpisodeStatus = contentEpisodeStatus
-                }
-            }
+            feedItem.contentEpisodeStatus = episodeStatusMap[feedItem.id]
         }
 
         feed.items = items
@@ -6342,29 +6371,23 @@ abstract class SphinxRepository(
             contentEpisodeStatusDboPresenterMapper.mapFrom(it)
         }
 
-        val moshi = Moshi.Builder()
-            .add(KotlinJsonAdapterFactory())
-            .build()
-
-        val adapter = moshi.adapter(ChapterResponseDto::class.java).lenient()
+        // Use Map for O(1) lookup instead of O(n²) nested loop
+        val episodeStatusMap = contentEpisodeStatuses.associateBy { it.itemId }
 
         items.forEach { feedItem ->
             feedItem.feed = feed
 
             feedItem.chaptersData?.value?.let { chaptersJson ->
                 try {
-                    val parsedChapters: ChapterResponseDto? = adapter.fromJson(chaptersJson)
+                    val parsedChapters: ChapterResponseDto? = chapterResponseAdapter.fromJson(chaptersJson)
                     feedItem.chapters = parsedChapters
                 } catch (e: Exception) {
                     feedItem.chapters = null
                 }
             }
 
-            contentEpisodeStatuses.forEach { contentEpisodeStatus ->
-                if (feedItem.id == contentEpisodeStatus.itemId) {
-                    feedItem.contentEpisodeStatus = contentEpisodeStatus
-                }
-            }
+            // O(1) lookup instead of O(n) inner loop
+            feedItem.contentEpisodeStatus = episodeStatusMap[feedItem.id]
         }
 
         feed.items = items
@@ -6395,12 +6418,7 @@ abstract class SphinxRepository(
 
         feedItem.chaptersData?.value?.let { chaptersJson ->
             try {
-                val moshi = Moshi.Builder()
-                    .add(KotlinJsonAdapterFactory())
-                    .build()
-
-                val adapter = moshi.adapter(ChapterResponseDto::class.java).lenient()
-                val parsedChapters: ChapterResponseDto? = adapter.fromJson(chaptersJson)
+                val parsedChapters: ChapterResponseDto? = chapterResponseAdapter.fromJson(chaptersJson)
                 feedItem.chapters = parsedChapters
             } catch (e: Exception) {
                 feedItem.chapters = null
@@ -6607,11 +6625,6 @@ abstract class SphinxRepository(
                     val queries = coreDB.getSphinxDatabaseQueries()
 
                     try {
-                        val moshi = Moshi.Builder()
-                            .add(KotlinJsonAdapterFactory())
-                            .build()
-
-                        val adapter = moshi.adapter(ChapterResponseDto::class.java)
                         val chapterResponseDto = response.value
 
                         val hasChapters = chapterResponseDto.nodes.any { it.node_type == "Chapter" }
@@ -6622,7 +6635,7 @@ abstract class SphinxRepository(
                                 ?.properties?.media_url?.toFeedUrl()
 
                         if (hasChapters) {
-                            val feedChaptersData = adapter.toJson(chapterResponseDto).toFeedChapterData()
+                            val feedChaptersData = chapterResponseAdapter.toJson(chapterResponseDto).toFeedChapterData()
                             queries.feedItemUpdateChaptersData(feedChaptersData, downloadedMediaUrl, id)
                         } else {
                             getEpisodeNodeDetails(
@@ -6656,16 +6669,10 @@ abstract class SphinxRepository(
             podcastEpisodeDboPresenterMapper.mapFrom(it, podcast)
         }
 
-        val moshi = Moshi.Builder()
-            .add(KotlinJsonAdapterFactory())
-            .build()
-
-        val adapter = moshi.adapter(ChapterResponseDto::class.java).lenient()
-
         episodes.forEach { episode ->
             episode.chaptersData?.value?.let { chaptersJson ->
                 try {
-                    val parsedChapters: ChapterResponseDto? = adapter.fromJson(chaptersJson)
+                    val parsedChapters: ChapterResponseDto? = chapterResponseAdapter.fromJson(chaptersJson)
                     episode.chapters = parsedChapters
                 } catch (e: Exception) {
                     episode.chapters = null
@@ -6685,23 +6692,17 @@ abstract class SphinxRepository(
             chatDboPresenterMapper.mapFrom(it)
         }
 
-        val allContentStatuses = queries.contentEpisodeStatusGetAll().executeAsList()
-
         val episodeIds = episodes.map { it.id }
 
         val contentEpisodeStatuses = queries.contentEpisodeStatusGetByFeedIdAndItemIds(podcast.id, episodeIds).executeAsList().map {
             contentEpisodeStatusDboPresenterMapper.mapFrom(it)
         }
 
-        LOG.d("TEST", "${allContentStatuses.count()}")
-
+        // Use Map for O(1) lookup instead of O(n²) nested loop
         if (contentEpisodeStatuses.isNotEmpty()) {
+            val episodeStatusMap = contentEpisodeStatuses.associateBy { it.itemId }
             episodes.forEach { episode ->
-                contentEpisodeStatuses.forEach { contentEpisodeStatus ->
-                    if (episode.id == contentEpisodeStatus.itemId) {
-                        episode.contentEpisodeStatus = contentEpisodeStatus
-                    }
-                }
+                episode.contentEpisodeStatus = episodeStatusMap[episode.id]
             }
         }
 

@@ -4582,7 +4582,8 @@ abstract class SphinxRepository(
 
 
             applicationScope.launch(io) {
-                delay(1000L)
+                // Removed unnecessary 1000ms delay - message should be sent immediately
+                // after DB insert for better perceived performance
 
                 if (metadata != null && chat?.id != null) {
                     updateTimezoneFlag(

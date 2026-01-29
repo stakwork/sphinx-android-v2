@@ -38,7 +38,6 @@ import io.matthewnelson.concept_views.viewstate.collect
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -250,34 +249,32 @@ internal class ChatListFragment : SideEffectFragment<
 
     override fun subscribeToViewStateFlow() {
         onStopSupervisor.scope.launch(viewModel.default) {
-            val chatViewStateFlow = flow {
-                viewModel.chatViewStateContainer.collect { emit(it) }
-            }
+            // Use viewStateFlow property directly instead of wrapping in flow { }
+            viewModel.chatViewStateContainer.viewStateFlow
+                .combine(viewModel.hasSingleContact) { chatViewState, isSingleContact ->
+                    Pair(chatViewState, isSingleContact)
+                }.collect { (chatViewState, isSingleContact) ->
+                    withContext(viewModel.mainImmediate) {
+                        when {
+                            chatViewState.list.isEmpty() -> {
+                                if (chatViewState.showProgressBar) {
+                                    binding.progressBarChatList.visible
+                                } else {
+                                    binding.progressBarChatList.gone
+                                }
 
-            chatViewStateFlow.combine(viewModel.hasSingleContact) { chatViewState, isSingleContact ->
-                Pair(chatViewState, isSingleContact)
-            }.collect { (chatViewState, isSingleContact) ->
-                withContext(viewModel.mainImmediate) {
-                    when {
-                        chatViewState.list.isEmpty() -> {
-                            if (chatViewState.showProgressBar) {
-                                binding.progressBarChatList.visible
-                            } else {
-                                binding.progressBarChatList.gone
+                                if (isSingleContact == true) {
+                                    binding.progressBarChatList.gone
+                                }
                             }
 
-                            if (isSingleContact == true) {
+                            else -> {
                                 binding.progressBarChatList.gone
+                                binding.welcomeToSphinx.gone
                             }
-                        }
-
-                        else -> {
-                            binding.progressBarChatList.gone
-                            binding.welcomeToSphinx.gone
                         }
                     }
                 }
-            }
         }
 
         super.subscribeToViewStateFlow()

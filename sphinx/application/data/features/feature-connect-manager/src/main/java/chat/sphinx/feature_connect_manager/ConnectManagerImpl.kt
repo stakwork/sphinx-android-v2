@@ -306,7 +306,7 @@ class ConnectManagerImpl: ConnectManager()
                 )
                 handleRunReturn(setUp)
 
-                val qos = IntArray(1) { 1 }
+                val qos = IntArray(1) { 0 }
 
                 val tribeSubtopic = getTribeManagementTopic(
                     ownerSeed!!,
@@ -523,7 +523,7 @@ class ConnectManagerImpl: ConnectManager()
             }
 
             rr.subscriptionTopics.forEach { topic ->
-                val qos = IntArray(1) { 1 }
+                val qos = IntArray(1) { 0 }
                 mqttClient?.subscribe(arrayOf(topic), qos)
                 Log.d("MQTT_MESSAGES", "=> subscribed to $topic")
             }

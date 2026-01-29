@@ -352,8 +352,7 @@ class SignerManagerImpl(
                         "${clientId}/${SignerTopics.INIT_2_MSG}",
                         "${clientId}/${SignerTopics.LSS_MSG}"
                     )
-                    val qos = IntArray(topics.size) { 1 }
-
+                    val qos = IntArray(topics.size) { 0 }
                     mqttClient?.subscribe(topics, qos)
 
                     val topic = "${clientId}/${SignerTopics.HELLO}"

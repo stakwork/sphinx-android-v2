@@ -48,7 +48,7 @@ class NetworkQueryMemeServerImpl(
         private const val ENDPOINT_SIGNER = "/signer/%s"
         private const val ENDPOINT_VERIFY_AUTHENTICATION = "$MEME_SERVER_URL/verify?id=%s&sig=%s&pubkey=%s"
         private const val ENDPOINT_TEMPLATES = "$MEME_SERVER_URL/templates"
-        private const val ENDPOINT_DATA_SYNC = "TEST" // Need to define actual endpoint
+        private const val ENDPOINT_DATA_SYNC = "$MEME_SERVER_URL/preferences"
     }
 
     override fun askMemeAuthentication(
@@ -229,10 +229,10 @@ class NetworkQueryMemeServerImpl(
     override suspend fun getDataSyncFile(
         authenticationToken: AuthenticationToken,
         memeServerHost: MediaHost,
-    ): Flow<LoadResponse<DataSyncResponseDto, ResponseError>> =
-        networkRelayCall.get(
+    ): Flow<LoadResponse<String, ResponseError>> =
+        networkRelayCall.getRawJson(
             url = String.format(ENDPOINT_DATA_SYNC, memeServerHost.value),
-            headers = mapOf(Pair(authenticationToken.headerKey, authenticationToken.headerValue)),
-            responseJsonClass = DataSyncResponseDto::class.java,
+            headers = mapOf(authenticationToken.headerKey to authenticationToken.headerValue),
+            useExtendedNetworkCallClient = true,
         )
 }

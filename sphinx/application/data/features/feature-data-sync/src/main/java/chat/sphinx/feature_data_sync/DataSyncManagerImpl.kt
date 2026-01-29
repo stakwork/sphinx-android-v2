@@ -259,15 +259,7 @@ class DataSyncManagerImpl (
                         try {
                             // Use dataSyncMoshi instead of moshi
                             val serverItemsResponseRaw = decryptedData.toItemsResponseRaw(dataSyncMoshi)
-
                             val serverItems = serverItemsResponseRaw.toSettingItems()
-
-                            serverItems.forEach { item ->
-                                val valueStr = when (val value = item.value) {
-                                    is DataSyncJson.StringValue -> "\"${value.value}\""
-                                    is DataSyncJson.ObjectValue -> value.value.toString()
-                                }
-                            }
 
                             val mergedItems = mergeDataSyncItems(localItems, serverItems)
 
@@ -460,10 +452,9 @@ class DataSyncManagerImpl (
 //                        println("⏳ Uploading data sync...")
 //                    }
 //                    is Response.Error -> {
-//                        println("❌ Error uploading data sync: ${loadResponse.message}")
 //                    }
 //                    is Response.Success -> {
-//                        println("✅ Successfully uploaded data sync")
+//
 //                    }
 //                }
 //            }
@@ -499,7 +490,7 @@ class DataSyncManagerImpl (
         return try {
             val token = getAuthenticationToken() ?: return null
 
-            var resultJson: String? = null
+            var encryptedString: String? = null
 
             networkQueryMemeServer.getDataSyncFile(
                 authenticationToken = token,
@@ -511,13 +502,12 @@ class DataSyncManagerImpl (
                         println("Error fetching data sync: ${loadResponse.message}")
                     }
                     is Response.Success -> {
-                        val response = loadResponse.value
-                        resultJson = response.toJson()
+                        encryptedString = loadResponse.value
                     }
                 }
             }
 
-            resultJson
+            encryptedString
         } catch (e: Exception) {
             println("Exception fetching data sync: ${e.message}")
             null

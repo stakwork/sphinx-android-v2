@@ -59,4 +59,11 @@ abstract class NetworkQueryMemeServer {
         memeServerHost: MediaHost = MediaHost.DEFAULT,
     ): Flow<LoadResponse<String, ResponseError>>
 
+    abstract suspend fun uploadDataSyncFile(
+        authenticationToken: AuthenticationToken,
+        memeServerHost: MediaHost = MediaHost.DEFAULT,
+        pubkey: String,
+        data: String,
+    ): Flow<LoadResponse<Boolean, ResponseError>>
+
 }

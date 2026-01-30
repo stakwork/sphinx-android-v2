@@ -1323,9 +1323,12 @@ internal class DashboardViewModel @Inject constructor(
     fun initOwner() {
         viewModelScope.launch(mainImmediate) {
             getOwner()
+            accountOwner.value?.let { owner ->
+                dataSyncRepository.setOwner(owner)
+            }
+            dataSyncRepository.startDataSyncObservation()
         }
     }
-
     fun updateTabsState(
         feedActive: Boolean? = null,
         friendsActive: Boolean? = null,

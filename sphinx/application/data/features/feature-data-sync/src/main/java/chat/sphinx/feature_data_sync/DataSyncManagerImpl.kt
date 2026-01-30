@@ -9,34 +9,26 @@ import chat.sphinx.feature_data_sync.adapter.SettingItemRawAdapter
 import chat.sphinx.kotlin_response.LoadResponse
 import chat.sphinx.kotlin_response.Response
 import chat.sphinx.kotlin_response.message
-import chat.sphinx.wrapper_common.datasync.DataSync
-import chat.sphinx.wrapper_common.datasync.DataSyncJson
-import chat.sphinx.wrapper_common.datasync.DataSyncKey
-import chat.sphinx.wrapper_common.datasync.FeedItemStatus
-import chat.sphinx.wrapper_common.datasync.FeedStatus
-import chat.sphinx.wrapper_common.datasync.ItemsResponseRaw
-import chat.sphinx.wrapper_common.datasync.SettingItem
-import chat.sphinx.wrapper_common.datasync.TimezoneSetting
-import chat.sphinx.wrapper_common.datasync.toItemsResponseRaw
-import chat.sphinx.wrapper_common.datasync.toSettingItems
+import chat.sphinx.wrapper_common.datasync.*
 import chat.sphinx.wrapper_common.time
 import chat.sphinx.wrapper_contact.Contact
 import chat.sphinx.wrapper_meme_server.AuthenticationToken
 import chat.sphinx.wrapper_message_media.token.MediaHost
 import com.squareup.moshi.Moshi
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
+import android.util.Base64
 import java.util.*
 
-class DataSyncManagerImpl (
+class DataSyncManagerImpl(
     private val moshi: Moshi,
     private val dispatchers: CoroutineDispatchers,
     private val networkQueryMemeServer: NetworkQueryMemeServer,
     private val memeServerTokenHandler: MemeServerTokenHandler,
-): DataSyncManager() {
+) : DataSyncManager() {
 
     private val dataSyncMoshi: Moshi by lazy {
         moshi.newBuilder()
@@ -44,11 +36,17 @@ class DataSyncManagerImpl (
             .build()
     }
 
-    private var accountOwner: StateFlow<Contact?>? = null
+    private var accountOwner: Contact? = null
+        private set
 
-    fun setAccountOwner(owner: StateFlow<Contact?>) {
-        this.accountOwner = owner
+    private var isOwnerSet = false
+
+
+    override fun setAccountOwner(owner: Contact?) {
+        accountOwner = owner
     }
+
+    private val syncScope = CoroutineScope(SupervisorJob() + dispatchers.io)
 
     private val syncMutex = Mutex()
     private val synchronizedListeners = SynchronizedListenerHolder()
@@ -68,7 +66,9 @@ class DataSyncManagerImpl (
         _dataSyncStateFlow.value = dataSyncList
     }
 
+    // ===========================
     // Listener Management
+    // ===========================
     private inner class SynchronizedListenerHolder {
         private val listeners: LinkedHashSet<DataSyncManagerListener> = LinkedHashSet()
 
@@ -80,7 +80,6 @@ class DataSyncManagerImpl (
             listeners.remove(listener)
         }
 
-        // Suspend version for result-returning operations
         suspend fun <T> requestFromFirstListener(
             block: suspend (DataSyncManagerListener) -> T?
         ): T? {
@@ -89,9 +88,16 @@ class DataSyncManagerImpl (
             }
 
             for (listener in listenersCopy) {
-                val result = block(listener)
-                if (result != null) {
-                    return result
+                try {
+                    val result = block(listener)
+                    if (result != null) {
+                        return result
+                    }
+                } catch (e: CancellationException) {
+                    throw e // Re-throw cancellation
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    // Continue to next listener on error
                 }
             }
 
@@ -117,14 +123,12 @@ class DataSyncManagerImpl (
         }
     }
 
-    // Generic helper for suspend operations that need results
     private suspend fun <T> requestFromListener(
         block: suspend (DataSyncManagerListener) -> T?
     ): T? {
         return synchronizedListeners.requestFromFirstListener(block)
     }
 
-    // Save methods - notify listeners to save to DB
     override suspend fun saveTipAmount(value: String) {
         saveDataSyncItem(
             key = DataSyncKey.TIP_AMOUNT,
@@ -173,7 +177,15 @@ class DataSyncManagerImpl (
         playerSpeed: Double,
         itemId: String
     ) {
-        val feedStatus = FeedStatus(chatPubkey, feedUrl, feedId, subscribed, satsPerMinute, playerSpeed, itemId)
+        val feedStatus = FeedStatus(
+            chatPubkey = chatPubkey,
+            feedUrl = feedUrl,
+            feedId = feedId,
+            subscribed = subscribed,
+            satsPerMinute = satsPerMinute,
+            playerSpeed = playerSpeed,
+            itemId = itemId
+        )
         val jsonString = feedStatus.toJson(moshi)
 
         saveDataSyncItem(
@@ -189,7 +201,10 @@ class DataSyncManagerImpl (
         duration: Int,
         currentTime: Int
     ) {
-        val feedItemStatus = FeedItemStatus(duration, currentTime)
+        val feedItemStatus = FeedItemStatus(
+            duration = duration,
+            currentTime = currentTime
+        )
         val jsonString = feedItemStatus.toJson(moshi)
 
         saveDataSyncItem(
@@ -204,105 +219,203 @@ class DataSyncManagerImpl (
         identifier: String,
         value: String
     ) {
-        withContext(dispatchers.io) {
-            requestFromListener { listener ->
-                listener.onSaveDataSyncItem(
-                    key = key,
-                    identifier = identifier,
-                    value = value,
-                    timestamp = getTimestampInMilliseconds()
-                )
-            }
-        }
-
-        syncWithServer()
-    }
-
-    // Encrypt value using listener
-    private suspend fun encryptValue(value: String): String? {
-        return requestFromListener { listener ->
-            listener.onEncryptDataSync(value)
-        }
-    }
-
-    // Decrypt value using listener
-    private suspend fun decryptValue(value: String): String? {
-        return requestFromListener { listener ->
-            listener.onDecryptDataSync(value)
-        }
-    }
-
-    override suspend fun syncWithServer() = syncMutex.withLock {
-        withContext(dispatchers.io) {
-            try {
-                _syncStatusStateFlow.value = SyncStatus.Syncing
-
-                val localDataSync = _dataSyncStateFlow.value
-                val localItems = localDataSync.map { dataSync ->
-                    SettingItem(
-                        key = dataSync.sync_key.value,
-                        identifier = dataSync.identifier.value,
-                        date = convertTimestampToSeconds(dataSync.date.time),
-                        value = parseLocalValue(
-                            dataSync.sync_value.value,
-                            dataSync.sync_key.value
-                        )
+        try {
+            withContext(dispatchers.io) {
+                requestFromListener { listener ->
+                    listener.onSaveDataSyncItem(
+                        key = key,
+                        identifier = identifier,
+                        value = value,
+                        timestamp = getTimestampInMilliseconds()
                     )
                 }
-
-                val serverDataString = getFileFromServer()
-
-                if (serverDataString != null) {
-                    val decryptedData = decryptValue(serverDataString)
-
-                    if (decryptedData != null) {
-                        try {
-                            // Use dataSyncMoshi instead of moshi
-                            val serverItemsResponseRaw = decryptedData.toItemsResponseRaw(dataSyncMoshi)
-                            val serverItems = serverItemsResponseRaw.toSettingItems()
-
-                            val mergedItems = mergeDataSyncItems(localItems, serverItems)
-
-                            applyMergedItemsToLocal(mergedItems, localItems)
-                            uploadMergedDataToServer(mergedItems)
-
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                            _syncStatusStateFlow.value = SyncStatus.Error("Error parsing server data: ${e.message}")
-                            return@withContext
-                        }
-                    } else {
-                        if (localItems.isNotEmpty()) {
-                            uploadMergedDataToServer(localItems)
-                        }
-                    }
-                } else {
-                    if (localItems.isNotEmpty()) {
-                        uploadMergedDataToServer(localItems)
-                    }
-                }
-
-                _syncStatusStateFlow.value = SyncStatus.Success(System.currentTimeMillis())
-
-            } catch (e: Exception) {
-                e.printStackTrace()
-                _syncStatusStateFlow.value = SyncStatus.Error(e.message ?: "Unknown error")
             }
+
+            syncScope.launch {
+                syncWithServer()
+            }
+        } catch (e: CancellationException) {
+            println("saveDataSyncItem cancelled: ${e.message}")
+            throw e
+        } catch (e: Exception) {
+            println("Error saving data sync item: ${e.message}")
+            e.printStackTrace()
         }
     }
 
+    private suspend fun encryptValue(value: String): String? {
+        return try {
+            requestFromListener { listener ->
+                listener.onEncryptDataSync(value)
+            }
+        } catch (e: CancellationException) {
+            println("encryptValue cancelled")
+            null
+        } catch (e: Exception) {
+            println("Error encrypting value: ${e.message}")
+            null
+        }
+    }
+
+    private suspend fun decryptValue(value: String): String? {
+        return try {
+            requestFromListener { listener ->
+                listener.onDecryptDataSync(value)
+            }
+        } catch (e: CancellationException) {
+            println("decryptValue cancelled")
+            null
+        } catch (e: Exception) {
+            println("Error decrypting value: ${e.message}")
+            null
+        }
+    }
+
+    override suspend fun syncWithServer() {
+        // Don't try to acquire lock if already syncing
+        if (!syncMutex.tryLock()) {
+            println("Sync already in progress, skipping...")
+            return
+        }
+
+        try {
+            syncWithServerInternal()
+        } finally {
+            syncMutex.unlock()
+        }
+    }
+
+    private suspend fun syncWithServerInternal() {
+        try {
+            if (!syncScope.isActive) {
+                println("Sync scope is not active, aborting sync")
+                return
+            }
+
+            _syncStatusStateFlow.value = SyncStatus.Syncing
+
+            val localDataSync = _dataSyncStateFlow.value
+
+            val localItems = localDataSync.map { dataSync ->
+                SettingItem(
+                    key = dataSync.sync_key.value,
+                    identifier = dataSync.identifier.value,
+                    date = convertTimestampToSeconds(dataSync.date.time),
+                    value = parseLocalValue(
+                        dataSync.sync_value.value,
+                        dataSync.sync_key.value
+                    )
+                )
+            }
+
+            ensureActive()
+
+            val serverDataString = getFileFromServer()
+
+            if (serverDataString != null) {
+                ensureActive()
+
+                val decryptedData = decryptValue(serverDataString)
+
+                if (decryptedData != null) {
+                    try {
+                        val serverItemsResponseRaw = decryptedData.toItemsResponseRaw(dataSyncMoshi)
+                        val serverItems = serverItemsResponseRaw.toSettingItems()
+
+                        ensureActive()
+
+                        val mergedItems = mergeDataSyncItems(localItems, serverItems)
+
+                        ensureActive()
+
+                        applyMergedItemsToLocal(mergedItems, localItems)
+
+                        ensureActive()
+
+                        val uploadSuccess = uploadMergedDataToServer(mergedItems)
+
+                        ensureActive()
+
+                        if (uploadSuccess) {
+                            clearDataSyncTable()
+                        }
+
+                    } catch (e: CancellationException) {
+                        println("Sync cancelled during processing: ${e.message}")
+                        throw e
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        _syncStatusStateFlow.value = SyncStatus.Error("Error parsing server data: ${e.message}")
+                        return
+                    }
+                } else {
+                    // No server data or decryption failed
+                    if (localItems.isNotEmpty()) {
+                        ensureActive()
+                        val uploadSuccess = uploadMergedDataToServer(localItems)
+                        if (uploadSuccess) {
+                            ensureActive()
+                            clearDataSyncTable()
+                        }
+                    }
+                }
+            } else {
+                // No server data exists
+                if (localItems.isNotEmpty()) {
+                    ensureActive()
+                    val uploadSuccess = uploadMergedDataToServer(localItems)
+                    if (uploadSuccess) {
+                        ensureActive()
+                        clearDataSyncTable()
+                    }
+                }
+            }
+
+            _syncStatusStateFlow.value = SyncStatus.Success(System.currentTimeMillis())
+
+        } catch (e: CancellationException) {
+            println("Sync operation cancelled: ${e.message}")
+            _syncStatusStateFlow.value = SyncStatus.Idle
+        } catch (e: Exception) {
+            e.printStackTrace()
+            _syncStatusStateFlow.value = SyncStatus.Error(e.message ?: "Unknown error")
+        }
+    }
+
+    private fun ensureActive() {
+        if (!syncScope.isActive) {
+            throw CancellationException("Sync scope is not active")
+        }
+    }
+
+    private suspend fun clearDataSyncTable() {
+        try {
+            requestFromListener { listener ->
+                listener.onClearDataSyncTable()
+            }
+        } catch (e: CancellationException) {
+            println("clearDataSyncTable cancelled")
+        } catch (e: Exception) {
+            println("Error clearing data sync table: ${e.message}")
+            e.printStackTrace()
+        }
+    }
+
+    // ===========================
+    // Helper Methods
+    // ===========================
     private fun parseLocalValue(valueString: String, key: String): DataSyncJson {
         if (valueString.trim().startsWith("{")) {
             try {
                 val map = parseSimpleJsonObject(valueString)
                 return DataSyncJson.ObjectValue(map)
             } catch (e: Exception) {
+                // Fall through to StringValue
             }
         }
         return DataSyncJson.StringValue(valueString)
     }
 
-    // Simple JSON object parser for local data (only handles string values)
     private fun parseSimpleJsonObject(json: String): Map<String, String> {
         val map = mutableMapOf<String, String>()
         val cleaned = json.trim().removePrefix("{").removeSuffix("}")
@@ -327,13 +440,13 @@ class DataSyncManagerImpl (
     ): List<SettingItem> {
         val mergedMap = mutableMapOf<String, SettingItem>()
 
-        // First, add all server items to the map
+        // Add all server items first
         serverItems.forEach { serverItem ->
             val key = "${serverItem.key}:${serverItem.identifier}"
             mergedMap[key] = serverItem
         }
 
-        // Then process local items
+        // Process local items
         localItems.forEach { localItem ->
             val key = "${localItem.key}:${localItem.identifier}"
             val existingItem = mergedMap[key]
@@ -364,105 +477,208 @@ class DataSyncManagerImpl (
         val localMap = localItems.associateBy { "${it.key}:${it.identifier}" }
 
         mergedItems.forEach { mergedItem ->
-            val key = "${mergedItem.key}:${mergedItem.identifier}"
-            val localItem = localMap[key]
+            try {
+                ensureActive()
 
-            if (localItem == null) {
-                saveDataSyncItem(mergedItem)
-                applyItemToActualTables(mergedItem)
-            } else {
-                // Item exists locally - check if server version is newer
-                val localDate = parseDate(localItem.date)
-                val mergedDate = parseDate(mergedItem.date)
+                val key = "${mergedItem.key}:${mergedItem.identifier}"
+                val localItem = localMap[key]
 
-                if (mergedDate > localDate) {
-                    // Server version is newer - update local DB and actual tables
-                    saveDataSyncItem(mergedItem)
+                if (localItem == null) {
+                    // Item doesn't exist locally - add it
+                    saveDataSyncItemToDb(mergedItem)
                     applyItemToActualTables(mergedItem)
+                } else {
+                    // Item exists locally - check if server version is newer
+                    val localDate = parseDate(localItem.date)
+                    val mergedDate = parseDate(mergedItem.date)
+
+                    if (mergedDate > localDate) {
+                        // Server version is newer - update local DB and actual tables
+                        saveDataSyncItemToDb(mergedItem)
+                        applyItemToActualTables(mergedItem)
+                    }
                 }
+            } catch (e: CancellationException) {
+                println("applyMergedItemsToLocal cancelled")
+                throw e
+            } catch (e: Exception) {
+                println("Error applying item to local: ${e.message}")
+                e.printStackTrace()
+                // Continue with next item
             }
         }
     }
 
     private suspend fun applyItemToActualTables(item: SettingItem) {
-        val valueString = when (val value = item.value) {
-            is DataSyncJson.StringValue -> value.value
-            is DataSyncJson.ObjectValue -> {
-                value.value.entries.joinToString(
-                    prefix = "{",
-                    postfix = "}",
-                    separator = ","
-                ) { (k, v) -> "\"$k\":\"$v\"" }
-            }
-        }
-
-        requestFromListener { listener ->
-            listener.onApplySyncedData(
-                key = item.key,
-                identifier = item.identifier,
-                value = valueString
-            )
-        }
-    }
-
-    private suspend fun saveDataSyncItem(item: SettingItem) {
-        val valueString = when (val value = item.value) {
-            is DataSyncJson.StringValue -> value.value
-            is DataSyncJson.ObjectValue -> {
-                value.value.entries.joinToString(
-                    prefix = "{",
-                    postfix = "}",
-                    separator = ","
-                ) { (k, v) -> "\"$k\":\"$v\"" }
-            }
-        }
-
-        requestFromListener { listener ->
-            listener.onSaveDataSyncItem(
-                key = item.key,
-                identifier = item.identifier,
-                value = valueString,
-                timestamp = convertSecondsToMilliseconds(item.date)
-            )
-        }
-    }
-
-    private suspend fun uploadMergedDataToServer(mergedItems: List<SettingItem>) {
         try {
-            val token = getAuthenticationToken() ?: return
+            val valueString = when (val value = item.value) {
+                is DataSyncJson.StringValue -> value.value
+                is DataSyncJson.ObjectValue -> {
+                    value.value.entries.joinToString(
+                        prefix = "{",
+                        postfix = "}",
+                        separator = ","
+                    ) { (k, v) -> "\"$k\":\"$v\"" }
+                }
+            }
+
+            requestFromListener { listener ->
+                listener.onApplySyncedData(
+                    key = item.key,
+                    identifier = item.identifier,
+                    value = valueString
+                )
+            }
+        } catch (e: CancellationException) {
+            println("applyItemToActualTables cancelled")
+        } catch (e: Exception) {
+            println("Error applying item to actual tables: ${e.message}")
+            e.printStackTrace()
+        }
+    }
+
+    private suspend fun saveDataSyncItemToDb(item: SettingItem) {
+        try {
+            val valueString = when (val value = item.value) {
+                is DataSyncJson.StringValue -> value.value
+                is DataSyncJson.ObjectValue -> {
+                    value.value.entries.joinToString(
+                        prefix = "{",
+                        postfix = "}",
+                        separator = ","
+                    ) { (k, v) -> "\"$k\":\"$v\"" }
+                }
+            }
+
+            requestFromListener { listener ->
+                listener.onSaveDataSyncItem(
+                    key = item.key,
+                    identifier = item.identifier,
+                    value = valueString,
+                    timestamp = convertSecondsToMilliseconds(item.date)
+                )
+            }
+        } catch (e: CancellationException) {
+            println("saveDataSyncItemToDb cancelled")
+        } catch (e: Exception) {
+            println("Error saving data sync item to DB: ${e.message}")
+            e.printStackTrace()
+        }
+    }
+
+    private suspend fun uploadMergedDataToServer(mergedItems: List<SettingItem>): Boolean {
+        return try {
+            ensureActive()
+
+            val token = getAuthenticationToken() ?: return false
+            val ownerPubKey = accountOwner?.nodePubKey?.value ?: return false
+
+            val pubkeyBase64Url = hexToBase64URL(ownerPubKey)
 
             val itemsResponseRaw = mergedItems.toItemsResponseRaw()
 
             val adapter = dataSyncMoshi.adapter(ItemsResponseRaw::class.java)
             val jsonData = adapter.toJson(itemsResponseRaw)
 
-            val encryptedData = encryptValue(jsonData)
+            val encryptedData = encryptValue(jsonData) ?: return false
 
-            if (encryptedData == null) {
-                return
+            ensureActive()
+
+            var uploadSuccess = false
+            var uploadCompleted = false
+
+
+            withTimeoutOrNull(30000L) {
+                networkQueryMemeServer.uploadDataSyncFile(
+                    authenticationToken = token,
+                    memeServerHost = MediaHost.DEFAULT,
+                    pubkey = pubkeyBase64Url,
+                    data = encryptedData
+                ).collect { loadResponse ->
+                    when (loadResponse) {
+                        is LoadResponse.Loading -> {
+                        }
+                        is Response.Error -> {
+                            uploadSuccess = false
+                            uploadCompleted = true
+                        }
+                        is Response.Success -> {
+                            uploadSuccess = true
+                            uploadCompleted = true
+                        }
+                    }
+
+                    if (uploadCompleted) {
+                        ensureActive()
+                    }
+                }
+            } ?: run {
+                println("Upload timed out")
+                return false
             }
 
-//            networkQueryMemeServer.uploadDataSyncFile(
-//                authenticationToken = token,
-//                memeServerHost = MediaHost.DEFAULT,
-//                data = encryptedData
-//            ).collect { loadResponse ->
-//                when (loadResponse) {
-//                    is LoadResponse.Loading -> {
-//                        println("⏳ Uploading data sync...")
-//                    }
-//                    is Response.Error -> {
-//                    }
-//                    is Response.Success -> {
-//
-//                    }
-//                }
-//            }
+            uploadSuccess
+        } catch (e: CancellationException) {
+            println("Upload cancelled: ${e.message}")
+            false
         } catch (e: Exception) {
             e.printStackTrace()
+            false
         }
     }
 
+    // ===========================
+    // Server Communication
+    // ===========================
+    private suspend fun getFileFromServer(): String? {
+        return try {
+            ensureActive()
+
+            val token = getAuthenticationToken() ?: return null
+
+            var encryptedString: String? = null
+            var fetchCompleted = false
+
+            // Use timeout to prevent hanging
+            withTimeoutOrNull(30000L) { // 30 second timeout
+                networkQueryMemeServer.getDataSyncFile(
+                    authenticationToken = token,
+                    memeServerHost = MediaHost.DEFAULT
+                ).collect { loadResponse ->
+                    when (loadResponse) {
+                        is LoadResponse.Loading -> {}
+                        is Response.Error -> {
+                            println("Error fetching data sync: ${loadResponse.message}")
+                            fetchCompleted = true
+                        }
+                        is Response.Success -> {
+                            encryptedString = loadResponse.value
+                            fetchCompleted = true
+                        }
+                    }
+
+                    if (fetchCompleted) {
+                        ensureActive()
+                    }
+                }
+            } ?: run {
+                println("Fetch timed out")
+                return null
+            }
+
+            encryptedString
+        } catch (e: CancellationException) {
+            println("Fetch cancelled: ${e.message}")
+            null
+        } catch (e: Exception) {
+            println("Exception fetching data sync: ${e.message}")
+            null
+        }
+    }
+
+    // ===========================
+    // Utility Methods
+    // ===========================
     private fun convertTimestampToSeconds(milliseconds: Long): String {
         val seconds = milliseconds / 1000
         return seconds.toString()
@@ -485,35 +701,6 @@ class DataSyncManagerImpl (
         }
     }
 
-
-    private suspend fun getFileFromServer(): String? {
-        return try {
-            val token = getAuthenticationToken() ?: return null
-
-            var encryptedString: String? = null
-
-            networkQueryMemeServer.getDataSyncFile(
-                authenticationToken = token,
-                memeServerHost = MediaHost.DEFAULT
-            ).collect { loadResponse ->
-                when (loadResponse) {
-                    is LoadResponse.Loading -> {}
-                    is Response.Error -> {
-                        println("Error fetching data sync: ${loadResponse.message}")
-                    }
-                    is Response.Success -> {
-                        encryptedString = loadResponse.value
-                    }
-                }
-            }
-
-            encryptedString
-        } catch (e: Exception) {
-            println("Exception fetching data sync: ${e.message}")
-            null
-        }
-    }
-
     private fun getTimestampInMilliseconds(): Long =
         System.currentTimeMillis()
 
@@ -524,9 +711,47 @@ class DataSyncManagerImpl (
                 ?: return null
 
             token
+        } catch (e: CancellationException) {
+            println("getAuthenticationToken cancelled")
+            null
         } catch (e: Exception) {
             println("Exception retrieving authentication token: ${e.message}")
             null
         }
+    }
+
+    private fun hexToBase64URL(hex: String): String {
+        val bytes = mutableListOf<Byte>()
+        var hexString = hex
+
+        // Remove any spaces or special characters
+        hexString = hexString.replace(Regex("[^0-9A-Fa-f]"), "")
+
+        // Convert hex string to bytes
+        var i = 0
+        while (i < hexString.length) {
+            val byteString = hexString.substring(i, minOf(i + 2, hexString.length))
+            bytes.add(byteString.toInt(16).toByte())
+            i += 2
+        }
+
+        val byteArray = bytes.toByteArray()
+
+        // Convert to base64
+        val base64 = Base64.encodeToString(
+            byteArray,
+            Base64.NO_WRAP
+        )
+
+        // Convert to base64URL format
+        return base64
+            .replace("+", "-")
+            .replace("/", "_")
+            .replace("=", "")
+    }
+
+    // Cleanup method to cancel ongoing operations
+    fun cleanup() {
+        syncScope.cancel()
     }
 }

@@ -1,9 +1,8 @@
 package chat.sphinx.concept_data_sync
 
-import chat.sphinx.concept_data_sync.model.DataSyncError
-import chat.sphinx.concept_data_sync.model.DataSyncState
 import chat.sphinx.concept_data_sync.model.SyncStatus
 import chat.sphinx.wrapper_common.datasync.DataSync
+import chat.sphinx.wrapper_contact.Contact
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -51,6 +50,8 @@ abstract class DataSyncManager {
     // Listener methods
     abstract fun addListener(listener: DataSyncManagerListener): Boolean
     abstract fun removeListener(listener: DataSyncManagerListener): Boolean
+    abstract fun setAccountOwner(owner: Contact?)
+
 }
 
 interface DataSyncManagerListener {
@@ -96,5 +97,5 @@ interface DataSyncManagerListener {
 
     suspend fun onEncryptDataSync(value: String): String?
     suspend fun onDecryptDataSync(value: String): String?
-
+    fun onClearDataSyncTable()
 }

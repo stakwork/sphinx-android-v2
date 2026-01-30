@@ -329,6 +329,10 @@ abstract class SphinxRepository(
         )
     }
 
+    override fun setOwner(owner: Contact?) {
+        dataSyncManager.setAccountOwner(owner)
+    }
+
     override suspend fun upsertDataSync(
         key: DataSyncKey1,
         identifier: DataSyncIdentifier,
@@ -2050,6 +2054,12 @@ abstract class SphinxRepository(
 
     override suspend fun onDecryptDataSync(value: String): String? = withContext(io) {
         connectManager.decryptDataSync(value)
+    }
+
+    override fun onClearDataSyncTable() {
+        applicationScope.launch(io) {
+            coreDB.getSphinxDatabaseQueries().dataSyncDeleteAll()
+        }
     }
 
     fun extractUrlParts(url: String): Pair<String?, String?> {

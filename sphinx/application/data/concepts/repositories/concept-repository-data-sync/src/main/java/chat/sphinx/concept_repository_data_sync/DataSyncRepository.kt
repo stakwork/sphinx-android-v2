@@ -5,6 +5,7 @@ import chat.sphinx.wrapper_common.datasync.DataSync
 import chat.sphinx.wrapper_common.datasync.DataSyncIdentifier
 import chat.sphinx.wrapper_common.datasync.DataSyncKey
 import chat.sphinx.wrapper_common.datasync.DataSyncValue
+import chat.sphinx.wrapper_contact.Contact
 import kotlinx.coroutines.flow.Flow
 
 
@@ -16,6 +17,8 @@ interface DataSyncRepository {
         key: DataSyncKey,
         identifier: DataSyncIdentifier
     ): Flow<DataSync?>
+
+    abstract fun setOwner(owner: Contact?)
 
     suspend fun upsertDataSync(
         key: DataSyncKey,

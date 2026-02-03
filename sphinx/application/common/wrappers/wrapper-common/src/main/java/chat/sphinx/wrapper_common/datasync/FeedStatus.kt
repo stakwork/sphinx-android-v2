@@ -1,18 +1,19 @@
 package chat.sphinx.wrapper_common.datasync
 
+import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.JsonDataException
 import com.squareup.moshi.Moshi
 
 @JsonClass(generateAdapter = true)
 data class FeedStatus(
-    val chatPubkey: String,
-    val feedUrl: String,
-    val feedId: String,
-    val subscribed: Boolean,
-    val satsPerMinute: Int,
-    val playerSpeed: Double,
-    val itemId: String
+    @Json(name = "chat_pubkey") val chatPubkey: String,
+    @Json(name = "feed_url") val feedUrl: String,
+    @Json(name = "feed_id") val feedId: String,
+    @Json(name = "subscribed") val subscribed: Boolean,
+    @Json(name = "sats_per_minute") val satsPerMinute: Int,
+    @Json(name = "player_speed") val playerSpeed: Double,
+    @Json(name = "item_id") val itemId: String
 ) {
     @Throws(AssertionError::class)
     fun toJson(moshi: Moshi): String {

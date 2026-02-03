@@ -1789,42 +1789,7 @@ abstract class SphinxRepository(
         }
     }
 
-    override fun onRemoteTipAmountChanged(tipAmount: Long) {
-        TODO("Not yet implemented")
-    }
 
-    override fun onRemotePrivatePhotoChanged(isPrivate: Boolean) {
-        TODO("Not yet implemented")
-    }
-
-    override fun onRemoteTimezoneChanged(
-        chatPubkey: String,
-        timezoneEnabled: Boolean,
-        timezoneIdentifier: String
-    ) {
-        TODO("Not yet implemented")
-    }
-
-    override fun onRemoteFeedStatusChanged(
-        feedId: String,
-        chatPubkey: String,
-        feedUrl: String,
-        subscribed: Boolean,
-        satsPerMinute: Int,
-        playerSpeed: Double,
-        itemId: String
-    ) {
-        TODO("Not yet implemented")
-    }
-
-    override fun onRemoteFeedItemStatusChanged(
-        feedId: String,
-        itemId: String,
-        duration: Int,
-        currentTime: Int
-    ) {
-        TODO("Not yet implemented")
-    }
 
     override fun onSaveDataSyncItem(
         key: String,
@@ -1947,14 +1912,14 @@ abstract class SphinxRepository(
             val queries = coreDB.getSphinxDatabaseQueries()
 
             val feedIdValue = feedId.toFeedId() ?: return
-            val feedUrl = feedStatusData["feedUrl"]?.toFeedUrl() ?: return
+            val feedUrl = feedStatusData["feed_url"]?.toFeedUrl() ?: return
             val subscribed = (feedStatusData["subscribed"]?.lowercase() == "true").toSubscribed()
-            val satsPerMinute = feedStatusData["satsPerMinute"]?.toLongOrNull()?.toSat()
-            val playerSpeed = feedStatusData["playerSpeed"]?.toDoubleOrNull()?.toFeedPlayerSpeed()
-            val itemId = feedStatusData["itemId"]?.toFeedId()
+            val satsPerMinute = feedStatusData["sats_per_minute"]?.toLongOrNull()?.toSat()
+            val playerSpeed = feedStatusData["player_speed"]?.toDoubleOrNull()?.toFeedPlayerSpeed()
+            val itemId = feedStatusData["item_id"]?.toFeedId()
 
             // Get chat_id if chatPubkey is provided
-            val chatPubkey = feedStatusData["chatPubkey"]
+            val chatPubkey = feedStatusData["chat_pubkey"]
             val chatId = if (!chatPubkey.isNullOrEmpty()) {
                 queries.chatGetAll()
                     .executeAsList()
@@ -1964,6 +1929,37 @@ abstract class SphinxRepository(
                 null
             }
 
+            // Check if feed exists locally
+            val existingFeed = queries.feedGetByIds(listOf(feedIdValue))
+                .executeAsOneOrNull()
+
+            // If feed doesn't exist or is not subscribed but should be, fetch it
+            if (existingFeed == null) {
+                LOG.d(TAG, "Feed $feedId doesn't exist or needs updating, fetching from server...")
+
+                // Fetch the feed content from server
+                val updateResponse = updateFeedContent(
+                    chatId = chatId ?: ChatId(ChatId.NULL_CHAT_ID.toLong()),
+                    host = ChatHost(Feed.TRIBES_DEFAULT_SERVER_URL),
+                    feedUrl = feedUrl,
+                    searchResultDescription = null,
+                    searchResultImageUrl = null,
+                    chatUUID = null,
+                    subscribed = subscribed,
+                    currentItemId = itemId,
+                    delay = 0L
+                )
+
+                when (updateResponse) {
+                    is Response.Error -> {
+                    }
+                    is Response.Success -> {
+                        LOG.d(TAG, "Successfully fetched feed content for $feedId")
+                    }
+                }
+            }
+
+            // Update content feed status
             contentFeedStatusLock.withLock {
                 queries.contentFeedStatusUpsert(
                     feed_id = feedIdValue,
@@ -1994,7 +1990,7 @@ abstract class SphinxRepository(
             val feedItemStatusData = parseFeedItemStatusJson(value)
 
             val duration = feedItemStatusData["duration"]?.toLongOrNull()?.toFeedItemDuration() ?: return
-            val currentTime = feedItemStatusData["currentTime"]?.toLongOrNull()?.toFeedItemDuration() ?: return
+            val currentTime = feedItemStatusData["current_time"]?.toLongOrNull()?.toFeedItemDuration() ?: return
 
             val queries = coreDB.getSphinxDatabaseQueries()
 

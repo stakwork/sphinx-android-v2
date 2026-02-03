@@ -1,13 +1,14 @@
 package chat.sphinx.wrapper_common.datasync
 
+import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.JsonDataException
 import com.squareup.moshi.Moshi
 
 @JsonClass(generateAdapter = true)
 data class TimezoneSetting(
-    val timezoneEnabled: Boolean,
-    val timezoneIdentifier: String
+    @Json(name = "timezone_enabled") val timezoneEnabled: Boolean,
+    @Json(name = "timezone_identifier") val timezoneIdentifier: String
 ) {
     @Throws(AssertionError::class)
     fun toJson(moshi: Moshi): String {

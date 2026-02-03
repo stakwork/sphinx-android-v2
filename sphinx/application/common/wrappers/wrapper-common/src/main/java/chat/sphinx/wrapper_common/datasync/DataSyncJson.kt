@@ -34,8 +34,8 @@ sealed class DataSyncJson {
 
     // Type-specific converters
     private fun ObjectValue.toTimezoneSetting(): TimezoneSetting? {
-        val enabled = value["timezoneEnabled"] ?: return null
-        val identifier = value["timezoneIdentifier"] ?: return null
+        val enabled = value["timezone_enabled"] ?: return null
+        val identifier = value["timezone_identifier"] ?: return null
         return TimezoneSetting(
             timezoneEnabled = enabled.lowercase() == "true",
             timezoneIdentifier = identifier

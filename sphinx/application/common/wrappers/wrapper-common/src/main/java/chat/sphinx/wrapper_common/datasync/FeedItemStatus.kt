@@ -1,13 +1,14 @@
 package chat.sphinx.wrapper_common.datasync
 
+import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.JsonDataException
 import com.squareup.moshi.Moshi
 
 @JsonClass(generateAdapter = true)
 data class FeedItemStatus(
-    val duration: Int,
-    val currentTime: Int
+    @Json(name = "duration") val duration: Int,
+    @Json(name = "current_time") val currentTime: Int
 ) {
     val progressPercentage: Double
         get() = if (duration > 0) (currentTime.toDouble() / duration) * 100 else 0.0

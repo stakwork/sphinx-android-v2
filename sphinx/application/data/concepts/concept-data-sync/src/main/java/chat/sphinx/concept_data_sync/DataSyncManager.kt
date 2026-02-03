@@ -55,31 +55,6 @@ abstract class DataSyncManager {
 }
 
 interface DataSyncManagerListener {
-    // Called when server has newer data that should be applied locally
-    fun onRemoteTipAmountChanged(tipAmount: Long)
-    fun onRemotePrivatePhotoChanged(isPrivate: Boolean)
-
-    fun onRemoteTimezoneChanged(
-        chatPubkey: String,
-        timezoneEnabled: Boolean,
-        timezoneIdentifier: String
-    )
-
-    fun onRemoteFeedStatusChanged(
-        feedId: String,
-        chatPubkey: String,
-        feedUrl: String,
-        subscribed: Boolean,
-        satsPerMinute: Int,
-        playerSpeed: Double,
-        itemId: String
-    )
-
-    fun onRemoteFeedItemStatusChanged(
-        feedId: String,
-        itemId: String,
-        duration: Int, currentTime: Int
-    )
 
     // Called when manager needs to save data locally
     fun onSaveDataSyncItem(

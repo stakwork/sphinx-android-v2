@@ -44,7 +44,6 @@ abstract class DataSyncManager {
         currentTime: Int
     )
 
-    // Sync trigger - called after saves or on app init
     abstract suspend fun syncWithServer()
 
     // Listener methods

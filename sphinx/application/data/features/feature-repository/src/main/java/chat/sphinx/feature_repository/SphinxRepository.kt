@@ -355,6 +355,12 @@ abstract class SphinxRepository(
         }
     }
 
+    override fun syncWithServer() {
+        applicationScope.launch(io) {
+            dataSyncManager.syncWithServer()
+        }
+    }
+
     override suspend fun deleteDataSync(
         key: DataSyncKey1,
         identifier: DataSyncIdentifier
@@ -1789,8 +1795,6 @@ abstract class SphinxRepository(
         }
     }
 
-
-
     override fun onSaveDataSyncItem(
         key: String,
         identifier: String,
@@ -1873,13 +1877,15 @@ abstract class SphinxRepository(
         if (chatPubkey.isEmpty()) return
 
         try {
-            // Parse the timezone JSON object
             val timezoneData = parseTimezoneJson(value)
-            val timezoneEnabled = timezoneData["timezoneEnabled"]?.lowercase() == "true"
-            val timezoneIdentifier = timezoneData["timezoneIdentifier"] ?: ""
+
+            val timezoneEnabled = (timezoneData["timezone_enabled"]
+                ?: timezoneData["timezoneEnabled"])?.lowercase() == "true"
+
+            val timezoneIdentifier = (timezoneData["timezone_identifier"]
+                ?: timezoneData["timezoneIdentifier"]) ?: ""
 
             val queries = coreDB.getSphinxDatabaseQueries()
-
             val chat = queries.chatGetAll()
                 .executeAsList()
                 .firstOrNull { it.owner_pub_key?.value == chatPubkey }

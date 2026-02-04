@@ -29,6 +29,8 @@ interface DataSyncRepository {
 
     fun startDataSyncObservation()
 
+    fun syncWithServer()
+
     suspend fun deleteDataSync(
         key: DataSyncKey,
         identifier: DataSyncIdentifier

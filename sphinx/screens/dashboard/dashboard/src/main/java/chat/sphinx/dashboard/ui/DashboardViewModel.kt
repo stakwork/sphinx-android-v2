@@ -1327,6 +1327,14 @@ internal class DashboardViewModel @Inject constructor(
                 dataSyncRepository.setOwner(owner)
             }
             dataSyncRepository.startDataSyncObservation()
+
+            viewModelScope.launch(io) {
+                try {
+                    delay(500)
+                    dataSyncRepository.syncWithServer()
+                } catch (e: Exception) {
+                }
+            }
         }
     }
     fun updateTabsState(

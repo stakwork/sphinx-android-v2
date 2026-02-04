@@ -7435,16 +7435,19 @@ abstract class SphinxRepository(
     ) = withContext(io) {
         try {
             val feed = getFeedById(feedId).firstOrNull() ?: return@withContext
-            val chat = feed.chat
+            val podcast = getPodcastById(feedId).firstOrNull()
 
             val contentFeedStatus = coreDB.getSphinxDatabaseQueries()
                 .contentFeedStatusGetByFeedId(feedId)
                 .executeAsOneOrNull()
 
-            val chatPubkey = chat?.ownerPubKey?.value ?: ""
+            val chatPubkey = feed.chat?.ownerPubKey?.value ?: ""
             val satsPerMinute = contentFeedStatus?.sats_per_minute?.value?.toInt() ?: 0
             val playerSpeed = contentFeedStatus?.player_speed?.value ?: 1.0
-            val itemId = contentFeedStatus?.item_id?.value ?: ""
+
+            val itemId = contentFeedStatus?.item_id?.value?.takeIf { it.isNotEmpty() }
+                ?: podcast?.getCurrentEpisode()?.id?.value
+                ?: ""
 
             dataSyncManager.saveFeedStatus(
                 feedId = feedId.value,

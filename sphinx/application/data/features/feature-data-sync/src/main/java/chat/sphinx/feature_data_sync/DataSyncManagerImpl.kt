@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import android.util.Base64
+import chat.sphinx.wrapper_common.toDateTime
 import java.util.*
 
 class DataSyncManagerImpl(
@@ -220,19 +221,28 @@ class DataSyncManagerImpl(
         value: String
     ) {
         try {
+            val timestamp = getTimestampInMilliseconds()
+
             withContext(dispatchers.io) {
                 requestFromListener { listener ->
                     listener.onSaveDataSyncItem(
                         key = key,
                         identifier = identifier,
                         value = value,
-                        timestamp = getTimestampInMilliseconds()
+                        timestamp = timestamp
                     )
                 }
             }
 
+            val pendingDataSync = DataSync(
+                sync_key = key.toDataSyncKey(),
+                identifier = DataSyncIdentifier(identifier),
+                date = timestamp.toDateTime(),
+                sync_value = DataSyncValue(value)
+            )
+
             syncScope.launch {
-                syncWithServer()
+                syncWithServer(pendingDataSync)
             }
         } catch (e: CancellationException) {
             println("saveDataSyncItem cancelled: ${e.message}")
@@ -271,7 +281,7 @@ class DataSyncManagerImpl(
         }
     }
 
-    override suspend fun syncWithServer() {
+    override suspend fun syncWithServer(pendingDataSync: DataSync?) {
         // Don't try to acquire lock if already syncing
         if (!syncMutex.tryLock()) {
             println("Sync already in progress, skipping...")
@@ -279,13 +289,13 @@ class DataSyncManagerImpl(
         }
 
         try {
-            syncWithServerInternal()
+            syncWithServerInternal(pendingDataSync)
         } finally {
             syncMutex.unlock()
         }
     }
 
-    private suspend fun syncWithServerInternal() {
+    private suspend fun syncWithServerInternal(pendingDataSync: DataSync?) {
         try {
             if (!syncScope.isActive) {
                 println("Sync scope is not active, aborting sync")
@@ -294,7 +304,17 @@ class DataSyncManagerImpl(
 
             _syncStatusStateFlow.value = SyncStatus.Syncing
 
-            val localDataSync = _dataSyncStateFlow.value
+            val localDataSync = _dataSyncStateFlow.value.toMutableList()
+
+            pendingDataSync?.let { pending ->
+                val exists = localDataSync.any { existing ->
+                    existing.sync_key == pending.sync_key &&
+                            existing.identifier == pending.identifier
+                }
+                if (!exists) {
+                    localDataSync.add(pending)
+                }
+            }
 
             val localItems = localDataSync.map { dataSync ->
                 SettingItem(
@@ -349,7 +369,6 @@ class DataSyncManagerImpl(
                         return
                     }
                 } else {
-                    // No server data or decryption failed
                     if (localItems.isNotEmpty()) {
                         ensureActive()
                         val uploadSuccess = uploadMergedDataToServer(localItems)
@@ -360,7 +379,6 @@ class DataSyncManagerImpl(
                     }
                 }
             } else {
-                // No server data exists
                 if (localItems.isNotEmpty()) {
                     ensureActive()
                     val uploadSuccess = uploadMergedDataToServer(localItems)

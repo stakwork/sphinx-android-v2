@@ -44,7 +44,7 @@ abstract class DataSyncManager {
         currentTime: Int
     )
 
-    abstract suspend fun syncWithServer()
+    abstract suspend fun syncWithServer(pendingDataSync: DataSync? = null)
 
     // Listener methods
     abstract fun addListener(listener: DataSyncManagerListener): Boolean

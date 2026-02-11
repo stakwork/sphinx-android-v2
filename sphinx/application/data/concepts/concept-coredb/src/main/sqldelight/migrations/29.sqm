@@ -1,3 +1,3 @@
-import chat.sphinx.wrapper_common.feed.FeedUrl;
+import chat.sphinx.wrapper_chat.ChatMemberMentions;
 
-ALTER TABLE feedItemDbo ADD COLUMN downloaded_item_url INTEGER AS FeedUrl;
+ALTER TABLE chatDbo ADD COLUMN member_mentions TEXT AS ChatMemberMentions DEFAULT NULL;

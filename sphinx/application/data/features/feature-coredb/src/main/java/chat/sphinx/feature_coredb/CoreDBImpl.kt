@@ -8,6 +8,7 @@ import chat.sphinx.conceptcoredb.ContactDbo
 import chat.sphinx.conceptcoredb.ContentEpisodeStatusDbo
 import chat.sphinx.conceptcoredb.ContentFeedStatusDbo
 import chat.sphinx.conceptcoredb.DashboardDbo
+import chat.sphinx.conceptcoredb.DataSyncDbo
 import chat.sphinx.conceptcoredb.FeedDbo
 import chat.sphinx.conceptcoredb.FeedDestinationDbo
 import chat.sphinx.conceptcoredb.FeedItemDbo
@@ -68,6 +69,9 @@ import chat.sphinx.feature_coredb.adapters.contact.LightningNodeAliasAdapter
 import chat.sphinx.feature_coredb.adapters.contact.LightningRouteHintAdapter
 import chat.sphinx.feature_coredb.adapters.contact.NotificationSoundAdapter
 import chat.sphinx.feature_coredb.adapters.contact.PrivatePhotoAdapter
+import chat.sphinx.feature_coredb.adapters.data_sync.DataSyncIdentifierAdapter
+import chat.sphinx.feature_coredb.adapters.data_sync.DataSyncKeyAdapter
+import chat.sphinx.feature_coredb.adapters.data_sync.DataSyncValueAdapter
 import chat.sphinx.feature_coredb.adapters.feed.FeedAuthorAdapter
 import chat.sphinx.feature_coredb.adapters.feed.FeedChapterDataAdapter
 import chat.sphinx.feature_coredb.adapters.feed.FeedContentTypeAdapter
@@ -376,6 +380,12 @@ abstract class CoreDBImpl(private val moshi: Moshi): CoreDB() {
                     preimageAdapter = LsatPreImageAdapter(),
                     statusAdapter = LsatStatusAdapter(),
                     created_atAdapter = DateTimeAdapter.getInstance()
+                ),
+                dataSyncDboAdapter = DataSyncDbo.Adapter(
+                    sync_keyAdapter = DataSyncKeyAdapter(),
+                    identifierAdapter = DataSyncIdentifierAdapter(),
+                    dateAdapter = DateTimeAdapter.getInstance(),
+                    sync_valueAdapter = DataSyncValueAdapter(),
                 )
             ).sphinxDatabaseQueries
         }

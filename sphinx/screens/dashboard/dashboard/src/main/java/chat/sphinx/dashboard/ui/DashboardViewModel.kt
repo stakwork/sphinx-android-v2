@@ -26,6 +26,7 @@ import chat.sphinx.concept_repository_connect_manager.model.NetworkStatus
 import chat.sphinx.concept_repository_connect_manager.model.OwnerRegistrationState
 import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.concept_repository_dashboard_android.RepositoryDashboardAndroid
+import chat.sphinx.concept_repository_data_sync.DataSyncRepository
 import chat.sphinx.concept_repository_feed.FeedRepository
 import chat.sphinx.concept_repository_message.MessageRepository
 import chat.sphinx.concept_service_media.MediaPlayerServiceController
@@ -69,6 +70,7 @@ import chat.sphinx.wrapper_common.chat.PushNotificationLink
 import chat.sphinx.wrapper_common.chat.toPushNotificationLink
 import chat.sphinx.wrapper_common.dashboard.ChatId
 import chat.sphinx.wrapper_common.dashboard.toChatId
+import chat.sphinx.wrapper_common.datasync.DataSync
 import chat.sphinx.wrapper_common.feed.FeedItemLink
 import chat.sphinx.wrapper_common.feed.toFeedItemLink
 import chat.sphinx.wrapper_common.isValidExternalAuthorizeLink
@@ -170,6 +172,7 @@ internal class DashboardViewModel @Inject constructor(
     private val scannerCoordinator: ViewModelCoordinator<ScannerRequest, ScannerResponse>,
     private val moshi: Moshi,
     private val connectManagerRepository: ConnectManagerRepository,
+    private val dataSyncRepository: DataSyncRepository,
 
     private val LOG: SphinxLogger,
 ) : MotionLayoutViewModel<
@@ -222,6 +225,7 @@ internal class DashboardViewModel @Inject constructor(
     private val serverSettingsSharedPreferences: SharedPreferences =
         app.getSharedPreferences(SERVER_SETTINGS_SHARED_PREFERENCES, Context.MODE_PRIVATE)
 
+
     init {
         if (args.updateBackgroundLoginTime) {
             viewModelScope.launch(default) {
@@ -244,9 +248,11 @@ internal class DashboardViewModel @Inject constructor(
         actionsRepository.syncActions()
         feedRepository.restoreContentFeedStatuses()
         chatRepository.setLatestMessagesDatePerChat()
+        dataSyncRepository.startDataSyncObservation()
 
         networkRefresh()
     }
+
 
     fun processTimezoneChanges() {
         getSystemTimezone()?.let { savesTimezone ->
@@ -1317,9 +1323,20 @@ internal class DashboardViewModel @Inject constructor(
     fun initOwner() {
         viewModelScope.launch(mainImmediate) {
             getOwner()
+            accountOwner.value?.let { owner ->
+                dataSyncRepository.setOwner(owner)
+            }
+            dataSyncRepository.startDataSyncObservation()
+
+            viewModelScope.launch(io) {
+                try {
+                    delay(500)
+                    dataSyncRepository.syncWithServer()
+                } catch (e: Exception) {
+                }
+            }
         }
     }
-
     fun updateTabsState(
         feedActive: Boolean? = null,
         friendsActive: Boolean? = null,

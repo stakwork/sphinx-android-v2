@@ -25,6 +25,7 @@ dependencies {
     api project(path: ':sphinx:application:data:concepts:repositories:concept-repository-chat')
     api project(path: ':sphinx:application:data:concepts:repositories:concept-repository-contact')
     api project(path: ':sphinx:application:data:concepts:repositories:concept-repository-dashboard')
+    api project(path: ':sphinx:application:data:concepts:repositories:concept-repository-data-sync')
     api project(path: ':sphinx:application:data:concepts:repositories:concept-repository-lightning')
     api project(path: ':sphinx:application:data:concepts:repositories:concept-repository-media')
     api project(path: ':sphinx:application:data:concepts:repositories:concept-repository-message')
@@ -55,6 +56,9 @@ dependencies {
     implementation deps.msgpack.sdk
 
     implementation project(path: ':sphinx:application:data:concepts:concept-sphinx-notification-manager')
+    implementation project(':sphinx:application:data:concepts:repositories:concept-repository-data-sync')
+    implementation project(':sphinx:application:data:concepts:concept-data-sync')
+    implementation project(':sphinx:application:data:concepts:concept-data-sync')
 
     testImplementation deps.square.sqlDelightJvm
     testImplementation project(path: ':sphinx:test:test-network-query')

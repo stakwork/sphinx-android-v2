@@ -133,6 +133,8 @@ dependencies {
     }
 
     implementation deps.google.hilt
+    implementation project(':sphinx:application:data:features:feature-data-sync')
+    implementation project(':sphinx:application:data:concepts:concept-data-sync')
     kapt kaptDeps.google.hilt
 
     implementation deps.sqlCipher

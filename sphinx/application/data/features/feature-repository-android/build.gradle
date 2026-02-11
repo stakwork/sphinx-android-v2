@@ -30,4 +30,5 @@ dependencies {
     api project(path: ':sphinx:application:data:features:feature-repository')
 
     api deps.square.sqlDelightAndroidPaging3
+    implementation project(':sphinx:application:data:concepts:concept-data-sync')
 }

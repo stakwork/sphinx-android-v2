@@ -18,11 +18,14 @@ import io.matthewnelson.concept_coroutines.CoroutineDispatchers
 import io.matthewnelson.crypto_common.annotations.RawPasswordAccess
 import io.matthewnelson.crypto_common.clazzes.Password
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.internal.closeQuietly
 import okio.BufferedSink
 import okio.IOException
@@ -48,6 +51,7 @@ class NetworkQueryMemeServerImpl(
         private const val ENDPOINT_SIGNER = "/signer/%s"
         private const val ENDPOINT_VERIFY_AUTHENTICATION = "$MEME_SERVER_URL/verify?id=%s&sig=%s&pubkey=%s"
         private const val ENDPOINT_TEMPLATES = "$MEME_SERVER_URL/templates"
+        private const val ENDPOINT_DATA_SYNC = "$MEME_SERVER_URL/preferences"
     }
 
     override fun askMemeAuthentication(
@@ -224,4 +228,57 @@ class NetworkQueryMemeServerImpl(
             )
         }
     }
+
+    override suspend fun getDataSyncFile(
+        authenticationToken: AuthenticationToken,
+        memeServerHost: MediaHost,
+    ): Flow<LoadResponse<String, ResponseError>> =
+        networkRelayCall.getRawJson(
+            url = String.format(ENDPOINT_DATA_SYNC, memeServerHost.value),
+            headers = mapOf(authenticationToken.headerKey to authenticationToken.headerValue),
+            useExtendedNetworkCallClient = true,
+        )
+
+
+    override suspend fun uploadDataSyncFile(
+        authenticationToken: AuthenticationToken,
+        memeServerHost: MediaHost,
+        pubkey: String,
+        data: String,
+    ): Flow<LoadResponse<Boolean, ResponseError>> {
+
+        return try {
+            val requestBuilder = networkRelayCall.buildRequest(
+                url = String.format(ENDPOINT_DATA_SYNC, memeServerHost.value),
+                headers = mapOf(
+                    authenticationToken.headerKey to authenticationToken.headerValue
+                )
+            )
+
+            val requestBody = MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart("pubkey", pubkey)
+                .addFormDataPart("file", "preferences.json",
+                    data.toRequestBody("application/json".toMediaType()))
+                .build()
+
+            requestBuilder.post(requestBody)
+
+            networkRelayCall.call(
+                responseJsonClass = Any::class.java,
+                request = requestBuilder.build(),
+                useExtendedNetworkCallClient = true
+            )
+
+            flowOf(LoadResponse.Loading, Response.Success(true))
+
+        } catch (e: Exception) {
+            flowOf(
+                Response.Error(
+                    ResponseError("Failed to upload data sync file", e)
+                )
+            )
+        }
+    }
+
 }

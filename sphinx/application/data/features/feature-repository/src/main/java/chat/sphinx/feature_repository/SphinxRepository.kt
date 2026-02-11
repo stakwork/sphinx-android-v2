@@ -3,6 +3,8 @@ package chat.sphinx.feature_repository
 import app.cash.exhaustive.Exhaustive
 import chat.sphinx.concept_coredb.CoreDB
 import chat.sphinx.concept_crypto_rsa.RSA
+import chat.sphinx.concept_data_sync.DataSyncManager
+import chat.sphinx.concept_data_sync.DataSyncManagerListener
 import chat.sphinx.concept_meme_input_stream.MemeInputStreamHandler
 import chat.sphinx.concept_meme_server.MemeServerTokenHandler
 import chat.sphinx.concept_network_query_chat.NetworkQueryChat
@@ -32,6 +34,7 @@ import chat.sphinx.concept_repository_connect_manager.model.OwnerRegistrationSta
 import chat.sphinx.concept_repository_connect_manager.model.RestoreProcessState
 import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.concept_repository_dashboard.RepositoryDashboard
+import chat.sphinx.concept_repository_data_sync.DataSyncRepository
 import chat.sphinx.concept_repository_feed.FeedRepository
 import chat.sphinx.concept_repository_lightning.LightningRepository
 import chat.sphinx.concept_repository_media.RepositoryMedia
@@ -67,6 +70,7 @@ import chat.sphinx.feature_repository.mappers.chat.ChatDboPresenterMapper
 import chat.sphinx.feature_repository.mappers.chat.toChat
 import chat.sphinx.feature_repository.mappers.contact.ContactDboPresenterMapper
 import chat.sphinx.feature_repository.mappers.contact.toContact
+import chat.sphinx.feature_repository.mappers.data_sync.DataSyncDboPresenterMapper
 import chat.sphinx.feature_repository.mappers.feed.*
 import chat.sphinx.feature_repository.mappers.feed.podcast.FeedDboFeedSearchResultPresenterMapper
 import chat.sphinx.feature_repository.mappers.feed.podcast.FeedDboPodcastPresenterMapper
@@ -140,12 +144,18 @@ import chat.sphinx.wrapper_message.MsgSender.Companion.toMsgSenderNull
 import chat.sphinx.wrapper_message_media.*
 import chat.sphinx.wrapper_message_media.token.MediaHost
 import chat.sphinx.wrapper_common.ChapterResponseDto
+import chat.sphinx.wrapper_common.datasync.DataSync
+import chat.sphinx.wrapper_common.datasync.DataSyncIdentifier
+import chat.sphinx.wrapper_common.datasync.DataSyncKey
+import chat.sphinx.wrapper_common.datasync.DataSyncValue
+import chat.sphinx.wrapper_common.datasync.toDataSyncKey
 import chat.sphinx.wrapper_podcast.FeedRecommendation
 import chat.sphinx.wrapper_podcast.FeedSearchResultRow
 import chat.sphinx.wrapper_podcast.Podcast
 import chat.sphinx.wrapper_podcast.PodcastEpisode
 import chat.sphinx.wrapper_rsa.RsaPrivateKey
 import chat.sphinx.wrapper_rsa.RsaPublicKey
+import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.squareup.sqldelight.TransactionWithoutReturn
@@ -173,6 +183,7 @@ import kotlin.math.max
 import kotlinx.coroutines.ensureActive
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.absoluteValue
+import chat.sphinx.wrapper_common.datasync.DataSyncKey as DataSyncKey1
 
 
 abstract class SphinxRepository(
@@ -197,6 +208,7 @@ abstract class SphinxRepository(
     private val networkQueryFeedSearch: NetworkQueryFeedSearch,
     private val networkQueryFeedStatus: NetworkQueryFeedStatus,
     private val connectManager: ConnectManager,
+    private val dataSyncManager: DataSyncManager,
     private val walletDataHandler: WalletDataHandler,
     private val rsa: RSA,
     private val sphinxNotificationManager: SphinxNotificationManager,
@@ -211,8 +223,10 @@ abstract class SphinxRepository(
     ActionsRepository,
     FeedRepository,
     ConnectManagerRepository,
+    DataSyncRepository,
     CoroutineDispatchers by dispatchers,
-    ConnectManagerListener
+    ConnectManagerListener,
+    DataSyncManagerListener
 {
 
     companion object {
@@ -223,6 +237,10 @@ abstract class SphinxRepository(
         const val REPOSITORY_PUSH_KEY = "REPOSITORY_PUSH_KEY"
 
         const val MEDIA_KEY_SIZE = 32
+
+        // Cache size limits to prevent unbounded memory growth
+        private const val MSG_SENDER_CACHE_MAX_SIZE = 500
+        private const val FLOW_CACHE_MAX_SIZE = 100
     }
 
     var lastMessageIndex: Long? = null
@@ -288,26 +306,82 @@ abstract class SphinxRepository(
     init {
         connectManager.addListener(this)
         memeServerTokenHandler.addListener(this)
+        dataSyncManager.addListener(this)
+    }
+
+    override val getAllDataSync: Flow<List<DataSync>> = flow {
+        emitAll(
+            coreDB.getSphinxDatabaseQueries().dataSyncGetAll()
+                .asFlow()
+                .mapToList(io)
+                .map { list ->
+                    list.map { dataSyncDboPresenterMapper.mapFrom(it) }
+                }
+                .distinctUntilChanged()
+        )
+    }
+
+    override fun getDataSyncByKeyAndIdentifier(
+        key: DataSyncKey1,
+        identifier: DataSyncIdentifier
+    ): Flow<DataSync?> = flow {
+        emitAll(
+            coreDB.getSphinxDatabaseQueries().dataSyncGetByKeyAndIdentifier(key, identifier)
+                .asFlow()
+                .mapToOneOrNull(io)
+                .map { it?.let { dataSyncDboPresenterMapper.mapFrom(it) } }
+                .distinctUntilChanged()
+        )
+    }
+
+    override fun setOwner(owner: Contact?) {
+        dataSyncManager.setAccountOwner(owner)
+    }
+
+    override suspend fun upsertDataSync(
+        key: DataSyncKey1,
+        identifier: DataSyncIdentifier,
+        date: DateTime,
+        value: DataSyncValue
+    ) {
+        coreDB.getSphinxDatabaseQueries().dataSyncUpsert(
+            sync_key = key,
+            identifier = identifier,
+            date = date,
+            sync_value = value
+        )
+    }
+
+    override fun startDataSyncObservation() {
+        applicationScope.launch(io) {
+            getAllDataSync.collect { dataSyncList ->
+                dataSyncManager.updateDataSyncList(dataSyncList)
+            }
+        }
+    }
+
+    override fun syncWithServer() {
+        applicationScope.launch(io) {
+            dataSyncManager.syncWithServer()
+        }
+    }
+
+    override suspend fun deleteDataSync(
+        key: DataSyncKey1,
+        identifier: DataSyncIdentifier
+    ) {
+        coreDB.getSphinxDatabaseQueries().dataSyncDeleteByKeyAndIdentifier(key, identifier)
+    }
+
+    override suspend fun deleteAllDataSync() {
+        coreDB.getSphinxDatabaseQueries().dataSyncDeleteAll()
     }
 
     override fun connectAndSubscribeToMqtt(userState: String?, mixerIp: String?) {
         applicationScope.launch(io) {
             val queries = coreDB.getSphinxDatabaseQueries()
             val mnemonic = walletDataHandler.retrieveWalletMnemonic()
-            var owner: Contact? = accountOwner.value
-
-            if (owner == null) {
-                try {
-                    accountOwner.collect { contact ->
-                        if (contact != null) {
-                            owner = contact
-                            throw Exception()
-                        }
-                    }
-                } catch (e: Exception) {
-                }
-                delay(25L)
-            }
+            val owner: Contact? = accountOwner.value ?: accountOwner.filterNotNull().firstOrNull()
 
             val okKey = owner?.nodePubKey?.value
             val lastMessageIndex = queries.messageGetMaxId().executeAsOneOrNull()?.MAX
@@ -1179,7 +1253,15 @@ abstract class SphinxRepository(
         }
     }
 
-    private val msgSenderCache: MutableMap<String, MsgSender?> = mutableMapOf()
+    // Bounded LRU cache to prevent unbounded memory growth
+    private val msgSenderCache: MutableMap<String, MsgSender?> = object : LinkedHashMap<String, MsgSender?>(
+        MSG_SENDER_CACHE_MAX_SIZE, 0.75f, true
+    ) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, MsgSender?>?): Boolean {
+            return size > MSG_SENDER_CACHE_MAX_SIZE
+        }
+    }
+
     private val emptyMsg = Msg(null, null, null, null, null, null, null, null, null, null, null, null)
 
     private data class MessageComponents(
@@ -1713,6 +1795,275 @@ abstract class SphinxRepository(
         }
     }
 
+    override fun onSaveDataSyncItem(
+        key: String,
+        identifier: String,
+        value: String,
+        timestamp: Long
+    ) {
+        applicationScope.launch(io) {
+
+            upsertDataSync(
+                key = key.toDataSyncKey(),
+                identifier = DataSyncIdentifier(identifier),
+                date = timestamp.toDateTime(),
+                value = DataSyncValue(value)
+            )
+        }
+    }
+
+    override suspend fun onApplySyncedData(
+        key: String,
+        identifier: String,
+        value: String
+    ) {
+        withContext(io) {
+            try {
+                when (key) {
+                    DataSyncKey.TIP_AMOUNT -> {
+                        applyTipAmountSync(value)
+                    }
+                    DataSyncKey.PRIVATE_PHOTO -> {
+                        applyPrivatePhotoSync(value)
+                    }
+                    DataSyncKey.TIMEZONE -> {
+                        applyTimezoneSync(identifier, value)
+                    }
+                    DataSyncKey.FEED_STATUS -> {
+                        applyFeedStatusSync(identifier, value)
+                    }
+                    DataSyncKey.FEED_ITEM_STATUS -> {
+                        applyFeedItemStatusSync(identifier, value)
+                    }
+                }
+            } catch (e: Exception) {
+                LOG.e(TAG, "Error applying synced data for key: $key", e)
+            }
+        }
+    }
+    private suspend fun applyTipAmountSync(value: String) {
+        val tipAmount = value.toLongOrNull()?.toSat() ?: return
+
+        val queries = coreDB.getSphinxDatabaseQueries()
+
+        contactLock.withLock {
+            queries.contactUpdateOwnerTipAmount(
+                tip_amount = tipAmount
+            )
+        }
+
+        LOG.d(TAG, "Applied tip_amount sync: $tipAmount")
+    }
+
+    private suspend fun applyPrivatePhotoSync(value: String) {
+        val privatePhoto = when (value.lowercase()) {
+            "true", "1" -> PrivatePhoto.True
+            "false", "0" -> PrivatePhoto.False
+            else -> return
+        }
+
+        val queries = coreDB.getSphinxDatabaseQueries()
+
+        contactLock.withLock {
+            queries.contactUpdateOwnerPrivatePhoto(
+                private_photo = privatePhoto
+            )
+        }
+
+        LOG.d(TAG, "Applied private_photo sync: ${privatePhoto.isTrue()}")
+    }
+
+    private suspend fun applyTimezoneSync(chatPubkey: String, value: String) {
+        if (chatPubkey.isEmpty()) return
+
+        try {
+            val timezoneData = parseTimezoneJson(value)
+
+            val timezoneEnabled = (timezoneData["timezone_enabled"]
+                ?: timezoneData["timezoneEnabled"])?.lowercase() == "true"
+
+            val timezoneIdentifier = (timezoneData["timezone_identifier"]
+                ?: timezoneData["timezoneIdentifier"]) ?: ""
+
+            val queries = coreDB.getSphinxDatabaseQueries()
+            val chat = queries.chatGetAll()
+                .executeAsList()
+                .firstOrNull { it.owner_pub_key?.value == chatPubkey }
+                ?: return
+
+            chatLock.withLock {
+                queries.chatUpdateTimezoneEnabled(
+                    timezone_enabled = timezoneEnabled.toTimezoneEnabled(),
+                    id = chat.id
+                )
+
+                if (timezoneEnabled && timezoneIdentifier.isNotEmpty()) {
+                    queries.chatUpdateTimezoneIdentifier(
+                        timezone_identifier = timezoneIdentifier.toTimezoneIdentifier(),
+                        chat.id
+                    )
+                }
+            }
+
+            LOG.d(TAG, "Applied timezone sync for chat ${chat.id}: enabled=$timezoneEnabled, identifier=$timezoneIdentifier")
+        } catch (e: Exception) {
+            LOG.e(TAG, "Error applying timezone sync", e)
+        }
+    }
+
+    private suspend fun applyFeedStatusSync(feedId: String, value: String) {
+        try {
+            val feedStatusData = parseFeedStatusJson(value)
+
+            val queries = coreDB.getSphinxDatabaseQueries()
+
+            val feedIdValue = feedId.toFeedId() ?: return
+            val feedUrl = feedStatusData["feed_url"]?.toFeedUrl() ?: return
+            val subscribed = (feedStatusData["subscribed"]?.lowercase() == "true").toSubscribed()
+            val satsPerMinute = feedStatusData["sats_per_minute"]?.toLongOrNull()?.toSat()
+            val playerSpeed = feedStatusData["player_speed"]?.toDoubleOrNull()?.toFeedPlayerSpeed()
+            val itemId = feedStatusData["item_id"]?.toFeedId()
+
+            // Get chat_id if chatPubkey is provided
+            val chatPubkey = feedStatusData["chat_pubkey"]
+            val chatId = if (!chatPubkey.isNullOrEmpty()) {
+                queries.chatGetAll()
+                    .executeAsList()
+                    .firstOrNull { it.owner_pub_key?.value == chatPubkey }
+                    ?.id
+            } else {
+                null
+            }
+
+            // Check if feed exists locally
+            val existingFeed = queries.feedGetByIds(listOf(feedIdValue))
+                .executeAsOneOrNull()
+
+            // If feed doesn't exist or is not subscribed but should be, fetch it
+            if (existingFeed == null) {
+                LOG.d(TAG, "Feed $feedId doesn't exist or needs updating, fetching from server...")
+
+                // Fetch the feed content from server
+                val updateResponse = updateFeedContent(
+                    chatId = chatId ?: ChatId(ChatId.NULL_CHAT_ID.toLong()),
+                    host = ChatHost(Feed.TRIBES_DEFAULT_SERVER_URL),
+                    feedUrl = feedUrl,
+                    searchResultDescription = null,
+                    searchResultImageUrl = null,
+                    chatUUID = null,
+                    subscribed = subscribed,
+                    currentItemId = itemId,
+                    delay = 0L
+                )
+
+                when (updateResponse) {
+                    is Response.Error -> {
+                    }
+                    is Response.Success -> {
+                        LOG.d(TAG, "Successfully fetched feed content for $feedId")
+                    }
+                }
+            }
+
+            // Update content feed status
+            contentFeedStatusLock.withLock {
+                queries.contentFeedStatusUpsert(
+                    feed_id = feedIdValue,
+                    feed_url = feedUrl,
+                    subscription_status = subscribed,
+                    chat_id = chatId,
+                    item_id = itemId,
+                    sats_per_minute = satsPerMinute,
+                    player_speed = playerSpeed
+                )
+            }
+
+            LOG.d(TAG, "Applied feed_status sync for feed $feedId: subscribed=${subscribed.isTrue()}")
+        } catch (e: Exception) {
+            LOG.e(TAG, "Error applying feed_status sync", e)
+        }
+    }
+
+    private suspend fun applyFeedItemStatusSync(identifier: String, value: String) {
+        try {
+            // identifier format: "feedId-itemId"
+            val parts = identifier.split("-", limit = 2)
+            if (parts.size != 2) return
+
+            val feedId = parts[0].toFeedId() ?: return
+            val itemId = parts[1].toFeedId() ?: return
+
+            val feedItemStatusData = parseFeedItemStatusJson(value)
+
+            val duration = feedItemStatusData["duration"]?.toLongOrNull()?.toFeedItemDuration() ?: return
+            val currentTime = feedItemStatusData["current_time"]?.toLongOrNull()?.toFeedItemDuration() ?: return
+
+            val queries = coreDB.getSphinxDatabaseQueries()
+
+            contentEpisodeLock.withLock {
+                queries.contentEpisodeStatusUpsert(
+                    feed_id = feedId,
+                    item_id = itemId,
+                    duration = duration,
+                    current_time = currentTime,
+                    played = false
+                )
+            }
+
+            LOG.d(TAG, "Applied feed_item_status sync for $identifier: currentTime=$currentTime/$duration")
+        } catch (e: Exception) {
+            LOG.e(TAG, "Error applying feed_item_status sync", e)
+        }
+    }
+
+    // JSON parsing helpers
+    private fun parseTimezoneJson(json: String): Map<String, String> {
+        return parseSimpleJsonObject(json)
+    }
+
+    private fun parseFeedStatusJson(json: String): Map<String, String> {
+        return parseSimpleJsonObject(json)
+    }
+
+    private fun parseFeedItemStatusJson(json: String): Map<String, String> {
+        return parseSimpleJsonObject(json)
+    }
+
+    private fun parseSimpleJsonObject(json: String): Map<String, String> {
+        val map = mutableMapOf<String, String>()
+        val cleaned = json.trim().removePrefix("{").removeSuffix("}")
+
+        if (cleaned.isEmpty()) return map
+
+        // Handle JSON with quoted or unquoted values
+        cleaned.split(",").forEach { pair ->
+            val parts = pair.split(":", limit = 2)
+            if (parts.size == 2) {
+                val key = parts[0].trim().removeSurrounding("\"")
+                val value = parts[1].trim().removeSurrounding("\"")
+                map[key] = value
+            }
+        }
+
+        return map
+    }
+
+    private val contentFeedStatusLock = Mutex()
+
+    override suspend fun onEncryptDataSync(value: String): String? = withContext(io) {
+        connectManager.encryptDataSync(value)
+    }
+
+    override suspend fun onDecryptDataSync(value: String): String? = withContext(io) {
+        connectManager.decryptDataSync(value)
+    }
+
+    override fun onClearDataSyncTable() {
+        applicationScope.launch(io) {
+            coreDB.getSphinxDatabaseQueries().dataSyncDeleteAll()
+        }
+    }
+
     fun extractUrlParts(url: String): Pair<String?, String?> {
         val cleanUrl = url.replace(Regex("^[a-zA-Z]+://"), "")
         val separatorIndex = cleanUrl.indexOf("/")
@@ -2174,6 +2525,17 @@ abstract class SphinxRepository(
                     id = chatId
                 )
             }
+
+            val chat = queries.chatGetById(chatId).executeAsOneOrNull()
+            chat?.owner_pub_key?.value?.let { pubKey ->
+                val isEnabled = chat.timezone_enabled?.isTrue() ?: false
+
+                dataSyncManager.saveTimezoneForChat(
+                    chatPubkey = pubKey,
+                    timezoneEnabled = isEnabled,
+                    timezoneIdentifier = timezoneIdentifier?.value ?: ""
+                )
+            }
         } catch (ex: Exception) {
             LOG.e(TAG, ex.printStackTrace().toString(), ex)
         }
@@ -2336,8 +2698,8 @@ abstract class SphinxRepository(
     )
 
     private suspend fun insertTribesInSingleTransaction(tribeDataList: List<TribeData>) {
-        messageLock.withLock {
-            chatLock.withLock {
+        chatLock.withLock {
+            messageLock.withLock {
                 val queries = coreDB.getSphinxDatabaseQueries()
 
                 queries.transaction {
@@ -2592,20 +2954,8 @@ abstract class SphinxRepository(
     }
 
     override fun getConversationByContactId(contactId: ContactId): Flow<Chat?> = flow {
-        var ownerId: ContactId? = accountOwner.value?.id
-
-        if (ownerId == null) {
-            try {
-                accountOwner.collect {
-                    if (it != null) {
-                        ownerId = it.id
-                        throw Exception()
-                    }
-                }
-            } catch (e: Exception) {
-            }
-            delay(25L)
-        }
+        val ownerId: ContactId? = accountOwner.value?.id
+            ?: accountOwner.filterNotNull().firstOrNull()?.id
 
         emitAll(
             coreDB.getSphinxDatabaseQueries()
@@ -2624,20 +2974,8 @@ abstract class SphinxRepository(
     }
 
     override fun getUnseenMessagesByChatId(chatId: ChatId): Flow<Long?> = flow {
-        var ownerId: ContactId? = accountOwner.value?.id
-
-        if (ownerId == null) {
-            try {
-                accountOwner.collect { contact ->
-                    if (contact != null) {
-                        ownerId = contact.id
-                        throw Exception()
-                    }
-                }
-            } catch (e: Exception) {
-            }
-            delay(25L)
-        }
+        val ownerId: ContactId? = accountOwner.value?.id
+            ?: accountOwner.filterNotNull().firstOrNull()?.id
 
         emitAll(
             coreDB.getSphinxDatabaseQueries()
@@ -2651,7 +2989,14 @@ abstract class SphinxRepository(
         )
     }
 
-    private val unseenFlowCache = mutableMapOf<ChatId, Flow<Long?>>()
+    // Bounded LRU cache for Flow references
+    private val unseenFlowCache: MutableMap<ChatId, Flow<Long?>> = object : LinkedHashMap<ChatId, Flow<Long?>>(
+        FLOW_CACHE_MAX_SIZE, 0.75f, true
+    ) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<ChatId, Flow<Long?>>?): Boolean {
+            return size > FLOW_CACHE_MAX_SIZE
+        }
+    }
     override fun getUnseenMessagesByChatIdCache(chatId: ChatId): Flow<Long?> {
         return unseenFlowCache.getOrPut(chatId) {
             getUnseenMessagesByChatId(chatId).distinctUntilChanged()
@@ -2659,19 +3004,8 @@ abstract class SphinxRepository(
     }
 
     override fun getUnseenMentionsByChatId(chatId: ChatId): Flow<Long?> = flow {
-        var ownerId: ContactId? = accountOwner.value?.id
-
-        if (ownerId == null) {
-            try {
-                accountOwner.collect { contact ->
-                    if (contact != null) {
-                        ownerId = contact.id
-                        throw Exception()
-                    }
-                }
-            } catch (e: Exception) {}
-            delay(25L)
-        }
+        val ownerId: ContactId? = accountOwner.value?.id
+            ?: accountOwner.filterNotNull().firstOrNull()?.id
 
         emitAll(
             coreDB.getSphinxDatabaseQueries()
@@ -2685,7 +3019,14 @@ abstract class SphinxRepository(
         )
     }
 
-    private val unseenMentionsFlowCache = mutableMapOf<ChatId, Flow<Long?>>()
+    // Bounded LRU cache for Flow references
+    private val unseenMentionsFlowCache: MutableMap<ChatId, Flow<Long?>> = object : LinkedHashMap<ChatId, Flow<Long?>>(
+        FLOW_CACHE_MAX_SIZE, 0.75f, true
+    ) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<ChatId, Flow<Long?>>?): Boolean {
+            return size > FLOW_CACHE_MAX_SIZE
+        }
+    }
     override fun getUnseenMentionsByChatIdCache(chatId: ChatId): Flow<Long?> {
         return unseenMentionsFlowCache.getOrPut(chatId) {
             getUnseenMentionsByChatId(chatId).distinctUntilChanged()
@@ -2694,20 +3035,8 @@ abstract class SphinxRepository(
 
     override fun getUnseenActiveConversationMessagesCount(): Flow<Long?> = flow {
         val queries = coreDB.getSphinxDatabaseQueries()
-        var ownerId: ContactId? = accountOwner.value?.id
-
-        if (ownerId == null) {
-            try {
-                accountOwner.collect { contact ->
-                    if (contact != null) {
-                        ownerId = contact.id
-                        throw Exception()
-                    }
-                }
-            } catch (e: Exception) {
-            }
-            delay(25L)
-        }
+        val ownerId: ContactId? = accountOwner.value?.id
+            ?: accountOwner.filterNotNull().firstOrNull()?.id
 
         val blockedContactIds = queries.contactGetBlocked().executeAsList().map { it.id }
 
@@ -2725,20 +3054,8 @@ abstract class SphinxRepository(
     }
 
     override fun getUnseenTribeMessagesCount(): Flow<Long?> = flow {
-        var ownerId: ContactId? = accountOwner.value?.id
-
-        if (ownerId == null) {
-            try {
-                accountOwner.collect { contact ->
-                    if (contact != null) {
-                        ownerId = contact.id
-                        throw Exception()
-                    }
-                }
-            } catch (e: Exception) {
-            }
-            delay(25L)
-        }
+        val ownerId: ContactId? = accountOwner.value?.id
+            ?: accountOwner.filterNotNull().firstOrNull()?.id
 
         emitAll(
             coreDB.getSphinxDatabaseQueries()
@@ -2754,24 +3071,13 @@ abstract class SphinxRepository(
     }
 
     override fun getUnseenReceivedMessages(): Flow<List<Message>> = flow {
-        var ownerId: ContactId? = accountOwner.value?.id
-
-        if (ownerId == null) {
-            try {
-                accountOwner.collect { contact ->
-                    if (contact != null) {
-                        ownerId = contact.id
-                        throw Exception()
-                    }
-                }
-            } catch (e: Exception) {
-            }
-            delay(25L)
-        }
+        val ownerId: ContactId = accountOwner.value?.id
+            ?: accountOwner.filterNotNull().firstOrNull()?.id
+            ?: return@flow
 
         emitAll(
             coreDB.getSphinxDatabaseQueries()
-                .messageGetUnseenIncomingMessages(ownerId!!)
+                .messageGetUnseenIncomingMessages(ownerId)
                 .asFlow()
                 .mapToList(io)
                 .map { listMessageDbo ->
@@ -2791,24 +3097,13 @@ abstract class SphinxRepository(
     }
 
     override fun getUnseenReceivedMentions(): Flow<List<Message>?> = flow {
-        var ownerId: ContactId? = accountOwner.value?.id
-
-        if (ownerId == null) {
-            try {
-                accountOwner.collect { contact ->
-                    if (contact != null) {
-                        ownerId = contact.id
-                        throw Exception()
-                    }
-                }
-            } catch (e: Exception) {
-            }
-            delay(25L)
-        }
+        val ownerId: ContactId = accountOwner.value?.id
+            ?: accountOwner.filterNotNull().firstOrNull()?.id
+            ?: return@flow
 
         emitAll(
             coreDB.getSphinxDatabaseQueries()
-                .messageGetUnseenIncomingMentions(ownerId!!)
+                .messageGetUnseenIncomingMentions(ownerId)
                 .asFlow()
                 .mapToList(io)
                 .map { listMessageDbo ->
@@ -3073,6 +3368,14 @@ abstract class SphinxRepository(
             )
         }
 
+        tipAmount?.let {
+            dataSyncManager.saveTipAmount(it.value.toString())
+        }
+
+        privatePhoto?.let {
+            dataSyncManager.savePrivatePhoto(it.isTrue().toString())
+        }
+
         return Response.Success(Any())
     }
 
@@ -3128,19 +3431,14 @@ abstract class SphinxRepository(
     override suspend fun updateOwnerDeviceId(deviceId: DeviceId) {
         val queries = coreDB.getSphinxDatabaseQueries()
 
-        try {
-            accountOwner.collect { owner ->
-                if (owner != null) {
-                    if (owner.deviceId != deviceId) {
-                        queries.contactUpdateOwnerDeviceId(deviceId)
-                    } else {
-                        LOG.d(TAG, "DeviceId is up to date")
-                        throw Exception()
-                    }
-                }
+        val owner = accountOwner.value ?: accountOwner.filterNotNull().firstOrNull()
+        if (owner != null) {
+            if (owner.deviceId != deviceId) {
+                queries.contactUpdateOwnerDeviceId(deviceId)
+            } else {
+                LOG.d(TAG, "DeviceId is up to date")
             }
-        } catch (e: Exception) { }
-
+        }
     }
 
     @OptIn(RawPasswordAccess::class)
@@ -3230,20 +3528,8 @@ abstract class SphinxRepository(
 
                         // TODO: if chatId method argument is null, update owner record
 
-                        var owner = accountOwner.value
-
-                        if (owner == null) {
-                            try {
-                                accountOwner.collect { contact ->
-                                    if (contact != null) {
-                                        owner = contact
-                                        throw Exception()
-                                    }
-                                }
-                            } catch (e: Exception) {
-                            }
-                            delay(25L)
-                        }
+                        val owner = accountOwner.value
+                            ?: accountOwner.filterNotNull().firstOrNull()
 
                         owner?.let { nnOwner ->
 
@@ -3497,20 +3783,8 @@ abstract class SphinxRepository(
         val queries = coreDB.getSphinxDatabaseQueries()
         val now = DateTime.nowUTC().toDateTime()
 
-        var owner: Contact? = accountOwner.value
-
-        if (owner == null) {
-            try {
-                accountOwner.collect { contact ->
-                    if (contact != null) {
-                        owner = contact
-                        throw Exception()
-                    }
-                }
-            } catch (e: Exception) {
-            }
-            delay(25L)
-        }
+        val owner: Contact? = accountOwner.value
+            ?: accountOwner.filterNotNull().firstOrNull()
 
         val updatedOwner = owner?.copy(
             alias = alias,
@@ -4613,7 +4887,7 @@ abstract class SphinxRepository(
             val provisionalMessageId: MessageId? = chat?.let { chatDbo ->
                 val provisionalMessageId = generateProvisionalMessageId()
                 val provisionalId = MessageId(provisionalMessageId)
-                runBlocking {
+                withContext(io) {
                     queries.transaction {
                         if (media != null) {
                             queries.messageMediaUpsert(
@@ -4671,14 +4945,15 @@ abstract class SphinxRepository(
                             forceUpdateOnSend = true
                         )
                     }
-                    completeCallback()
                 }
+                completeCallback()
                 provisionalId
             }
 
 
             applicationScope.launch(io) {
-                delay(1000L)
+                // Removed unnecessary 1000ms delay - message should be sent immediately
+                // after DB insert for better perceived performance
 
                 if (metadata != null && chat?.id != null) {
                     updateTimezoneFlag(
@@ -5052,21 +5327,7 @@ abstract class SphinxRepository(
             }
 
             val owner: Contact? = accountOwner.value
-                ?: let {
-                    // TODO: Handle this better...
-                    var owner: Contact? = null
-                    try {
-                        accountOwner.collect {
-                            if (it != null) {
-                                owner = it
-                                throw Exception()
-                            }
-                        }
-                    } catch (e: Exception) {
-                    }
-                    delay(25L)
-                    owner
-                }
+                ?: accountOwner.filterNotNull().firstOrNull()
 
             if (owner == null) {
                 response = Response.Error(
@@ -5224,35 +5485,14 @@ abstract class SphinxRepository(
             val contact = getContactById(ContactId(chatId.value)).firstOrNull()
             val currentChat = getChatById(chatId).firstOrNull()
 
-            val owner: Contact = accountOwner.value.let {
-                if (it != null) {
-                    it
-                } else {
-                    var owner: Contact? = null
-                    val retrieveOwnerJob = applicationScope.launch(mainImmediate) {
-                        try {
-                            accountOwner.collect { contact ->
-                                if (contact != null) {
-                                    owner = contact
-                                    throw Exception()
-                                }
-                            }
-                        } catch (e: Exception) {
-                        }
-                        delay(20L)
-                    }
-
-                    delay(200L)
-                    retrieveOwnerJob.cancelAndJoin()
-
-                    owner ?: let {
-                        response = Response.Error(
-                            ResponseError("Owner Contact returned null")
-                        )
-                        return@launch
-                    }
+            val owner: Contact = accountOwner.value
+                ?: accountOwner.filterNotNull().firstOrNull()
+                ?: run {
+                    response = Response.Error(
+                        ResponseError("Owner Contact returned null")
+                    )
+                    return@launch
                 }
-            }
 
             val currentProvisionalId: MessageId? = withContext(io) {
                 queries.messageGetLowestProvisionalMessageId().executeAsOneOrNull()
@@ -5407,12 +5647,11 @@ abstract class SphinxRepository(
                 callback?.invoke()
                 processingInvoice.value = Pair(paymentRequest.value, it)
 
-                val timer = Timer("OneTimeTimer", true)
-                timer.schedule(object : TimerTask() {
-                    override fun run() {
-                        processingInvoice.value = null
-                    }
-                }, 60000)
+                // Use coroutine instead of Timer to avoid creating unnecessary threads
+                applicationScope.launch(io) {
+                    delay(60000L)
+                    processingInvoice.value = null
+                }
             }
         }
     }
@@ -5452,20 +5691,9 @@ abstract class SphinxRepository(
         routerPubKey: String?,
         data: String?
     ): Boolean {
-        var owner: Contact? = accountOwner.value
+        val owner: Contact? = accountOwner.value
+            ?: accountOwner.filterNotNull().firstOrNull()
 
-        if (owner == null) {
-            try {
-                accountOwner.collect {
-                    if (it != null) {
-                        owner = it
-                        throw Exception()
-                    }
-                }
-            } catch (e: Exception) {
-            }
-            delay(25L)
-        }
         val payeeLspPubKey = routeHint?.getLspPubKey()
         val ownerLspPubKey = owner?.routeHint?.getLspPubKey()
 
@@ -5671,20 +5899,8 @@ abstract class SphinxRepository(
                 mediaToken.getPriceFromMediaToken().let { price ->
 
                     val owner: Contact = accountOwner.value
-                        ?: let {
-                            // TODO: Handle this better...
-                            var owner: Contact? = null
-                            try {
-                                accountOwner.collect {
-                                    if (it != null) {
-                                        owner = it
-                                        throw Exception()
-                                    }
-                                }
-                            } catch (e: Exception) {}
-                            delay(25L)
-                            owner
-                        } ?: return@launch
+                        ?: accountOwner.filterNotNull().firstOrNull()
+                        ?: return@launch
 
                     val contact: Contact? = message.chatId.let { chatId ->
                         getContactById(ContactId(chatId.value)).firstOrNull()
@@ -5863,20 +6079,8 @@ abstract class SphinxRepository(
     }
 
     override suspend fun updateTribeInfo(chat: Chat, isProductionEnvironment: Boolean): NewTribeDto? {
-        var owner: Contact? = accountOwner.value
-
-        if (owner == null) {
-            try {
-                accountOwner.collect {
-                    if (it != null) {
-                        owner = it
-                        throw Exception()
-                    }
-                }
-            } catch (e: Exception) {
-            }
-            delay(25L)
-        }
+        // Ensure owner is loaded before proceeding
+        accountOwner.value ?: accountOwner.filterNotNull().firstOrNull()
 
         var tribeData: NewTribeDto? = null
 
@@ -6244,6 +6448,14 @@ abstract class SphinxRepository(
     private val contentEpisodeStatusDboPresenterMapper: ContentEpisodeStatusDboPresenterMapper by lazy {
         ContentEpisodeStatusDboPresenterMapper(dispatchers)
     }
+    private val dataSyncDboPresenterMapper: DataSyncDboPresenterMapper by lazy {
+        DataSyncDboPresenterMapper(dispatchers)
+    }
+
+    // Reusable Moshi adapter for ChapterResponseDto to avoid repeated instance creation
+    private val chapterResponseAdapter: JsonAdapter<ChapterResponseDto> by lazy {
+        moshi.adapter(ChapterResponseDto::class.java).lenient()
+    }
 
     override fun getAllFeedsOfType(feedType: FeedType): Flow<List<Feed>> = flow {
         val queries = coreDB.getSphinxDatabaseQueries()
@@ -6485,14 +6697,12 @@ abstract class SphinxRepository(
 
         val feed = feedDboPresenterMapper.mapFrom(feedDbo)
 
+        // Use Map for O(1) lookup instead of O(n²) nested loop
+        val episodeStatusMap = contentEpisodeStatus.associateBy { it.itemId }
+
         items.forEach { feedItem ->
             feedItem.feed = feed
-
-            contentEpisodeStatus.forEach { contentEpisodeStatus ->
-                if (feedItem.id == contentEpisodeStatus.itemId) {
-                    feedItem.contentEpisodeStatus = contentEpisodeStatus
-                }
-            }
+            feedItem.contentEpisodeStatus = episodeStatusMap[feedItem.id]
         }
 
         feed.items = items
@@ -6535,29 +6745,23 @@ abstract class SphinxRepository(
             contentEpisodeStatusDboPresenterMapper.mapFrom(it)
         }
 
-        val moshi = Moshi.Builder()
-            .add(KotlinJsonAdapterFactory())
-            .build()
-
-        val adapter = moshi.adapter(ChapterResponseDto::class.java).lenient()
+        // Use Map for O(1) lookup instead of O(n²) nested loop
+        val episodeStatusMap = contentEpisodeStatuses.associateBy { it.itemId }
 
         items.forEach { feedItem ->
             feedItem.feed = feed
 
             feedItem.chaptersData?.value?.let { chaptersJson ->
                 try {
-                    val parsedChapters: ChapterResponseDto? = adapter.fromJson(chaptersJson)
+                    val parsedChapters: ChapterResponseDto? = chapterResponseAdapter.fromJson(chaptersJson)
                     feedItem.chapters = parsedChapters
                 } catch (e: Exception) {
                     feedItem.chapters = null
                 }
             }
 
-            contentEpisodeStatuses.forEach { contentEpisodeStatus ->
-                if (feedItem.id == contentEpisodeStatus.itemId) {
-                    feedItem.contentEpisodeStatus = contentEpisodeStatus
-                }
-            }
+            // O(1) lookup instead of O(n) inner loop
+            feedItem.contentEpisodeStatus = episodeStatusMap[feedItem.id]
         }
 
         feed.items = items
@@ -6588,12 +6792,7 @@ abstract class SphinxRepository(
 
         feedItem.chaptersData?.value?.let { chaptersJson ->
             try {
-                val moshi = Moshi.Builder()
-                    .add(KotlinJsonAdapterFactory())
-                    .build()
-
-                val adapter = moshi.adapter(ChapterResponseDto::class.java).lenient()
-                val parsedChapters: ChapterResponseDto? = adapter.fromJson(chaptersJson)
+                val parsedChapters: ChapterResponseDto? = chapterResponseAdapter.fromJson(chaptersJson)
                 feedItem.chapters = parsedChapters
             } catch (e: Exception) {
                 feedItem.chapters = null
@@ -6800,11 +6999,6 @@ abstract class SphinxRepository(
                     val queries = coreDB.getSphinxDatabaseQueries()
 
                     try {
-                        val moshi = Moshi.Builder()
-                            .add(KotlinJsonAdapterFactory())
-                            .build()
-
-                        val adapter = moshi.adapter(ChapterResponseDto::class.java)
                         val chapterResponseDto = response.value
 
                         val hasChapters = chapterResponseDto.nodes.any { it.node_type == "Chapter" }
@@ -6815,7 +7009,7 @@ abstract class SphinxRepository(
                                 ?.properties?.media_url?.toFeedUrl()
 
                         if (hasChapters) {
-                            val feedChaptersData = adapter.toJson(chapterResponseDto).toFeedChapterData()
+                            val feedChaptersData = chapterResponseAdapter.toJson(chapterResponseDto).toFeedChapterData()
                             queries.feedItemUpdateChaptersData(feedChaptersData, downloadedMediaUrl, id)
                         } else {
                             getEpisodeNodeDetails(
@@ -6849,16 +7043,10 @@ abstract class SphinxRepository(
             podcastEpisodeDboPresenterMapper.mapFrom(it, podcast)
         }
 
-        val moshi = Moshi.Builder()
-            .add(KotlinJsonAdapterFactory())
-            .build()
-
-        val adapter = moshi.adapter(ChapterResponseDto::class.java).lenient()
-
         episodes.forEach { episode ->
             episode.chaptersData?.value?.let { chaptersJson ->
                 try {
-                    val parsedChapters: ChapterResponseDto? = adapter.fromJson(chaptersJson)
+                    val parsedChapters: ChapterResponseDto? = chapterResponseAdapter.fromJson(chaptersJson)
                     episode.chapters = parsedChapters
                 } catch (e: Exception) {
                     episode.chapters = null
@@ -6878,23 +7066,17 @@ abstract class SphinxRepository(
             chatDboPresenterMapper.mapFrom(it)
         }
 
-        val allContentStatuses = queries.contentEpisodeStatusGetAll().executeAsList()
-
         val episodeIds = episodes.map { it.id }
 
         val contentEpisodeStatuses = queries.contentEpisodeStatusGetByFeedIdAndItemIds(podcast.id, episodeIds).executeAsList().map {
             contentEpisodeStatusDboPresenterMapper.mapFrom(it)
         }
 
-        LOG.d("TEST", "${allContentStatuses.count()}")
-
+        // Use Map for O(1) lookup instead of O(n²) nested loop
         if (contentEpisodeStatuses.isNotEmpty()) {
+            val episodeStatusMap = contentEpisodeStatuses.associateBy { it.itemId }
             episodes.forEach { episode ->
-                contentEpisodeStatuses.forEach { contentEpisodeStatus ->
-                    if (episode.id == contentEpisodeStatus.itemId) {
-                        episode.contentEpisodeStatus = contentEpisodeStatus
-                    }
-                }
+                episode.contentEpisodeStatus = episodeStatusMap[episode.id]
             }
         }
 
@@ -7020,14 +7202,57 @@ abstract class SphinxRepository(
         currentSubscribeState: Subscribed
     ) {
         val queries = coreDB.getSphinxDatabaseQueries()
-        val newValue = if (currentSubscribeState.isTrue()) Subscribed.False else Subscribed.True
 
-        queries.transaction {
-            updateSubscriptionStatus(
-                queries,
-                newValue,
-                feedId
+        val newSubscribeState = if (currentSubscribeState.isTrue()) {
+            Subscribed.False
+        } else {
+            Subscribed.True
+        }
+
+        feedLock.withLock {
+            queries.transaction {
+                updateSubscriptionStatus(
+                    queries,
+                    newSubscribeState,
+                    feedId
+                )
+            }
+        }
+
+        syncFeedSubscriptionStatus(feedId, newSubscribeState)
+    }
+
+    private suspend fun syncFeedSubscriptionStatus(
+        feedId: FeedId,
+        subscribed: Subscribed
+    ) = withContext(io) {
+        try {
+            val feed = getFeedById(feedId).firstOrNull() ?: return@withContext
+            val podcast = getPodcastById(feedId).firstOrNull()
+
+            val contentFeedStatus = coreDB.getSphinxDatabaseQueries()
+                .contentFeedStatusGetByFeedId(feedId)
+                .executeAsOneOrNull()
+
+            val chatPubkey = feed.chat?.ownerPubKey?.value ?: ""
+            val satsPerMinute = contentFeedStatus?.sats_per_minute?.value?.toInt() ?: 0
+            val playerSpeed = contentFeedStatus?.player_speed?.value ?: 1.0
+
+            val itemId = contentFeedStatus?.item_id?.value?.takeIf { it.isNotEmpty() }
+                ?: podcast?.getCurrentEpisode()?.id?.value
+                ?: ""
+
+            dataSyncManager.saveFeedStatus(
+                feedId = feedId.value,
+                chatPubkey = chatPubkey,
+                feedUrl = feed.feedUrl.value,
+                subscribed = subscribed.isTrue(),
+                satsPerMinute = satsPerMinute,
+                playerSpeed = playerSpeed,
+                itemId = itemId
             )
+        } catch (e: Exception) {
+            LOG.e(TAG, "Error syncing feed subscription status", e)
         }
     }
 
@@ -8881,10 +9106,46 @@ abstract class SphinxRepository(
             }
 
             if (shouldSync) {
-                saveContentFeedStatusFor(feedId)
+                syncContentFeedStatus(
+                    feedId = feedId,
+                    feedUrl = feedUrl,
+                    subscriptionStatus = subscriptionStatus,
+                    chatId = chatId,
+                    itemId = itemId,
+                    satsPerMinute = satsPerMinute,
+                    playerSpeed = playerSpeed
+                )
             }
         }
     }
+
+    private suspend fun syncContentFeedStatus(
+        feedId: FeedId,
+        feedUrl: FeedUrl,
+        subscriptionStatus: Subscribed,
+        chatId: ChatId?,
+        itemId: FeedId?,
+        satsPerMinute: Sat?,
+        playerSpeed: FeedPlayerSpeed?
+    ) = withContext(io) {
+        try {
+            val chat = chatId?.let { getChatById(it).firstOrNull() }
+            val chatPubkey = chat?.ownerPubKey?.value ?: ""
+
+            dataSyncManager.saveFeedStatus(
+                feedId = feedId.value,
+                chatPubkey = chatPubkey,
+                feedUrl = feedUrl.value,
+                subscribed = subscriptionStatus.isTrue(),
+                satsPerMinute = satsPerMinute?.value?.toInt() ?: 0,
+                playerSpeed = playerSpeed?.value ?: 1.0,
+                itemId = itemId?.value ?: ""
+            )
+        } catch (e: Exception) {
+            LOG.e(TAG, "Error syncing content feed status", e)
+        }
+    }
+
     private val contentEpisodeLock = Mutex()
     override fun updateContentEpisodeStatus(
         feedId: FeedId,
@@ -8908,15 +9169,38 @@ abstract class SphinxRepository(
                     duration = duration,
                     current_time = currentTime,
                     played = played
-
                 )
             }
 
             if (shouldSync) {
-                saveContentFeedStatusFor(feedId)
+                syncContentEpisodeStatus(
+                    feedId = feedId,
+                    itemId = itemId,
+                    duration = duration,
+                    currentTime = currentTime
+                )
             }
         }
     }
+
+    private suspend fun syncContentEpisodeStatus(
+        feedId: FeedId,
+        itemId: FeedId,
+        duration: FeedItemDuration,
+        currentTime: FeedItemDuration
+    ) = withContext(io) {
+        try {
+            dataSyncManager.saveFeedItemStatus(
+                feedId = feedId.value,
+                itemId = itemId.value,
+                duration = duration.value.toInt(),
+                currentTime = currentTime.value.toInt()
+            )
+        } catch (e: Exception) {
+            LOG.e(TAG, "Error syncing content episode status", e)
+        }
+    }
+
 
     private fun updateContentEpisodeStatusDuration(
         itemId: FeedId,
@@ -9254,8 +9538,8 @@ abstract class SphinxRepository(
     override suspend fun clearDatabase() {
         val queries = coreDB.getSphinxDatabaseQueries()
 
-        messageLock.withLock {
-            chatLock.withLock {
+        chatLock.withLock {
+            messageLock.withLock {
                 withContext(io) {
                     queries.transaction {
                         clearDatabase(

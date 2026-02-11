@@ -1,0 +1,49 @@
+import chat.sphinx.wrapper_common.DateTime;
+import chat.sphinx.wrapper_common.datasync.DataSyncIdentifier;
+import chat.sphinx.wrapper_common.datasync.DataSyncKey;
+import chat.sphinx.wrapper_common.datasync.DataSyncValue;
+
+
+-- Migration 30: Add missing indexes for performance optimization and Data Sync table
+
+CREATE TABLE dataSyncDbo(
+    sync_key                 TEXT                 AS DataSyncKey NOT NULL,
+    identifier               TEXT                 AS DataSyncIdentifier NOT NULL,
+    date                     INTEGER              AS DateTime NOT NULL,
+    sync_value               TEXT                 AS DataSyncValue NOT NULL,
+    PRIMARY KEY (sync_key, identifier)
+);
+
+-- Contact table indexes
+CREATE INDEX IF NOT EXISTS idx_contact_node_pub_key ON contactDbo(node_pub_key);
+CREATE INDEX IF NOT EXISTS idx_contact_owner ON contactDbo(owner);
+CREATE INDEX IF NOT EXISTS idx_contact_blocked ON contactDbo(blocked);
+
+-- Message table indexes (payment/tag lookups)
+CREATE INDEX IF NOT EXISTS idx_message_payment_hash ON messageDbo(payment_hash);
+CREATE INDEX IF NOT EXISTS idx_message_tag ON messageDbo(tag_message);
+
+-- Better composite index for unseen message counts
+CREATE INDEX IF NOT EXISTS idx_message_chat_sender_seen ON messageDbo(chat_id, sender, seen);
+
+-- Feed table indexes
+CREATE INDEX IF NOT EXISTS idx_feed_chat_id ON feedDbo(chat_id);
+CREATE INDEX IF NOT EXISTS idx_feed_type ON feedDbo(feed_type);
+CREATE INDEX IF NOT EXISTS idx_feed_subscribed ON feedDbo(subscribed);
+
+-- Feed item table index
+CREATE INDEX IF NOT EXISTS idx_feed_item_feed_id ON feedItemDbo(feed_id);
+
+-- Invite table index
+CREATE INDEX IF NOT EXISTS idx_invite_contact_id ON inviteDbo(contact_id);
+
+-- LSAT table indexes
+CREATE INDEX IF NOT EXISTS idx_lsat_issuer ON lsatDbo(issuer);
+CREATE INDEX IF NOT EXISTS idx_lsat_status ON lsatDbo(status);
+
+-- Subscription table indexes
+CREATE INDEX IF NOT EXISTS idx_subscription_contact_id ON subscriptionDbo(contact_id);
+CREATE INDEX IF NOT EXISTS idx_subscription_chat_id ON subscriptionDbo(chat_id);
+
+-- Dashboard index for pagination
+CREATE INDEX IF NOT EXISTS idx_dashboard_include_return ON dashboardDbo(include_in_return);

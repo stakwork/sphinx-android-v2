@@ -28,6 +28,9 @@ import chat.sphinx.wrapper_common.dashboard.ChatId;
 import chat.sphinx.wrapper_common.dashboard.ContactId;
 import chat.sphinx.wrapper_common.dashboard.DashboardItemId;
 import chat.sphinx.wrapper_common.dashboard.InviteId;
+import chat.sphinx.wrapper_common.datasync.DataSyncIdentifier;
+import chat.sphinx.wrapper_common.datasync.DataSyncKey;
+import chat.sphinx.wrapper_common.datasync.DataSyncValue;
 import chat.sphinx.wrapper_common.feed.FeedId;
 import chat.sphinx.wrapper_common.feed.FeedType;
 import chat.sphinx.wrapper_common.feed.FeedUrl;
@@ -620,6 +623,21 @@ SET alias = :alias,
     tip_amount = :tip_amount
 WHERE owner = 1;
 
+contactUpdateOwnerTipAmount:
+UPDATE contactDbo
+SET tip_amount = :tip_amount
+WHERE owner = 1;
+
+contactUpdateOwnerPrivatePhoto:
+UPDATE contactDbo
+SET private_photo = :private_photo
+WHERE owner = 1;
+
+contactUpdateOwnerAlias:
+UPDATE contactDbo
+SET alias = :alias
+WHERE owner = 1;
+
 contactUpdateOwnerDeviceId:
 UPDATE contactDbo
 SET device_id = :device_id
@@ -627,6 +645,10 @@ WHERE owner = 1;
 
 contactDeleteAll:
 DELETE FROM contactDbo;
+
+CREATE INDEX IF NOT EXISTS idx_contact_node_pub_key ON contactDbo(node_pub_key);
+CREATE INDEX IF NOT EXISTS idx_contact_owner ON contactDbo(owner);
+CREATE INDEX IF NOT EXISTS idx_contact_blocked ON contactDbo(blocked);
 
 CREATE TABLE inviteDbo(
     id                          INTEGER         AS InviteId NOT NULL PRIMARY KEY,
@@ -716,6 +738,8 @@ WHERE contact_id = ?;
 
 inviteDeleteAll:
 DELETE FROM inviteDbo;
+
+CREATE INDEX IF NOT EXISTS idx_invite_contact_id ON inviteDbo(contact_id);
 
 CREATE TABLE dashboardDbo(
     id                          TEXT            AS DashboardItemId NOT NULL PRIMARY KEY,
@@ -809,6 +833,8 @@ WHERE id = ?;
 
 dashboardDeleteAll:
 DELETE FROM dashboardDbo;
+
+CREATE INDEX IF NOT EXISTS idx_dashboard_include_return ON dashboardDbo(include_in_return);
 
 -- Cannot use inline classes if there are 23 or more columns
 -- https://youtrack.jetbrains.com/issue/KT-45084
@@ -1486,6 +1512,9 @@ CREATE INDEX IF NOT EXISTS idx_message_chat_latest ON messageDbo(chat_id, date D
 CREATE INDEX IF NOT EXISTS idx_message_chat_id_date_id ON messageDbo(chat_id, date DESC, id);
 CREATE INDEX IF NOT EXISTS idx_message_chat_seen ON messageDbo(chat_id, seen);
 CREATE INDEX IF NOT EXISTS idx_message_chat_seen_date ON messageDbo(chat_id, seen, date DESC);
+CREATE INDEX IF NOT EXISTS idx_message_payment_hash ON messageDbo(payment_hash);
+CREATE INDEX IF NOT EXISTS idx_message_tag ON messageDbo(tag_message);
+CREATE INDEX IF NOT EXISTS idx_message_chat_sender_seen ON messageDbo(chat_id, sender, seen);
 
 CREATE INDEX IF NOT EXISTS idx_message_media_message_id ON messageMediaDbo(id);
 CREATE INDEX IF NOT EXISTS idx_message_media_type ON messageMediaDbo(media_type);
@@ -1595,6 +1624,9 @@ WHERE contact_id = ?;
 
 subscriptionDeleteAll:
 DELETE FROM subscriptionDbo;
+
+CREATE INDEX IF NOT EXISTS idx_subscription_contact_id ON subscriptionDbo(contact_id);
+CREATE INDEX IF NOT EXISTS idx_subscription_chat_id ON subscriptionDbo(chat_id);
 
 CREATE TABLE feedDbo(
     id                          TEXT               AS FeedId NOT NULL PRIMARY KEY,
@@ -1778,6 +1810,10 @@ WHERE id = ?;
 feedDeleteAll:
 DELETE FROM feedDbo;
 
+CREATE INDEX IF NOT EXISTS idx_feed_chat_id ON feedDbo(chat_id);
+CREATE INDEX IF NOT EXISTS idx_feed_type ON feedDbo(feed_type);
+CREATE INDEX IF NOT EXISTS idx_feed_subscribed ON feedDbo(subscribed);
+
 CREATE TABLE feedItemDbo(
     id                          TEXT               AS FeedId NOT NULL PRIMARY KEY,
     title                       TEXT               AS FeedTitle NOT NULL,
@@ -1926,6 +1962,8 @@ WHERE id = :id;
 
 feedItemDeleteAll:
 DELETE FROM feedItemDbo;
+
+CREATE INDEX IF NOT EXISTS idx_feed_item_feed_id ON feedItemDbo(feed_id);
 
 CREATE TABLE feedModelDbo(
     id                          TEXT               AS FeedId NOT NULL PRIMARY KEY,
@@ -2298,3 +2336,49 @@ lsatUpsert {
         :created_at
     );
 }
+
+CREATE TABLE dataSyncDbo(
+    sync_key                 TEXT                 AS DataSyncKey NOT NULL,
+    identifier               TEXT                 AS DataSyncIdentifier NOT NULL,
+    date                     INTEGER              AS DateTime NOT NULL,
+    sync_value               TEXT                 AS DataSyncValue NOT NULL,
+    PRIMARY KEY (sync_key, identifier)
+);
+
+CREATE INDEX idx_data_sync_date ON dataSyncDbo(date DESC);
+
+dataSyncGetAll:
+SELECT *
+FROM dataSyncDbo
+ORDER BY date DESC;
+
+dataSyncGetByKeyAndIdentifier:
+SELECT *
+FROM dataSyncDbo
+WHERE sync_key = ? AND identifier = ?
+LIMIT 1;
+
+dataSyncDeleteAll:
+DELETE FROM dataSyncDbo;
+
+dataSyncDeleteByKeyAndIdentifier:
+DELETE FROM dataSyncDbo
+WHERE sync_key = ? AND identifier = ?;
+
+dataSyncUpsert {
+    INSERT OR REPLACE INTO dataSyncDbo(
+        sync_key,
+        identifier,
+        date,
+        sync_value
+    )
+    VALUES (
+        :sync_key,
+        :identifier,
+        :date,
+        :sync_value
+    );
+}
+
+CREATE INDEX IF NOT EXISTS idx_lsat_issuer ON lsatDbo(issuer);
+CREATE INDEX IF NOT EXISTS idx_lsat_status ON lsatDbo(status);

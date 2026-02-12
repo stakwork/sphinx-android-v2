@@ -1942,6 +1942,13 @@ abstract class SphinxRepository(
                 }
             }
         }
+
+        // Update member mentions for tribe messages
+        if (isTribe && msg.senderAlias != null) {
+            applicationScope.launch(io) {
+                updateChatMemberMentions(ChatId(chatId), newMessage as Message)
+            }
+        }
     }
 
     override fun setLatestMessagesDatePerChat() {
@@ -2066,6 +2073,41 @@ abstract class SphinxRepository(
             chatLock.withLock {
                 queries.chatUpdateMyAlias(
                     my_alias = chatAlias,
+                    id = chatId
+                )
+            }
+        } catch (ex: Exception) {
+            LOG.e(TAG, ex.printStackTrace().toString(), ex)
+        }
+    }
+
+    override suspend fun updateChatMemberMentions(
+        chatId: ChatId,
+        message: Message
+    ) {
+        val queries = coreDB.getSphinxDatabaseQueries()
+
+        try {
+            chatLock.withLock {
+                val chat = getChatById(chatId).firstOrNull() ?: return@withLock
+                
+                val alias = message.senderAlias?.value ?: return@withLock
+                val pictureUrl = message.senderPic?.value ?: ""
+                val colorKey = message.getColorKey()
+                val timestamp = message.date
+
+                val currentMentions = chat.memberMentions ?: ChatMemberMentions(emptyList())
+                
+                val updatedMentions = if (message.type.isGroupLeave()) {
+                    currentMentions.removeMember(alias, pictureUrl)
+                } else {
+                    currentMentions.addOrUpdateMember(alias, pictureUrl, colorKey, timestamp)
+                }
+
+                val mentionsJson = updatedMentions.toJson(moshi)
+
+                queries.chatUpdateMemberMentions(
+                    member_mentions = mentionsJson.toChatMemberMentionsOrNull(moshi),
                     id = chatId
                 )
             }

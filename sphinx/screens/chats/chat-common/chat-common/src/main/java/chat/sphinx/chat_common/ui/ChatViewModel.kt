@@ -3218,66 +3218,21 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         val lastWord = s?.split(" ")?.last()?.toString() ?: ""
 
         if (lastWord.startsWith("@") && lastWord.length > 1) {
-            val matchingMessages: MutableList<MessageHolderViewState> = mutableListOf();
+            // Get current chat from state
+            val chat = chatViewState.value
+            
+            // Use persistent member mentions list instead of loaded messages
+            val filteredMembers = chat?.memberMentions
+                ?.filterByThreeMonths()
+                ?.matchAlias(lastWord.replace("@", ""))
+                ?: emptyList()
 
-            messageHolderViewStateFlow.value.forEach loop@{ messageHolder ->
-                if (messageHolder is MessageHolderViewState.Sent) {
-                    return@loop
-                }
-                messageHolder.message?.date?.let { nnDate ->
-                    if (nnDate.before(DateTime.getThreeMonthsAgo())) {
-                        return@loop
-                    }
-                }
-                messageHolder.message?.senderAlias?.value?.let { alias ->
-                    if (alias.startsWith(lastWord.replace("@", ""), true)) {
-                        messageHolder.message.senderPic?.value?.let { picture ->
-                            if (messageHolder.message.type.isGroupLeave()) {
-                                val index = matchingMessages.indexOfFirst {
-                                    it.message?.senderPic?.value == picture || it.message?.senderAlias?.value == alias
-                                }
-                                if (index != -1) {
-                                    matchingMessages.removeAt(index)
-                                }
-                            }
-
-                            val index = matchingMessages.indexOfFirst {
-                                it.message?.senderAlias?.value == alias
-                            }
-
-                            if (index != -1) {
-                                matchingMessages[index] = messageHolder
-                            } else if (!matchingMessages.any { it.message?.senderPic?.value == picture || it.message?.senderAlias?.value == alias }) {
-                                matchingMessages.add(messageHolder)
-                            }
-                        } ?: run {
-                            if (messageHolder.message.type.isGroupLeave()) {
-                                val index = matchingMessages.indexOfFirst {
-                                    it.message?.senderAlias?.value == alias
-                                }
-                                if (index != -1) {
-                                    matchingMessages.removeAt(index)
-                                }
-                            }
-                            val index = matchingMessages.indexOfFirst {
-                                it.message?.senderAlias?.value == alias
-                            }
-
-                            if (index != -1) {
-                                matchingMessages[index] = messageHolder
-                            } else {
-                                matchingMessages.add(messageHolder)
-                            }
-                        }
-                    }
-                }
-            }
-
-            val matchingAliases = matchingMessages.map {
+            // Map to Triple format for ViewState compatibility
+            val matchingAliases = filteredMembers.map {
                 Triple(
-                    it.message?.senderAlias?.value ?: "",
-                    it.message?.senderPic?.value ?: "",
-                    it.message?.getColorKey() ?: ""
+                    it.alias,
+                    it.pictureUrl,
+                    it.colorKey
                 )
             }
 

@@ -1944,7 +1944,7 @@ abstract class SphinxRepository(
         }
 
         // Update member mentions for tribe messages
-        if (isTribe && msg.senderAlias != null && msgSender.photo_url != null) {
+        if (isTribe && msg.senderAlias != null) {
             applicationScope.launch(io) {
                 updateChatMemberMentions(ChatId(chatId), newMessage as Message)
             }
@@ -2092,7 +2092,7 @@ abstract class SphinxRepository(
                 val chat = getChatById(chatId).firstOrNull() ?: return@withLock
                 
                 val alias = message.senderAlias?.value ?: return@withLock
-                val pictureUrl = message.senderPic?.value ?: return@withLock
+                val pictureUrl = message.senderPic?.value ?: ""
                 val colorKey = message.getColorKey()
                 val timestamp = message.date
 

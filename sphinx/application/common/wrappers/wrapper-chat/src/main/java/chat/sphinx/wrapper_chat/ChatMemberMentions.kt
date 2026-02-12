@@ -50,7 +50,8 @@ data class ChatMemberMentions(
 ) {
     /**
      * Add a new member or update existing member's timestamp.
-     * Matches by alias OR pictureUrl to handle profile changes.
+     * Matches primarily by alias to handle profile picture changes.
+     * Profile picture can be null or empty.
      */
     fun addOrUpdateMember(
         alias: String,
@@ -58,12 +59,11 @@ data class ChatMemberMentions(
         colorKey: String,
         timestamp: DateTime
     ): ChatMemberMentions {
-        val existingIndex = members.indexOfFirst { 
-            it.alias == alias || it.pictureUrl == pictureUrl 
-        }
+        // Match by alias only (primary identifier)
+        val existingIndex = members.indexOfFirst { it.alias == alias }
         
         return if (existingIndex >= 0) {
-            // Update existing member
+            // Update existing member (may have new picture)
             val updatedMembers = members.toMutableList()
             updatedMembers[existingIndex] = ChatMemberMention(
                 alias = alias,
@@ -79,11 +79,11 @@ data class ChatMemberMentions(
     }
 
     /**
-     * Remove a member matching by alias OR pictureUrl.
+     * Remove a member matching by alias only.
      */
     fun removeMember(alias: String, pictureUrl: String): ChatMemberMentions {
         return ChatMemberMentions(
-            members.filter { it.alias != alias && it.pictureUrl != pictureUrl }
+            members.filter { it.alias != alias }
         )
     }
 

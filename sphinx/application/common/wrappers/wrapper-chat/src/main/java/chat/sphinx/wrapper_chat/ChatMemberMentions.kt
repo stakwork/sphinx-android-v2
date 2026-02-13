@@ -1,23 +1,27 @@
 package chat.sphinx.wrapper_chat
 
 import chat.sphinx.wrapper_common.DateTime
+import chat.sphinx.wrapper_common.after
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.JsonDataException
 import com.squareup.moshi.Moshi
 
-@Suppress("NOTHING_TO_INLINE")
-inline fun String.toChatMemberMentionsOrNull(moshi: Moshi): ChatMemberMentions? =
+fun String.toChatMemberMentionsOrNull(moshi: Moshi): ChatMemberMentions? =
     try {
         moshi.adapter(ChatMemberMentionsMoshi::class.java)
             .fromJson(this)
-            ?.let { ChatMemberMentions(it.members.map { m -> 
-                ChatMemberMention(
-                    alias = m.alias,
-                    pictureUrl = m.pictureUrl,
-                    colorKey = m.colorKey,
-                    lastMessageTimestamp = DateTime(m.lastMessageTimestamp)
+            ?.let { moshiData ->
+                ChatMemberMentions(
+                    moshiData.members.map { m ->
+                        ChatMemberMention(
+                            alias = m.alias,
+                            pictureUrl = m.pictureUrl,
+                            colorKey = m.colorKey,
+                            lastMessageTimestamp = DateTime(java.util.Date(m.lastMessageTimestamp))
+                        )
+                    }
                 )
-            }) }
+            }
     } catch (e: Exception) {
         null
     }
@@ -27,12 +31,12 @@ fun ChatMemberMentions.toJson(moshi: Moshi): String =
     moshi.adapter(ChatMemberMentionsMoshi::class.java)
         .toJson(
             ChatMemberMentionsMoshi(
-                members = members.map { m ->
+                members.map { m ->
                     ChatMemberMentionMoshi(
                         alias = m.alias,
                         pictureUrl = m.pictureUrl,
                         colorKey = m.colorKey,
-                        lastMessageTimestamp = m.lastMessageTimestamp.value
+                        lastMessageTimestamp = m.lastMessageTimestamp.value.time
                     )
                 }
             )
@@ -93,7 +97,7 @@ data class ChatMemberMentions(
     fun filterByThreeMonths(): ChatMemberMentions {
         val threeMonthsAgo = DateTime.getThreeMonthsAgo()
         return ChatMemberMentions(
-            members.filter { it.lastMessageTimestamp >= threeMonthsAgo }
+            members.filter { it.lastMessageTimestamp.after(threeMonthsAgo) }
         )
     }
 
@@ -101,8 +105,7 @@ data class ChatMemberMentions(
      * Match members whose alias starts with the query (case-insensitive).
      */
     fun matchAlias(query: String): List<ChatMemberMention> {
-        val lowerQuery = query.lowercase()
-        return members.filter { it.alias.lowercase().startsWith(lowerQuery) }
+        return members.filter { it.alias.startsWith(query, ignoreCase = true) }
     }
 }
 

@@ -5,6 +5,7 @@ import chat.sphinx.wrapper_action_track.ActionTrackUploaded;
 import chat.sphinx.wrapper_chat.ChatAlias;
 import chat.sphinx.wrapper_chat.ChatGroupKey;
 import chat.sphinx.wrapper_chat.ChatHost;
+import chat.sphinx.wrapper_chat.ChatMemberMentions;
 import chat.sphinx.wrapper_chat.ChatMetaData;
 import chat.sphinx.wrapper_chat.ChatMuted;
 import chat.sphinx.wrapper_chat.ChatName;

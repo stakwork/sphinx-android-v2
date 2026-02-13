@@ -36,6 +36,7 @@ import chat.sphinx.feature_coredb.adapters.chat.ChatUUIDAdapter
 import chat.sphinx.feature_coredb.adapters.chat.ChatUnlistedAdapter
 import chat.sphinx.feature_coredb.adapters.chat.NotifyAdapter
 import chat.sphinx.feature_coredb.adapters.chat.OwnedTribeAdapter
+import chat.sphinx.feature_coredb.adapters.chat.ChatMemberMentionsAdapter
 import chat.sphinx.feature_coredb.adapters.chat.RemoteTimezoneIdentifierAdapter
 import chat.sphinx.feature_coredb.adapters.chat.SecondBrainUrlAdapter
 import chat.sphinx.feature_coredb.adapters.chat.TimezoneEnabledAdapter
@@ -195,6 +196,7 @@ abstract class CoreDBImpl(private val moshi: Moshi): CoreDB() {
                     remote_timezone_identifierAdapter = RemoteTimezoneIdentifierAdapter(),
                     timezone_identifierAdapter = TimezoneIdentifierAdapter(),
                     is_my_tribeAdapter = OwnedTribeAdapter(),
+                    member_mentionsAdapter = ChatMemberMentionsAdapter(moshi),
                 ),
                 contactDboAdapter = ContactDbo.Adapter(
                     idAdapter = ContactIdAdapter.getInstance(),

@@ -978,8 +978,7 @@ abstract class SphinxRepository(
                                 timezoneIdentifier = null,
                                 remoteTimezoneIdentifier = null,
                                 timezoneUpdated = null,
-                                ownedTribe = OwnedTribe.False,
-                memberMentions = null
+                                ownedTribe = OwnedTribe.False
                             )
 
                             chatLock.withLock {
@@ -1538,8 +1537,7 @@ abstract class SphinxRepository(
                     timezoneIdentifier = existingTribe?.timezoneIdentifier,
                     remoteTimezoneIdentifier = existingTribe?.remoteTimezoneIdentifier,
                     timezoneUpdated = existingTribe?.timezoneUpdated,
-                    ownedTribe = OwnedTribe.True,
-                    memberMentions = null
+                    ownedTribe = OwnedTribe.True
                 )
 
                 chatLock.withLock {
@@ -2436,8 +2434,7 @@ abstract class SphinxRepository(
             timezoneIdentifier = null,
             remoteTimezoneIdentifier = null,
             timezoneUpdated = null,
-            ownedTribe = tribeData.isAdmin.toOwnedTribe(),
-            memberMentions = null
+            ownedTribe = tribeData.isAdmin.toOwnedTribe()
         )
 
         transaction.upsertNewChat(
@@ -3520,8 +3517,7 @@ abstract class SphinxRepository(
                 timezoneIdentifier = null,
                 remoteTimezoneIdentifier = null,
                 timezoneUpdated = null,
-                ownedTribe = OwnedTribe.False,
-                memberMentions = null
+                ownedTribe = OwnedTribe.False
             )
 
             transaction.upsertNewContact(newContact, queries)

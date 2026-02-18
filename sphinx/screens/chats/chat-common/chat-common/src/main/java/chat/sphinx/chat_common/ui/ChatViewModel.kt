@@ -3218,8 +3218,8 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         val lastWord = s?.split(" ")?.last()?.toString() ?: ""
 
         if (lastWord.startsWith("@") && lastWord.length > 1) {
-            // Get current chat from state
-            val chat = chatViewState.value
+            // Get current chat from chatSharedFlow
+            val chat = chatSharedFlow.replayCache.firstOrNull()
             
             // Use persistent member mentions list instead of loaded messages
             val filteredMembers = chat?.memberMentions
@@ -3228,11 +3228,11 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                 ?: emptyList()
 
             // Map to Triple format for ViewState compatibility
-            val matchingAliases = filteredMembers.map {
+            val matchingAliases = filteredMembers.map { member ->
                 Triple(
-                    it.alias,
-                    it.pictureUrl,
-                    it.colorKey
+                    member.alias,
+                    member.pictureUrl,
+                    member.colorKey
                 )
             }
 

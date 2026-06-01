@@ -609,7 +609,8 @@ class ConnectManagerImpl: ConnectManager()
         return try {
             val mnemonicWords = walletMnemonic?.value ?: return null
             val seed = mnemonicToSeed(mnemonicWords)
-            val keys = nodeKeys(net = MAINNET_NETWORK, seed = seed)
+            // Use dynamic network variable to match encryption (was hardcoded to MAINNET_NETWORK)
+            val keys = nodeKeys(net = network, seed = seed)
             val secretKey = keys.secret
 
             val encryptedBytes = Base64.decode(value, Base64.NO_WRAP)

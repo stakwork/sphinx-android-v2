@@ -148,6 +148,7 @@ import chat.sphinx.wrapper_common.datasync.DataSync
 import chat.sphinx.wrapper_common.datasync.DataSyncIdentifier
 import chat.sphinx.wrapper_common.datasync.DataSyncKey
 import chat.sphinx.wrapper_common.datasync.DataSyncValue
+import chat.sphinx.wrapper_common.datasync.parseSimpleJsonObject
 import chat.sphinx.wrapper_common.datasync.toDataSyncKey
 import chat.sphinx.wrapper_podcast.FeedRecommendation
 import chat.sphinx.wrapper_podcast.FeedSearchResultRow
@@ -588,7 +589,8 @@ abstract class SphinxRepository(
                 timezoneIdentifier = null,
                 remoteTimezoneIdentifier = null,
                 timezoneUpdated = null,
-                ownedTribe = OwnedTribe.False
+                ownedTribe = OwnedTribe.False,
+                memberMentions = null
             )
 
             chatLock.withLock {
@@ -1051,7 +1053,8 @@ abstract class SphinxRepository(
                                 timezoneIdentifier = null,
                                 remoteTimezoneIdentifier = null,
                                 timezoneUpdated = null,
-                                ownedTribe = OwnedTribe.False
+                                ownedTribe = OwnedTribe.False,
+                                memberMentions = null
                             )
 
                             chatLock.withLock {
@@ -1618,7 +1621,8 @@ abstract class SphinxRepository(
                     timezoneIdentifier = existingTribe?.timezoneIdentifier,
                     remoteTimezoneIdentifier = existingTribe?.remoteTimezoneIdentifier,
                     timezoneUpdated = existingTribe?.timezoneUpdated,
-                    ownedTribe = OwnedTribe.True
+                    ownedTribe = OwnedTribe.True,
+                    memberMentions = existingTribe?.memberMentions
                 )
 
                 chatLock.withLock {
@@ -1795,14 +1799,15 @@ abstract class SphinxRepository(
         }
     }
 
-    override fun onSaveDataSyncItem(
+    override suspend fun onSaveDataSyncItem(
         key: String,
         identifier: String,
         value: String,
         timestamp: Long
     ) {
-        applicationScope.launch(io) {
-
+        // Changed from launch to withContext to properly await DB write
+        // This fixes race condition where sync could start before DB write completes
+        withContext(io) {
             upsertDataSync(
                 key = key.toDataSyncKey(),
                 identifier = DataSyncIdentifier(identifier),
@@ -2026,26 +2031,8 @@ abstract class SphinxRepository(
     }
 
     private fun parseFeedItemStatusJson(json: String): Map<String, String> {
+        // Uses shared parseSimpleJsonObject from DataSyncExtensions
         return parseSimpleJsonObject(json)
-    }
-
-    private fun parseSimpleJsonObject(json: String): Map<String, String> {
-        val map = mutableMapOf<String, String>()
-        val cleaned = json.trim().removePrefix("{").removeSuffix("}")
-
-        if (cleaned.isEmpty()) return map
-
-        // Handle JSON with quoted or unquoted values
-        cleaned.split(",").forEach { pair ->
-            val parts = pair.split(":", limit = 2)
-            if (parts.size == 2) {
-                val key = parts[0].trim().removeSurrounding("\"")
-                val value = parts[1].trim().removeSurrounding("\"")
-                map[key] = value
-            }
-        }
-
-        return map
     }
 
     private val contentFeedStatusLock = Mutex()
@@ -2058,8 +2045,8 @@ abstract class SphinxRepository(
         connectManager.decryptDataSync(value)
     }
 
-    override fun onClearDataSyncTable() {
-        applicationScope.launch(io) {
+    override suspend fun onClearDataSyncTable() {
+        withContext(io) {
             coreDB.getSphinxDatabaseQueries().dataSyncDeleteAll()
         }
     }
@@ -2295,7 +2282,7 @@ abstract class SphinxRepository(
         }
 
         // Update member mentions for tribe messages
-        if (isTribe && msg.senderAlias != null) {
+        if (isTribe && msgSender.alias != null) {
             applicationScope.launch(io) {
                 updateChatMemberMentions(ChatId(chatId), newMessage as Message)
             }
@@ -2432,7 +2419,7 @@ abstract class SphinxRepository(
         }
     }
 
-    override suspend fun updateChatMemberMentions(
+    private suspend fun updateChatMemberMentions(
         chatId: ChatId,
         message: Message
     ) {
@@ -2795,7 +2782,8 @@ abstract class SphinxRepository(
             timezoneIdentifier = null,
             remoteTimezoneIdentifier = null,
             timezoneUpdated = null,
-            ownedTribe = tribeData.isAdmin.toOwnedTribe()
+            ownedTribe = tribeData.isAdmin.toOwnedTribe(),
+            memberMentions = null
         )
 
         transaction.upsertNewChat(
@@ -3802,7 +3790,8 @@ abstract class SphinxRepository(
                 timezoneIdentifier = null,
                 remoteTimezoneIdentifier = null,
                 timezoneUpdated = null,
-                ownedTribe = OwnedTribe.False
+                ownedTribe = OwnedTribe.False,
+                memberMentions = null
             )
 
             transaction.upsertNewContact(newContact, queries)

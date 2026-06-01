@@ -58,3 +58,26 @@ fun ItemsResponseRaw.toJson(moshi: Moshi): String {
 fun List<SettingItem>.toJson(moshi: Moshi): String {
     return this.toItemsResponseRaw().toJson(moshi)
 }
+
+/**
+ * Parse a simple JSON object string into a Map<String, String>.
+ * Handles basic key-value pairs without nested objects.
+ * Example: {"key1":"value1","key2":"value2"} -> mapOf("key1" to "value1", "key2" to "value2")
+ */
+fun parseSimpleJsonObject(json: String): Map<String, String> {
+    val map = mutableMapOf<String, String>()
+    val cleaned = json.trim().removePrefix("{").removeSuffix("}")
+
+    if (cleaned.isEmpty()) return map
+
+    cleaned.split(",").forEach { pair ->
+        val parts = pair.split(":", limit = 2)
+        if (parts.size == 2) {
+            val key = parts[0].trim().removeSurrounding("\"")
+            val value = parts[1].trim().removeSurrounding("\"")
+            map[key] = value
+        }
+    }
+
+    return map
+}

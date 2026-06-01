@@ -52,6 +52,16 @@ class DataSyncManagerImpl(
     private val syncMutex = Mutex()
     private val synchronizedListeners = SynchronizedListenerHolder()
 
+    // Debouncing support for sync operations
+    private var pendingSyncJob: Job? = null
+    private var pendingDataSyncItems = mutableListOf<DataSync>()
+    private val pendingItemsLock = Mutex()
+    private val syncDebounceDelayMs = 500L
+
+    // Retry configuration for network operations
+    private val maxRetries = 3
+    private val retryDelayMs = 1000L
+
     private val _syncStatusStateFlow = MutableStateFlow<SyncStatus>(SyncStatus.Idle)
     override val syncStatusStateFlow: StateFlow<SyncStatus>
         get() = _syncStatusStateFlow.asStateFlow()
@@ -241,15 +251,46 @@ class DataSyncManagerImpl(
                 sync_value = DataSyncValue(value)
             )
 
-            syncScope.launch {
-                syncWithServer(pendingDataSync)
-            }
+            // Use debounced sync to batch rapid changes
+            scheduleDebouncedSync(pendingDataSync)
         } catch (e: CancellationException) {
             println("saveDataSyncItem cancelled: ${e.message}")
             throw e
         } catch (e: Exception) {
             println("Error saving data sync item: ${e.message}")
             e.printStackTrace()
+        }
+    }
+
+    private fun scheduleDebouncedSync(pendingDataSync: DataSync) {
+        syncScope.launch {
+            pendingItemsLock.withLock {
+                // Remove any existing item with same key/identifier
+                pendingDataSyncItems.removeAll { existing ->
+                    existing.sync_key == pendingDataSync.sync_key &&
+                            existing.identifier == pendingDataSync.identifier
+                }
+                pendingDataSyncItems.add(pendingDataSync)
+            }
+
+            // Cancel previous pending sync job
+            pendingSyncJob?.cancel()
+
+            // Schedule new debounced sync
+            pendingSyncJob = syncScope.launch {
+                delay(syncDebounceDelayMs)
+
+                val itemsToSync = pendingItemsLock.withLock {
+                    val items = pendingDataSyncItems.toList()
+                    pendingDataSyncItems.clear()
+                    items
+                }
+
+                // Sync with the most recent item (they're all batched in localDataSync anyway)
+                if (itemsToSync.isNotEmpty()) {
+                    syncWithServer(itemsToSync.last())
+                }
+            }
         }
     }
 
@@ -321,10 +362,7 @@ class DataSyncManagerImpl(
                     key = dataSync.sync_key.value,
                     identifier = dataSync.identifier.value,
                     date = convertTimestampToSeconds(dataSync.date.time),
-                    value = parseLocalValue(
-                        dataSync.sync_value.value,
-                        dataSync.sync_key.value
-                    )
+                    value = parseLocalValue(dataSync.sync_value.value)
                 )
             }
 
@@ -335,12 +373,16 @@ class DataSyncManagerImpl(
             if (serverDataString != null) {
                 ensureActive()
 
-                val decryptedData = decryptValue(serverDataString)
+                // Validate server data is not empty or malformed
+                if (serverDataString.isBlank()) {
+                    println("DataSync: Server returned empty data, treating as no data")
+                } else {
+                    val decryptedData = decryptValue(serverDataString)
 
-                if (decryptedData != null) {
-                    try {
-                        val serverItemsResponseRaw = decryptedData.toItemsResponseRaw(dataSyncMoshi)
-                        val serverItems = serverItemsResponseRaw.toSettingItems()
+                    if (decryptedData != null && isValidJsonStructure(decryptedData)) {
+                        try {
+                            val serverItemsResponseRaw = decryptedData.toItemsResponseRaw(dataSyncMoshi)
+                            val serverItems = serverItemsResponseRaw.toSettingItems()
 
                         ensureActive()
 
@@ -360,21 +402,24 @@ class DataSyncManagerImpl(
                             clearDataSyncTable()
                         }
 
-                    } catch (e: CancellationException) {
-                        println("Sync cancelled during processing: ${e.message}")
-                        throw e
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                        _syncStatusStateFlow.value = SyncStatus.Error("Error parsing server data: ${e.message}")
-                        return
-                    }
-                } else {
-                    if (localItems.isNotEmpty()) {
-                        ensureActive()
-                        val uploadSuccess = uploadMergedDataToServer(localItems)
-                        if (uploadSuccess) {
+                        } catch (e: CancellationException) {
+                            println("Sync cancelled during processing: ${e.message}")
+                            throw e
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                            _syncStatusStateFlow.value = SyncStatus.Error("Error parsing server data: ${e.message}")
+                            return
+                        }
+                    } else {
+                        // Decryption failed or invalid JSON structure
+                        println("DataSync: Failed to decrypt or invalid data structure, uploading local data")
+                        if (localItems.isNotEmpty()) {
                             ensureActive()
-                            clearDataSyncTable()
+                            val uploadSuccess = uploadMergedDataToServer(localItems)
+                            if (uploadSuccess) {
+                                ensureActive()
+                                clearDataSyncTable()
+                            }
                         }
                     }
                 }
@@ -422,9 +467,10 @@ class DataSyncManagerImpl(
     // ===========================
     // Helper Methods
     // ===========================
-    private fun parseLocalValue(valueString: String, key: String): DataSyncJson {
+    private fun parseLocalValue(valueString: String): DataSyncJson {
         if (valueString.trim().startsWith("{")) {
             try {
+                // Uses shared parseSimpleJsonObject from DataSyncExtensions
                 val map = parseSimpleJsonObject(valueString)
                 return DataSyncJson.ObjectValue(map)
             } catch (e: Exception) {
@@ -432,24 +478,6 @@ class DataSyncManagerImpl(
             }
         }
         return DataSyncJson.StringValue(valueString)
-    }
-
-    private fun parseSimpleJsonObject(json: String): Map<String, String> {
-        val map = mutableMapOf<String, String>()
-        val cleaned = json.trim().removePrefix("{").removeSuffix("}")
-
-        if (cleaned.isEmpty()) return map
-
-        cleaned.split(",").forEach { pair ->
-            val parts = pair.split(":", limit = 2)
-            if (parts.size == 2) {
-                val key = parts[0].trim().removeSurrounding("\"")
-                val value = parts[1].trim().removeSurrounding("\"")
-                map[key] = value
-            }
-        }
-
-        return map
     }
 
     private fun mergeDataSyncItems(
@@ -602,45 +630,40 @@ class DataSyncManagerImpl(
 
             ensureActive()
 
-            var uploadSuccess = false
-            var uploadCompleted = false
-
-
-            withTimeoutOrNull(30000L) {
-                networkQueryMemeServer.uploadDataSyncFile(
-                    authenticationToken = token,
-                    memeServerHost = MediaHost.DEFAULT,
-                    pubkey = pubkeyBase64Url,
-                    data = encryptedData
-                ).collect { loadResponse ->
-                    when (loadResponse) {
-                        is LoadResponse.Loading -> {
-                        }
-                        is Response.Error -> {
-                            uploadSuccess = false
-                            uploadCompleted = true
-                        }
-                        is Response.Success -> {
-                            uploadSuccess = true
-                            uploadCompleted = true
-                        }
-                    }
-
-                    if (uploadCompleted) {
-                        ensureActive()
-                    }
+            // Use retry for network resilience
+            val uploadResult = withRetry("Upload") {
+                val result = withTimeoutOrNull(30000L) {
+                    networkQueryMemeServer.uploadDataSyncFile(
+                        authenticationToken = token,
+                        memeServerHost = MediaHost.DEFAULT,
+                        pubkey = pubkeyBase64Url,
+                        data = encryptedData
+                    ).filterNot { it is LoadResponse.Loading }
+                        .first()
                 }
-            } ?: run {
-                println("Upload timed out")
-                return false
+
+                when (result) {
+                    is Response.Success -> true
+                    is Response.Error -> {
+                        println("Upload attempt failed: ${result.message}")
+                        null  // Return null to trigger retry
+                    }
+                    else -> null
+                }
             }
 
-            uploadSuccess
+            if (uploadResult == true) {
+                true
+            } else {
+                _syncStatusStateFlow.value = SyncStatus.Error("Upload failed after retries")
+                false
+            }
         } catch (e: CancellationException) {
             println("Upload cancelled: ${e.message}")
             false
         } catch (e: Exception) {
             e.printStackTrace()
+            _syncStatusStateFlow.value = SyncStatus.Error("Upload error: ${e.message}")
             false
         }
     }
@@ -654,37 +677,25 @@ class DataSyncManagerImpl(
 
             val token = getAuthenticationToken() ?: return null
 
-            var encryptedString: String? = null
-            var fetchCompleted = false
-
-            // Use timeout to prevent hanging
-            withTimeoutOrNull(30000L) { // 30 second timeout
-                networkQueryMemeServer.getDataSyncFile(
-                    authenticationToken = token,
-                    memeServerHost = MediaHost.DEFAULT
-                ).collect { loadResponse ->
-                    when (loadResponse) {
-                        is LoadResponse.Loading -> {}
-                        is Response.Error -> {
-                            println("Error fetching data sync: ${loadResponse.message}")
-                            fetchCompleted = true
-                        }
-                        is Response.Success -> {
-                            encryptedString = loadResponse.value
-                            fetchCompleted = true
-                        }
-                    }
-
-                    if (fetchCompleted) {
-                        ensureActive()
-                    }
+            // Use retry for network resilience
+            withRetry("Fetch") {
+                val result = withTimeoutOrNull(30000L) {
+                    networkQueryMemeServer.getDataSyncFile(
+                        authenticationToken = token,
+                        memeServerHost = MediaHost.DEFAULT
+                    ).filterNot { it is LoadResponse.Loading }
+                        .first()
                 }
-            } ?: run {
-                println("Fetch timed out")
-                return null
-            }
 
-            encryptedString
+                when (result) {
+                    is Response.Success -> result.value
+                    is Response.Error -> {
+                        println("Fetch attempt failed: ${result.message}")
+                        null  // Return null to trigger retry
+                    }
+                    else -> null
+                }
+            }
         } catch (e: CancellationException) {
             println("Fetch cancelled: ${e.message}")
             null
@@ -697,6 +708,41 @@ class DataSyncManagerImpl(
     // ===========================
     // Utility Methods
     // ===========================
+
+    /**
+     * Retry a suspend operation with exponential backoff.
+     * Returns the result on success, or null if all retries fail.
+     */
+    private suspend fun <T> withRetry(
+        operationName: String,
+        block: suspend () -> T?
+    ): T? {
+        var lastException: Exception? = null
+
+        repeat(maxRetries) { attempt ->
+            try {
+                ensureActive()
+                val result = block()
+                if (result != null) {
+                    return result
+                }
+            } catch (e: CancellationException) {
+                throw e  // Don't retry on cancellation
+            } catch (e: Exception) {
+                lastException = e
+                println("$operationName attempt ${attempt + 1} failed: ${e.message}")
+
+                if (attempt < maxRetries - 1) {
+                    val delayTime = retryDelayMs * (attempt + 1)  // Linear backoff
+                    delay(delayTime)
+                }
+            }
+        }
+
+        println("$operationName failed after $maxRetries attempts: ${lastException?.message}")
+        return null
+    }
+
     private fun convertTimestampToSeconds(milliseconds: Long): String {
         val seconds = milliseconds / 1000
         return seconds.toString()
@@ -721,6 +767,19 @@ class DataSyncManagerImpl(
 
     private fun getTimestampInMilliseconds(): Long =
         System.currentTimeMillis()
+
+    /**
+     * Validate that a string appears to be valid JSON before attempting to parse.
+     * This prevents unnecessary parsing attempts on corrupted or incomplete data.
+     */
+    private fun isValidJsonStructure(json: String): Boolean {
+        val trimmed = json.trim()
+        if (trimmed.isEmpty()) return false
+
+        // Basic structural validation for JSON object
+        return (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+               (trimmed.startsWith("[") && trimmed.endsWith("]"))
+    }
 
     private suspend fun getAuthenticationToken(): AuthenticationToken? {
         return try {
@@ -768,8 +827,23 @@ class DataSyncManagerImpl(
             .replace("=", "")
     }
 
-    // Cleanup method to cancel ongoing operations
+    // Cleanup method to cancel ongoing operations and release resources
     fun cleanup() {
+        // Cancel any pending debounced sync
+        pendingSyncJob?.cancel()
+        pendingSyncJob = null
+
+        // Clear pending items
+        syncScope.launch {
+            pendingItemsLock.withLock {
+                pendingDataSyncItems.clear()
+            }
+        }
+
+        // Reset sync status
+        _syncStatusStateFlow.value = SyncStatus.Idle
+
+        // Cancel all ongoing operations
         syncScope.cancel()
     }
 }

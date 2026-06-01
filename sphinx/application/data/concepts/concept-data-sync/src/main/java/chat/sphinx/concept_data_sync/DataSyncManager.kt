@@ -56,7 +56,8 @@ abstract class DataSyncManager {
 interface DataSyncManagerListener {
 
     // Called when manager needs to save data locally
-    fun onSaveDataSyncItem(
+    // Changed to suspend to ensure DB write completes before sync starts
+    suspend fun onSaveDataSyncItem(
         key: String,
         identifier: String,
         value: String,
@@ -71,5 +72,5 @@ interface DataSyncManagerListener {
 
     suspend fun onEncryptDataSync(value: String): String?
     suspend fun onDecryptDataSync(value: String): String?
-    fun onClearDataSyncTable()
+    suspend fun onClearDataSyncTable()
 }

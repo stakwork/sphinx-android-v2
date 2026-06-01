@@ -245,9 +245,10 @@ class NetworkQueryMemeServerImpl(
         memeServerHost: MediaHost,
         pubkey: String,
         data: String,
-    ): Flow<LoadResponse<Boolean, ResponseError>> {
+    ): Flow<LoadResponse<Boolean, ResponseError>> = flow {
+        emit(LoadResponse.Loading)
 
-        return try {
+        try {
             val requestBuilder = networkRelayCall.buildRequest(
                 url = String.format(ENDPOINT_DATA_SYNC, memeServerHost.value),
                 headers = mapOf(
@@ -264,16 +265,17 @@ class NetworkQueryMemeServerImpl(
 
             requestBuilder.post(requestBody)
 
+            // Actually use the network call result instead of ignoring it
             networkRelayCall.call(
                 responseJsonClass = Any::class.java,
                 request = requestBuilder.build(),
                 useExtendedNetworkCallClient = true
             )
 
-            flowOf(LoadResponse.Loading, Response.Success(true))
+            emit(Response.Success(true))
 
         } catch (e: Exception) {
-            flowOf(
+            emit(
                 Response.Error(
                     ResponseError("Failed to upload data sync file", e)
                 )

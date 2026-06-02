@@ -4,11 +4,15 @@ import android.app.Application
 import android.content.Context
 import android.widget.ImageView
 import chat.sphinx.BuildConfig
+import chat.sphinx.concept_data_sync.DataSyncManager
 import chat.sphinx.concept_grapheneos_manager.GrapheneOsManager
 import chat.sphinx.concept_image_loader.ImageLoader
+import chat.sphinx.concept_meme_server.MemeServerTokenHandler
 import chat.sphinx.concept_network_client_cache.NetworkClientCache
+import chat.sphinx.concept_network_query_meme_server.NetworkQueryMemeServer
 import chat.sphinx.example.concept_connect_manager.ConnectManager
 import chat.sphinx.feature_connect_manager.ConnectManagerImpl
+import chat.sphinx.feature_data_sync.DataSyncManagerImpl
 import chat.sphinx.feature_image_loader_android.ImageLoaderAndroid
 import chat.sphinx.grapheneos_manager.GrapheneOsManagerImpl
 import chat.sphinx.logger.SphinxLogger
@@ -147,5 +151,27 @@ object AppModule {
         connectManagerImpl: ConnectManagerImpl
     ): ConnectManager =
         connectManagerImpl
+
+    @Provides
+    @Singleton
+    fun provideDataSyncManagerImpl(
+        moshi: Moshi,
+        dispatchers: CoroutineDispatchers,
+        networkQueryMemeServer: NetworkQueryMemeServer,
+        memeServerTokenHandler: MemeServerTokenHandler,
+    ): DataSyncManagerImpl =
+        DataSyncManagerImpl(
+            moshi,
+            dispatchers,
+            networkQueryMemeServer,
+            memeServerTokenHandler,
+        )
+
+    @Provides
+    @Singleton
+    fun provideDataSyncManager(
+        dataSyncManagerImpl: DataSyncManagerImpl
+    ): DataSyncManager =
+        dataSyncManagerImpl
 
 }

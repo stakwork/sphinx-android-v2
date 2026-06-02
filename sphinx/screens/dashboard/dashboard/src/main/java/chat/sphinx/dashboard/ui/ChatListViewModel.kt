@@ -150,9 +150,9 @@ internal class ChatListViewModel @Inject constructor(
         }
 
         viewModelScope.launch(mainImmediate) {
-            delay(25L)
+            // Removed unnecessary delay(25L) - chat collection should start immediately
 
-            var allChats = when (args.argChatListType) {
+            val allChats = when (args.argChatListType) {
                 ChatType.CONVERSATION -> {
                     repositoryDashboard.getAllContactChats.distinctUntilChanged()
                 }
@@ -165,62 +165,66 @@ internal class ChatListViewModel @Inject constructor(
             }
 
             allChats.collect { chats ->
-                val unseenMessages = repositoryDashboard.getUnseenReceivedMessages().firstOrNull()
-                val unseenMessagesByChatId: Map<ChatId, List<Message>> = unseenMessages?.groupBy { it.chatId } ?: mapOf()
+                // Process on default dispatcher to avoid blocking main thread
+                val newList = withContext(default) {
+                    // Extract IDs needed for queries
+                    val messageIds = chats.mapNotNull { it.latestMessageId }
+                    val contactIds = chats.mapNotNull { it.contactIds.lastOrNull() }
 
-                val unseenMentions = repositoryDashboard.getUnseenReceivedMentions().firstOrNull()
-                val unseenMentionsByChatId: Map<ChatId, List<Message>> = unseenMentions?.groupBy { it.chatId } ?: mapOf()
+                    // Parallelize independent database queries using async
+                    val unseenMessagesDeferred = async { repositoryDashboard.getUnseenReceivedMessages().firstOrNull() }
+                    val unseenMentionsDeferred = async { repositoryDashboard.getUnseenReceivedMentions().firstOrNull() }
+                    val messagesDeferred = async { messageRepository.getMessagesByIds(messageIds).first() }
+                    val contactsDeferred = async { contactRepository.getAllContactsByIds(contactIds) }
 
-                chatsCollectionInitialized = true
-                val newList = ArrayList<DashboardChat>(chats.size)
-                val contactsAdded = mutableListOf<ContactId>()
+                    // Await all parallel queries
+                    val unseenMessages = unseenMessagesDeferred.await()
+                    val unseenMentions = unseenMentionsDeferred.await()
+                    val messagesList = messagesDeferred.await()
+                    val contactsList = contactsDeferred.await()
 
-                val messageIds = chats.mapNotNull { it.latestMessageId }
-                val contactIds = chats.mapNotNull { it.contactIds.lastOrNull() }
+                    // Build lookup maps
+                    val unseenMessagesByChatId: Map<ChatId, List<Message>> = unseenMessages?.groupBy { it.chatId } ?: mapOf()
+                    val unseenMentionsByChatId: Map<ChatId, List<Message>> = unseenMentions?.groupBy { it.chatId } ?: mapOf()
+                    val messagesMap = messagesList.associateBy { it?.id }
+                    val contactsMap = contactsList.associateBy { it.id }
 
-                val messagesMap = messageRepository.getMessagesByIds(messageIds).first().associateBy { it?.id }
-                val contactsMap = contactRepository.getAllContactsByIds(contactIds).associateBy { it.id }
+                    // Fetch invites (depends on contacts, so sequential)
+                    val inviteIds = contactsMap.mapNotNull { it.value.inviteId }
+                    val invitesMap = contactRepository.getInvitesByIds(inviteIds).first().associateBy { it?.id }
 
-                val inviteIds = contactsMap.mapNotNull { it.value.inviteId }
-                val invitesMap = contactRepository.getInvitesByIds(inviteIds).first().associateBy { it?.id }
+                    // Cache owner once before loop to avoid repeated calls
+                    val cachedOwner = accountOwnerStateFlow.value ?: getOwner()
 
-                withContext(mainImmediate) {
+                    // Build the dashboard chat list
+                    val result = ArrayList<DashboardChat>(chats.size)
+
                     for (chat in chats) {
-                        val message: Message? = chat.latestMessageId?.let {
-                            messagesMap[it]
-                        }
-
+                        val message: Message? = chat.latestMessageId?.let { messagesMap[it] }
                         val chatUnseenMessages = if (!chat.seen.isTrue()) unseenMessagesByChatId[chat.id] else emptyList()
                         val chatUnseenMentions = if (!chat.seen.isTrue()) unseenMentionsByChatId[chat.id] else emptyList()
 
                         if (chat.type.isConversation()) {
                             val contactId: ContactId = chat.contactIds.lastOrNull() ?: continue
-
                             val contact: Contact = contactsMap[contactId] ?: continue
 
                             if (contact.status is ContactStatus.Pending) {
                                 if (contact.isInviteContact()) {
-                                    var contactInvite: Invite? = null
-
-                                    contact.inviteId?.let { inviteId ->
-                                        contactInvite = invitesMap[inviteId]
-                                    }
+                                    val contactInvite = contact.inviteId?.let { invitesMap[it] }
                                     if (contactInvite != null) {
-                                        newList.add(
+                                        result.add(
                                             DashboardChat.Inactive.Invite(contact, contactInvite, Long.MAX_VALUE)
                                         )
                                     }
                                 } else {
-                                    newList.add(
+                                    result.add(
                                         DashboardChat.Inactive.Conversation(contact, contact.createdAt.time)
                                     )
                                 }
                             }
 
                             if (!contact.isBlocked() && chat.status is ChatStatus.Approved) {
-                                contactsAdded.add(contactId)
-
-                                newList.add(
+                                result.add(
                                     DashboardChat.Active.Conversation(
                                         chat,
                                         message,
@@ -231,11 +235,11 @@ internal class ChatListViewModel @Inject constructor(
                                 )
                             }
                         } else {
-                            newList.add(
+                            result.add(
                                 DashboardChat.Active.GroupOrTribe(
                                     chat,
                                     message,
-                                    accountOwnerStateFlow.value ?: getOwner(),
+                                    cachedOwner,
                                     chatUnseenMessages?.size ?: 0,
                                     chatUnseenMentions?.size ?: 0,
                                     chat.contentSeenAt?.time ?: message?.date?.time ?: chat.createdAt.time
@@ -243,7 +247,11 @@ internal class ChatListViewModel @Inject constructor(
                             )
                         }
                     }
+
+                    result
                 }
+
+                chatsCollectionInitialized = true
                 collectionLock.withLock {
                     chatViewStateContainer.updateDashboardChats(newList)
                 }
@@ -286,25 +294,9 @@ internal class ChatListViewModel @Inject constructor(
     }
 
     private suspend fun getOwner(): Contact {
-        return accountOwner.value.let { contact ->
-            if (contact != null) {
-                contact
-            } else {
-                var resolvedOwner: Contact? = null
-                try {
-                    accountOwner.collect { ownerContact ->
-                        if (ownerContact != null) {
-                            resolvedOwner = ownerContact
-                            throw Exception()
-                        }
-                    }
-                } catch (e: Exception) {
-                }
-                delay(25L)
-
-                resolvedOwner!!
-            }
-        }
+        // Use filterNotNull().first() instead of exception-based flow collection
+        return accountOwner.value
+            ?: accountOwner.filterNotNull().first()
     }
 
     private suspend fun updateChatListContacts(
@@ -495,12 +487,8 @@ internal class ChatListViewModel @Inject constructor(
             )
 
             if (response is Response.Success) {
-
-                val code = response.value.value
-
-                delay(200L)
-
-                code?.toTribeJoinLink()?.let { tribeJoinLink ->
+                // Removed unnecessary delay(200L) - handle tribe join immediately
+                response.value.value?.toTribeJoinLink()?.let { tribeJoinLink ->
                     handleTribeJoinLink(tribeJoinLink)
                 }
             }

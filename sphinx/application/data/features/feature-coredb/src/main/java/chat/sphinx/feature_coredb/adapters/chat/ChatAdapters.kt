@@ -186,3 +186,13 @@ internal class OwnedTribeAdapter : ColumnAdapter<OwnedTribe, Long> {
 
     override fun encode(value: OwnedTribe): Long = value.value.toLong()
 }
+
+internal class ChatMemberMentionsAdapter(val moshi: Moshi): ColumnAdapter<ChatMemberMentions, String> {
+    override fun decode(databaseValue: String): ChatMemberMentions {
+        return databaseValue.toChatMemberMentionsOrNull(moshi) ?: ChatMemberMentions(emptyList())
+    }
+
+    override fun encode(value: ChatMemberMentions): String {
+        return value.toJson(moshi)
+    }
+}

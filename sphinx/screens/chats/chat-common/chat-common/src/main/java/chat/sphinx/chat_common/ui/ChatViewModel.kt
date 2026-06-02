@@ -382,23 +382,8 @@ abstract class ChatViewModel<ARGS : NavArgs>(
             return chat
         }
 
-        chatSharedFlow.firstOrNull()?.let { chat ->
-            return chat
-        }
-
-        var chat: Chat? = null
-
-        try {
-            chatSharedFlow.collect {
-                if (it != null) {
-                    chat = it
-                    throw Exception()
-                }
-            }
-        } catch (e: Exception) {}
-        delay(25L)
-
-        return chat!!
+        // Use filterNotNull().first() instead of exception-based flow collection
+        return chatSharedFlow.filterNotNull().first()
     }
 
     private fun handleDisabledFooterState(chat: Chat) {
@@ -448,25 +433,9 @@ abstract class ChatViewModel<ARGS : NavArgs>(
     ): InitialHolderViewState
 
     suspend fun getOwner(): Contact {
-        return contactRepository.accountOwner.value.let { contact ->
-            if (contact != null) {
-                contact
-            } else {
-                var resolvedOwner: Contact? = null
-                try {
-                    contactRepository.accountOwner.collect { ownerContact ->
-                        if (ownerContact != null) {
-                            resolvedOwner = ownerContact
-                            throw Exception()
-                        }
-                    }
-                } catch (e: Exception) {
-                }
-                delay(25L)
-
-                resolvedOwner!!
-            }
-        }
+        // Use filterNotNull().first() instead of exception-based flow collection
+        return contactRepository.accountOwner.value
+            ?: contactRepository.accountOwner.filterNotNull().first()
     }
 
     private fun getBubbleBackgroundForMessage(
@@ -1632,8 +1601,6 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                         messageHolderViewStateFlow.value = processedData.first
                         changeThreadHeaderState(processedData.third)
                         scrollDownButtonCount.value = processedData.second
-
-                        delay(25)
                         hideShimmeringView()
                     }
                 }
@@ -1672,8 +1639,6 @@ abstract class ChatViewModel<ARGS : NavArgs>(
                         reloadSearchWithFetchedMsgs()
                         updateScrollDownButtonCount()
                         updateClockIconState(processedData.second)
-
-                        delay(25)
                         hideShimmeringView()
                     }
                 }

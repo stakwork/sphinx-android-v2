@@ -4,6 +4,7 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingSource
 import chat.sphinx.concept_coredb.CoreDB
 import chat.sphinx.concept_crypto_rsa.RSA
+import chat.sphinx.concept_data_sync.DataSyncManager
 import chat.sphinx.concept_meme_input_stream.MemeInputStreamHandler
 import chat.sphinx.concept_meme_server.MemeServerTokenHandler
 import chat.sphinx.concept_network_query_chat.NetworkQueryChat
@@ -61,6 +62,7 @@ class SphinxRepositoryAndroid(
     networkQueryFeedSearch: NetworkQueryFeedSearch,
     networkQueryFeedStatus: NetworkQueryFeedStatus,
     connectManager: ConnectManager,
+    dataSyncManager: DataSyncManager,
     walletDataHandler: WalletDataHandler,
     rsa: RSA,
     sphinxNotificationManager: SphinxNotificationManager,
@@ -87,6 +89,7 @@ class SphinxRepositoryAndroid(
     networkQueryFeedSearch,
     networkQueryFeedStatus,
     connectManager,
+    dataSyncManager,
     walletDataHandler,
     rsa,
     sphinxNotificationManager,

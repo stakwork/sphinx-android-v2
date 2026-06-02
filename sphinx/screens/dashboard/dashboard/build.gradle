@@ -83,6 +83,7 @@ dependencies {
     implementation deps.lottie.sdk
     implementation deps.square.moshi
     implementation deps.msgpack.sdk
+    implementation project(':sphinx:application:data:concepts:repositories:concept-repository-data-sync')
     kapt kaptDeps.google.hilt
 
 

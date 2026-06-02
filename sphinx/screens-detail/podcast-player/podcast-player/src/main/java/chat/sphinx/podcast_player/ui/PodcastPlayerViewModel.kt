@@ -48,6 +48,7 @@ import chat.sphinx.wrapper_common.feed.*
 import chat.sphinx.wrapper_common.lightning.Sat
 import chat.sphinx.wrapper_common.toFileSize
 import chat.sphinx.wrapper_contact.Contact
+import chat.sphinx.wrapper_feed.ContentFeedStatus
 import chat.sphinx.wrapper_feed.Feed
 import chat.sphinx.wrapper_feed.FeedItemDetail
 import chat.sphinx.wrapper_feed.FeedItemDuration
@@ -70,6 +71,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
 
@@ -378,18 +380,38 @@ internal class PodcastPlayerViewModel @Inject constructor(
 
                 nnPodcast.didChangeSatsPerMinute(sats)
 
+                val contentFeedStatus = nnPodcast.getUpdatedContentFeedStatus(Sat(sats))
+
                 viewModelScope.launch(mainImmediate) {
                     mediaPlayerServiceController.submitAction(
                         UserAction.AdjustSatsPerMinute(
                             args.chatId,
-                            nnPodcast.getUpdatedContentFeedStatus(
-                                Sat(sats)
-                            )
+                            contentFeedStatus
                         )
                     )
-                }
 
+                    syncSatsPerMinuteChange(nnPodcast, contentFeedStatus)
+                }
             }
+        }
+    }
+    private suspend fun syncSatsPerMinuteChange(
+        podcast: Podcast,
+        contentFeedStatus: ContentFeedStatus
+    ) = withContext(dispatchers.io) {
+        try {
+            feedRepository.updateContentFeedStatus(
+                feedId = podcast.id,
+                feedUrl = podcast.feedUrl,
+                subscriptionStatus = podcast.subscribed,
+                chatId = podcast.chatId,
+                itemId = contentFeedStatus.itemId,
+                satsPerMinute = contentFeedStatus.satsPerMinute,
+                playerSpeed = contentFeedStatus.playerSpeed,
+                shouldSync = true
+            )
+        } catch (e: Exception) {
+            Log.e("PodcastPlayerViewModel", "Error syncing sats per minute", e)
         }
     }
 
@@ -515,7 +537,29 @@ internal class PodcastPlayerViewModel @Inject constructor(
                         episode.id.value
                     )
                 )
+
+                syncEpisodeStatusOnPause(podcast, episode)
             }
+        }
+    }
+
+    private suspend fun syncEpisodeStatusOnPause(
+        podcast: Podcast,
+        episode: PodcastEpisode
+    ) = withContext(dispatchers.io) {
+        try {
+            val episodeStatus = episode.getUpdatedContentEpisodeStatus()
+
+            feedRepository.updateContentEpisodeStatus(
+                feedId = podcast.id,
+                itemId = episode.id,
+                duration = episodeStatus.duration,
+                currentTime = episodeStatus.currentTime,
+                played = episodeStatus.played ?: false,
+                shouldSync = true
+            )
+        } catch (e: Exception) {
+            Log.e("PodcastPlayerViewModel", "Error syncing episode status on pause", e)
         }
     }
 
@@ -540,7 +584,28 @@ internal class PodcastPlayerViewModel @Inject constructor(
                         podcast.getUpdatedContentEpisodeStatus()
                     )
                 )
+                syncEpisodeStatusOnSeek(podcast)
             }
+        }
+    }
+
+    private suspend fun syncEpisodeStatusOnSeek(
+        podcast: Podcast
+    ) = withContext(dispatchers.io) {
+        try {
+            val episode = podcast.getCurrentEpisode()
+            val episodeStatus = episode.getUpdatedContentEpisodeStatus()
+
+            feedRepository.updateContentEpisodeStatus(
+                feedId = podcast.id,
+                itemId = episode.id,
+                duration = episodeStatus.duration,
+                currentTime = episodeStatus.currentTime,
+                played = episodeStatus.played ?: false,
+                shouldSync = true
+            )
+        } catch (e: Exception) {
+            Log.e("PodcastPlayerViewModel", "Error syncing episode status on seek", e)
         }
     }
 
@@ -557,7 +622,29 @@ internal class PodcastPlayerViewModel @Inject constructor(
                         contentFeedStatus
                     )
                 )
+
+                syncSpeedChange(podcast, contentFeedStatus)
             }
+        }
+    }
+
+    private suspend fun syncSpeedChange(
+        podcast: Podcast,
+        contentFeedStatus: ContentFeedStatus
+    ) = withContext(dispatchers.io) {
+        try {
+            feedRepository.updateContentFeedStatus(
+                feedId = podcast.id,
+                feedUrl = podcast.feedUrl,
+                subscriptionStatus = podcast.subscribed,
+                chatId = podcast.chatId,
+                itemId = contentFeedStatus.itemId,
+                satsPerMinute = contentFeedStatus.satsPerMinute,
+                playerSpeed = contentFeedStatus.playerSpeed,
+                shouldSync = true
+            )
+        } catch (e: Exception) {
+            Log.e("PodcastPlayerViewModel", "Error syncing speed change", e)
         }
     }
 

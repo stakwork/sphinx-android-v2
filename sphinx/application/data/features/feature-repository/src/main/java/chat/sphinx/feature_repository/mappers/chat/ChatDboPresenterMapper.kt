@@ -87,7 +87,7 @@ internal class ChatDboPresenterMapper(
             remoteTimezoneIdentifier = value.remote_timezone_identifier,
             timezoneUpdated = value.timezone_updated,
             ownedTribe = value.is_my_tribe,
-            memberMentions = value.member_mentions
+            memberMentions = value.member_mentions,
         )
     }
 
@@ -124,7 +124,7 @@ internal class ChatDboPresenterMapper(
             remote_timezone_identifier = value.remoteTimezoneIdentifier,
             timezone_updated = value.timezoneUpdated,
             is_my_tribe = value.ownedTribe,
-            member_mentions = value.memberMentions
+            member_mentions = value.memberMentions,
         )
     }
 }

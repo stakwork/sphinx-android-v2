@@ -12,7 +12,7 @@ fun String.toChatMemberMentionsOrNull(moshi: Moshi): ChatMemberMentions? =
             .fromJson(this)
             ?.let { moshiData ->
                 ChatMemberMentions(
-                    moshiData.members.map { m -> 
+                    moshiData.members.map { m ->
                         ChatMemberMention(
                             alias = m.alias,
                             pictureUrl = m.pictureUrl,
@@ -31,7 +31,7 @@ fun ChatMemberMentions.toJson(moshi: Moshi): String =
     moshi.adapter(ChatMemberMentionsMoshi::class.java)
         .toJson(
             ChatMemberMentionsMoshi(
-                members = members.map { m ->
+                members.map { m ->
                     ChatMemberMentionMoshi(
                         alias = m.alias,
                         pictureUrl = m.pictureUrl,

@@ -119,30 +119,38 @@ internal class MessageListAdapter<ARGS : NavArgs>(
         }
 
         override fun areContentsTheSame(oldItem: MessageHolderViewState, newItem: MessageHolderViewState): Boolean {
+            // Optimized comparison - only compare fields that affect rendering
+            // instead of full Message object equality which is expensive
+            val oldMsg = oldItem.message
+            val newMsg = newItem.message
+
+            // Quick check on message status and content (most common changes)
+            val messageFieldsEqual = oldMsg?.id == newMsg?.id &&
+                    oldMsg?.status == newMsg?.status &&
+                    oldMsg?.messageContentDecrypted == newMsg?.messageContentDecrypted &&
+                    oldMsg?.reactions?.size == newMsg?.reactions?.size &&
+                    oldMsg?.flagged == newMsg?.flagged
+
+            if (!messageFieldsEqual) return false
+
             return when {
                 oldItem is MessageHolderViewState.Received && newItem is MessageHolderViewState.Received -> {
                             oldItem.background                      == newItem.background                   &&
-                            oldItem.message                         == newItem.message                      &&
                             oldItem.invoiceLinesHolderViewState     == newItem.invoiceLinesHolderViewState  &&
-                            oldItem.message?.thread?.size           == newItem.message?.thread?.size        &&
-                            oldItem.message?.thread?.first()        == newItem.message?.thread?.first()
+                            oldItem.message?.thread?.size           == newItem.message?.thread?.size
                 }
                 oldItem is MessageHolderViewState.Sent && newItem is MessageHolderViewState.Sent -> {
                             oldItem.background                      == newItem.background                    &&
-                            oldItem.message                         == newItem.message                       &&
                             oldItem.invoiceLinesHolderViewState     == newItem.invoiceLinesHolderViewState   &&
                             oldItem.isPinned                        == newItem.isPinned                      &&
-                            oldItem.message?.thread?.size           == newItem.message?.thread?.size         &&
-                            oldItem.message?.thread?.first()        == newItem.message?.thread?.first()
+                            oldItem.message?.thread?.size           == newItem.message?.thread?.size
                 }
                 oldItem is MessageHolderViewState.MessageOnlyTextHolderViewState.Received && newItem is MessageHolderViewState.MessageOnlyTextHolderViewState.Received -> {
                             oldItem.background                      == newItem.background                   &&
-                            oldItem.message                         == newItem.message                      &&
                             oldItem.invoiceLinesHolderViewState     == newItem.invoiceLinesHolderViewState
                 }
                 oldItem is MessageHolderViewState.MessageOnlyTextHolderViewState.Sent && newItem is MessageHolderViewState.MessageOnlyTextHolderViewState.Sent -> {
                             oldItem.background                      == newItem.background                   &&
-                            oldItem.message                         == newItem.message                      &&
                             oldItem.invoiceLinesHolderViewState     == newItem.invoiceLinesHolderViewState
                 }
                 else -> false

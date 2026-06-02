@@ -75,6 +75,7 @@ dependencies {
     implementation project(path: ':sphinx:application:data:concepts:repositories:concept-repository-message')
 
     api project(path: ':sphinx:service:concepts:concept-service-media-player')
+    implementation project(path: ':sphinx:service:features:restore:feature-service-restore-android')
 
     implementation deps.androidx.swipeRefreshLayout
     implementation deps.androidx.recyclerView

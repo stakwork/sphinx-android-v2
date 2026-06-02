@@ -109,6 +109,11 @@ interface ChatRepository {
         chatAlias: ChatAlias,
     )
 
+    suspend fun updateChatMemberMentions(
+        chatId: ChatId,
+        message: Message
+    )
+
     suspend fun updateChatOwned(
         chatId: ChatId,
         ownedTribe: OwnedTribe

@@ -3185,7 +3185,7 @@ abstract class ChatViewModel<ARGS : NavArgs>(
         if (lastWord.startsWith("@") && lastWord.length > 1) {
             // Get current chat from chatSharedFlow
             val chat = chatSharedFlow.replayCache.firstOrNull()
-            
+
             // Use persistent memberMentions list
             val matchingMembers = chat?.memberMentions
                 ?.filterByThreeMonths()

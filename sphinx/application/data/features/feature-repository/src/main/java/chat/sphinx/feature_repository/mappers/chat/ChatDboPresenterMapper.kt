@@ -43,7 +43,7 @@ inline fun ChatDbo.toChat(): Chat =
         remoteTimezoneIdentifier = remote_timezone_identifier,
         timezoneUpdated = timezone_updated,
         ownedTribe = is_my_tribe,
-        memberMentions = member_mentions,
+        memberMentions = member_mentions
     )
 
 internal class ChatDboPresenterMapper(

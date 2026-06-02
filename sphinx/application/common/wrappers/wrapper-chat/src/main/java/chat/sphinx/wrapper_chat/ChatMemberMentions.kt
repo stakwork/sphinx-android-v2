@@ -3,8 +3,8 @@ package chat.sphinx.wrapper_chat
 import chat.sphinx.wrapper_common.DateTime
 import chat.sphinx.wrapper_common.after
 import com.squareup.moshi.JsonClass
-import com.squareup.moshi.JsonDataException
 import com.squareup.moshi.Moshi
+import java.util.Date
 
 fun String.toChatMemberMentionsOrNull(moshi: Moshi): ChatMemberMentions? =
     try {
@@ -17,7 +17,7 @@ fun String.toChatMemberMentionsOrNull(moshi: Moshi): ChatMemberMentions? =
                             alias = m.alias,
                             pictureUrl = m.pictureUrl,
                             colorKey = m.colorKey,
-                            lastMessageTimestamp = DateTime(java.util.Date(m.lastMessageTimestamp))
+                            lastMessageTimestamp = DateTime(Date(m.lastMessageTimestamp))
                         )
                     }
                 )
@@ -63,7 +63,7 @@ data class ChatMemberMentions(
         colorKey: String,
         timestamp: DateTime
     ): ChatMemberMentions {
-        // Match by alias first (primary identifier)
+        // Match by alias only (primary identifier)
         val existingIndex = members.indexOfFirst { it.alias == alias }
         
         return if (existingIndex >= 0) {
@@ -83,7 +83,7 @@ data class ChatMemberMentions(
     }
 
     /**
-     * Remove a member matching by alias.
+     * Remove a member matching by alias only.
      */
     fun removeMember(alias: String, pictureUrl: String): ChatMemberMentions {
         return ChatMemberMentions(
@@ -105,7 +105,8 @@ data class ChatMemberMentions(
      * Match members whose alias starts with the query (case-insensitive).
      */
     fun matchAlias(query: String): List<ChatMemberMention> {
-        return members.filter { it.alias.startsWith(query, ignoreCase = true) }
+        val lowerQuery = query.lowercase()
+        return members.filter { it.alias.lowercase().startsWith(lowerQuery) }
     }
 }
 

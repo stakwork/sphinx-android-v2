@@ -4,7 +4,10 @@ plugins {
     id 'dagger.hilt.android.plugin'
     id 'kotlin-android'
     id 'kotlin-kapt'
-    id 'com.google.gms.google-services'
+}
+
+if (findProperty("SPHINX_COMPILE_PUSH_NOTIFICATION_TYPE") == "firebase") {
+    apply plugin: 'com.google.gms.google-services'
 }
 
 android {

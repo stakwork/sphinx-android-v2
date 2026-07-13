@@ -1,6 +1,6 @@
 #!/bin/bash
 # Start emulator in background
-emulator -avd sphinx_avd -no-audio -no-window -gpu swiftshader_indirect -no-boot-anim &
+emulator -avd sphinx_avd -no-audio -no-window -gpu swiftshader_indirect -no-boot-anim -no-snapshot-load &
 
 # Wait for adb to see the device
 adb wait-for-device

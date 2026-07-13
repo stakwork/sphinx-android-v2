@@ -38,7 +38,7 @@
             android:layout_marginEnd="@dimen/default_layout_margin"
             android:background="@null"
             android:fontFamily="@font/roboto_regular"
-            android:hint="@string/search"
+            android:hint="@string/dashboard_search_hint"
             android:imeOptions="actionDone"
             android:importantForAutofill="no"
             android:inputType="text"

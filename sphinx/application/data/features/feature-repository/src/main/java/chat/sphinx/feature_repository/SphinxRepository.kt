@@ -29,6 +29,7 @@ import chat.sphinx.concept_repository_chat.ChatRepository
 import chat.sphinx.concept_repository_chat.model.AddMember
 import chat.sphinx.concept_repository_chat.model.CreateTribe
 import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
+import chat.sphinx.concept_repository_connect_manager.model.HiveAuthParams as RepoHiveAuthParams
 import chat.sphinx.concept_repository_connect_manager.model.NetworkStatus
 import chat.sphinx.concept_repository_connect_manager.model.OwnerRegistrationState
 import chat.sphinx.concept_repository_connect_manager.model.RestoreProcessState
@@ -701,6 +702,15 @@ abstract class SphinxRepository(
 
     override fun getIdFromMacaroon(macaroon: String): String? {
         return connectManager.getIdFromMacaroon(macaroon)
+    }
+
+    override fun getHiveAuthParams(): RepoHiveAuthParams? {
+        val params = connectManager.getHiveAuthParams() ?: return null
+        return RepoHiveAuthParams(
+            signedToken = params.signedToken,
+            pubkey = params.pubkey,
+            timestamp = params.timestamp,
+        )
     }
 
     override fun attemptReconnectOnResume() {

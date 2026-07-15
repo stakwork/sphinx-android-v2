@@ -4,6 +4,7 @@ import android.util.Base64
 import android.util.Log
 import chat.sphinx.example.concept_connect_manager.ConnectManager
 import chat.sphinx.example.concept_connect_manager.ConnectManagerListener
+import chat.sphinx.example.concept_connect_manager.model.HiveAuthParams
 import chat.sphinx.example.concept_connect_manager.model.OwnerInfo
 import chat.sphinx.example.concept_connect_manager.model.RestoreProgress
 import chat.sphinx.example.concept_connect_manager.model.RestoreState
@@ -84,6 +85,7 @@ import uniffi.sphinxrs.setNetwork
 import uniffi.sphinxrs.setPushToken
 import uniffi.sphinxrs.signBase64
 import uniffi.sphinxrs.signBytes
+import uniffi.sphinxrs.pubkeyFromSeed
 import uniffi.sphinxrs.signedTimestamp
 import uniffi.sphinxrs.updateTribe
 import uniffi.sphinxrs.xpubFromSeed
@@ -2219,6 +2221,19 @@ class ConnectManagerImpl: ConnectManager()
             idFromMacaroon(macaroon)
         } catch (e: Exception) {
             Log.d("MQTT_MESSAGES", "Error to get id from macaroon $e")
+            null
+        }
+    }
+
+    override fun getHiveAuthParams(): HiveAuthParams? {
+        return try {
+            val seed = ownerSeed ?: return null
+            val timestamp = getTimestampInMilliseconds()
+            val signedToken = signedTimestamp(seed, 0.toULong(), timestamp, network)
+            val pubkey = pubkeyFromSeed(seed, 0.toULong(), timestamp, network)
+            HiveAuthParams(signedToken, pubkey, timestamp)
+        } catch (e: Exception) {
+            Log.d("HIVE_AUTH", "Error deriving Hive auth params: $e")
             null
         }
     }

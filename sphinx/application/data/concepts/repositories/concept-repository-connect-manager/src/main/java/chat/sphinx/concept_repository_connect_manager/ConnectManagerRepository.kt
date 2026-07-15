@@ -1,7 +1,8 @@
 package chat.sphinx.concept_repository_connect_manager
 
-import chat.sphinx.concept_repository_connect_manager.model.OwnerRegistrationState
+import chat.sphinx.concept_repository_connect_manager.model.HiveAuthParams
 import chat.sphinx.concept_repository_connect_manager.model.NetworkStatus
+import chat.sphinx.concept_repository_connect_manager.model.OwnerRegistrationState
 import chat.sphinx.concept_repository_connect_manager.model.RestoreProcessState
 import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
 import chat.sphinx.example.wrapper_mqtt.TransactionDto
@@ -126,6 +127,7 @@ interface ConnectManagerRepository {
     fun getSignedTimeStamps(): String?
     fun getSignBase64(text: String): String?
     fun getIdFromMacaroon(macaroon: String): String?
+    fun getHiveAuthParams(): HiveAuthParams?
     fun attemptReconnectOnResume()
 
     fun reconnectMqtt()

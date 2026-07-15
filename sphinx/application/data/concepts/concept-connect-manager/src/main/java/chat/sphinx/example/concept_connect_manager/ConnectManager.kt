@@ -1,5 +1,6 @@
 package chat.sphinx.example.concept_connect_manager
 
+import chat.sphinx.example.concept_connect_manager.model.HiveAuthParams
 import chat.sphinx.example.concept_connect_manager.model.OwnerInfo
 import chat.sphinx.example.concept_connect_manager.model.RestoreState
 import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
@@ -180,6 +181,7 @@ abstract class ConnectManager {
     abstract fun getSignedTimeStamps(): String?
     abstract fun getSignBase64(text: String): String?
     abstract fun getIdFromMacaroon(macaroon: String): String?
+    abstract fun getHiveAuthParams(): HiveAuthParams?
     // Listener Methods
     abstract fun addListener(listener: ConnectManagerListener): Boolean
     abstract fun removeListener(listener: ConnectManagerListener): Boolean

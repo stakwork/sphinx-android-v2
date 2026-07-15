@@ -40,6 +40,7 @@ dependencies {
     api project(path: ':sphinx:application:network:concepts:queries:concept-network-query-contact')
     api project(path: ':sphinx:application:network:concepts:queries:concept-network-query-invite')
     api project(path: ':sphinx:application:network:concepts:queries:concept-network-query-authorize-external')
+    api project(path: ':sphinx:application:network:concepts:queries:concept-network-query-hive')
     api project(path: ':sphinx:application:network:concepts:queries:concept-network-query-feed-search')
     api project(path: ':sphinx:application:network:concepts:queries:concept-network-query-people')
     api project(path: ':sphinx:application:network:concepts:queries:concept-network-query-feed-status')

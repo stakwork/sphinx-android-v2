@@ -1,6 +1,12 @@
 #!/bin/bash
+
+export PATH=$PATH:/opt/android-sdk/emulator:/opt/android-sdk/platform-tools
+
+# Clear any stale locks from previous runs
+rm -f ~/.android/avd/sphinx_avd.avd/*.lock
+
 # Start emulator in background
-emulator -avd sphinx_avd -no-audio -no-window -gpu swiftshader_indirect -no-boot-anim -no-snapshot-load &
+emulator -avd sphinx_avd -no-audio -no-window -gpu swiftshader_indirect -no-boot-anim -no-snapshot-load -no-snapshot-save &
 
 # Wait for adb to see the device
 adb wait-for-device

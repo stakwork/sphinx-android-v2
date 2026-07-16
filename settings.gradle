@@ -53,6 +53,8 @@ include ':sphinx:application:data:concepts:concept-sphinx-notification-manager'
 include ':sphinx:application:data:features:feature-sphinx-notification-manager'
 include ':sphinx:application:data:concepts:concept-wallet'
 include ':sphinx:application:data:features:feature-wallet'
+include ':sphinx:application:data:concepts:concept-hive-token'
+include ':sphinx:application:data:features:feature-hive-token'
 
 include ':sphinx:application:data:concepts:repositories:concept-repository-actions'
 include ':sphinx:application:data:concepts:repositories:concept-repository-chat'

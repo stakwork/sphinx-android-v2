@@ -1,0 +1,15 @@
+plugins {
+    id 'java-library'
+    id 'kotlin'
+}
+
+dependencies {
+    // KotlinAndroid
+    implementation project(path: ':kotlin:crypto:k-openssl')
+    implementation project(path: ':kotlin:features:authentication:feature-authentication-core')
+
+    // Sphinx
+    api project(path: ':sphinx:application:data:concepts:concept-hive-token')
+
+    testImplementation project(path: ':kotlin:test:test-feature-authentication-core')
+}

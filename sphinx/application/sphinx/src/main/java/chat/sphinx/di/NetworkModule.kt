@@ -21,6 +21,7 @@ import chat.sphinx.concept_network_query_verify_external.NetworkQueryAuthorizeEx
 import chat.sphinx.concept_network_query_people.NetworkQueryPeople
 import chat.sphinx.concept_network_relay_call.NetworkRelayCall
 import chat.sphinx.concept_relay.RelayDataHandler
+import chat.sphinx.concept_hive_token.HiveTokenHandler
 import chat.sphinx.concept_wallet.WalletDataHandler
 import chat.sphinx.feature_link_preview.LinkPreviewHandlerImpl
 import chat.sphinx.feature_network_client.NetworkClientImpl
@@ -37,6 +38,7 @@ import chat.sphinx.feature_network_query_people.NetworkQueryPeopleImpl
 import chat.sphinx.feature_network_relay_call.NetworkRelayCallImpl
 import chat.sphinx.feature_relay.RelayDataHandlerImpl
 import chat.sphinx.feature_sphinx_service.ApplicationServiceTracker
+import chat.sphinx.feature_hive_token.HiveTokenHandlerImpl
 import chat.sphinx.feature_wallet.WalletDataHandlerImpl
 import chat.sphinx.logger.SphinxLogger
 import chat.sphinx.meme_input_stream.MemeInputStreamHandlerImpl
@@ -108,6 +110,27 @@ object NetworkModule {
         walletDataHandlerImpl: WalletDataHandlerImpl
     ): WalletDataHandler =
         walletDataHandlerImpl
+
+    @Provides
+    @Singleton
+    fun provideHiveTokenHandlerImpl(
+        authenticationStorage: AuthenticationStorage,
+        authenticationCoreManager: AuthenticationCoreManager,
+        dispatchers: CoroutineDispatchers,
+        encryptionKeyHandler: EncryptionKeyHandler,
+    ): HiveTokenHandlerImpl =
+        HiveTokenHandlerImpl(
+            authenticationStorage,
+            authenticationCoreManager,
+            dispatchers,
+            encryptionKeyHandler,
+        )
+
+    @Provides
+    fun provideHiveTokenHandler(
+        hiveTokenHandlerImpl: HiveTokenHandlerImpl
+    ): HiveTokenHandler =
+        hiveTokenHandlerImpl
 
     @Provides
     @Singleton

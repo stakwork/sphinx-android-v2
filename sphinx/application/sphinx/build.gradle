@@ -111,6 +111,7 @@ dependencies {
     implementation project(path: ':sphinx:application:network:features:queries:feature-network-query-chat')
     implementation project(path: ':sphinx:application:network:features:queries:feature-network-query-contact')
     implementation project(path: ':sphinx:application:network:features:queries:feature-network-query-invite')
+    implementation project(path: ':sphinx:application:network:features:queries:feature-network-query-hive')
     implementation project(path: ':sphinx:application:network:features:queries:feature-network-query-meme-server')
     implementation project(path: ':sphinx:application:network:features:queries:feature-network-query-authorize-external')
     implementation project(path: ':sphinx:application:network:features:queries:feature-network-query-feed-search')

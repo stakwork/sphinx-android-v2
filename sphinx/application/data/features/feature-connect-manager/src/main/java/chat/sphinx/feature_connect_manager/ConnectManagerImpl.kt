@@ -2199,6 +2199,21 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
+    override fun getSignedTimestampParams(): Triple<String, String, String>? {
+        val seed = ownerSeed ?: run {
+            Log.d("MQTT_MESSAGES", "[Hive] getSignedTimestampParams: null — wallet not initialized")
+            return null
+        }
+        val pubkey = ownerInfoStateFlow.value?.pubkey ?: return null
+        val time = getTimestampInMilliseconds()
+        return try {
+            val signedToken = signedTimestamp(seed, 0UL, time, network)
+            Triple(signedToken, pubkey, time)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     override fun getSignBase64(text: String): String? {
         return try {
             signBase64(

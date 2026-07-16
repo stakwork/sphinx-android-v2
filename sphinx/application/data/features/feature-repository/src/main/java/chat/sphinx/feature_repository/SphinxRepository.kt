@@ -695,6 +695,10 @@ abstract class SphinxRepository(
         return connectManager.getSignedTimeStamps()
     }
 
+    override fun getSignedTimestampParams(): Triple<String, String, String>? {
+        return connectManager.getSignedTimestampParams()
+    }
+
     override fun getSignBase64(text: String): String? {
         return connectManager.getSignBase64(text)
     }

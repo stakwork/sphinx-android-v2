@@ -124,6 +124,7 @@ interface ConnectManagerRepository {
     fun requestNodes(nodeUrl: String)
     fun getInvoiceInfo(invoice: String): String?
     fun getSignedTimeStamps(): String?
+    fun getSignedTimestampParams(): Triple<String, String, String>?
     fun getSignBase64(text: String): String?
     fun getIdFromMacaroon(macaroon: String): String?
     fun attemptReconnectOnResume()

@@ -178,6 +178,9 @@ abstract class ConnectManager {
 
     // Utility Methods
     abstract fun getSignedTimeStamps(): String?
+
+    /** Returns Triple(signedToken, pubkey, timestamp), or null if seed/pubkey unavailable */
+    abstract fun getSignedTimestampTriple(): Triple<String, String, String>?
     abstract fun getSignBase64(text: String): String?
     abstract fun getIdFromMacaroon(macaroon: String): String?
     // Listener Methods

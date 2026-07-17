@@ -16,6 +16,8 @@ import chat.sphinx.concept_network_query_feed_search.model.toFeedSearchResult
 import chat.sphinx.concept_network_query_feed_status.NetworkQueryFeedStatus
 import chat.sphinx.concept_network_query_feed_status.model.ContentFeedStatusDto
 import chat.sphinx.concept_network_query_feed_status.model.EpisodeStatusDto
+import chat.sphinx.concept_network_query_hive.NetworkQueryHive
+import chat.sphinx.concept_network_query_hive.model.HiveAuthRequestDto
 import chat.sphinx.concept_network_query_invite.NetworkQueryInvite
 import chat.sphinx.concept_network_query_meme_server.NetworkQueryMemeServer
 import chat.sphinx.concept_network_query_people.NetworkQueryPeople
@@ -208,6 +210,7 @@ abstract class SphinxRepository(
     private val networkQueryPeople: NetworkQueryPeople,
     private val networkQueryFeedSearch: NetworkQueryFeedSearch,
     private val networkQueryFeedStatus: NetworkQueryFeedStatus,
+    private val networkQueryHive: NetworkQueryHive,
     private val connectManager: ConnectManager,
     private val dataSyncManager: DataSyncManager,
     private val walletDataHandler: WalletDataHandler,
@@ -9595,6 +9598,34 @@ abstract class SphinxRepository(
         }
 
         return byteArray
+    }
+
+    private val hiveAuthLock = Mutex()
+
+    // TODO: upgrade visibility when the getWorkspaces call site lands
+    internal suspend fun authenticateWithHive() {
+        hiveAuthLock.withLock {
+            val (signedToken, pubkey, timestamp) = connectManager.getSignedTimestampTriple() ?: run {
+                LOG.w(TAG, "authenticateWithHive: failed to generate signed token")
+                return@withLock
+            }
+            networkQueryHive.authenticateWithHive(
+                HiveAuthRequestDto(signedToken, pubkey, timestamp)
+            ).collect { response ->
+                @Exhaustive
+                when (response) {
+                    is LoadResponse.Loading -> {}
+                    is Response.Error ->
+                        LOG.w(TAG, "authenticateWithHive: Hive auth failed (status ${response.cause.statusCode})")
+                    is Response.Success -> {
+                        response.value.token?.let { token ->
+                            relayDataHandler.persistHiveToken(token)
+                            LOG.d(TAG, "authenticateWithHive: success - token stored")
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

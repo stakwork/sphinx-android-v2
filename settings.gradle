@@ -99,6 +99,8 @@ include ':sphinx:application:network:concepts:queries:concept-network-query-disc
 include ':sphinx:application:network:features:queries:feature-network-query-discover-tribes'
 include ':sphinx:application:network:concepts:queries:concept-network-query-feed-status'
 include ':sphinx:application:network:features:queries:feature-network-query-feed-status'
+include ':sphinx:application:network:concepts:queries:concept-network-query-hive'
+include ':sphinx:application:network:features:queries:feature-network-query-hive'
 
 // Activity
 include ':sphinx:activity:hilt-qualifiers'

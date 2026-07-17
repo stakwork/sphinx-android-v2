@@ -2199,6 +2199,18 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
+    override fun getSignedTimestampTriple(): Triple<String, String, String>? {
+        val seed = ownerSeed ?: return null
+        val pubkey = ownerInfoStateFlow.value?.pubkey ?: return null
+        val now = getTimestampInMilliseconds()
+        return try {
+            val token = signedTimestamp(seed, 0.toULong(), now, network)
+            Triple(token, pubkey, now)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     override fun getSignBase64(text: String): String? {
         return try {
             signBase64(

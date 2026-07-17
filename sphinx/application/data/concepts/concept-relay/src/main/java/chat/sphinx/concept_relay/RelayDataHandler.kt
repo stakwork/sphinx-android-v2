@@ -20,6 +20,13 @@ abstract class RelayDataHandler {
     abstract suspend fun persistAuthorizationToken(token: AuthorizationToken?): Boolean
     abstract suspend fun retrieveAuthorizationToken(): AuthorizationToken?
 
+    /**
+     * Persist the Hive JWT to encrypted storage. Send `null` to clear.
+     * Empty string is rejected (not a valid JWT) and returns `false`.
+     */
+    abstract suspend fun persistHiveToken(token: String?): Boolean
+    abstract suspend fun retrieveHiveToken(): String?
+
 }
 
 open class CustomException : IOException {

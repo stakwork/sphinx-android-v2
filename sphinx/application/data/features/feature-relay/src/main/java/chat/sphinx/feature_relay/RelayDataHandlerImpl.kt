@@ -38,8 +38,11 @@ class RelayDataHandlerImpl(
         @Volatile
         private var tokenCache: AuthorizationToken? = null
 
+        @Volatile
+        private var hiveTokenCache: String? = null
 
         const val RELAY_AUTHORIZATION_KEY = "RELAY_JWT_KEY"
+        const val HIVE_TOKEN_KEY = "HIVE_JWT_KEY"
     }
 
     private val kOpenSSL: KOpenSSL by lazy {
@@ -114,6 +117,7 @@ class RelayDataHandlerImpl(
     }
 
     private val lock = Mutex()
+    private val hiveLock = Mutex()
 
     override suspend fun persistAuthorizationToken(token: AuthorizationToken?): Boolean {
         return authenticationCoreManager.getEncryptionKey()?.privateKey?.let { privateKey ->
@@ -160,6 +164,59 @@ class RelayDataHandlerImpl(
                                     token
                                 }
                         } catch (e: Exception) {
+                            null
+                        }
+                    }
+            }
+        }
+    }
+
+    @OptIn(UnencryptedDataAccess::class, RawPasswordAccess::class)
+    override suspend fun persistHiveToken(token: String?): Boolean {
+        return hiveLock.withLock {
+            // Empty string is not a valid JWT — reject without touching storage
+            if (token != null && token.isEmpty()) {
+                return@withLock false
+            }
+
+            if (token == null) {
+                authenticationStorage.putString(HIVE_TOKEN_KEY, null)
+                hiveTokenCache = null
+                return@withLock true
+            }
+
+            val privateKey = authenticationCoreManager.getEncryptionKey()?.privateKey
+                ?: return@withLock false
+
+            val encryptedToken = try {
+                encryptData(privateKey, UnencryptedString(token))
+            } catch (e: Exception) {
+                return@withLock false
+            }
+
+            authenticationStorage.putString(HIVE_TOKEN_KEY, encryptedToken.value)
+            hiveTokenCache = token
+            true
+        }
+    }
+
+    @OptIn(UnencryptedDataAccess::class)
+    override suspend fun retrieveHiveToken(): String? {
+        return authenticationCoreManager.getEncryptionKey()?.privateKey?.let { privateKey ->
+            hiveLock.withLock {
+                hiveTokenCache ?: authenticationStorage.getString(HIVE_TOKEN_KEY, null)
+                    ?.let { encryptedTokenString ->
+                        try {
+                            val decrypted = decryptData(privateKey, EncryptedString(encryptedTokenString)).value
+                            if (decrypted.isEmpty()) {
+                                hiveTokenCache = null
+                                null
+                            } else {
+                                hiveTokenCache = decrypted
+                                decrypted
+                            }
+                        } catch (e: Exception) {
+                            hiveTokenCache = null
                             null
                         }
                     }

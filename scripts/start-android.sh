@@ -4,7 +4,7 @@ if adb shell pidof chat.sphinx.v2.debug > /dev/null 2>&1; then
 fi
 
 #!/bin/bash
-bash /root/sphinx-android-v2/scripts/wait-for-emulator.sh
+bash /workspaces/sphinx-android-v2/scripts/wait-for-emulator.sh
 ./gradlew assembleDebug --no-daemon
 
 # Install the APK on the emulator

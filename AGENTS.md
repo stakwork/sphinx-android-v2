@@ -5,4 +5,4 @@ This is an Android project running inside a workspace pod with a live emulator.
 ### After making code changes, always run:
 
 ```bash
-bash /scripts/start-android.sh
+bash /workspaces/sphinx-android-v2/scripts/start-android.sh

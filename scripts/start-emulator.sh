@@ -2,6 +2,12 @@
 
 export PATH=$PATH:/opt/android-sdk/emulator:/opt/android-sdk/platform-tools
 
+if adb devices | grep -q "emulator"; then
+  echo "Emulator already running, skipping boot"
+  wait
+  exit 0
+fi
+
 # Clear any stale locks from previous runs
 rm -f ~/.android/avd/sphinx_avd.avd/*.lock
 

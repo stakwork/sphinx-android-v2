@@ -80,6 +80,8 @@ include ':sphinx:application:network:concepts:queries:concept-network-query-meme
 include ':sphinx:application:network:features:queries:feature-network-query-meme-server'
 include ':sphinx:application:network:concepts:queries:concept-network-query-chat'
 include ':sphinx:application:network:features:queries:feature-network-query-chat'
+include ':sphinx:application:network:concepts:queries:concept-network-query-hive'
+include ':sphinx:application:network:features:queries:feature-network-query-hive'
 include ':sphinx:application:network:concepts:queries:concept-network-query-contact'
 include ':sphinx:application:network:features:queries:feature-network-query-contact'
 include ':sphinx:application:network:concepts:queries:concept-network-query-invite'

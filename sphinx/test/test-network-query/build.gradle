@@ -12,6 +12,7 @@ dependencies {
     api project(path: ':sphinx:application:data:features:crypto:feature-crypto-rsa')
 
     api project(path: ':sphinx:application:network:features:queries:feature-network-query-chat')
+    api project(path: ':sphinx:application:network:features:queries:feature-network-query-hive')
     api project(path: ':sphinx:application:network:features:queries:feature-network-query-contact')
     api project(path: ':sphinx:application:network:features:queries:feature-network-query-invite')
     api project(path: ':sphinx:application:network:features:queries:feature-network-query-authorize-external')

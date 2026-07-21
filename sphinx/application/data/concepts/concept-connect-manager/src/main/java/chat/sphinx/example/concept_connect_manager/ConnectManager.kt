@@ -178,6 +178,15 @@ abstract class ConnectManager {
 
     // Utility Methods
     abstract fun getSignedTimeStamps(): String?
+
+    /**
+     * Returns a Pair of (signedToken, epochSecondsString) for Hive authentication.
+     * Uses epoch SECONDS (not milliseconds) to match iOS getSignedToken() behaviour
+     * and Hive server validation. Do not confuse with [getSignedTimeStamps] which
+     * uses milliseconds for the relay/MQTT system.
+     */
+    abstract fun getSignedTimestampForHive(): Pair<String, String>?
+
     abstract fun getSignBase64(text: String): String?
     abstract fun getIdFromMacaroon(macaroon: String): String?
     // Listener Methods

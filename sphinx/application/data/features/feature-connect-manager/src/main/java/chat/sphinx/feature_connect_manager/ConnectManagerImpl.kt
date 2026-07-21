@@ -2199,6 +2199,22 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
+    /**
+     * Returns a Pair<signedToken, epochSecondsString> for Hive authentication.
+     * Uses epoch SECONDS (not milliseconds) — distinct from [getSignedTimeStamps] which
+     * intentionally uses milliseconds for the relay/MQTT system and must remain unchanged.
+     * Both values are derived from the same [time] string to guarantee agreement.
+     */
+    override fun getSignedTimestampForHive(): Pair<String, String>? {
+        return try {
+            val time = (System.currentTimeMillis() / 1000).toString()
+            val token = signedTimestamp(ownerSeed!!, 0.toULong(), time, network)
+            Pair(token, time)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     override fun getSignBase64(text: String): String? {
         return try {
             signBase64(

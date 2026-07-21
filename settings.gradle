@@ -95,6 +95,8 @@ include ':sphinx:application:network:concepts:queries:concept-network-query-feed
 include ':sphinx:application:network:features:queries:feature-network-query-feed-search'
 include ':sphinx:application:network:concepts:queries:concept-network-query-crypter'
 include ':sphinx:application:network:features:queries:feature-network-query-crypter'
+include ':sphinx:application:network:concepts:queries:concept-network-query-hive'
+include ':sphinx:application:network:features:queries:feature-network-query-hive'
 include ':sphinx:application:network:concepts:queries:concept-network-query-discover-tribes'
 include ':sphinx:application:network:features:queries:feature-network-query-discover-tribes'
 include ':sphinx:application:network:concepts:queries:concept-network-query-feed-status'

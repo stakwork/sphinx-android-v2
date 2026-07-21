@@ -116,6 +116,7 @@ dependencies {
     implementation project(path: ':sphinx:application:network:features:queries:feature-network-query-feed-search')
     implementation project(path: ':sphinx:application:network:features:queries:feature-network-query-people')
     implementation project(path: ':sphinx:application:network:features:queries:feature-network-query-crypter')
+    implementation project(path: ':sphinx:application:network:features:queries:feature-network-query-hive')
     implementation project(path: ':sphinx:application:network:features:queries:feature-network-query-discover-tribes')
     implementation project(path: ':sphinx:application:network:features:queries:feature-network-query-feed-status')
     implementation project(path: ':sphinx:application:network:features:feature-network-relay-call')
@@ -135,6 +136,7 @@ dependencies {
         implementation project(path: ':sphinx:service:features:notifications:feature-service-notification-empty')
     }
 
+    implementation deps.square.okhttpLogging
     implementation deps.google.hilt
     implementation project(':sphinx:application:data:features:feature-data-sync')
     implementation project(':sphinx:application:data:concepts:concept-data-sync')

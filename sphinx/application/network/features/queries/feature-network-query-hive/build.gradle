@@ -1,0 +1,23 @@
+plugins {
+    id 'app.cash.exhaustive'
+    id 'java-library'
+    id 'kotlin'
+    id 'kotlin-kapt'
+}
+
+dependencies {
+    api project(path: ':sphinx:application:network:concepts:queries:concept-network-query-hive')
+
+    implementation deps.kotlin.coroutinesCore
+
+    // needed to override moshi's use of 1.4.31
+    implementation deps.kotlin.reflect
+    implementation deps.square.moshi
+    implementation deps.square.okhttp
+    implementation deps.square.okhttpLogging
+    kapt kaptDeps.square.moshiCodegen
+
+    testImplementation "junit:junit:4.12"
+    testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.5.2"
+    testImplementation "com.squareup.okhttp3:mockwebserver:4.12.0"
+}

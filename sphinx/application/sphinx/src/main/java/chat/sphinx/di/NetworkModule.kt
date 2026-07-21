@@ -12,6 +12,7 @@ import chat.sphinx.concept_network_client_cache.NetworkClientCache
 import chat.sphinx.concept_network_query_chat.NetworkQueryChat
 import chat.sphinx.concept_network_query_contact.NetworkQueryContact
 import chat.sphinx.concept_network_query_crypter.NetworkQueryCrypter
+import chat.sphinx.concept_network_query_hive.NetworkQueryHive
 import chat.sphinx.concept_network_query_discover_tribes.NetworkQueryDiscoverTribes
 import chat.sphinx.concept_network_query_invite.NetworkQueryInvite
 import chat.sphinx.concept_network_query_meme_server.NetworkQueryMemeServer
@@ -27,6 +28,7 @@ import chat.sphinx.feature_network_client.NetworkClientImpl
 import chat.sphinx.feature_network_query_chat.NetworkQueryChatImpl
 import chat.sphinx.feature_network_query_contact.NetworkQueryContactImpl
 import chat.sphinx.feature_network_query_crypter.NetworkQueryCrypterImpl
+import chat.sphinx.feature_network_query_hive.NetworkQueryHiveImpl
 import chat.sphinx.feature_network_query_discover_tribes.NetworkQueryDiscoverTribesImpl
 import chat.sphinx.feature_network_query_feed_status.NetworkQueryFeedStatusImpl
 import chat.sphinx.feature_network_query_invite.NetworkQueryInviteImpl
@@ -58,7 +60,11 @@ import io.matthewnelson.concept_encryption_key.EncryptionKeyHandler
 import io.matthewnelson.feature_authentication_core.AuthenticationCoreManager
 import kotlinx.coroutines.CoroutineScope
 import okhttp3.Cache
+import okhttp3.CertificatePinner
+import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
 import java.io.File
+import javax.inject.Named
 import javax.inject.Singleton
 
 @Module
@@ -322,4 +328,43 @@ object NetworkModule {
         networkQueryFeedStatusImpl: NetworkQueryFeedStatusImpl
     ): NetworkQueryFeedStatus =
         networkQueryFeedStatusImpl
+
+    /**
+     * Dedicated OkHttpClient for Hive traffic (https://hive.sphinx.chat).
+     *
+     * Security properties that differ from the shared relay client:
+     * 1. HEADERS-only logging — prevents the short-lived signedToken and the returned
+     *    Hive bearer token from appearing in logcat on debug builds.
+     * 2. Certificate pinning — pins the SPKI public key for hive.sphinx.chat to
+     *    prevent MITM interception of bearer-token exchanges.
+     *
+     * Pin extracted on 2026-07-21 via:
+     *   openssl s_client -connect hive.sphinx.chat:443 2>/dev/null \
+     *     | openssl x509 -pubkey -noout \
+     *     | openssl pkey -pubin -outform der \
+     *     | openssl dgst -sha256 -binary | base64
+     */
+    @Provides
+    @Singleton
+    @Named("hive")
+    fun provideHiveOkHttpClient(): OkHttpClient =
+        OkHttpClient.Builder()
+            .addNetworkInterceptor(
+                HttpLoggingInterceptor().apply {
+                    level = HttpLoggingInterceptor.Level.HEADERS
+                }
+            )
+            .certificatePinner(
+                CertificatePinner.Builder()
+                    .add("hive.sphinx.chat", "sha256/pq6j7wsmUpn3+1casJ1O7EKNUAU7b8K/JrdGJiLR9sA=")
+                    .build()
+            )
+            .build()
+
+    @Provides
+    @Singleton
+    fun provideNetworkQueryHive(
+        @Named("hive") hiveClient: OkHttpClient,
+        moshi: Moshi,
+    ): NetworkQueryHive = NetworkQueryHiveImpl(hiveClient, moshi)
 }

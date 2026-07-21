@@ -12,6 +12,7 @@ import chat.sphinx.concept_network_query_invite.NetworkQueryInvite
 import chat.sphinx.concept_network_query_meme_server.NetworkQueryMemeServer
 import chat.sphinx.concept_network_query_feed_search.NetworkQueryFeedSearch
 import chat.sphinx.concept_network_query_feed_status.NetworkQueryFeedStatus
+import chat.sphinx.concept_network_query_hive.NetworkQueryHive
 import chat.sphinx.concept_network_query_people.NetworkQueryPeople
 import chat.sphinx.concept_network_query_verify_external.NetworkQueryAuthorizeExternal
 import chat.sphinx.concept_relay.RelayDataHandler
@@ -146,6 +147,7 @@ object RepositoryModule {
         networkQueryPeople: NetworkQueryPeople,
         networkQueryFeedSearch: NetworkQueryFeedSearch,
         networkQueryFeedStatus: NetworkQueryFeedStatus,
+        networkQueryHive: NetworkQueryHive,
         connectManager: ConnectManager,
         dataSyncManager: DataSyncManager,
         walletDataHandler: WalletDataHandler,
@@ -154,32 +156,33 @@ object RepositoryModule {
         sphinxLogger: SphinxLogger,
     ): SphinxRepositoryAndroid =
         SphinxRepositoryAndroid(
-            accountOwner,
-            applicationScope,
-            authenticationCoreManager,
-            authenticationStorage,
-            relayDataHandler,
-            coreDBImpl,
-            dispatchers,
-            moshi,
-            mediaCacheHandler,
-            memeInputStreamHandler,
-            memeServerTokenHandler,
-            networkQueryDiscoverTribes,
-            networkQueryMemeServer,
-            networkQueryChat,
-            networkQueryContact,
-            networkQueryInvite,
-            networkQueryAuthorizeExternal,
-            networkQueryPeople,
-            networkQueryFeedSearch,
-            networkQueryFeedStatus,
-            connectManager,
-            dataSyncManager,
-            walletDataHandler,
-            rsa,
-            sphinxNotificationManager,
-            sphinxLogger,
+            accountOwner = accountOwner,
+            applicationScope = applicationScope,
+            authenticationCoreManager = authenticationCoreManager,
+            authenticationStorage = authenticationStorage,
+            relayDataHandler = relayDataHandler,
+            coreDB = coreDBImpl,
+            dispatchers = dispatchers,
+            moshi = moshi,
+            mediaCacheHandler = mediaCacheHandler,
+            memeInputStreamHandler = memeInputStreamHandler,
+            memeServerTokenHandler = memeServerTokenHandler,
+            networkQueryDiscoverTribes = networkQueryDiscoverTribes,
+            networkQueryMemeServer = networkQueryMemeServer,
+            networkQueryChat = networkQueryChat,
+            networkQueryContact = networkQueryContact,
+            networkQueryInvite = networkQueryInvite,
+            networkQueryAuthorizeExternal = networkQueryAuthorizeExternal,
+            networkQueryPeople = networkQueryPeople,
+            networkQueryFeedSearch = networkQueryFeedSearch,
+            networkQueryFeedStatus = networkQueryFeedStatus,
+            networkQueryHive = networkQueryHive,
+            connectManager = connectManager,
+            dataSyncManager = dataSyncManager,
+            walletDataHandler = walletDataHandler,
+            rsa = rsa,
+            sphinxNotificationManager = sphinxNotificationManager,
+            LOG = sphinxLogger,
         )
 
     @Provides

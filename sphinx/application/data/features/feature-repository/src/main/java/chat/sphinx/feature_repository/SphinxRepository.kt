@@ -16,6 +16,8 @@ import chat.sphinx.concept_network_query_feed_search.model.toFeedSearchResult
 import chat.sphinx.concept_network_query_feed_status.NetworkQueryFeedStatus
 import chat.sphinx.concept_network_query_feed_status.model.ContentFeedStatusDto
 import chat.sphinx.concept_network_query_feed_status.model.EpisodeStatusDto
+import chat.sphinx.concept_network_query_hive.NetworkQueryHive
+import chat.sphinx.concept_network_query_hive.model.HiveAuthRequestDto
 import chat.sphinx.concept_network_query_invite.NetworkQueryInvite
 import chat.sphinx.concept_network_query_meme_server.NetworkQueryMemeServer
 import chat.sphinx.concept_network_query_people.NetworkQueryPeople
@@ -208,6 +210,7 @@ abstract class SphinxRepository(
     private val networkQueryPeople: NetworkQueryPeople,
     private val networkQueryFeedSearch: NetworkQueryFeedSearch,
     private val networkQueryFeedStatus: NetworkQueryFeedStatus,
+    private val networkQueryHive: NetworkQueryHive,
     private val connectManager: ConnectManager,
     private val dataSyncManager: DataSyncManager,
     private val walletDataHandler: WalletDataHandler,
@@ -236,6 +239,7 @@ abstract class SphinxRepository(
         // PersistentStorage Keys
         const val REPOSITORY_LIGHTNING_BALANCE = "REPOSITORY_LIGHTNING_BALANCE"
         const val REPOSITORY_PUSH_KEY = "REPOSITORY_PUSH_KEY"
+        const val HIVE_AUTH_TOKEN = "HIVE_AUTH_TOKEN"
 
         const val MEDIA_KEY_SIZE = 32
 
@@ -701,6 +705,48 @@ abstract class SphinxRepository(
 
     override fun getIdFromMacaroon(macaroon: String): String? {
         return connectManager.getIdFromMacaroon(macaroon)
+    }
+
+    suspend fun authenticateWithHive(): String? {
+        // Return cached token if present. A future 401-triggered re-auth task must clear
+        // HIVE_AUTH_TOKEN from AuthenticationStorage before calling this to force a refresh.
+        authenticationStorage.getString(HIVE_AUTH_TOKEN, null)?.let { cached ->
+            return cached
+        }
+
+        val (signedToken, timestamp) = connectManager.getSignedTimestampWithTime()
+        val pubkey = connectManager.ownerInfoStateFlow.value?.pubkey
+
+        if (signedToken == null || pubkey == null) {
+            LOG.e(TAG, "authenticateWithHive: missing signed token or pubkey", null)
+            return null
+        }
+
+        var hiveToken: String? = null
+        networkQueryHive.getHiveToken(
+            HiveAuthRequestDto(token = signedToken, pubkey = pubkey, timestamp = timestamp)
+        ).collect { response ->
+            @Exhaustive
+            when (response) {
+                is LoadResponse.Loading -> {}
+                is Response.Error -> LOG.e(TAG, "authenticateWithHive failed: ${response.cause.message}", null)
+                is Response.Success -> {
+                    val token = response.value.token
+                    when {
+                        token == null ->
+                            LOG.e(TAG, "authenticateWithHive: server returned null token", null)
+                        token.isBlank() || token.length > 2048 ->
+                            LOG.e(TAG, "authenticateWithHive: token failed validation (length=${token.length})", null)
+                        else -> {
+                            authenticationStorage.putString(HIVE_AUTH_TOKEN, token)
+                            hiveToken = token
+                            LOG.d(TAG, "authenticateWithHive: token persisted")
+                        }
+                    }
+                }
+            }
+        }
+        return hiveToken
     }
 
     override fun attemptReconnectOnResume() {

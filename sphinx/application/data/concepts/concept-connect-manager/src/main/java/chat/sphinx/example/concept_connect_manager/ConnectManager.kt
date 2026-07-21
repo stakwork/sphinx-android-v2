@@ -178,6 +178,7 @@ abstract class ConnectManager {
 
     // Utility Methods
     abstract fun getSignedTimeStamps(): String?
+    abstract fun getSignedTimestampWithTime(): Pair<String?, String>
     abstract fun getSignBase64(text: String): String?
     abstract fun getIdFromMacaroon(macaroon: String): String?
     // Listener Methods

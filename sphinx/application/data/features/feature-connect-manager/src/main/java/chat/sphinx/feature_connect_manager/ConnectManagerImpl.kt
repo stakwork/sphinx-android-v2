@@ -2199,6 +2199,16 @@ class ConnectManagerImpl: ConnectManager()
         }
     }
 
+    override fun getSignedTimestampWithTime(): Pair<String?, String> {
+        val time = getTimestampInMilliseconds()
+        return try {
+            Pair(signedTimestamp(ownerSeed!!, 0.toULong(), time, network), time)
+        } catch (e: Exception) {
+            Log.d("MQTT_MESSAGES", "getSignedTimestampWithTime error: $e")
+            Pair(null, time)
+        }
+    }
+
     override fun getSignBase64(text: String): String? {
         return try {
             signBase64(

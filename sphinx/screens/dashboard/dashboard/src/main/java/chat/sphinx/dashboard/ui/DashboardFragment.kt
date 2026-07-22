@@ -1,6 +1,10 @@
 package chat.sphinx.dashboard.ui
 
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -40,6 +44,7 @@ import chat.sphinx.wrapper_common.HideBalance
 import chat.sphinx.wrapper_common.chat.PushNotificationLink
 import chat.sphinx.wrapper_common.lightning.*
 import chat.sphinx.wrapper_lightning.NodeBalance
+import chat.sphinx.feature_service_restore_android.RestoreForegroundService
 import chat.sphinx.wrapper_view.Px
 import chat.sphinx.resources.R as R_common
 import com.google.android.material.tabs.TabLayoutMediator
@@ -96,6 +101,18 @@ internal class DashboardFragment : MotionLayoutFragment<
 
     var timeTrackerStart: Long = 0
     private var isRestoreCancelled = false
+    private var isRestoreServiceRunning = false
+
+    private val restoreCancelledReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == RestoreForegroundService.ACTION_RESTORE_CANCELLED) {
+                isRestoreCancelled = true
+                isRestoreServiceRunning = false
+                viewModel.cancelRestore()
+            }
+        }
+    }
+    private var restoreCancelledReceiverRegistered = false
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -112,6 +129,18 @@ internal class DashboardFragment : MotionLayoutFragment<
         setupRestorePopup()
         setupBottomMenuScanner()
         setupSignerManager()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        if (restoreCancelledReceiverRegistered) {
+            try {
+                requireContext().unregisterReceiver(restoreCancelledReceiver)
+            } catch (e: IllegalArgumentException) {
+                // Not registered — safe to ignore
+            }
+            restoreCancelledReceiverRegistered = false
+        }
     }
 
     override fun onPause() {
@@ -493,6 +522,16 @@ internal class DashboardFragment : MotionLayoutFragment<
     override fun onStart() {
         super.onStart()
 
+        if (!restoreCancelledReceiverRegistered) {
+            val filter = IntentFilter(RestoreForegroundService.ACTION_RESTORE_CANCELLED)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                requireContext().registerReceiver(restoreCancelledReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+            } else {
+                requireContext().registerReceiver(restoreCancelledReceiver, filter)
+            }
+            restoreCancelledReceiverRegistered = true
+        }
+
         onStopSupervisor.scope.launch(viewModel.mainImmediate) {
             viewModel.newVersionAvailable.asStateFlow().collect { newVersionAvailable ->
                 binding.layoutDashboardHeader.textViewDashboardHeaderUpgradeApp.goneIfFalse(
@@ -620,6 +659,15 @@ internal class DashboardFragment : MotionLayoutFragment<
             viewModel.restoreProgressStateFlow.collect { response ->
                 binding.layoutDashboardRestore.apply {
                     if (response != null && response < 100 && !isRestoreCancelled) {
+                        // Start the foreground service to keep restore alive in background
+                        if (!isRestoreServiceRunning) {
+                            isRestoreServiceRunning = true
+                            ContextCompat.startForegroundService(
+                                requireContext(),
+                                Intent(requireContext(), RestoreForegroundService::class.java)
+                            )
+                        }
+
                         layoutDashboardRestoreProgress.apply {
                             val progressString = "${response}%"
                             val label = if (response <= 10) {
@@ -637,6 +685,7 @@ internal class DashboardFragment : MotionLayoutFragment<
                         }
                         root.visible
                     } else {
+                        isRestoreServiceRunning = false
                         viewModel.fetchDeletedMessagesOnDb()
 
                         if (response != null) {

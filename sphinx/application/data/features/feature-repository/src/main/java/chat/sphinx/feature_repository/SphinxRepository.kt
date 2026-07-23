@@ -11,6 +11,7 @@ import chat.sphinx.concept_network_query_chat.NetworkQueryChat
 import chat.sphinx.concept_network_query_chat.model.*
 import chat.sphinx.concept_network_query_contact.NetworkQueryContact
 import chat.sphinx.concept_network_query_discover_tribes.NetworkQueryDiscoverTribes
+import chat.sphinx.concept_network_query_hive.NetworkQueryHive
 import chat.sphinx.concept_network_query_feed_search.NetworkQueryFeedSearch
 import chat.sphinx.concept_network_query_feed_search.model.toFeedSearchResult
 import chat.sphinx.concept_network_query_feed_status.NetworkQueryFeedStatus
@@ -200,6 +201,7 @@ abstract class SphinxRepository(
     private val memeInputStreamHandler: MemeInputStreamHandler,
     private val memeServerTokenHandler: MemeServerTokenHandler,
     private val networkQueryDiscoverTribes: NetworkQueryDiscoverTribes,
+    private val networkQueryHive: NetworkQueryHive,
     private val networkQueryMemeServer: NetworkQueryMemeServer,
     private val networkQueryChat: NetworkQueryChat,
     private val networkQueryContact: NetworkQueryContact,
@@ -236,15 +238,21 @@ abstract class SphinxRepository(
         // PersistentStorage Keys
         const val REPOSITORY_LIGHTNING_BALANCE = "REPOSITORY_LIGHTNING_BALANCE"
         const val REPOSITORY_PUSH_KEY = "REPOSITORY_PUSH_KEY"
+        const val HIVE_TOKEN_KEY = "HIVE_AUTH_TOKEN"
 
         const val MEDIA_KEY_SIZE = 32
 
         // Cache size limits to prevent unbounded memory growth
         private const val MSG_SENDER_CACHE_MAX_SIZE = 500
         private const val FLOW_CACHE_MAX_SIZE = 100
+
+        private const val HIVE_AUTH_MIN_INTERVAL_MS = 60_000L
     }
 
     var lastMessageIndex: Long? = null
+
+    private val hiveAuthMutex = Mutex()
+    @Volatile private var lastHiveAuthMs = 0L
 
     ////////////////////////
     /// Connect Manager ///
@@ -9596,6 +9604,47 @@ abstract class SphinxRepository(
 
         return byteArray
     }
+
+    ///////////////////
+    /// Hive Auth   ///
+    ///////////////////
+
+    suspend fun authenticateWithHive() {
+        hiveAuthMutex.withLock {
+            val now = System.currentTimeMillis()
+            if (now - lastHiveAuthMs < HIVE_AUTH_MIN_INTERVAL_MS) return
+
+            val timestampMs = now.toString()
+
+            val signedToken = connectManager.getSignedTimeStamps()
+            if (signedToken == null) {
+                LOG.d(TAG, "[Hive] authenticateWithHive: aborted — signed token unavailable")
+                return
+            }
+
+            val pubkey = accountOwner.value?.nodePubKey?.value
+            if (pubkey.isNullOrBlank()) {
+                LOG.d(TAG, "[Hive] authenticateWithHive: aborted — pubkey unavailable")
+                return
+            }
+
+            networkQueryHive.getHiveAuthToken(signedToken, pubkey, timestampMs).collect { response ->
+                when (response) {
+                    is Response.Success -> {
+                        authenticationStorage.putString(HIVE_TOKEN_KEY, response.value.token)
+                        lastHiveAuthMs = System.currentTimeMillis()
+                        LOG.d(TAG, "[Hive] authenticateWithHive: success — token obtained")
+                    }
+                    is Response.Error -> {
+                        LOG.d(TAG, "[Hive] authenticateWithHive: failed")
+                    }
+                    else -> { /* Loading — no action */ }
+                }
+            }
+        }
+    }
+
+    suspend fun getStoredHiveToken(): String? = authenticationStorage.getString(HIVE_TOKEN_KEY, null)
 }
 
 @Suppress("NOTHING_TO_INLINE")

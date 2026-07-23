@@ -2194,7 +2194,7 @@ class ConnectManagerImpl: ConnectManager()
                 network
             )
         } catch (e: Exception) {
-            Log.d("MQTT_MESSAGES", "Error to get signed timestamp $e")
+            Log.d("MQTT_MESSAGES", "Error to get signed timestamp: ${e.javaClass.simpleName}")
             null
         }
     }

@@ -1,10 +1,9 @@
 #!/bin/bash
 
+echo "=== android-service.sh called at $(date) ===" >> /tmp/android-build.log
+
 bash /workspaces/sphinx-android-v2/scripts/wait-for-emulator.sh
 
-if adb shell pidof chat.sphinx.v2.debug > /dev/null 2>&1; then
-  echo "App already running, skipping install and launch"
-  exit 1
-fi
+bash /workspaces/sphinx-android-v2/scripts/start-android.sh
 
-./gradlew assembleDebug --no-daemon
+sleep infinity

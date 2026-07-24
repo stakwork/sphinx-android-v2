@@ -14,6 +14,7 @@ import chat.sphinx.concept_network_query_discover_tribes.NetworkQueryDiscoverTri
 import chat.sphinx.concept_network_query_feed_search.NetworkQueryFeedSearch
 import chat.sphinx.concept_network_query_feed_search.model.toFeedSearchResult
 import chat.sphinx.concept_network_query_feed_status.NetworkQueryFeedStatus
+import chat.sphinx.concept_network_query_hive.NetworkQueryHive
 import chat.sphinx.concept_network_query_feed_status.model.ContentFeedStatusDto
 import chat.sphinx.concept_network_query_feed_status.model.EpisodeStatusDto
 import chat.sphinx.concept_network_query_invite.NetworkQueryInvite
@@ -208,6 +209,7 @@ abstract class SphinxRepository(
     private val networkQueryPeople: NetworkQueryPeople,
     private val networkQueryFeedSearch: NetworkQueryFeedSearch,
     private val networkQueryFeedStatus: NetworkQueryFeedStatus,
+    private val networkQueryHive: NetworkQueryHive,
     private val connectManager: ConnectManager,
     private val dataSyncManager: DataSyncManager,
     private val walletDataHandler: WalletDataHandler,
@@ -236,6 +238,7 @@ abstract class SphinxRepository(
         // PersistentStorage Keys
         const val REPOSITORY_LIGHTNING_BALANCE = "REPOSITORY_LIGHTNING_BALANCE"
         const val REPOSITORY_PUSH_KEY = "REPOSITORY_PUSH_KEY"
+        const val HIVE_AUTHENTICATION_TOKEN = "HIVE_AUTHENTICATION_TOKEN"
 
         const val MEDIA_KEY_SIZE = 32
 
@@ -9595,6 +9598,39 @@ abstract class SphinxRepository(
         }
 
         return byteArray
+    }
+
+    /////////////////
+    /// Hive Auth ///
+    /////////////////
+
+    suspend fun authenticateWithHive(): Boolean {
+        // Short-circuit: avoid redundant Rust FFI call + network round-trip if already authenticated
+        retrieveHiveToken()?.let { return true }
+
+        val signedToken = connectManager.getSignedTimeStamps() ?: return false
+        val pubkey = accountOwner.value?.nodePubKey?.value ?: return false
+        val timestamp = System.currentTimeMillis().toString()
+
+        var success = false
+        networkQueryHive.authenticateWithHive(signedToken, pubkey, timestamp)
+            .collect { response ->
+                when (response) {
+                    is Response.Success -> {
+                        val jwt = response.value.token
+                            ?.takeIf { it.isNotBlank() }
+                            ?: return@collect
+                        authenticationStorage.putString(HIVE_AUTHENTICATION_TOKEN, jwt)
+                        success = true
+                    }
+                    else -> { /* success remains false */ }
+                }
+            }
+        return success
+    }
+
+    suspend fun retrieveHiveToken(): String? {
+        return authenticationStorage.getString(HIVE_AUTHENTICATION_TOKEN, null)
     }
 }
 

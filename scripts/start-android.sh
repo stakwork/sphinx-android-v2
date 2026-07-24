@@ -1,5 +1,7 @@
 #!/bin/bash
 
+LOCK_FILE=/tmp/android-build.lock
+
 echo "=== start-android.sh called at $(date) ===" >> /tmp/android-build.log
 
 # If emulator not available, skip gracefully
@@ -11,11 +13,20 @@ fi
 
 bash /workspaces/sphinx-android-v2/scripts/wait-for-emulator.sh
 
+# Acquire build lock — wait for any in-progress build to finish before proceeding
+echo "Acquiring build lock..."
+exec 9>"$LOCK_FILE"
+flock 9
+echo "Build lock acquired at $(date)"
+
+# Release lock on exit (success or failure)
+trap 'flock -u 9; exec 9>&-' EXIT
+
 ./gradlew assembleDebug --no-daemon
 if [ $? -ne 0 ]; then
   echo "BUILD FAILED - see error above"
   echo "=== BUILD FAILED at $(date) ===" >> /tmp/android-build.log
-  sleep infinity
+  exit 1
 fi
 
 adb install -r sphinx/application/sphinx/build/outputs/apk/debug/sphinx-x86_64-debug.apk

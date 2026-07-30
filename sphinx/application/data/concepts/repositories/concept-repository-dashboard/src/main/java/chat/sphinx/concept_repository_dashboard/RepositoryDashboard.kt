@@ -1,5 +1,6 @@
 package chat.sphinx.concept_repository_dashboard
 
+import chat.sphinx.concept_repository_dashboard.model.Workspace
 import chat.sphinx.kotlin_response.LoadResponse
 import chat.sphinx.kotlin_response.Response
 import chat.sphinx.kotlin_response.ResponseError
@@ -83,4 +84,6 @@ interface RepositoryDashboard {
     suspend fun didCancelRestore()
 
     suspend fun clearDatabase()
+
+    suspend fun fetchWorkspaces(): List<Workspace>
 }

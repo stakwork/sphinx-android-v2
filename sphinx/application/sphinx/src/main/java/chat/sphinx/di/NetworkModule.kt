@@ -132,7 +132,8 @@ object NetworkModule {
                 listOf(
                     AuthorizationToken.AUTHORIZATION_HEADER,
                     TransportToken.TRANSPORT_TOKEN_HEADER,
-                    AuthenticationToken.HEADER_KEY
+                    AuthenticationToken.HEADER_KEY,
+                    "Authorization"
                 )
             ),
             LOG,

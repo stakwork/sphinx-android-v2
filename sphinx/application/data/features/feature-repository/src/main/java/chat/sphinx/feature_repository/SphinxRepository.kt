@@ -35,6 +35,9 @@ import chat.sphinx.concept_repository_connect_manager.model.OwnerRegistrationSta
 import chat.sphinx.concept_repository_connect_manager.model.RestoreProcessState
 import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.concept_repository_dashboard.RepositoryDashboard
+import chat.sphinx.concept_repository_dashboard.model.Workspace
+import chat.sphinx.concept_network_query_hive.model.WorkspaceDto
+import chat.sphinx.feature_repository.mappers.hive.toDomain
 import chat.sphinx.concept_repository_data_sync.DataSyncRepository
 import chat.sphinx.concept_repository_feed.FeedRepository
 import chat.sphinx.concept_repository_lightning.LightningRepository
@@ -240,6 +243,17 @@ abstract class SphinxRepository(
         const val REPOSITORY_PUSH_KEY = "REPOSITORY_PUSH_KEY"
         const val HIVE_AUTHENTICATION_TOKEN = "HIVE_AUTHENTICATION_TOKEN"
 
+        // Delimiter used to separate the JWT from its expiry timestamp in storage.
+        // Chosen to be unlikely to appear inside a base64url JWT.
+        const val HIVE_TOKEN_DELIMITER = "|"
+
+        // TODO: Confirm the exact Hive JWT TTL from API docs/server config.
+        //       Using a conservative 15-minute default until confirmed.
+        const val HIVE_TOKEN_TTL_MS = 15L * 60L * 1000L // 15 minutes
+
+        // Return null (trigger proactive re-auth) when within 60 s of expiry.
+        const val HIVE_TOKEN_EXPIRY_MARGIN_MS = 60L * 1000L // 60 seconds
+
         const val MEDIA_KEY_SIZE = 32
 
         // Cache size limits to prevent unbounded memory growth
@@ -252,6 +266,9 @@ abstract class SphinxRepository(
     ////////////////////
     /// Hive Auth ///
     //////////////////
+
+    // Prevents concurrent callers from interleaving clear → re-auth → retrieve sequences
+    private val hiveAuthMutex = Mutex()
 
     suspend fun authenticateWithHive(): Boolean {
         // Short-circuit: avoid redundant Rust FFI call + network round-trip if already authenticated
@@ -269,7 +286,13 @@ abstract class SphinxRepository(
                         val jwt = response.value.token
                             ?.takeIf { it.isNotBlank() }
                             ?: return@collect
-                        authenticationStorage.putString(HIVE_AUTHENTICATION_TOKEN, jwt)
+                        // Store token with expiry timestamp for proactive freshness checks.
+                        // Format: "$jwt$HIVE_TOKEN_DELIMITER${expiresAtMillis}"
+                        val expiresAt = System.currentTimeMillis() + HIVE_TOKEN_TTL_MS
+                        authenticationStorage.putString(
+                            HIVE_AUTHENTICATION_TOKEN,
+                            "$jwt$HIVE_TOKEN_DELIMITER$expiresAt"
+                        )
                         success = true
                     }
                     else -> { /* success remains false */ }
@@ -278,8 +301,74 @@ abstract class SphinxRepository(
         return success
     }
 
+    /**
+     * Returns the stored Hive JWT, or null if:
+     * - no token is stored
+     * - the stored value cannot be parsed
+     * - the token is within [HIVE_TOKEN_EXPIRY_MARGIN_MS] of its TTL (proactive refresh)
+     */
     suspend fun retrieveHiveToken(): String? {
-        return authenticationStorage.getString(HIVE_AUTHENTICATION_TOKEN, null)
+        val raw = authenticationStorage.getString(HIVE_AUTHENTICATION_TOKEN, null)
+            ?: return null
+        val parts = raw.split(HIVE_TOKEN_DELIMITER)
+        // Legacy tokens stored without a delimiter are returned as-is (backward-compat)
+        if (parts.size < 2) return raw
+        val jwt = parts[0]
+        val expiresAt = parts[1].toLongOrNull() ?: return jwt
+        val now = System.currentTimeMillis()
+        // Return null if within 60-second safety margin — triggers proactive re-auth
+        return if (now >= expiresAt - HIVE_TOKEN_EXPIRY_MARGIN_MS) null else jwt
+    }
+
+    /** Removes the stored Hive token so re-authentication is forced on next use. */
+    private suspend fun clearHiveToken() {
+        authenticationStorage.removeString(HIVE_AUTHENTICATION_TOKEN)
+    }
+
+    override suspend fun fetchWorkspaces(): List<Workspace> {
+        return try {
+            val token = retrieveHiveToken()
+            if (token != null) {
+                // We have a valid, non-expired token — try to use it directly.
+                var result: List<Workspace>? = null
+                var failed = false
+                networkQueryHive.getWorkspaces(token).collect { response ->
+                    when (response) {
+                        is Response.Success ->
+                            result = response.value.workspaces.map { it.toDomain() }
+                        is Response.Error -> failed = true
+                        else -> {}
+                    }
+                }
+                if (!failed && result != null) return result!!
+                // Network/auth error with the current token — clear it and re-auth once.
+                hiveAuthMutex.withLock {
+                    clearHiveToken()
+                    authenticateWithHive()
+                }
+                val newToken = retrieveHiveToken() ?: return emptyList()
+                var retryResult: List<Workspace> = emptyList()
+                networkQueryHive.getWorkspaces(newToken).collect { retryResponse ->
+                    if (retryResponse is Response.Success) {
+                        retryResult = retryResponse.value.workspaces.map { it.toDomain() }
+                    }
+                }
+                retryResult
+            } else {
+                // No valid token — authenticate first, then fetch.
+                hiveAuthMutex.withLock { authenticateWithHive() }
+                val newToken = retrieveHiveToken() ?: return emptyList()
+                var result: List<Workspace> = emptyList()
+                networkQueryHive.getWorkspaces(newToken).collect { response ->
+                    if (response is Response.Success) {
+                        result = response.value.workspaces.map { it.toDomain() }
+                    }
+                }
+                result
+            }
+        } catch (e: Exception) {
+            emptyList()
+        }
     }
 
     ////////////////////////

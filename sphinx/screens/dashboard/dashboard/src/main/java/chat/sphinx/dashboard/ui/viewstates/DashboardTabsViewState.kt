@@ -10,6 +10,7 @@ sealed class DashboardTabsViewState: ViewState<DashboardTabsViewState>() {
         val feedActive: Boolean,
         val friendsActive: Boolean,
         val tribesActive: Boolean,
+        val workspacesActive: Boolean = false,
         val friendsBadgeVisible: Boolean,
         val tribesBadgeVisible: Boolean,
     ) : DashboardTabsViewState()

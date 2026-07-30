@@ -1341,6 +1341,7 @@ internal class DashboardViewModel @Inject constructor(
         feedActive: Boolean? = null,
         friendsActive: Boolean? = null,
         tribesActive: Boolean? = null,
+        workspacesActive: Boolean? = null,
         friendsBadgeVisible: Boolean? = null,
         tribesBadgeVisible: Boolean? = null
     ) {
@@ -1353,6 +1354,7 @@ internal class DashboardViewModel @Inject constructor(
                         feedActive = feedActive ?: currentState.feedActive,
                         friendsActive = friendsActive ?: currentState.friendsActive,
                         tribesActive = tribesActive ?: currentState.tribesActive,
+                        workspacesActive = workspacesActive ?: currentState.workspacesActive,
                         friendsBadgeVisible = friendsBadgeVisible
                             ?: currentState.friendsBadgeVisible,
                         tribesBadgeVisible = tribesBadgeVisible ?: currentState.tribesBadgeVisible
@@ -1362,6 +1364,7 @@ internal class DashboardViewModel @Inject constructor(
                         feedActive = feedActive ?: false,
                         friendsActive = friendsActive ?: true,
                         tribesActive = tribesActive ?: false,
+                        workspacesActive = workspacesActive ?: false,
                         friendsBadgeVisible = friendsBadgeVisible ?: false,
                         tribesBadgeVisible = tribesBadgeVisible ?: false
                     )
@@ -1382,6 +1385,9 @@ internal class DashboardViewModel @Inject constructor(
                 }
                 currentState.tribesActive -> {
                     DashboardFragmentsAdapter.TRIBES_TAB_POSITION
+                }
+                currentState.workspacesActive -> {
+                    DashboardFragmentsAdapter.WORKSPACES_TAB_POSITION
                 }
                 else -> DashboardFragmentsAdapter.FRIENDS_TAB_POSITION
             }

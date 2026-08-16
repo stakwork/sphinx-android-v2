@@ -20,10 +20,13 @@ import com.ensarsarajcic.kotlinx.serialization.msgpack.MsgPackDynamicSerializer
 import io.matthewnelson.crypto_common.annotations.RawPasswordAccess
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import okio.base64.encodeBase64
 import org.cryptonode.jncryptor.AES256JNCryptorOutputStream
@@ -111,6 +114,14 @@ class ConnectManagerImpl: ConnectManager()
     private var restoreMnemonicWords: List<String>? = emptyList()
     private var inviterContact: NewContact? = null
     private var hasAttemptedReconnect = false
+
+    @Volatile private var connectionInProgress  = false
+    @Volatile private var reconnectAttemptCount = 0
+    @Volatile private var lastInboundTimeMs: Long = 0L
+    private var connectionTimeoutJob: Job? = null
+    private var watchdogJob:          Job? = null
+    private var reconnectJob:         Job? = null
+
     private var tribeServer: String? = null
     private var serverDefaultTribe: String? = null
     private var router: String? = null
@@ -139,6 +150,11 @@ class ConnectManagerImpl: ConnectManager()
         const val TYPE_GROUP_JOIN = 14
         const val TYPE_MEMBER_APPROVE = 20
         const val TYPE_CONTACT_KEY_RECORD = 33
+
+        // MQTT reliability
+        const val MQTT_KEEP_ALIVE_SECS  = 15
+        const val CONNECTION_TIMEOUT_MS = 15_000L
+        const val WATCHDOG_INTERVAL_MS  = 30_000L  // keepAlive × 2
     }
 
     private val _ownerInfoStateFlow: MutableStateFlow<OwnerInfo> by lazy {
@@ -184,12 +200,84 @@ class ConnectManagerImpl: ConnectManager()
         return _mixerIp
     }
 
+    private fun forceCloseMqttClient() {
+        val dead = mqttClient
+        mqttClient = null
+        dead?.setCallback(null)
+        try { dead?.disconnect() } catch (_: Exception) {}
+    }
+
+    private fun startConnectionTimeoutGuard() {
+        connectionTimeoutJob?.cancel()
+        connectionTimeoutJob = userStateScope.launch {
+            delay(CONNECTION_TIMEOUT_MS)
+            if (connectionInProgress) {
+                Log.w("MQTT_MESSAGES", "[MQTT] Connection timed out after 15s — force-closing and retrying")
+                forceCloseMqttClient()
+                connectionInProgress = false
+                startReconnectWithDelay()
+            }
+        }
+    }
+
+    private fun startWatchdog() {
+        stopWatchdog()
+        lastInboundTimeMs = System.currentTimeMillis()
+        watchdogJob = userStateScope.launch {
+            while (isActive) {
+                delay(WATCHDOG_INTERVAL_MS)
+                if (!isMqttConnected) break
+                val elapsed = System.currentTimeMillis() - lastInboundTimeMs
+                if (elapsed >= WATCHDOG_INTERVAL_MS) {
+                    Log.w("MQTT_MESSAGES", "[MQTT] Watchdog: silent for 30s — forcing reconnect")
+                    stopWatchdog()
+                    forceCloseMqttClient()
+                    isMqttConnected = false
+                    connectionInProgress = false
+                    startReconnectWithDelay()
+                    break
+                }
+            }
+        }
+    }
+
+    private fun stopWatchdog() {
+        watchdogJob?.cancel()
+        watchdogJob = null
+    }
+
+    private fun startReconnectWithDelay() {
+        reconnectJob?.cancel()
+        val factor  = Math.pow(2.0, reconnectAttemptCount.toDouble())
+        val jitter  = 0.75 + Math.random() * 0.5
+        val delayMs = minOf((1_000.0 * factor * jitter).toLong(), 60_000L)
+        reconnectAttemptCount++
+        Log.d("MQTT_MESSAGES", "[MQTT] Scheduling reconnect attempt $reconnectAttemptCount in ${delayMs}ms")
+        reconnectJob = userStateScope.launch {
+            delay(delayMs)
+            if (mixerIp != null && walletMnemonic != null) {
+                initializeMqttAndSubscribe(
+                    mixerIp!!,
+                    walletMnemonic!!,
+                    ownerInfoStateFlow.value
+                )
+            }
+        }
+    }
+
     private fun connectToMQTT(
         serverURI: String,
         clientId: String,
         key: String,
         password: String,
     ) {
+        if (connectionInProgress) {
+            Log.d("MQTT_MESSAGES", "[MQTT] connectToMQTT skipped — connection already in progress")
+            return
+        }
+        connectionInProgress = true
+        forceCloseMqttClient()
+
         try {
             mqttClient = MqttAsyncClient(serverURI, clientId, null)
 
@@ -216,49 +304,47 @@ class ConnectManagerImpl: ConnectManager()
                 this.userName = key
                 this.password = password.toCharArray()
                 this.socketFactory = sslContext?.socketFactory
+                this.keepAliveInterval = MQTT_KEEP_ALIVE_SECS
+                this.connectionTimeout = MQTT_KEEP_ALIVE_SECS
             }
 
             mqttClient?.connect(options, null, object : IMqttActionListener {
                 override fun onSuccess(asyncActionToken: IMqttToken?) {
+                    connectionTimeoutJob?.cancel()
+                    connectionTimeoutJob = null
                     isMqttConnected = true
+                    connectionInProgress = false
+                    reconnectAttemptCount = 0
                     hasAttemptedReconnect = false
-
+                    startWatchdog()
                     subscribeOwnerMQTT()
-
                     notifyListeners {
                         onNetworkStatusChange(false, isLoading = true)
                     }
-                    Log.d("MQTT_MESSAGES", "MQTT CONNECTED!")
+                    Log.d("MQTT_MESSAGES", "[MQTT] CONNECTED!")
                 }
 
                 override fun onFailure(asyncActionToken: IMqttToken?, exception: Throwable?) {
                     isMqttConnected = false
-
-                    // If it's the first time trying to connect, try to reconnect otherwise
-                    // prevent infinite loop
-                    if (!hasAttemptedReconnect) {
-                        hasAttemptedReconnect = true
-                        reconnectWithBackOff()
-                    }
-//                    notifyListeners {
-//                        onConnectManagerError(ConnectManagerError.MqttConnectError(exception?.message))
-//                    }
-                    Log.d("MQTT_MESSAGES", "Failed to connect to MQTT: ${exception?.message}")
+                    connectionInProgress = false
+                    connectionTimeoutJob?.cancel()
+                    startReconnectWithDelay()
+                    Log.d("MQTT_MESSAGES", "[MQTT] Failed to connect: ${exception?.message}")
                 }
             })
+            startConnectionTimeoutGuard()
 
             mqttClient?.setCallback(object : MqttCallback {
                 override fun connectionLost(cause: Throwable?) {
                     isMqttConnected = false
-                    reconnectWithBackOff()
-
-//                    notifyListeners {
-//                        onConnectManagerError(ConnectManagerError.MqttConnectError(cause?.message))
-//                    }
-                    Log.d("MQTT_MESSAGES", "MQTT DISCONNECTED! $cause ${cause?.message}")
+                    connectionInProgress = false
+                    stopWatchdog()
+                    startReconnectWithDelay()
+                    Log.d("MQTT_MESSAGES", "[MQTT] DISCONNECTED! $cause ${cause?.message}")
                 }
 
                 override fun messageArrived(topic: String?, message: MqttMessage?) {
+                    lastInboundTimeMs = System.currentTimeMillis()
                     // Handle incoming messages here
                     if (topic?.contains("/ping") == true) {
 
@@ -280,12 +366,9 @@ class ConnectManagerImpl: ConnectManager()
             })
         } catch (e: MqttException) {
             isMqttConnected = false
-//            notifyListeners {
-//                onConnectManagerError(ConnectManagerError.MqttConnectError(e.message))
-//            }
-
-            reconnectWithBackOff()
-            Log.d("MQTT_MESSAGES", "MQTT DISCONNECTED! exception ${e.printStackTrace()}")
+            connectionInProgress = false
+            startReconnectWithDelay()
+            Log.d("MQTT_MESSAGES", "[MQTT] MqttException: ${e.message}")
         }
     }
 
@@ -1256,16 +1339,8 @@ class ConnectManagerImpl: ConnectManager()
 
         if (!isConnected()) {
             resetMQTT()
-
-            if (mixerIp != null && walletMnemonic != null) {
-
-                initializeMqttAndSubscribe(
-                    mixerIp!!,
-                    walletMnemonic!!,
-                    ownerInfoStateFlow.value,
-                )
-            }
-            Log.d("MQTT_MESSAGES", "onReconnectMqtt")
+            startReconnectWithDelay()
+            Log.d("MQTT_MESSAGES", "[MQTT] onReconnectMqtt")
         } else {
             getReadMessages()
             getMutedChats()
@@ -1280,9 +1355,14 @@ class ConnectManagerImpl: ConnectManager()
         if (isAppFirstInit) {
             isAppFirstInit = false
             return
-        } else {
-            reconnectWithBackOff()
         }
+        // Tear down any stale in-flight state from background
+        reconnectAttemptCount = 0
+        connectionInProgress  = false
+        stopWatchdog()
+        connectionTimeoutJob?.cancel()
+        connectionTimeoutJob = null
+        reconnectWithBackOff()
     }
 
     override fun retrieveLspIp(): String? {
@@ -2281,9 +2361,14 @@ class ConnectManagerImpl: ConnectManager()
     }
 
     override fun resetMQTT() {
-        if (mqttClient?.isConnected == true) {
-            mqttClient?.disconnect()
-        }
+        forceCloseMqttClient()
+        stopWatchdog()
+        connectionTimeoutJob?.cancel()
+        connectionTimeoutJob = null
+        reconnectJob?.cancel()
+        reconnectJob = null
+        isMqttConnected = false
+        connectionInProgress = false
     }
 
     private fun storeUserState(state: ByteArray) {

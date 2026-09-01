@@ -388,8 +388,6 @@ internal interface _UniFFILib : Library {
     ): RustBuffer.ByValue
     fun uniffi_sphinxrs_fn_func_make_auth_token(`ts`: Int,`secret`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
-    fun uniffi_sphinxrs_fn_func_run(`topic`: RustBuffer.ByValue,`args`: RustBuffer.ByValue,`state`: RustBuffer.ByValue,`msg1`: RustBuffer.ByValue,`expectedSequence`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
-    ): RustBuffer.ByValue
     fun uniffi_sphinxrs_fn_func_sha_256(`msg`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_sphinxrs_fn_func_create_onion(`seed`: RustBuffer.ByValue,`idx`: Long,`time`: RustBuffer.ByValue,`network`: RustBuffer.ByValue,`hops`: RustBuffer.ByValue,`payload`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
@@ -459,6 +457,8 @@ internal interface _UniFFILib : Library {
     fun uniffi_sphinxrs_fn_func_make_media_token_with_meta(`seed`: RustBuffer.ByValue,`uniqueTime`: RustBuffer.ByValue,`state`: RustBuffer.ByValue,`host`: RustBuffer.ByValue,`muid`: RustBuffer.ByValue,`to`: RustBuffer.ByValue,`expiry`: Int,`meta`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_sphinxrs_fn_func_make_media_token_with_price(`seed`: RustBuffer.ByValue,`uniqueTime`: RustBuffer.ByValue,`state`: RustBuffer.ByValue,`host`: RustBuffer.ByValue,`muid`: RustBuffer.ByValue,`to`: RustBuffer.ByValue,`expiry`: Int,`price`: Long,_uniffi_out_err: RustCallStatus, 
+    ): RustBuffer.ByValue
+    fun uniffi_sphinxrs_fn_func_request_invoice(`seed`: RustBuffer.ByValue,`uniqueTime`: RustBuffer.ByValue,`state`: RustBuffer.ByValue,`amtMsat`: Long,`description`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_sphinxrs_fn_func_make_invoice(`seed`: RustBuffer.ByValue,`uniqueTime`: RustBuffer.ByValue,`state`: RustBuffer.ByValue,`amtMsat`: Long,`description`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
@@ -564,8 +564,6 @@ internal interface _UniFFILib : Library {
     ): Short
     fun uniffi_sphinxrs_checksum_func_make_auth_token(
     ): Short
-    fun uniffi_sphinxrs_checksum_func_run(
-    ): Short
     fun uniffi_sphinxrs_checksum_func_sha_256(
     ): Short
     fun uniffi_sphinxrs_checksum_func_create_onion(
@@ -635,6 +633,8 @@ internal interface _UniFFILib : Library {
     fun uniffi_sphinxrs_checksum_func_make_media_token_with_meta(
     ): Short
     fun uniffi_sphinxrs_checksum_func_make_media_token_with_price(
+    ): Short
+    fun uniffi_sphinxrs_checksum_func_request_invoice(
     ): Short
     fun uniffi_sphinxrs_checksum_func_make_invoice(
     ): Short
@@ -761,9 +761,6 @@ private fun uniffiCheckApiChecksums(lib: _UniFFILib) {
     if (lib.uniffi_sphinxrs_checksum_func_make_auth_token() != 13236.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_sphinxrs_checksum_func_run() != 47350.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
     if (lib.uniffi_sphinxrs_checksum_func_sha_256() != 54805.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -867,6 +864,9 @@ private fun uniffiCheckApiChecksums(lib: _UniFFILib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_sphinxrs_checksum_func_make_media_token_with_price() != 53555.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sphinxrs_checksum_func_request_invoice() != 4786.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_sphinxrs_checksum_func_make_invoice() != 12949.toShort()) {
@@ -999,26 +999,6 @@ public object FfiConverterUByte: FfiConverter<UByte, Byte> {
 
     override fun write(value: UByte, buf: ByteBuffer) {
         buf.put(value.toByte())
-    }
-}
-
-public object FfiConverterUShort: FfiConverter<UShort, Short> {
-    override fun lift(value: Short): UShort {
-        return value.toUShort()
-    }
-
-    override fun read(buf: ByteBuffer): UShort {
-        return lift(buf.getShort())
-    }
-
-    override fun lower(value: UShort): Short {
-        return value.toShort()
-    }
-
-    override fun allocationSize(value: UShort) = 2
-
-    override fun write(value: UShort, buf: ByteBuffer) {
-        buf.putShort(value.toShort())
     }
 }
 
@@ -1463,47 +1443,6 @@ public object FfiConverterTypeRunReturn: FfiConverterRustBuffer<RunReturn> {
 
 
 
-data class VlsResponse (
-    var `topic`: String, 
-    var `bytes`: ByteArray, 
-    var `sequence`: UShort, 
-    var `cmd`: String, 
-    var `state`: ByteArray
-) {
-    
-}
-
-public object FfiConverterTypeVlsResponse: FfiConverterRustBuffer<VlsResponse> {
-    override fun read(buf: ByteBuffer): VlsResponse {
-        return VlsResponse(
-            FfiConverterString.read(buf),
-            FfiConverterByteArray.read(buf),
-            FfiConverterUShort.read(buf),
-            FfiConverterString.read(buf),
-            FfiConverterByteArray.read(buf),
-        )
-    }
-
-    override fun allocationSize(value: VlsResponse) = (
-            FfiConverterString.allocationSize(value.`topic`) +
-            FfiConverterByteArray.allocationSize(value.`bytes`) +
-            FfiConverterUShort.allocationSize(value.`sequence`) +
-            FfiConverterString.allocationSize(value.`cmd`) +
-            FfiConverterByteArray.allocationSize(value.`state`)
-    )
-
-    override fun write(value: VlsResponse, buf: ByteBuffer) {
-            FfiConverterString.write(value.`topic`, buf)
-            FfiConverterByteArray.write(value.`bytes`, buf)
-            FfiConverterUShort.write(value.`sequence`, buf)
-            FfiConverterString.write(value.`cmd`, buf)
-            FfiConverterByteArray.write(value.`state`, buf)
-    }
-}
-
-
-
-
 
 sealed class SphinxException: Exception() {
     // Each variant is a nested class
@@ -1585,49 +1524,7 @@ sealed class SphinxException: Exception() {
             get() = "r=${ `r` }"
     }
     
-    class BadTopic(
-        val `r`: String
-        ) : SphinxException() {
-        override val message
-            get() = "r=${ `r` }"
-    }
-    
     class BadArgs(
-        val `r`: String
-        ) : SphinxException() {
-        override val message
-            get() = "r=${ `r` }"
-    }
-    
-    class BadState(
-        val `r`: String
-        ) : SphinxException() {
-        override val message
-            get() = "r=${ `r` }"
-    }
-    
-    class BadVelocity(
-        val `r`: String
-        ) : SphinxException() {
-        override val message
-            get() = "r=${ `r` }"
-    }
-    
-    class InitFailed(
-        val `r`: String
-        ) : SphinxException() {
-        override val message
-            get() = "r=${ `r` }"
-    }
-    
-    class LssFailed(
-        val `r`: String
-        ) : SphinxException() {
-        override val message
-            get() = "r=${ `r` }"
-    }
-    
-    class VlsFailed(
         val `r`: String
         ) : SphinxException() {
         override val message
@@ -1750,55 +1647,37 @@ public object FfiConverterTypeSphinxError : FfiConverterRustBuffer<SphinxExcepti
             11 -> SphinxException.BadResponse(
                 FfiConverterString.read(buf),
                 )
-            12 -> SphinxException.BadTopic(
+            12 -> SphinxException.BadArgs(
                 FfiConverterString.read(buf),
                 )
-            13 -> SphinxException.BadArgs(
+            13 -> SphinxException.BadChildIndex(
                 FfiConverterString.read(buf),
                 )
-            14 -> SphinxException.BadState(
+            14 -> SphinxException.BadMsg(
                 FfiConverterString.read(buf),
                 )
-            15 -> SphinxException.BadVelocity(
+            15 -> SphinxException.AddContactFailed(
                 FfiConverterString.read(buf),
                 )
-            16 -> SphinxException.InitFailed(
+            16 -> SphinxException.GetContactFailed(
                 FfiConverterString.read(buf),
                 )
-            17 -> SphinxException.LssFailed(
+            17 -> SphinxException.HandleFailed(
                 FfiConverterString.read(buf),
                 )
-            18 -> SphinxException.VlsFailed(
+            18 -> SphinxException.FetchMsgsFailed(
                 FfiConverterString.read(buf),
                 )
-            19 -> SphinxException.BadChildIndex(
+            19 -> SphinxException.SendFailed(
                 FfiConverterString.read(buf),
                 )
-            20 -> SphinxException.BadMsg(
+            20 -> SphinxException.SetNetworkFailed(
                 FfiConverterString.read(buf),
                 )
-            21 -> SphinxException.AddContactFailed(
+            21 -> SphinxException.SetBlockheightFailed(
                 FfiConverterString.read(buf),
                 )
-            22 -> SphinxException.GetContactFailed(
-                FfiConverterString.read(buf),
-                )
-            23 -> SphinxException.HandleFailed(
-                FfiConverterString.read(buf),
-                )
-            24 -> SphinxException.FetchMsgsFailed(
-                FfiConverterString.read(buf),
-                )
-            25 -> SphinxException.SendFailed(
-                FfiConverterString.read(buf),
-                )
-            26 -> SphinxException.SetNetworkFailed(
-                FfiConverterString.read(buf),
-                )
-            27 -> SphinxException.SetBlockheightFailed(
-                FfiConverterString.read(buf),
-                )
-            28 -> SphinxException.ParseStateFailed(
+            22 -> SphinxException.ParseStateFailed(
                 FfiConverterString.read(buf),
                 )
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
@@ -1862,37 +1741,7 @@ public object FfiConverterTypeSphinxError : FfiConverterRustBuffer<SphinxExcepti
                 4
                 + FfiConverterString.allocationSize(value.`r`)
             )
-            is SphinxException.BadTopic -> (
-                // Add the size for the Int that specifies the variant plus the size needed for all fields
-                4
-                + FfiConverterString.allocationSize(value.`r`)
-            )
             is SphinxException.BadArgs -> (
-                // Add the size for the Int that specifies the variant plus the size needed for all fields
-                4
-                + FfiConverterString.allocationSize(value.`r`)
-            )
-            is SphinxException.BadState -> (
-                // Add the size for the Int that specifies the variant plus the size needed for all fields
-                4
-                + FfiConverterString.allocationSize(value.`r`)
-            )
-            is SphinxException.BadVelocity -> (
-                // Add the size for the Int that specifies the variant plus the size needed for all fields
-                4
-                + FfiConverterString.allocationSize(value.`r`)
-            )
-            is SphinxException.InitFailed -> (
-                // Add the size for the Int that specifies the variant plus the size needed for all fields
-                4
-                + FfiConverterString.allocationSize(value.`r`)
-            )
-            is SphinxException.LssFailed -> (
-                // Add the size for the Int that specifies the variant plus the size needed for all fields
-                4
-                + FfiConverterString.allocationSize(value.`r`)
-            )
-            is SphinxException.VlsFailed -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4
                 + FfiConverterString.allocationSize(value.`r`)
@@ -2007,88 +1856,58 @@ public object FfiConverterTypeSphinxError : FfiConverterRustBuffer<SphinxExcepti
                 FfiConverterString.write(value.`r`, buf)
                 Unit
             }
-            is SphinxException.BadTopic -> {
+            is SphinxException.BadArgs -> {
                 buf.putInt(12)
                 FfiConverterString.write(value.`r`, buf)
                 Unit
             }
-            is SphinxException.BadArgs -> {
+            is SphinxException.BadChildIndex -> {
                 buf.putInt(13)
                 FfiConverterString.write(value.`r`, buf)
                 Unit
             }
-            is SphinxException.BadState -> {
+            is SphinxException.BadMsg -> {
                 buf.putInt(14)
                 FfiConverterString.write(value.`r`, buf)
                 Unit
             }
-            is SphinxException.BadVelocity -> {
+            is SphinxException.AddContactFailed -> {
                 buf.putInt(15)
                 FfiConverterString.write(value.`r`, buf)
                 Unit
             }
-            is SphinxException.InitFailed -> {
+            is SphinxException.GetContactFailed -> {
                 buf.putInt(16)
                 FfiConverterString.write(value.`r`, buf)
                 Unit
             }
-            is SphinxException.LssFailed -> {
+            is SphinxException.HandleFailed -> {
                 buf.putInt(17)
                 FfiConverterString.write(value.`r`, buf)
                 Unit
             }
-            is SphinxException.VlsFailed -> {
+            is SphinxException.FetchMsgsFailed -> {
                 buf.putInt(18)
                 FfiConverterString.write(value.`r`, buf)
                 Unit
             }
-            is SphinxException.BadChildIndex -> {
+            is SphinxException.SendFailed -> {
                 buf.putInt(19)
                 FfiConverterString.write(value.`r`, buf)
                 Unit
             }
-            is SphinxException.BadMsg -> {
+            is SphinxException.SetNetworkFailed -> {
                 buf.putInt(20)
                 FfiConverterString.write(value.`r`, buf)
                 Unit
             }
-            is SphinxException.AddContactFailed -> {
+            is SphinxException.SetBlockheightFailed -> {
                 buf.putInt(21)
                 FfiConverterString.write(value.`r`, buf)
                 Unit
             }
-            is SphinxException.GetContactFailed -> {
-                buf.putInt(22)
-                FfiConverterString.write(value.`r`, buf)
-                Unit
-            }
-            is SphinxException.HandleFailed -> {
-                buf.putInt(23)
-                FfiConverterString.write(value.`r`, buf)
-                Unit
-            }
-            is SphinxException.FetchMsgsFailed -> {
-                buf.putInt(24)
-                FfiConverterString.write(value.`r`, buf)
-                Unit
-            }
-            is SphinxException.SendFailed -> {
-                buf.putInt(25)
-                FfiConverterString.write(value.`r`, buf)
-                Unit
-            }
-            is SphinxException.SetNetworkFailed -> {
-                buf.putInt(26)
-                FfiConverterString.write(value.`r`, buf)
-                Unit
-            }
-            is SphinxException.SetBlockheightFailed -> {
-                buf.putInt(27)
-                FfiConverterString.write(value.`r`, buf)
-                Unit
-            }
             is SphinxException.ParseStateFailed -> {
-                buf.putInt(28)
+                buf.putInt(22)
                 FfiConverterString.write(value.`r`, buf)
                 Unit
             }
@@ -2122,35 +1941,6 @@ public object FfiConverterOptionalUByte: FfiConverterRustBuffer<UByte?> {
         } else {
             buf.put(1)
             FfiConverterUByte.write(value, buf)
-        }
-    }
-}
-
-
-
-
-public object FfiConverterOptionalUShort: FfiConverterRustBuffer<UShort?> {
-    override fun read(buf: ByteBuffer): UShort? {
-        if (buf.get().toInt() == 0) {
-            return null
-        }
-        return FfiConverterUShort.read(buf)
-    }
-
-    override fun allocationSize(value: UShort?): Int {
-        if (value == null) {
-            return 1
-        } else {
-            return 1 + FfiConverterUShort.allocationSize(value)
-        }
-    }
-
-    override fun write(value: UShort?, buf: ByteBuffer) {
-        if (value == null) {
-            buf.put(0)
-        } else {
-            buf.put(1)
-            FfiConverterUShort.write(value, buf)
         }
     }
 }
@@ -2536,15 +2326,6 @@ fun `makeAuthToken`(`ts`: UInt, `secret`: String): String {
 })
 }
 
-@Throws(SphinxException::class)
-
-fun `run`(`topic`: String, `args`: String, `state`: ByteArray, `msg1`: ByteArray, `expectedSequence`: UShort?): VlsResponse {
-    return FfiConverterTypeVlsResponse.lift(
-    rustCallWithError(SphinxException) { _status ->
-    _UniFFILib.INSTANCE.uniffi_sphinxrs_fn_func_run(FfiConverterString.lower(`topic`),FfiConverterString.lower(`args`),FfiConverterByteArray.lower(`state`),FfiConverterByteArray.lower(`msg1`),FfiConverterOptionalUShort.lower(`expectedSequence`),_status)
-})
-}
-
 
 fun `sha256`(`msg`: ByteArray): String {
     return FfiConverterString.lift(
@@ -2856,6 +2637,15 @@ fun `makeMediaTokenWithPrice`(`seed`: String, `uniqueTime`: String, `state`: Byt
     return FfiConverterString.lift(
     rustCallWithError(SphinxException) { _status ->
     _UniFFILib.INSTANCE.uniffi_sphinxrs_fn_func_make_media_token_with_price(FfiConverterString.lower(`seed`),FfiConverterString.lower(`uniqueTime`),FfiConverterByteArray.lower(`state`),FfiConverterString.lower(`host`),FfiConverterString.lower(`muid`),FfiConverterString.lower(`to`),FfiConverterUInt.lower(`expiry`),FfiConverterULong.lower(`price`),_status)
+})
+}
+
+@Throws(SphinxException::class)
+
+fun `requestInvoice`(`seed`: String, `uniqueTime`: String, `state`: ByteArray, `amtMsat`: ULong, `description`: String?): RunReturn {
+    return FfiConverterTypeRunReturn.lift(
+    rustCallWithError(SphinxException) { _status ->
+    _UniFFILib.INSTANCE.uniffi_sphinxrs_fn_func_request_invoice(FfiConverterString.lower(`seed`),FfiConverterString.lower(`uniqueTime`),FfiConverterByteArray.lower(`state`),FfiConverterULong.lower(`amtMsat`),FfiConverterOptionalString.lower(`description`),_status)
 })
 }
 

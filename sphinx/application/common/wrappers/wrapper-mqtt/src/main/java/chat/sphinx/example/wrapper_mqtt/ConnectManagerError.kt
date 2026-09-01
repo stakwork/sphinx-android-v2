@@ -11,7 +11,7 @@ sealed class ConnectManagerError {
     data class MqttConnectError(val error: String?): ConnectManagerError()
     object MqttClientError: ConnectManagerError()
     data class MqttInitError(val logs: String) : ConnectManagerError()
-    object SendMessageError: ConnectManagerError()
+    data class SendMessageError(val provisionalId: Long? = null): ConnectManagerError()
     object DeleteMessageError: ConnectManagerError()
     object JoinTribeError: ConnectManagerError()
     object CreateTribeError: ConnectManagerError()

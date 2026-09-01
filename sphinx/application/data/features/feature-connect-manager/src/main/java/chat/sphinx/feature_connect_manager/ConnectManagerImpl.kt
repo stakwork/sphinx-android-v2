@@ -4,6 +4,7 @@ import android.util.Base64
 import android.util.Log
 import chat.sphinx.example.concept_connect_manager.ConnectManager
 import chat.sphinx.example.concept_connect_manager.ConnectManagerListener
+import chat.sphinx.example.concept_connect_manager.pairTopicsWithPayloads
 import chat.sphinx.example.concept_connect_manager.model.OwnerInfo
 import chat.sphinx.example.concept_connect_manager.model.RestoreProgress
 import chat.sphinx.example.concept_connect_manager.model.RestoreState
@@ -216,6 +217,10 @@ class ConnectManagerImpl: ConnectManager()
                 this.userName = key
                 this.password = password.toCharArray()
                 this.socketFactory = sslContext?.socketFactory
+                // MqttMessage defaults to QoS 1; a send chunked into many payloads
+                // published in a tight loop can exceed Paho's default maxInflight
+                // of 10 and throw "too many publishes in progress".
+                this.maxInflight = 100
             }
 
             mqttClient?.connect(options, null, object : IMqttActionListener {
@@ -346,7 +351,8 @@ class ConnectManagerImpl: ConnectManager()
         rr: RunReturn,
         skipSettleTopic: Boolean = false,
         skipAsyncTopic: Boolean = false,
-        topic: String? = null
+        topic: String? = null,
+        provisionalId: Long? = null
     ) {
         if (mqttClient != null) {
             // Set updated state into db
@@ -557,10 +563,45 @@ class ConnectManagerImpl: ConnectManager()
                     }
                 }
 
-                rr.topics.forEachIndexed { index, topic ->
-                    val payload = rr.payloads.getOrElse(index) { ByteArray(0) }
-                    mqttClient?.publish(topic, MqttMessage(payload))
-                    Log.d("MQTT_MESSAGES", "=> published to $topic")
+                val pairedMessages = pairTopicsWithPayloads(rr.topics, rr.payloads)
+
+                if (pairedMessages.isFailure) {
+                    Log.e(
+                        "MQTT_MESSAGES",
+                        "Aborting publish, topic/payload size mismatch: " +
+                            "topics.size=${rr.topics.size}, payloads.size=${rr.payloads.size}"
+                    )
+                    notifyListeners {
+                        onConnectManagerError(ConnectManagerError.SendMessageError(provisionalId))
+                    }
+                    return@handleRegisterTopic
+                }
+
+                val messagesToPublish: List<Pair<String, ByteArray>> =
+                    pairedMessages.getOrDefault(emptyList())
+
+                if (mqttClient == null || !isMqttConnected) {
+                    Log.e(
+                        "MQTT_MESSAGES",
+                        "Aborting publish, MQTT client null or disconnected. " +
+                            "topics.size=${messagesToPublish.size}, topics=${rr.topics.joinToString()}"
+                    )
+                    notifyListeners {
+                        onConnectManagerError(ConnectManagerError.SendMessageError(provisionalId))
+                    }
+                    return@handleRegisterTopic
+                }
+
+                messagesToPublish.forEach { (topic, payload) ->
+                    try {
+                        mqttClient?.publish(topic, MqttMessage(payload))
+                        Log.d("MQTT_MESSAGES", "=> published to $topic")
+                    } catch (e: MqttException) {
+                        Log.e("MQTT_MESSAGES", "Failed publishing to $topic: ${e.message}")
+                        notifyListeners {
+                            onConnectManagerError(ConnectManagerError.SendMessageError(provisionalId))
+                        }
+                    }
                 }
             }
         } else {
@@ -1682,7 +1723,19 @@ class ConnectManagerImpl: ConnectManager()
                 convertSatsToMillisats(nnAmount),
                 isTribe
             )
-            handleRunReturn(message)
+            Log.d(
+                "MQTT_MESSAGES",
+                "send returned: topics.size=${message.topics.size}, " +
+                    "payloads.size=${message.payloads.size}, msgs.size=${message.msgs.size}"
+            )
+            if (message.msgs.size > 1) {
+                Log.w(
+                    "MQTT_MESSAGES",
+                    "send returned ${message.msgs.size} msgs; only the first is " +
+                        "reconciled (tag/uuid/paymentHash) - capture for follow-up"
+                )
+            }
+            handleRunReturn(message, provisionalId = provisionalId)
 
             message.msgs.firstOrNull()?.let { sentMessage ->
                 sentMessage.paymentHash?.let { paymentHash ->
@@ -1700,7 +1753,7 @@ class ConnectManagerImpl: ConnectManager()
 
         } catch (e: Exception) {
             notifyListeners {
-                onConnectManagerError(ConnectManagerError.SendMessageError)
+                onConnectManagerError(ConnectManagerError.SendMessageError(provisionalId))
             }
             Log.e("MQTT_MESSAGES", "send ${e.message}")
         }

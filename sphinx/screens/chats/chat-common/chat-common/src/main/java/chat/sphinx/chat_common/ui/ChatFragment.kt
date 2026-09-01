@@ -16,7 +16,6 @@ import android.text.Editable
 import android.text.InputFilter
 import android.text.Spannable
 import android.text.SpannableString
-import android.text.Spanned
 import android.text.TextPaint
 import android.text.TextWatcher
 import android.text.style.BackgroundColorSpan
@@ -138,6 +137,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
+
+// Generous ceiling for the chat composer text field. This is a pathological-input guard
+// against runaway pastes, NOT a protocol/byte limit: it carries no overhead arithmetic
+// and applies identically to plain text, attachment captions, replies, and thread replies.
+private const val COMPOSER_MAX_CHARS = 20_000
 
 abstract class ChatFragment<
         VB: ViewBinding,
@@ -407,47 +411,11 @@ abstract class ChatFragment<
         footerBinding.apply {
             insetterActivity.addNavigationBarPadding(root)
 
-            editTextChatFooter.filters = arrayOf<InputFilter>(object : InputFilter {
-                override fun filter(
-                    source: CharSequence,
-                    start: Int,
-                    end: Int,
-                    dest: Spanned,
-                    dstart: Int,
-                    dend: Int
-                ): CharSequence {
-                    val currentText = dest.toString()
-                    val proposedText = currentText.substring(0, dstart) + source.subSequence(start, end) + currentText.substring(dend)
-
-                    val contentBytes = 18
-                    val offsetBytes = 360
-                    val attachmentBytes = 389
-                    val replyBytes = 84
-                    val threadBytes = 84
-
-                    var bytes = proposedText.toByteArray().size + contentBytes + offsetBytes
-
-                    if (sendMessageBuilder.isSendingAttachment()) {
-                        bytes += attachmentBytes
-                    }
-
-                    if (sendMessageBuilder.isReplying()) {
-                        bytes += replyBytes
-                    }
-
-                    if (sendMessageBuilder.isThreadMsg()) {
-                        bytes += threadBytes
-                    }
-                    
-                    return if (bytes > 869) {
-                        // If the proposed text exceeds the limit, return an empty string to prevent the change
-                        ""
-                    } else {
-                        // If the proposed text does not exceed the limit, allow the change
-                        source.subSequence(start, end)
-                    }
-                }
-            })
+            // Generous guard against runaway pastes. This is NOT a protocol/byte limit and
+            // carries no overhead arithmetic: the obsolete 869-byte cap (which silently
+            // dropped keystrokes and could wipe long drafts on programmatic setText) is
+            // gone. Applies identically to plain text, captions, replies, and thread replies.
+            editTextChatFooter.filters = arrayOf(InputFilter.LengthFilter(COMPOSER_MAX_CHARS))
 
             textViewChatFooterSend.setOnClickListener {
                 lifecycleScope.launch(viewModel.mainImmediate) {

@@ -252,7 +252,11 @@ internal class DashboardFragment : MotionLayoutFragment<
                 viewPagerDashboardTabs.currentItem = viewModel.getCurrentPagePosition()
             } else
             {
-                viewPagerDashboardTabs.setCurrentItem(DashboardFragmentsAdapter.FRIENDS_TAB_POSITION,false)
+                // TRIBES_TAB_POSITION resolves to 0, so setCurrentItem is a no-op and
+                // onPageSelected never fires. Explicitly update the ViewModel state so
+                // the Tribes tab is highlighted immediately on first render.
+                viewModel.updateTabsState(tribesActive = true)
+                viewPagerDashboardTabs.setCurrentItem(DashboardFragmentsAdapter.TRIBES_TAB_POSITION, false)
             }
 
         }

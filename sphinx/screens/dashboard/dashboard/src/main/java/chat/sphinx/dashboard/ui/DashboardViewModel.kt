@@ -1360,8 +1360,8 @@ internal class DashboardViewModel @Inject constructor(
                 } else {
                     DashboardTabsViewState.TabsState(
                         feedActive = feedActive ?: false,
-                        friendsActive = friendsActive ?: true,
-                        tribesActive = tribesActive ?: false,
+                        friendsActive = friendsActive ?: false,
+                        tribesActive = tribesActive ?: true,
                         friendsBadgeVisible = friendsBadgeVisible ?: false,
                         tribesBadgeVisible = tribesBadgeVisible ?: false
                     )
@@ -1383,7 +1383,7 @@ internal class DashboardViewModel @Inject constructor(
                 currentState.tribesActive -> {
                     DashboardFragmentsAdapter.TRIBES_TAB_POSITION
                 }
-                else -> DashboardFragmentsAdapter.FRIENDS_TAB_POSITION
+                else -> DashboardFragmentsAdapter.TRIBES_TAB_POSITION
             }
         }
         return DashboardFragmentsAdapter.FIRST_INIT

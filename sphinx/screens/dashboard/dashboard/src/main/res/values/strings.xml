@@ -120,6 +120,7 @@
     <string name="dashboard_feed_tab_name">Feed</string>
     <string name="dashboard_friends_tab_name">Friends</string>
     <string name="dashboard_tribes_tab_name">Tribes</string>
+    <string name="dashboard_workspaces_tab_name">Workspaces</string>
 
     <string name="all">All</string>
     <string name="listen">Listen</string>

@@ -122,11 +122,11 @@ internal class OnBoardConnectingViewModel @Inject constructor(
     }
 
     fun setSignerManager(signerManager: SignerManager) {
-        signerManager.setWalletDataHandler(walletDataHandler)
-        signerManager.setMoshi(moshi)
+//        signerManager.setWalletDataHandler(walletDataHandler)
+//        signerManager.setMoshi(moshi)
 //        signerManager.setNetworkQueryContact(networkQueryContact)
 
-        this.signerManager = signerManager
+//        this.signerManager = signerManager
     }
 
     private fun storeUserState(state: String) {

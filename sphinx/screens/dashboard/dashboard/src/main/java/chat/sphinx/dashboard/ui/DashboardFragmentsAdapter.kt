@@ -16,17 +16,34 @@ class DashboardFragmentsAdapter(
 ) : FragmentStateAdapter(fragment) {
 
     companion object {
-        const val FEED_TAB_POSITION = 0
-        const val FRIENDS_TAB_POSITION = 1
-        const val TRIBES_TAB_POSITION = 2
-        const val FIRST_INIT = 3
+        const val TRIBES_TAB_POSITION  = 0   // was 2
+        const val FRIENDS_TAB_POSITION = 1   // unchanged
+        const val FEED_TAB_POSITION    = 2   // was 0
+        const val FIRST_INIT           = 3
+
+        const val TRIBES_ITEM_ID  = 100L
+        const val FRIENDS_ITEM_ID = 101L
+        const val FEED_ITEM_ID    = 102L
 
         val TAB_TITLES = arrayOf(
-            R.string.dashboard_feed_tab_name,
-            R.string.dashboard_friends_tab_name,
-            R.string.dashboard_tribes_tab_name,
+            R.string.dashboard_tribes_tab_name,   // position 0
+            R.string.dashboard_friends_tab_name,  // position 1
+            R.string.dashboard_feed_tab_name,     // position 2
         )
+
+        fun itemIdForPosition(position: Int): Long = when (position) {
+            TRIBES_TAB_POSITION  -> TRIBES_ITEM_ID
+            FRIENDS_TAB_POSITION -> FRIENDS_ITEM_ID
+            FEED_TAB_POSITION    -> FEED_ITEM_ID
+            else                 -> position.toLong()
+        }
+
+        fun containsItemId(itemId: Long): Boolean = itemId in TRIBES_ITEM_ID..FEED_ITEM_ID
     }
+
+    override fun getItemId(position: Int): Long = itemIdForPosition(position)
+
+    override fun containsItem(itemId: Long): Boolean = containsItemId(itemId)
 
     override fun createFragment(position: Int): Fragment {
         return when (position) {

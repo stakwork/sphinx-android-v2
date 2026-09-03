@@ -16,17 +16,26 @@ class DashboardFragmentsAdapter(
 ) : FragmentStateAdapter(fragment) {
 
     companion object {
-        const val FEED_TAB_POSITION = 0
+        const val TRIBES_TAB_POSITION = 0
         const val FRIENDS_TAB_POSITION = 1
-        const val TRIBES_TAB_POSITION = 2
+        const val FEED_TAB_POSITION = 2
         const val FIRST_INIT = 3
 
         val TAB_TITLES = arrayOf(
-            R.string.dashboard_feed_tab_name,
-            R.string.dashboard_friends_tab_name,
             R.string.dashboard_tribes_tab_name,
+            R.string.dashboard_friends_tab_name,
+            R.string.dashboard_feed_tab_name,
         )
     }
+
+    override fun getItemId(position: Int): Long = when (position) {
+        TRIBES_TAB_POSITION -> 100L
+        FRIENDS_TAB_POSITION -> 101L
+        FEED_TAB_POSITION -> 102L
+        else -> super.getItemId(position)
+    }
+
+    override fun containsItem(itemId: Long): Boolean = itemId in 100L..102L
 
     override fun createFragment(position: Int): Fragment {
         return when (position) {

@@ -4,6 +4,7 @@
     <style name="DashboardTab">
         <item name="android:fontFamily">@font/roboto_medium</item>
         <item name="android:lines">1</item>
+        <item name="android:ellipsize">end</item>
         <item name="textAllCaps">false</item>
         <item name="android:textAllCaps">false</item>
         <item name="android:textSize">@dimen/default_text_size_tab</item>

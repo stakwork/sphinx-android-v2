@@ -28,6 +28,7 @@
         app:tabSelectedTextColor="@color/text"
         app:tabRippleColor="@null"
         app:tabTextAppearance="@style/DashboardTab"
+        app:tabMode="scrollable"
         app:layout_constraintTop_toBottomOf="@+id/layout_dashboard_header" />
 
     <androidx.swiperefreshlayout.widget.SwipeRefreshLayout

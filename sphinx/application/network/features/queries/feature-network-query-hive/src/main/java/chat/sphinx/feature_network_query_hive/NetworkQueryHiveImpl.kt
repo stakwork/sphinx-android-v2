@@ -22,7 +22,7 @@ class NetworkQueryHiveImpl(
     override fun authenticateWithHive(
         token: String,
         pubkey: String,
-        timestamp: String
+        timestamp: Long
     ): Flow<LoadResponse<HiveAuthenticationTokenDto, ResponseError>> =
         networkCall.post(
             url = HIVE_BASE_URL + ENDPOINT_AUTH,

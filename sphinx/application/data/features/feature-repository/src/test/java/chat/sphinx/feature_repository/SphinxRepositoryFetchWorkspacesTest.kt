@@ -42,6 +42,12 @@ private class FakeStorage2 : io.matthewnelson.concept_authentication.data.Authen
 
 // ---------------------------------------------------------------------------
 // Testable shim – exposes the fetchWorkspaces() surface without full DI.
+//
+// Mirrors SphinxRepository.fetchWorkspaces(), which now returns a
+// Response<List<Workspace>, ResponseError> (the same success/error signaling
+// convention used elsewhere in RepositoryDashboard, e.g. authorizeStakwork /
+// redeemSats / savePeopleProfile) so that "fetch succeeded with zero
+// workspaces" is distinguishable from "fetch failed".
 // ---------------------------------------------------------------------------
 
 private class TestableRepo(
@@ -71,7 +77,7 @@ private class TestableRepo(
         retrieveHiveToken()?.let { return true }
         val signedToken = getSignedTs() ?: return false
         val pubkey = getPubKey() ?: return false
-        val timestamp = System.currentTimeMillis().toString()
+        val timestamp = System.currentTimeMillis()
         var success = false
         hive.authenticateWithHive(signedToken, pubkey, timestamp).collect { response ->
             when (response) {
@@ -89,7 +95,7 @@ private class TestableRepo(
 
     private val hiveAuthMutex = kotlinx.coroutines.sync.Mutex()
 
-    suspend fun fetchWorkspaces(): List<Workspace> {
+    suspend fun fetchWorkspaces(): Response<List<Workspace>, ResponseError> {
         return try {
             val token = retrieveHiveToken()
             if (token != null) {
@@ -102,32 +108,48 @@ private class TestableRepo(
                         else -> {}
                     }
                 }
-                if (!failed && result != null) return result!!
+                if (!failed && result != null) return Response.Success(result!!)
                 hiveAuthMutex.withLock {
                     clearHiveToken()
                     authenticateWithHive()
                 }
-                val newToken = retrieveHiveToken() ?: return emptyList()
+                val newToken = retrieveHiveToken()
+                    ?: return Response.Error(ResponseError("Failed to authenticate with Hive"))
+                var retryFailed = false
                 var retryResult: List<Workspace> = emptyList()
                 hive.getWorkspaces(newToken).collect { retryResponse ->
-                    if (retryResponse is Response.Success) {
-                        retryResult = retryResponse.value.workspaces.map { it.toDomain() }
+                    when (retryResponse) {
+                        is Response.Success -> retryResult = retryResponse.value.workspaces.map { it.toDomain() }
+                        is Response.Error -> retryFailed = true
+                        else -> {}
                     }
                 }
-                retryResult
+                if (retryFailed) {
+                    return Response.Error(ResponseError("Failed to fetch workspaces"))
+                }
+                Response.Success(retryResult)
             } else {
-                hiveAuthMutex.withLock { authenticateWithHive() }
-                val newToken = retrieveHiveToken() ?: return emptyList()
+                val authenticated = hiveAuthMutex.withLock { authenticateWithHive() }
+                val newToken = retrieveHiveToken()
+                if (!authenticated || newToken == null) {
+                    return Response.Error(ResponseError("Failed to authenticate with Hive"))
+                }
+                var failed = false
                 var result: List<Workspace> = emptyList()
                 hive.getWorkspaces(newToken).collect { response ->
-                    if (response is Response.Success) {
-                        result = response.value.workspaces.map { it.toDomain() }
+                    when (response) {
+                        is Response.Success -> result = response.value.workspaces.map { it.toDomain() }
+                        is Response.Error -> failed = true
+                        else -> {}
                     }
                 }
-                result
+                if (failed) {
+                    return Response.Error(ResponseError("Failed to fetch workspaces"))
+                }
+                Response.Success(result)
             }
         } catch (e: Exception) {
-            emptyList()
+            Response.Error(ResponseError("Failed to fetch workspaces", e))
         }
     }
 }
@@ -142,6 +164,9 @@ private fun makeWorkspaceDto(id: String = "ws-1", name: String = "My Workspace")
 private fun successWorkspaces(vararg dtos: WorkspaceDto): LoadResponse<WorkspacesListDto, ResponseError> =
     Response.Success(WorkspacesListDto(workspaces = dtos.toList()))
 
+private fun emptySuccessWorkspaces(): LoadResponse<WorkspacesListDto, ResponseError> =
+    Response.Success(WorkspacesListDto(workspaces = emptyList()))
+
 private fun errorResponse(): LoadResponse<WorkspacesListDto, ResponseError> =
     Response.Error(ResponseError("network error"))
 
@@ -150,6 +175,14 @@ private fun authSuccess(token: String): LoadResponse<HiveAuthenticationTokenDto,
 
 private fun authError(): LoadResponse<HiveAuthenticationTokenDto, ResponseError> =
     Response.Error(ResponseError("auth error"))
+
+// Helper: unwrap a Response.Success, failing the test with a clear message otherwise.
+private fun Response<List<Workspace>, ResponseError>.assertSuccess(): List<Workspace> {
+    return when (this) {
+        is Response.Success -> this.value
+        is Response.Error -> throw AssertionError("Expected Response.Success but got Response.Error(${this.cause.message})")
+    }
+}
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -171,7 +204,7 @@ class SphinxRepositoryFetchWorkspacesTest {
         override fun authenticateWithHive(
             token: String,
             pubkey: String,
-            timestamp: String,
+            timestamp: Long,
         ): Flow<LoadResponse<HiveAuthenticationTokenDto, ResponseError>> = flow {
             authCallCount++
             emit(authResponse)
@@ -229,7 +262,8 @@ class SphinxRepositoryFetchWorkspacesTest {
         storeValidToken(repo, "cached-jwt")
         workspacesResponses.add(successWorkspaces(makeWorkspaceDto()))
 
-        val result = repo.fetchWorkspaces()
+        val response = repo.fetchWorkspaces()
+        val result = response.assertSuccess()
 
         assertEquals(1, workspacesCallCount)
         assertEquals(0, authCallCount)
@@ -247,7 +281,8 @@ class SphinxRepositoryFetchWorkspacesTest {
         // No token stored
         workspacesResponses.add(successWorkspaces(makeWorkspaceDto("ws-2", "Workspace 2")))
 
-        val result = repo.fetchWorkspaces()
+        val response = repo.fetchWorkspaces()
+        val result = response.assertSuccess()
 
         assertEquals(1, authCallCount)
         assertEquals(1, workspacesCallCount)
@@ -265,7 +300,8 @@ class SphinxRepositoryFetchWorkspacesTest {
         storeExpiredToken(repo, "expired-jwt")
         workspacesResponses.add(successWorkspaces(makeWorkspaceDto("ws-3")))
 
-        val result = repo.fetchWorkspaces()
+        val response = repo.fetchWorkspaces()
+        val result = response.assertSuccess()
 
         // retrieveHiveToken() returns null for expired token → enters no-token branch
         assertEquals(1, authCallCount)
@@ -285,7 +321,8 @@ class SphinxRepositoryFetchWorkspacesTest {
         workspacesResponses.add(errorResponse())
         workspacesResponses.add(successWorkspaces(makeWorkspaceDto("ws-retry")))
 
-        val result = repo.fetchWorkspaces()
+        val response = repo.fetchWorkspaces()
+        val result = response.assertSuccess()
 
         // getWorkspaces called exactly twice
         assertEquals(2, workspacesCallCount)
@@ -297,23 +334,78 @@ class SphinxRepositoryFetchWorkspacesTest {
     }
 
     // -----------------------------------------------------------------------
-    // Test 5: Re-auth failure on retry path → returns emptyList()
+    // Test 5: Re-auth failure on retry path → returns a real failure signal,
+    // NOT an empty success list.
     // -----------------------------------------------------------------------
 
     @Test
-    fun `re-auth failure after network error returns emptyList`() = runBlocking {
+    fun `re-auth failure after network error returns Response Error not an empty success`() = runBlocking {
         val repo = makeRepo()
         storeValidToken(repo, "stale-jwt")
         authResponse = authError()
         workspacesResponses.add(errorResponse())
 
-        val result = repo.fetchWorkspaces()
+        val response = repo.fetchWorkspaces()
 
-        assertTrue(result.isEmpty())
+        assertTrue(response is Response.Error)
         assertEquals(1, storage.removeCallCount) // clearHiveToken was called
         assertEquals(1, authCallCount)
         // getWorkspaces only called once (retry skipped because newToken is null)
         assertEquals(1, workspacesCallCount)
+    }
+
+    // -----------------------------------------------------------------------
+    // Test 5b: Retry itself failing (re-auth succeeds but getWorkspaces still
+    // errors) → also a real failure signal, not an empty success.
+    // -----------------------------------------------------------------------
+
+    @Test
+    fun `retry getWorkspaces failure after successful re-auth returns Response Error`() = runBlocking {
+        val repo = makeRepo()
+        storeValidToken(repo, "stale-jwt")
+        authResponse = authSuccess("fresh-jwt")
+        workspacesResponses.add(errorResponse())
+        workspacesResponses.add(errorResponse())
+
+        val response = repo.fetchWorkspaces()
+
+        assertTrue(response is Response.Error)
+        assertEquals(2, workspacesCallCount)
+        assertEquals(1, authCallCount)
+    }
+
+    // -----------------------------------------------------------------------
+    // Test 5c: No stored token and authentication fails outright → Response.Error,
+    // not an empty success list.
+    // -----------------------------------------------------------------------
+
+    @Test
+    fun `authentication failure with no stored token returns Response Error`() = runBlocking {
+        val repo = TestableRepo(storage = storage, getSignedTs = { null }, hive = fakeHive)
+        // No token stored, and getSignedTs() returns null so authenticateWithHive() fails
+
+        val response = repo.fetchWorkspaces()
+
+        assertTrue(response is Response.Error)
+        assertEquals(0, workspacesCallCount)
+    }
+
+    // -----------------------------------------------------------------------
+    // Test 5d: A genuine empty list from the server is a real success — this
+    // MUST be distinguishable from the failure cases above.
+    // -----------------------------------------------------------------------
+
+    @Test
+    fun `genuine zero-workspaces response is Response Success with an empty list`() = runBlocking {
+        val repo = makeRepo()
+        storeValidToken(repo, "valid-jwt")
+        workspacesResponses.add(emptySuccessWorkspaces())
+
+        val response = repo.fetchWorkspaces()
+        val result = response.assertSuccess()
+
+        assertTrue(response is Response.Success)
+        assertTrue(result.isEmpty())
     }
 
     // -----------------------------------------------------------------------
@@ -374,7 +466,8 @@ class SphinxRepositoryFetchWorkspacesTest {
         )
         workspacesResponses.add(successWorkspaces(makeWorkspaceDto("ws-fresh")))
 
-        val result = repo.fetchWorkspaces()
+        val response = repo.fetchWorkspaces()
+        val result = response.assertSuccess()
 
         // Token was treated as expired → re-auth triggered
         assertEquals(1, authCallCount)
@@ -392,7 +485,8 @@ class SphinxRepositoryFetchWorkspacesTest {
         storage.putString(SphinxRepository.HIVE_AUTHENTICATION_TOKEN, "legacy-jwt")
         workspacesResponses.add(successWorkspaces(makeWorkspaceDto("ws-legacy")))
 
-        val result = repo.fetchWorkspaces()
+        val response = repo.fetchWorkspaces()
+        val result = response.assertSuccess()
 
         // Should use the token directly without re-authing
         assertEquals(0, authCallCount)
@@ -415,7 +509,8 @@ class SphinxRepositoryFetchWorkspacesTest {
             )
         )
 
-        val result = repo.fetchWorkspaces()
+        val response = repo.fetchWorkspaces()
+        val result = response.assertSuccess()
 
         assertEquals(3, result.size)
         assertEquals("ws-a", result[0].id)

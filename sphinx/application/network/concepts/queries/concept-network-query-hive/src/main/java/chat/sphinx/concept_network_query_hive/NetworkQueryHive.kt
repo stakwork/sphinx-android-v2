@@ -11,7 +11,7 @@ abstract class NetworkQueryHive {
     abstract fun authenticateWithHive(
         token: String,
         pubkey: String,
-        timestamp: String
+        timestamp: Long
     ): Flow<LoadResponse<HiveAuthenticationTokenDto, ResponseError>>
 
     abstract fun getWorkspaces(

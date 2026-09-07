@@ -7,5 +7,5 @@ import com.squareup.moshi.JsonClass
 data class HiveAuthRequestDto(
     @Json(name = "token") val token: String,
     @Json(name = "pubkey") val pubkey: String,
-    @Json(name = "timestamp") val timestamp: String
+    @Json(name = "timestamp") val timestamp: Long
 )

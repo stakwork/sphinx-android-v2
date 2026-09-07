@@ -72,6 +72,17 @@ internal class WorkspacesFragment : SideEffectFragment<
                 workspaceAdapter?.submitList(workspaces)
             }
         }
+
+        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+            viewModel.error.collect { hasError ->
+                if (hasError) {
+                    ChatListSideEffect.AlertRetryFetchWorkspaces(
+                        onRetry = { viewModel.loadWorkspaces() },
+                        onDismiss = { viewModel.dismissError() }
+                    ).execute(binding.root.context)
+                }
+            }
+        }
     }
 
     override suspend fun onViewStateFlowCollect(viewState: WorkspacesViewState) {

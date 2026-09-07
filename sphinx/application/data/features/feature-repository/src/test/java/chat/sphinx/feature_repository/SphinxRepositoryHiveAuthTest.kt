@@ -2,6 +2,7 @@ package chat.sphinx.feature_repository
 
 import chat.sphinx.concept_network_query_hive.NetworkQueryHive
 import chat.sphinx.concept_network_query_hive.model.HiveAuthenticationTokenDto
+import chat.sphinx.concept_network_query_hive.model.WorkspacesListDto
 import chat.sphinx.kotlin_response.LoadResponse
 import chat.sphinx.kotlin_response.Response
 import chat.sphinx.kotlin_response.ResponseError
@@ -63,7 +64,7 @@ class TestableSphinxRepository(
 
         val signedToken = getSignedTs() ?: return false
         val pubkey = getPubKey() ?: return false
-        val timestamp = System.currentTimeMillis().toString()
+        val timestamp = System.currentTimeMillis()
 
         var success = false
         networkQueryHive.authenticateWithHive(signedToken, pubkey, timestamp)
@@ -101,9 +102,15 @@ class SphinxRepositoryHiveAuthTest {
         override fun authenticateWithHive(
             token: String,
             pubkey: String,
-            timestamp: String,
+            timestamp: Long,
         ): Flow<LoadResponse<HiveAuthenticationTokenDto, ResponseError>> = flow {
             emit(networkResponse)
+        }
+
+        override fun getWorkspaces(
+            authToken: String,
+        ): Flow<LoadResponse<WorkspacesListDto, ResponseError>> = flow {
+            emit(Response.Error(ResponseError("not used in this test")))
         }
     }
 

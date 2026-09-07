@@ -1314,6 +1314,25 @@ abstract class SphinxRepository(
     }
 
     override fun onConnectManagerError(error: ConnectManagerError) {
+        if (error is ConnectManagerError.SendMessageError) {
+            val messageId: MessageId? = error.provisionalId?.let { MessageId(it) }
+            // Only locally-minted provisional (negative-id) rows may be marked Failed;
+            // refuse to mutate any other id before touching the database.
+            if (messageId?.isProvisionalMessage == true) {
+                applicationScope.launch(io) {
+                    messageLock.withLock {
+                        try {
+                            coreDB.getSphinxDatabaseQueries().messageUpdateStatus(
+                                MessageStatus.Failed,
+                                messageId
+                            )
+                        } catch (e: Exception) {
+                            LOG.e(TAG, "Failed to mark provisional message as Failed", e)
+                        }
+                    }
+                }
+            }
+        }
         connectManagerErrorState.value = error
     }
 

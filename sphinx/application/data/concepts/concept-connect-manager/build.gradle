@@ -11,4 +11,6 @@ dependencies {
 
 
     implementation deps.kotlin.coroutinesCore
+
+    testImplementation testDeps.junit
 }

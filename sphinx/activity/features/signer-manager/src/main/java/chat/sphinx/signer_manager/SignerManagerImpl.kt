@@ -34,7 +34,7 @@ import org.eclipse.paho.client.mqttv3.*
 import org.json.JSONException
 import org.json.JSONObject
 import uniffi.sphinxrs.Keys
-import uniffi.sphinxrs.VlsResponse
+//import uniffi.sphinxrs.VlsResponse
 import uniffi.sphinxrs.deriveSharedSecret
 import uniffi.sphinxrs.encrypt
 import uniffi.sphinxrs.makeAuthToken
@@ -398,36 +398,36 @@ class SignerManagerImpl(
     }
 
     private fun processMessage(topic: String, payload: ByteArray) {
-        launch {
-            val (args, state) = argsAndState()
-
-            val ret: VlsResponse? =
-                try {
-                    uniffi.sphinxrs.run(
-                        topic,
-                        args,
-                        state,
-                        payload,
-                        retrieveSequence(),
-                    )
-                } catch (e: Exception) {
-                    if (e.localizedMessage?.contains(VLS_ERROR) == true) {
-                        restartMQTT()
-                    }
-                    null
-                }
-
-            ret?.let {
-                storeMutations(it.state)
-
-                val clientId = retrieveOrGenerateClientId()
-                mqttClient?.publish("${clientId}/${it.topic}", MqttMessage(it.bytes))
-
-                if (topic.contains(SignerTopics.VLS)) {
-                    storeAndIncrementSequence(ret.sequence)
-                }
-            }
-        }
+//        launch {
+//            val (args, state) = argsAndState()
+//
+//            val ret: VlsResponse? =
+//                try {
+//                    uniffi.sphinxrs.run(
+//                        topic,
+//                        args,
+//                        state,
+//                        payload,
+//                        retrieveSequence(),
+//                    )
+//                } catch (e: Exception) {
+//                    if (e.localizedMessage?.contains(VLS_ERROR) == true) {
+//                        restartMQTT()
+//                    }
+//                    null
+//                }
+//
+//            ret?.let {
+//                storeMutations(it.state)
+//
+//                val clientId = retrieveOrGenerateClientId()
+//                mqttClient?.publish("${clientId}/${it.topic}", MqttMessage(it.bytes))
+//
+//                if (topic.contains(SignerTopics.VLS)) {
+//                    storeAndIncrementSequence(ret.sequence)
+//                }
+//            }
+//        }
     }
 
     private suspend fun argsAndState(): Pair<String, ByteArray> {

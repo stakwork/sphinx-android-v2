@@ -82,6 +82,25 @@ sealed class ChatListSideEffect: SideEffect<Context>() {
         }
     }
 
+    class AlertRetryFetchWorkspaces(
+        private val onRetry: () -> Unit,
+        private val onDismiss: () -> Unit = {}
+    ): ChatListSideEffect() {
+        override suspend fun execute(value: Context) {
+            val builder = AlertDialog.Builder(value, R_common.style.AlertDialogTheme)
+            builder.setTitle(value.getString(R.string.alert_workspaces_load_failed_title))
+            builder.setMessage(value.getString(R.string.alert_workspaces_load_failed_message))
+            builder.setNegativeButton(value.getString(R.string.alert_workspaces_dismiss)) { _, _ ->
+                onDismiss()
+            }
+            builder.setPositiveButton(value.getString(R.string.alert_workspaces_retry)) { _, _ ->
+                onRetry()
+            }
+            builder.setCancelable(false)
+            builder.show()
+        }
+    }
+
     @Suppress("NOTHING_TO_INLINE")
     inline fun String.toCapitalized(): String {
         return this.replaceFirstChar {

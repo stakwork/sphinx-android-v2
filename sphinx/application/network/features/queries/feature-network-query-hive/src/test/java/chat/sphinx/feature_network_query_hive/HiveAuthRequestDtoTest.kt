@@ -19,7 +19,7 @@ class HiveAuthRequestDtoTest {
         val dto = HiveAuthRequestDto(
             token = "signed-token-123",
             pubkey = "pubkey-abc",
-            timestamp = "1700000000000"
+            timestamp = 1700000000000L
         )
         val adapter = moshi.adapter(HiveAuthRequestDto::class.java)
         val json = adapter.toJson(dto)
@@ -32,7 +32,9 @@ class HiveAuthRequestDtoTest {
         // Values must be correct
         assert(json.contains("signed-token-123"))
         assert(json.contains("pubkey-abc"))
-        assert(json.contains("1700000000000"))
+        // timestamp must be serialized as a bare JSON number, not a quoted string
+        assert(json.contains(":1700000000000"))
+        assertFalse(json.contains("\"1700000000000\""))
         // No null values
         assertFalse(json.contains("null"))
     }
@@ -42,7 +44,7 @@ class HiveAuthRequestDtoTest {
         val dto = HiveAuthRequestDto(
             token = "t",
             pubkey = "p",
-            timestamp = "123"
+            timestamp = 123L
         )
         val adapter = moshi.adapter(HiveAuthRequestDto::class.java)
         val json = adapter.toJson(dto)
@@ -51,18 +53,21 @@ class HiveAuthRequestDtoTest {
         assertNotNull(parsed)
         assertEquals("t", parsed!!.token)
         assertEquals("p", parsed.pubkey)
-        assertEquals("123", parsed.timestamp)
+        assertEquals(123L, parsed.timestamp)
+        // timestamp must be a bare JSON number, not a quoted string
+        assert(json.contains(":123"))
+        assertFalse(json.contains("\"123\""))
     }
 
     @Test
     fun `HiveAuthRequestDto deserializes from JSON correctly`() {
-        val json = """{"token":"signed-token","pubkey":"mypubkey","timestamp":"9999999"}"""
+        val json = """{"token":"signed-token","pubkey":"mypubkey","timestamp":9999999}"""
         val adapter = moshi.adapter(HiveAuthRequestDto::class.java)
         val dto = adapter.fromJson(json)
 
         assertNotNull(dto)
         assertEquals("signed-token", dto!!.token)
         assertEquals("mypubkey", dto.pubkey)
-        assertEquals("9999999", dto.timestamp)
+        assertEquals(9999999L, dto.timestamp)
     }
 }

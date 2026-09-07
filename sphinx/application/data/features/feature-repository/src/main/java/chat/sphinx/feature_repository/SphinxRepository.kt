@@ -276,7 +276,7 @@ abstract class SphinxRepository(
 
         val signedToken = connectManager.getSignedTimeStamps() ?: return false
         val pubkey = accountOwner.value?.nodePubKey?.value ?: return false
-        val timestamp = System.currentTimeMillis().toString()
+        val timestamp = System.currentTimeMillis()
 
         var success = false
         networkQueryHive.authenticateWithHive(signedToken, pubkey, timestamp)
@@ -325,7 +325,7 @@ abstract class SphinxRepository(
         authenticationStorage.removeString(HIVE_AUTHENTICATION_TOKEN)
     }
 
-    override suspend fun fetchWorkspaces(): List<Workspace> {
+    override suspend fun fetchWorkspaces(): Response<List<Workspace>, ResponseError> {
         return try {
             val token = retrieveHiveToken()
             if (token != null) {
@@ -340,34 +340,52 @@ abstract class SphinxRepository(
                         else -> {}
                     }
                 }
-                if (!failed && result != null) return result!!
+                if (!failed && result != null) return Response.Success(result!!)
                 // Network/auth error with the current token — clear it and re-auth once.
                 hiveAuthMutex.withLock {
                     clearHiveToken()
                     authenticateWithHive()
                 }
-                val newToken = retrieveHiveToken() ?: return emptyList()
+                val newToken = retrieveHiveToken()
+                    ?: return Response.Error(ResponseError("Failed to authenticate with Hive"))
+                var retryFailed = false
                 var retryResult: List<Workspace> = emptyList()
                 networkQueryHive.getWorkspaces(newToken).collect { retryResponse ->
-                    if (retryResponse is Response.Success) {
-                        retryResult = retryResponse.value.workspaces.map { it.toDomain() }
+                    when (retryResponse) {
+                        is Response.Success ->
+                            retryResult = retryResponse.value.workspaces.map { it.toDomain() }
+                        is Response.Error -> retryFailed = true
+                        else -> {}
                     }
                 }
-                retryResult
+                if (retryFailed) {
+                    return Response.Error(ResponseError("Failed to fetch workspaces"))
+                }
+                Response.Success(retryResult)
             } else {
                 // No valid token — authenticate first, then fetch.
-                hiveAuthMutex.withLock { authenticateWithHive() }
-                val newToken = retrieveHiveToken() ?: return emptyList()
+                val authenticated = hiveAuthMutex.withLock { authenticateWithHive() }
+                val newToken = retrieveHiveToken()
+                if (!authenticated || newToken == null) {
+                    return Response.Error(ResponseError("Failed to authenticate with Hive"))
+                }
+                var failed = false
                 var result: List<Workspace> = emptyList()
                 networkQueryHive.getWorkspaces(newToken).collect { response ->
-                    if (response is Response.Success) {
-                        result = response.value.workspaces.map { it.toDomain() }
+                    when (response) {
+                        is Response.Success ->
+                            result = response.value.workspaces.map { it.toDomain() }
+                        is Response.Error -> failed = true
+                        else -> {}
                     }
                 }
-                result
+                if (failed) {
+                    return Response.Error(ResponseError("Failed to fetch workspaces"))
+                }
+                Response.Success(result)
             }
         } catch (e: Exception) {
-            emptyList()
+            Response.Error(ResponseError("Failed to fetch workspaces", e))
         }
     }
 

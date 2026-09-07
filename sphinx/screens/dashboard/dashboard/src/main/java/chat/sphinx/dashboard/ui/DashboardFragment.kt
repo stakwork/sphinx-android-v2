@@ -204,8 +204,6 @@ internal class DashboardFragment : MotionLayoutFragment<
                 tab.text = dashboardFragmentsAdapter.getPageTitle(position)
             }.attach()
 
-            viewPagerDashboardTabs.offscreenPageLimit = 3
-
             viewPagerDashboardTabs.post {
 
                 viewPagerDashboardTabs.registerOnPageChangeCallback(object: ViewPager2.OnPageChangeCallback() {
@@ -216,11 +214,20 @@ internal class DashboardFragment : MotionLayoutFragment<
                     ) { }
 
                     override fun onPageSelected(position: Int) {
-                        viewModel.updateTabsState(
-                            feedActive = position == DashboardFragmentsAdapter.FEED_TAB_POSITION,
-                            friendsActive = position == DashboardFragmentsAdapter.FRIENDS_TAB_POSITION,
-                            tribesActive = position == DashboardFragmentsAdapter.TRIBES_TAB_POSITION,
-                        )
+                        when (position) {
+                            DashboardFragmentsAdapter.FEED_TAB_POSITION -> viewModel.updateTabsState(
+                                feedActive = true, friendsActive = false, tribesActive = false, workspacesActive = false
+                            )
+                            DashboardFragmentsAdapter.FRIENDS_TAB_POSITION -> viewModel.updateTabsState(
+                                feedActive = false, friendsActive = true, tribesActive = false, workspacesActive = false
+                            )
+                            DashboardFragmentsAdapter.TRIBES_TAB_POSITION -> viewModel.updateTabsState(
+                                feedActive = false, friendsActive = false, tribesActive = true, workspacesActive = false
+                            )
+                            DashboardFragmentsAdapter.WORKSPACES_TAB_POSITION -> viewModel.updateTabsState(
+                                feedActive = false, friendsActive = false, tribesActive = false, workspacesActive = true
+                            )
+                        }
                     }
 
                     override fun onPageScrollStateChanged(state: Int) { }
@@ -247,6 +254,15 @@ internal class DashboardFragment : MotionLayoutFragment<
 
             val tribesTitle = DashboardFragmentsAdapter.TAB_TITLES[DashboardFragmentsAdapter.TRIBES_TAB_POSITION]
             tribesTab?.findViewById<TextView>(R.id.text_view_tab_title)?.text = getString(tribesTitle)
+
+            val workspacesTab: View = LayoutInflater.from(this@DashboardFragment.context)
+                .inflate(R.layout.layout_dashboard_custom_tab, tabs, false)
+            tabs.getTabAt(DashboardFragmentsAdapter.WORKSPACES_TAB_POSITION)?.customView = workspacesTab
+
+            val workspacesTitle = DashboardFragmentsAdapter.TAB_TITLES[DashboardFragmentsAdapter.WORKSPACES_TAB_POSITION]
+            workspacesTab?.findViewById<TextView>(R.id.text_view_tab_title)?.text = getString(workspacesTitle)
+
+            viewPagerDashboardTabs.offscreenPageLimit = 4
 
             if (viewModel.getCurrentPagePosition() != DashboardFragmentsAdapter.FIRST_INIT) {
                 viewPagerDashboardTabs.currentItem = viewModel.getCurrentPagePosition()
@@ -731,6 +747,7 @@ internal class DashboardFragment : MotionLayoutFragment<
                         val feedTab = tabs.getTabAt(DashboardFragmentsAdapter.FEED_TAB_POSITION)?.customView
                         val friendsTab = tabs.getTabAt(DashboardFragmentsAdapter.FRIENDS_TAB_POSITION)?.customView
                         val tribesTab = tabs.getTabAt(DashboardFragmentsAdapter.TRIBES_TAB_POSITION)?.customView
+                        val workspacesTab = tabs.getTabAt(DashboardFragmentsAdapter.WORKSPACES_TAB_POSITION)?.customView
 
                         feedTab?.findViewById<TextView>(R.id.text_view_tab_title)?.setTextColor(
                             ContextCompat.getColor(
@@ -759,6 +776,13 @@ internal class DashboardFragment : MotionLayoutFragment<
 
                         tribesTab?.findViewById<View>(R.id.view_unseen_messages_dot)?.goneIfFalse(
                             viewState.tribesBadgeVisible
+                        )
+
+                        workspacesTab?.findViewById<TextView>(R.id.text_view_tab_title)?.setTextColor(
+                            ContextCompat.getColor(
+                                binding.root.context,
+                                if (viewState.workspacesActive) R_common.color.text else R_common.color.secondaryText
+                            )
                         )
                     }
                 }

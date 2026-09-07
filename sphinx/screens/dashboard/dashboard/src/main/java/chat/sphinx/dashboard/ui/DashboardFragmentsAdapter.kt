@@ -1,7 +1,6 @@
 package chat.sphinx.dashboard.ui
 
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.FragmentPagerAdapter
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import chat.sphinx.dashboard.R
 import chat.sphinx.dashboard.ui.feed.FeedFragment
@@ -19,12 +18,14 @@ class DashboardFragmentsAdapter(
         const val FEED_TAB_POSITION = 0
         const val FRIENDS_TAB_POSITION = 1
         const val TRIBES_TAB_POSITION = 2
-        const val FIRST_INIT = 3
+        const val WORKSPACES_TAB_POSITION = 3
+        const val FIRST_INIT = 4
 
         val TAB_TITLES = arrayOf(
             R.string.dashboard_feed_tab_name,
             R.string.dashboard_friends_tab_name,
             R.string.dashboard_tribes_tab_name,
+            R.string.dashboard_workspaces_tab_name,
         )
     }
 
@@ -42,6 +43,9 @@ class DashboardFragmentsAdapter(
                 ChatListFragment.newInstance(
                     chatListType = ChatType.Tribe
                 )
+            }
+            WORKSPACES_TAB_POSITION -> {
+                WorkspacesFragment()
             }
             else ->  {
                 ChatListFragment.newInstance()

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="72dp"
+    android:height="72dp"
+    android:viewportWidth="72"
+    android:viewportHeight="72">
+
+    <!-- Background circle -->
+    <path
+        android:fillColor="#3A3A4A"
+        android:pathData="M36,36m-36,0a36,36 0,1 1,72 0a36,36 0,1 1,-72 0" />
+
+    <!-- Building / workspace icon -->
+    <path
+        android:fillColor="#8A8A9A"
+        android:pathData="M22,50 L22,26 L36,20 L50,26 L50,50 Z"
+        android:strokeColor="#00000000"
+        android:strokeWidth="0" />
+    <path
+        android:fillColor="#6A6A7A"
+        android:pathData="M22,26 L36,20 L50,26 L36,32 Z" />
+
+    <!-- Windows -->
+    <path
+        android:fillColor="#3A3A4A"
+        android:pathData="M29,33 L33,33 L33,38 L29,38 Z" />
+    <path
+        android:fillColor="#3A3A4A"
+        android:pathData="M39,33 L43,33 L43,38 L39,38 Z" />
+
+    <!-- Door -->
+    <path
+        android:fillColor="#3A3A4A"
+        android:pathData="M32,42 L40,42 L40,50 L32,50 Z" />
+
+</vector>

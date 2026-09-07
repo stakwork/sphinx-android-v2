@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingStart="16dp"
+    android:paddingEnd="16dp"
+    android:paddingTop="12dp"
+    android:paddingBottom="12dp"
+    android:background="@color/body">
+
+    <!--
+        The background must be a shape drawable (not a vector) for clipToOutline=true to work.
+        VectorDrawable.getOutline() returns an empty outline, so clipping would have no effect.
+        bg_workspace_logo is a rounded-rectangle shape that provides a real outline for clipping.
+    -->
+    <ImageView
+        android:id="@+id/image_view_workspace_logo"
+        android:layout_width="72dp"
+        android:layout_height="72dp"
+        android:scaleType="centerCrop"
+        android:background="@drawable/bg_workspace_logo"
+        android:clipToOutline="true"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        tools:src="@drawable/ic_workspace_placeholder" />
+
+    <!--
+        Vertical packed chain: name (head) → role (tail), anchored between the ImageView's
+        top and bottom edges. Chain style goes on the head only.
+    -->
+    <TextView
+        android:id="@+id/text_view_workspace_name"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_marginEnd="8dp"
+        android:textColor="@android:color/white"
+        android:textSize="16sp"
+        android:fontFamily="sans-serif-medium"
+        android:textStyle="bold"
+        android:maxLines="1"
+        android:ellipsize="end"
+        app:layout_constraintStart_toEndOf="@id/image_view_workspace_logo"
+        app:layout_constraintEnd_toStartOf="@id/text_view_workspace_members"
+        app:layout_constraintTop_toTopOf="@id/image_view_workspace_logo"
+        app:layout_constraintBottom_toTopOf="@id/text_view_workspace_role"
+        app:layout_constraintVertical_chainStyle="packed"
+        tools:text="My Workspace" />
+
+    <TextView
+        android:id="@+id/text_view_workspace_role"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginTop="4dp"
+        android:textColor="@color/secondaryText"
+        android:textSize="13sp"
+        android:maxLines="1"
+        android:ellipsize="end"
+        app:layout_constraintStart_toEndOf="@id/image_view_workspace_logo"
+        app:layout_constraintEnd_toStartOf="@id/text_view_workspace_members"
+        app:layout_constraintTop_toBottomOf="@id/text_view_workspace_name"
+        app:layout_constraintBottom_toBottomOf="@id/image_view_workspace_logo"
+        tools:text="Member" />
+
+    <!--
+        Right-aligned member count. constraintStart added to silence the "not constrained
+        horizontally" warning — using the logo as the start anchor keeps it from overlapping.
+    -->
+    <TextView
+        android:id="@+id/text_view_workspace_members"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/secondaryText"
+        android:textSize="12sp"
+        app:layout_constraintStart_toEndOf="@id/image_view_workspace_logo"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        tools:text="Members: 5" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

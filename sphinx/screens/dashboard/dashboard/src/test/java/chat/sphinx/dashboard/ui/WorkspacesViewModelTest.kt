@@ -54,12 +54,13 @@ private class TestableWorkspacesViewModel(
 
 class WorkspacesViewModelTest {
 
-    private fun makeWorkspace(id: String = "ws-1") = Workspace(
+    private fun makeWorkspace(id: String = "ws-1", slug: String? = null) = Workspace(
         id = id,
         name = "Workspace $id",
         logoUrl = null,
         userRole = "admin",
         memberCount = 3,
+        slug = slug,
     )
 
     @Before

@@ -6,7 +6,8 @@ import chat.sphinx.concept_repository_dashboard.model.Workspace
 fun WorkspaceDto.toDomain(): Workspace = Workspace(
     id = id,
     name = name,
-    logoUrl = logoUrl,
+    logoUrl = null,
     userRole = userRole,
     memberCount = memberCount,
+    slug = slug,
 )

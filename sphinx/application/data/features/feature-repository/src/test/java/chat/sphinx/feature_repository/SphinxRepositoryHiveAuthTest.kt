@@ -2,6 +2,7 @@ package chat.sphinx.feature_repository
 
 import chat.sphinx.concept_network_query_hive.NetworkQueryHive
 import chat.sphinx.concept_network_query_hive.model.HiveAuthenticationTokenDto
+import chat.sphinx.concept_network_query_hive.model.WorkspaceImageDto
 import chat.sphinx.concept_network_query_hive.model.WorkspacesListDto
 import chat.sphinx.kotlin_response.LoadResponse
 import chat.sphinx.kotlin_response.Response
@@ -110,6 +111,13 @@ class SphinxRepositoryHiveAuthTest {
         override fun getWorkspaces(
             authToken: String,
         ): Flow<LoadResponse<WorkspacesListDto, ResponseError>> = flow {
+            emit(Response.Error(ResponseError("not used in this test")))
+        }
+
+        override fun getWorkspaceImage(
+            slug: String,
+            authToken: String,
+        ): Flow<LoadResponse<WorkspaceImageDto, ResponseError>> = flow {
             emit(Response.Error(ResponseError("not used in this test")))
         }
     }

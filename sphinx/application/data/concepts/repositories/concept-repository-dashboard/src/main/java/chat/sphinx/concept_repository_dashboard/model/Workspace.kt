@@ -6,4 +6,5 @@ data class Workspace(
     val logoUrl: String?,
     val userRole: String?,
     val memberCount: Int,
+    val slug: String? = null,
 )

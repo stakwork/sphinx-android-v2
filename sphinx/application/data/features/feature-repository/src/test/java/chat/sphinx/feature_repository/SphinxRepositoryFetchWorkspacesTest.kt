@@ -158,8 +158,11 @@ private class TestableRepo(
 // Helper builders
 // ---------------------------------------------------------------------------
 
-private fun makeWorkspaceDto(id: String = "ws-1", name: String = "My Workspace") =
-    WorkspaceDto(id = id, name = name, userRole = "admin", memberCount = 5, logoUrl = null)
+private fun makeWorkspaceDto(
+    id: String = "ws-1",
+    name: String = "My Workspace",
+    slug: String? = null,
+) = WorkspaceDto(id = id, name = name, slug = slug, userRole = "admin", memberCount = 5, logoUrl = null)
 
 private fun successWorkspaces(vararg dtos: WorkspaceDto): LoadResponse<WorkspacesListDto, ResponseError> =
     Response.Success(WorkspacesListDto(workspaces = dtos.toList()))
@@ -221,6 +224,14 @@ class SphinxRepositoryFetchWorkspacesTest {
             workspacesCallCount++
             emit(response)
         }
+
+        override fun getWorkspaceImage(
+            slug: String,
+            authToken: String,
+        ): Flow<LoadResponse<chat.sphinx.concept_network_query_hive.model.WorkspaceImageDto, ResponseError>> =
+            flow {
+                emit(Response.Error(ResponseError("not used in this test")))
+            }
     }
 
     @Before
@@ -433,7 +444,9 @@ class SphinxRepositoryFetchWorkspacesTest {
         assertEquals("Full Workspace", domain.name)
         assertEquals("owner", domain.userRole)
         assertEquals(42, domain.memberCount)
-        assertEquals("https://example.com/logo.png", domain.logoUrl)
+        assertEquals("full-workspace", domain.slug)
+        // Display URL is filled later from the presigned image fetch, never the list DTO.
+        assertEquals(null, domain.logoUrl)
     }
 
     // -----------------------------------------------------------------------
@@ -448,6 +461,7 @@ class SphinxRepositoryFetchWorkspacesTest {
         assertEquals("Minimal", domain.name)
         assertEquals(null, domain.logoUrl)
         assertEquals(null, domain.userRole)
+        assertEquals(null, domain.slug)
         assertEquals(0, domain.memberCount) // default
     }
 

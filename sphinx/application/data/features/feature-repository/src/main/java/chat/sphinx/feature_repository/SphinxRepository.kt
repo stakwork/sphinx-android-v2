@@ -37,6 +37,7 @@ import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.concept_repository_dashboard.RepositoryDashboard
 import chat.sphinx.concept_repository_dashboard.model.Workspace
 import chat.sphinx.concept_network_query_hive.model.WorkspaceDto
+import chat.sphinx.concept_relay.CustomException
 import chat.sphinx.feature_repository.mappers.hive.toDomain
 import chat.sphinx.concept_repository_data_sync.DataSyncRepository
 import chat.sphinx.concept_repository_feed.FeedRepository
@@ -185,6 +186,7 @@ import java.security.SecureRandom
 import java.util.*
 import kotlin.math.abs
 import kotlin.math.max
+import kotlin.math.min
 import kotlinx.coroutines.ensureActive
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.absoluteValue
@@ -269,6 +271,31 @@ abstract class SphinxRepository(
 
     // Prevents concurrent callers from interleaving clear → re-auth → retrieve sequences
     private val hiveAuthMutex = Mutex()
+
+    private data class WorkspaceImageCacheEntry(
+        val url: String,
+        val expiresAtMillis: Long,
+    )
+
+    // Overridable in tests so expiry-buffer assertions don't have to wait in real time.
+    @Volatile
+    internal var hiveNowMillis: () -> Long = { System.currentTimeMillis() }
+
+    private val workspaceImageCacheLock = Any()
+    private val workspaceImageCache: MutableMap<String, WorkspaceImageCacheEntry> =
+        object : LinkedHashMap<String, WorkspaceImageCacheEntry>(
+            FLOW_CACHE_MAX_SIZE, 0.75f, true
+        ) {
+            override fun removeEldestEntry(
+                eldest: MutableMap.MutableEntry<String, WorkspaceImageCacheEntry>?
+            ): Boolean = size > FLOW_CACHE_MAX_SIZE
+        }
+
+    @Volatile
+    private var workspaceImageCacheGeneration: Int = 0
+
+    private val workspaceImageInFlight =
+        ConcurrentHashMap<String, Deferred<Response<String, ResponseError>>>()
 
     suspend fun authenticateWithHive(): Boolean {
         // Short-circuit: avoid redundant Rust FFI call + network round-trip if already authenticated
@@ -386,6 +413,164 @@ abstract class SphinxRepository(
             }
         } catch (e: Exception) {
             Response.Error(ResponseError("Failed to fetch workspaces", e))
+        }
+    }
+
+    /**
+     * Obtain a Hive JWT then invoke [request]. On a non-terminal failure with an
+     * existing token, clear the token, re-authenticate once, and retry.
+     * [terminalError] (e.g. HTTP 404) is returned immediately with no re-auth.
+     */
+    private suspend fun <T : Any> withHiveToken(
+        terminalError: (ResponseError) -> Boolean = { false },
+        request: (token: String) -> Flow<LoadResponse<T, ResponseError>>,
+    ): Response<T, ResponseError> {
+        val token = retrieveHiveToken()
+        if (token != null) {
+            when (val first = collectHiveResponse(request(token))) {
+                is Response.Success -> return first
+                is Response.Error -> {
+                    if (terminalError(first.cause)) return first
+                    hiveAuthMutex.withLock {
+                        clearHiveToken()
+                        authenticateWithHive()
+                    }
+                    val newToken = retrieveHiveToken()
+                        ?: return Response.Error(ResponseError("Failed to authenticate with Hive"))
+                    return collectHiveResponse(request(newToken))
+                }
+            }
+        }
+
+        val authenticated = hiveAuthMutex.withLock { authenticateWithHive() }
+        val newToken = retrieveHiveToken()
+        if (!authenticated || newToken == null) {
+            return Response.Error(ResponseError("Failed to authenticate with Hive"))
+        }
+        return collectHiveResponse(request(newToken))
+    }
+
+    private suspend fun <T : Any> collectHiveResponse(
+        responses: Flow<LoadResponse<T, ResponseError>>,
+    ): Response<T, ResponseError> {
+        var success: Response.Success<T>? = null
+        var error: Response.Error<ResponseError>? = null
+        responses.collect { response ->
+            when (response) {
+                is Response.Success -> success = response
+                is Response.Error -> error = response
+                else -> {}
+            }
+        }
+        return success ?: error ?: Response.Error(ResponseError("Empty Hive response"))
+    }
+
+    private fun isHiveNotFound(error: ResponseError): Boolean =
+        (error.exception as? CustomException)?.code == 404
+
+    private fun hiveErrorStatusCode(error: ResponseError): Int? =
+        (error.exception as? CustomException)?.code
+
+    private fun cachedWorkspaceImageUrl(slug: String): String? {
+        val now = hiveNowMillis()
+        synchronized(workspaceImageCacheLock) {
+            val entry = workspaceImageCache[slug] ?: return null
+            if (now < entry.expiresAtMillis) return entry.url
+            workspaceImageCache.remove(slug)
+            return null
+        }
+    }
+
+    private fun putWorkspaceImageUrl(slug: String, url: String, expiresInSeconds: Long) {
+        val now = hiveNowMillis()
+        val ttlMs = expiresInSeconds * 1000L
+        val bufferMs = min(60_000L, ttlMs / 2)
+        val expiresAtMillis = now + ttlMs - bufferMs
+        synchronized(workspaceImageCacheLock) {
+            workspaceImageCache[slug] = WorkspaceImageCacheEntry(url, expiresAtMillis)
+        }
+    }
+
+    private fun clearWorkspaceImageCache() {
+        synchronized(workspaceImageCacheLock) {
+            workspaceImageCache.clear()
+            workspaceImageCacheGeneration++
+        }
+        workspaceImageInFlight.clear()
+    }
+
+    override suspend fun fetchWorkspaceImageUrl(slug: String): Response<String, ResponseError> {
+        cachedWorkspaceImageUrl(slug)?.let { url ->
+            LOG.d(TAG, "fetchWorkspaceImageUrl cache hit slug=$slug")
+            return Response.Success(url)
+        }
+
+        workspaceImageInFlight[slug]?.let { inFlight ->
+            return inFlight.await()
+        }
+
+        val generation = workspaceImageCacheGeneration
+        val deferred = CompletableDeferred<Response<String, ResponseError>>()
+        val existing = workspaceImageInFlight.putIfAbsent(slug, deferred)
+        if (existing != null) {
+            return existing.await()
+        }
+
+        // Isolated from the caller's Job so a cancelled waiter cannot abort
+        // coalesced in-flight work (ViewHolder recycle / ViewModel cancel).
+        applicationScope.launch(io) {
+            try {
+                deferred.complete(fetchWorkspaceImageUrlUncached(slug, generation))
+            } catch (e: Exception) {
+                deferred.complete(
+                    Response.Error(ResponseError("Failed to fetch workspace image", e))
+                )
+            } finally {
+                workspaceImageInFlight.remove(slug, deferred)
+            }
+        }
+        return deferred.await()
+    }
+
+    private suspend fun fetchWorkspaceImageUrlUncached(
+        slug: String,
+        generation: Int,
+    ): Response<String, ResponseError> {
+        cachedWorkspaceImageUrl(slug)?.let { url ->
+            LOG.d(TAG, "fetchWorkspaceImageUrl cache hit slug=$slug")
+            return Response.Success(url)
+        }
+
+        LOG.d(TAG, "fetchWorkspaceImageUrl cache miss slug=$slug")
+
+        return try {
+            when (
+                val response = withHiveToken(
+                    terminalError = ::isHiveNotFound,
+                ) { token ->
+                    networkQueryHive.getWorkspaceImage(slug, token)
+                }
+            ) {
+                is Response.Success -> {
+                    val dto = response.value
+                    if (generation == workspaceImageCacheGeneration) {
+                        putWorkspaceImageUrl(slug, dto.presignedUrl, dto.expiresIn)
+                    }
+                    Response.Success(dto.presignedUrl)
+                }
+                is Response.Error -> {
+                    val code = hiveErrorStatusCode(response.cause)
+                    if (isHiveNotFound(response.cause)) {
+                        LOG.d(TAG, "fetchWorkspaceImageUrl 404 no logo slug=$slug statusCode=$code")
+                    } else {
+                        LOG.d(TAG, "fetchWorkspaceImageUrl failure slug=$slug statusCode=$code")
+                    }
+                    response
+                }
+            }
+        } catch (e: Exception) {
+            LOG.e(TAG, "fetchWorkspaceImageUrl failure slug=$slug statusCode=null", e)
+            Response.Error(ResponseError("Failed to fetch workspace image", e))
         }
     }
 
@@ -9729,6 +9914,8 @@ abstract class SphinxRepository(
     }
 
     override suspend fun clearDatabase() {
+        clearWorkspaceImageCache()
+
         val queries = coreDB.getSphinxDatabaseQueries()
 
         chatLock.withLock {

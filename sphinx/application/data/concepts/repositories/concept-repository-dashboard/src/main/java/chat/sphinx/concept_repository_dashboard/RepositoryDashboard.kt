@@ -86,4 +86,6 @@ interface RepositoryDashboard {
     suspend fun clearDatabase()
 
     suspend fun fetchWorkspaces(): Response<List<Workspace>, ResponseError>
+
+    suspend fun fetchWorkspaceImageUrl(slug: String): Response<String, ResponseError>
 }

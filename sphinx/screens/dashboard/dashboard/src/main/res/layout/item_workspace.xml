@@ -75,10 +75,12 @@
         android:id="@+id/text_view_workspace_members"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginEnd="16dp"
         android:textColor="@color/secondaryText"
         android:textSize="12sp"
         app:layout_constraintStart_toEndOf="@id/image_view_workspace_logo"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="1.0"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         tools:text="Members: 5" />

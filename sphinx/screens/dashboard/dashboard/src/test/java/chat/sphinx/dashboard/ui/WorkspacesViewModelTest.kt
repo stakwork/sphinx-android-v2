@@ -3,12 +3,19 @@ package chat.sphinx.dashboard.ui
 import chat.sphinx.concept_repository_dashboard.model.Workspace
 import chat.sphinx.kotlin_response.Response
 import chat.sphinx.kotlin_response.ResponseError
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -20,7 +27,9 @@ import org.junit.Test
 // ---------------------------------------------------------------------------
 
 private class TestableWorkspacesViewModel(
-    private val fetchWorkspaces: suspend () -> Response<List<Workspace>, ResponseError>
+    private val fetchWorkspaces: suspend () -> Response<List<Workspace>, ResponseError>,
+    private val fetchWorkspaceImageUrl: suspend (String) -> Response<String, ResponseError> =
+        { Response.Error(ResponseError("not stubbed")) },
 ) {
     private val _workspaces = MutableStateFlow<List<Workspace>>(emptyList())
     val workspaces: StateFlow<List<Workspace>> = _workspaces.asStateFlow()
@@ -37,14 +46,48 @@ private class TestableWorkspacesViewModel(
         _error.value = false
         try {
             when (val response = fetchWorkspaces()) {
-                is Response.Success -> _workspaces.value = response.value
-                is Response.Error -> _error.value = true
+                is Response.Success -> {
+                    val list = response.value
+                    // Emit immediately so names/role/members show while logos resolve.
+                    _workspaces.value = list
+                    _loading.value = false
+                    resolveWorkspaceLogos(list)
+                }
+                is Response.Error -> {
+                    _error.value = true
+                }
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             _error.value = true
         } finally {
             _loading.value = false
         }
+    }
+
+    private suspend fun resolveWorkspaceLogos(workspaces: List<Workspace>) {
+        if (workspaces.none { !it.slug.isNullOrBlank() }) {
+            return
+        }
+
+        val resolved = coroutineScope {
+            workspaces.map { workspace ->
+                async {
+                    val slug = workspace.slug
+                    if (slug.isNullOrBlank()) {
+                        workspace
+                    } else {
+                        when (val result = fetchWorkspaceImageUrl(slug)) {
+                            is Response.Success -> workspace.copy(logoUrl = result.value)
+                            is Response.Error -> workspace
+                        }
+                    }
+                }
+            }.awaitAll()
+        }
+
+        _workspaces.value = resolved
     }
 
     fun dismissError() {
@@ -155,5 +198,127 @@ class WorkspacesViewModelTest {
         subject.loadWorkspaces()
         assertFalse(subject.error.value)
         assertEquals("ws-recovered", subject.workspaces.value[0].id)
+    }
+
+    @Test
+    fun `successful per-slug logo resolution populates logoUrl`() = runBlocking {
+        val subject = TestableWorkspacesViewModel(
+            fetchWorkspaces = {
+                Response.Success(
+                    listOf(
+                        makeWorkspace("ws-1", slug = "acme"),
+                        makeWorkspace("ws-2", slug = "beta"),
+                    )
+                )
+            },
+            fetchWorkspaceImageUrl = { slug -> Response.Success("https://presigned/$slug") },
+        )
+
+        subject.loadWorkspaces()
+
+        assertFalse(subject.error.value)
+        assertEquals(2, subject.workspaces.value.size)
+        assertEquals("https://presigned/acme", subject.workspaces.value[0].logoUrl)
+        assertEquals("https://presigned/beta", subject.workspaces.value[1].logoUrl)
+        assertEquals("Workspace ws-1", subject.workspaces.value[0].name)
+        assertEquals("admin", subject.workspaces.value[0].userRole)
+        assertEquals(3, subject.workspaces.value[0].memberCount)
+        assertEquals("Workspace ws-2", subject.workspaces.value[1].name)
+        assertEquals("admin", subject.workspaces.value[1].userRole)
+        assertEquals(3, subject.workspaces.value[1].memberCount)
+    }
+
+    @Test
+    fun `logo fetch error leaves that logoUrl null while others still resolve`() = runBlocking {
+        val subject = TestableWorkspacesViewModel(
+            fetchWorkspaces = {
+                Response.Success(
+                    listOf(
+                        makeWorkspace("ws-1", slug = "acme"),
+                        makeWorkspace("ws-2", slug = "no-logo"),
+                    )
+                )
+            },
+            fetchWorkspaceImageUrl = { slug ->
+                if (slug == "no-logo") {
+                    Response.Error(ResponseError("404"))
+                } else {
+                    Response.Success("https://presigned/$slug")
+                }
+            },
+        )
+
+        subject.loadWorkspaces()
+
+        assertFalse(subject.error.value)
+        assertEquals("https://presigned/acme", subject.workspaces.value[0].logoUrl)
+        assertNull(subject.workspaces.value[1].logoUrl)
+        assertEquals("Workspace ws-2", subject.workspaces.value[1].name)
+        assertEquals("admin", subject.workspaces.value[1].userRole)
+        assertEquals(3, subject.workspaces.value[1].memberCount)
+    }
+
+    @Test
+    fun `null or blank slug never triggers fetchWorkspaceImageUrl and keeps logoUrl null`() = runBlocking {
+        val fetchedSlugs = mutableListOf<String>()
+        val subject = TestableWorkspacesViewModel(
+            fetchWorkspaces = {
+                Response.Success(
+                    listOf(
+                        makeWorkspace("ws-1", slug = null),
+                        makeWorkspace("ws-2", slug = "  "),
+                        makeWorkspace("ws-3", slug = "acme"),
+                    )
+                )
+            },
+            fetchWorkspaceImageUrl = { slug ->
+                fetchedSlugs.add(slug)
+                Response.Success("https://presigned/$slug")
+            },
+        )
+
+        subject.loadWorkspaces()
+
+        assertEquals(listOf("acme"), fetchedSlugs)
+        assertNull(subject.workspaces.value[0].logoUrl)
+        assertNull(subject.workspaces.value[1].logoUrl)
+        assertEquals("https://presigned/acme", subject.workspaces.value[2].logoUrl)
+        assertEquals("Workspace ws-1", subject.workspaces.value[0].name)
+        assertEquals("admin", subject.workspaces.value[0].userRole)
+        assertEquals(3, subject.workspaces.value[0].memberCount)
+    }
+
+    @Test
+    fun `workspace list is emitted before logo resolution completes`() = runBlocking {
+        val logosStarted = CompletableDeferred<Unit>()
+        val allowLogos = CompletableDeferred<Unit>()
+        val subject = TestableWorkspacesViewModel(
+            fetchWorkspaces = {
+                Response.Success(listOf(makeWorkspace("ws-1", slug = "acme")))
+            },
+            fetchWorkspaceImageUrl = { slug ->
+                logosStarted.complete(Unit)
+                allowLogos.await()
+                Response.Success("https://presigned/$slug")
+            },
+        )
+
+        val job = launch { subject.loadWorkspaces() }
+
+        logosStarted.await()
+        assertEquals(1, subject.workspaces.value.size)
+        assertEquals("ws-1", subject.workspaces.value[0].id)
+        assertEquals("Workspace ws-1", subject.workspaces.value[0].name)
+        assertEquals("admin", subject.workspaces.value[0].userRole)
+        assertEquals(3, subject.workspaces.value[0].memberCount)
+        assertNull(subject.workspaces.value[0].logoUrl)
+        assertFalse(subject.loading.value)
+        assertFalse(subject.error.value)
+
+        allowLogos.complete(Unit)
+        job.join()
+
+        assertEquals("https://presigned/acme", subject.workspaces.value[0].logoUrl)
+        assertFalse(subject.loading.value)
     }
 }

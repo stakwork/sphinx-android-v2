@@ -8,7 +8,11 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import io.matthewnelson.android_feature_viewmodel.SideEffectViewModel
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
 import io.matthewnelson.concept_views.viewstate.ViewState
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -50,12 +54,18 @@ internal class WorkspacesViewModel @Inject constructor(
             try {
                 when (val response = repositoryDashboard.fetchWorkspaces()) {
                     is Response.Success -> {
-                        _workspaces.value = response.value
+                        val list = response.value
+                        // Emit immediately so names/role/members show while logos resolve.
+                        _workspaces.value = list
+                        _loading.value = false
+                        resolveWorkspaceLogos(list)
                     }
                     is Response.Error -> {
                         _error.value = true
                     }
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 // Guard here so _loading is always reset even on unexpected throws,
                 // and surface it as a failure rather than silently doing nothing.
@@ -64,6 +74,30 @@ internal class WorkspacesViewModel @Inject constructor(
                 _loading.value = false
             }
         }
+    }
+
+    private suspend fun resolveWorkspaceLogos(workspaces: List<Workspace>) {
+        if (workspaces.none { !it.slug.isNullOrBlank() }) {
+            return
+        }
+
+        val resolved = coroutineScope {
+            workspaces.map { workspace ->
+                async {
+                    val slug = workspace.slug
+                    if (slug.isNullOrBlank()) {
+                        workspace
+                    } else {
+                        when (val result = repositoryDashboard.fetchWorkspaceImageUrl(slug)) {
+                            is Response.Success -> workspace.copy(logoUrl = result.value)
+                            is Response.Error -> workspace
+                        }
+                    }
+                }
+            }.awaitAll()
+        }
+
+        _workspaces.value = resolved
     }
 
     fun dismissError() {

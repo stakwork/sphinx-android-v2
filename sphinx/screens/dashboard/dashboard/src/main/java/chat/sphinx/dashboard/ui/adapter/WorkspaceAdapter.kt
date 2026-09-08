@@ -32,6 +32,7 @@ internal class WorkspaceAdapter(
 
     private val imageLoaderOptions: ImageLoaderOptions = ImageLoaderOptions.Builder()
         .placeholderResId(R.drawable.ic_workspace_placeholder)
+        .errorResId(R.drawable.ic_workspace_logo_error)
         .build()
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): WorkspaceViewHolder {

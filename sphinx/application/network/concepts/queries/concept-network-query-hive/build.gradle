@@ -13,4 +13,6 @@ dependencies {
     implementation deps.kotlin.reflect
     implementation deps.square.moshi
     kapt kaptDeps.square.moshiCodegen
+
+    testImplementation testDeps.junit
 }

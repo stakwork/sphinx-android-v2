@@ -46,6 +46,10 @@ internal class DashboardNavigatorImpl @Inject constructor(
         )
     }
 
+    override suspend fun toWorkspaceDetail(workspaceId: String, workspaceName: String) {
+        // Wired to ToWorkspaceDetailScreen once the workspace-detail nav graph lands.
+    }
+
     override suspend fun toJoinTribeDetail(tribeLink: TribeJoinLink) {
         detailDriver.submitNavigationRequest(ToJoinTribeDetail(tribeLink))
     }

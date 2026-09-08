@@ -58,6 +58,9 @@ internal class WorkspacesFragment : SideEffectFragment<
         workspaceAdapter = WorkspaceAdapter(
             imageLoader = imageLoader,
             onStopSupervisor = onStopSupervisor,
+            onWorkspaceClicked = { workspace ->
+                viewModel.navigateToWorkspaceDetail(workspace.id, workspace.name)
+            },
         )
 
         binding.recyclerViewWorkspaces.apply {

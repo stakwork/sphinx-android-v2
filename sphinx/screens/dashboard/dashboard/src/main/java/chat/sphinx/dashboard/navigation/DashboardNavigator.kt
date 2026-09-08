@@ -8,6 +8,7 @@ import chat.sphinx.wrapper_common.feed.FeedUrl
 import chat.sphinx.wrapper_common.lightning.LightningNodePubKey
 import chat.sphinx.wrapper_common.lightning.LightningRouteHint
 import chat.sphinx.wrapper_common.tribe.TribeJoinLink
+import io.matthewnelson.android_feature_navigation.requests.PopBackStack
 import io.matthewnelson.concept_navigation.BaseNavigationDriver
 import io.matthewnelson.concept_navigation.Navigator
 
@@ -18,6 +19,7 @@ abstract class DashboardNavigator(
     abstract suspend fun toChatContact(chatId: ChatId?, contactId: ContactId)
     abstract suspend fun toChatGroup(chatId: ChatId)
     abstract suspend fun toChatTribe(chatId: ChatId)
+    abstract suspend fun toWorkspaceDetail(workspaceId: String, workspaceName: String)
     abstract suspend fun toJoinTribeDetail(tribeLink: TribeJoinLink)
     abstract suspend fun toQRCodeDetail(qrText: String, viewTitle: String, description: String? = null)
 
@@ -49,5 +51,11 @@ abstract class DashboardNavigator(
         podcastId: FeedId,
         episodeId: FeedId
     )
+
+    suspend fun popBackStack() {
+        navigationDriver.submitNavigationRequest(
+            PopBackStack()
+        )
+    }
 
 }

@@ -7,6 +7,7 @@ import chat.sphinx.chat_group.navigation.ToChatGroupScreen
 import chat.sphinx.chat_tribe.navigation.ToChatTribeScreen
 import chat.sphinx.common_player.navigation.ToCommonPlayerScreen
 import chat.sphinx.dashboard.navigation.DashboardNavigator
+import chat.sphinx.dashboard.navigation.ToWorkspaceDetailScreen
 import chat.sphinx.join_tribe.navigation.ToJoinTribeDetail
 import chat.sphinx.new_contact.navigation.ToNewContactDetail
 import chat.sphinx.newsletter_detail.navigation.ToNewsletterDetailScreen
@@ -47,7 +48,9 @@ internal class DashboardNavigatorImpl @Inject constructor(
     }
 
     override suspend fun toWorkspaceDetail(workspaceId: String, workspaceName: String) {
-        // Wired to ToWorkspaceDetailScreen once the workspace-detail nav graph lands.
+        navigationDriver.submitNavigationRequest(
+            ToWorkspaceDetailScreen(workspaceId, workspaceName)
+        )
     }
 
     override suspend fun toJoinTribeDetail(tribeLink: TribeJoinLink) {

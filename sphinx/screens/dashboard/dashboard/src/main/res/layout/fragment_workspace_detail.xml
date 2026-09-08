@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/layout_constraint_workspace_detail"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/body"
+    tools:context=".ui.WorkspaceDetailFragment">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/layout_constraint_workspace_detail_header"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/default_header_height"
+        android:background="@color/headerBG"
+        android:elevation="@dimen/default_elevation"
+        android:paddingEnd="@dimen/default_half_layout_margin"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/text_view_workspace_detail_nav_back"
+            android:layout_width="@dimen/default_chat_initial_image_xy"
+            android:layout_height="@dimen/default_chat_initial_image_xy"
+            android:fontFamily="@font/material_icons_regular"
+            android:gravity="center"
+            android:text="@string/material_icon_name_nav_back"
+            android:textColor="@color/washedOutReceivedText"
+            android:textSize="@dimen/default_text_size_back_arrow"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/text_view_workspace_detail_name"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/default_header_headline_margin_horizontal"
+            android:layout_marginEnd="@dimen/default_header_headline_margin_horizontal"
+            android:ellipsize="end"
+            android:fontFamily="@font/roboto_regular"
+            android:singleLine="true"
+            android:textColor="@color/textMessages"
+            android:textSize="@dimen/default_header_text_size"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/image_view_workspace_detail_search"
+            app:layout_constraintStart_toEndOf="@+id/text_view_workspace_detail_nav_back"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="Workspace Name" />
+
+        <androidx.appcompat.widget.AppCompatImageView
+            android:id="@+id/image_view_workspace_detail_search"
+            android:layout_width="40dp"
+            android:layout_height="match_parent"
+            android:contentDescription="@string/search"
+            android:padding="8dp"
+            android:src="@drawable/ic_baseline_search_24"
+            android:tint="@color/placeholderText"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/text_view_workspace_detail_create_feature"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/text_view_workspace_detail_create_feature"
+            android:layout_width="40dp"
+            android:layout_height="match_parent"
+            android:contentDescription="@string/workspace_detail_create_feature"
+            android:fontFamily="@font/material_icons_regular"
+            android:gravity="center"
+            android:text="@string/material_icon_name_add"
+            android:textColor="@color/washedOutReceivedText"
+            android:textSize="@dimen/default_text_size_tap_target_material_icon"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/tab_layout_workspace_detail"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/default_header_height"
+        android:background="@color/headerBG"
+        app:layout_constraintTop_toBottomOf="@+id/layout_constraint_workspace_detail_header"
+        app:tabBackground="@color/headerBG"
+        app:tabIndicatorColor="@color/primaryBlue"
+        app:tabMode="scrollable"
+        app:tabRippleColor="@null"
+        app:tabSelectedTextColor="@color/text"
+        app:tabTextAppearance="@style/DashboardTab"
+        app:tabTextColor="@color/secondaryText" />
+
+    <androidx.viewpager2.widget.ViewPager2
+        android:id="@+id/view_pager_workspace_detail"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/tab_layout_workspace_detail" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

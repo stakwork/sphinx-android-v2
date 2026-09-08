@@ -18,6 +18,7 @@ import kotlinx.coroutines.launch
 internal class WorkspaceAdapter(
     private val imageLoader: ImageLoader<ImageView>,
     private val onStopSupervisor: OnStopSupervisor,
+    private val onWorkspaceClicked: (Workspace) -> Unit,
 ) : ListAdapter<Workspace, WorkspaceAdapter.WorkspaceViewHolder>(DIFF_CALLBACK) {
 
     companion object {
@@ -80,6 +81,8 @@ internal class WorkspaceAdapter(
                 } else {
                     imageViewWorkspaceLogo.setImageResource(R.drawable.ic_workspace_placeholder)
                 }
+
+                root.setOnClickListener { onWorkspaceClicked(workspace) }
             }
         }
 

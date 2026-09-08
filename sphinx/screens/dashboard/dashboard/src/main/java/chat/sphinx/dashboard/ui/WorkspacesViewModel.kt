@@ -3,6 +3,7 @@ package chat.sphinx.dashboard.ui
 import androidx.lifecycle.viewModelScope
 import chat.sphinx.concept_repository_dashboard.model.Workspace
 import chat.sphinx.concept_repository_dashboard_android.RepositoryDashboardAndroid
+import chat.sphinx.dashboard.navigation.DashboardNavigator
 import chat.sphinx.kotlin_response.Response
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.matthewnelson.android_feature_viewmodel.SideEffectViewModel
@@ -27,6 +28,7 @@ internal sealed class WorkspacesViewState : ViewState<WorkspacesViewState>() {
 internal class WorkspacesViewModel @Inject constructor(
     dispatchers: CoroutineDispatchers,
     private val repositoryDashboard: RepositoryDashboardAndroid<Any>,
+    private val dashboardNavigator: DashboardNavigator,
 ) : SideEffectViewModel<
         android.content.Context,
         ChatListSideEffect,
@@ -102,5 +104,11 @@ internal class WorkspacesViewModel @Inject constructor(
 
     fun dismissError() {
         _error.value = false
+    }
+
+    fun navigateToWorkspaceDetail(workspaceId: String, workspaceName: String) {
+        viewModelScope.launch(mainImmediate) {
+            dashboardNavigator.toWorkspaceDetail(workspaceId, workspaceName)
+        }
     }
 }

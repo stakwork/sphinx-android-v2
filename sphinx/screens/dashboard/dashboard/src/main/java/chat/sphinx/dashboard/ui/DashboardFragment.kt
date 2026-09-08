@@ -224,9 +224,14 @@ internal class DashboardFragment : MotionLayoutFragment<
                             DashboardFragmentsAdapter.TRIBES_TAB_POSITION -> viewModel.updateTabsState(
                                 feedActive = false, friendsActive = false, tribesActive = true, workspacesActive = false
                             )
-                            DashboardFragmentsAdapter.WORKSPACES_TAB_POSITION -> viewModel.updateTabsState(
-                                feedActive = false, friendsActive = false, tribesActive = false, workspacesActive = true
-                            )
+                            DashboardFragmentsAdapter.WORKSPACES_TAB_POSITION -> {
+                                viewModel.updateTabsState(
+                                    feedActive = false, friendsActive = false, tribesActive = false, workspacesActive = true
+                                )
+                                (childFragmentManager.findFragmentByTag(
+                                    "f${DashboardFragmentsAdapter.WORKSPACES_TAB_POSITION}"
+                                ) as? WorkspacesFragment)?.onTabSelected()
+                            }
                         }
                     }
 

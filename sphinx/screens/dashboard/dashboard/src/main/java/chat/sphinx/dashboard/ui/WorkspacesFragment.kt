@@ -40,7 +40,18 @@ internal class WorkspacesFragment : SideEffectFragment<
         super.onViewCreated(view, savedInstanceState)
         setupRecyclerView()
         subscribeToWorkspaces()
-        viewModel.loadWorkspaces()
+    }
+
+    /**
+     * Called by the parent [DashboardFragment] whenever this tab becomes the
+     * currently-selected page. Only triggers a fetch if workspaces haven't
+     * been loaded yet and a fetch isn't already in flight, so swiping back
+     * to this tab repeatedly doesn't spam the network.
+     */
+    fun onTabSelected() {
+        if (viewModel.workspaces.value.isEmpty() && !viewModel.loading.value) {
+            viewModel.loadWorkspaces()
+        }
     }
 
     private fun setupRecyclerView() {

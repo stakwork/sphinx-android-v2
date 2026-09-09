@@ -2,6 +2,9 @@ package chat.sphinx.feature_network_query_hive
 
 import chat.sphinx.concept_network_call.NetworkCall
 import chat.sphinx.concept_network_query_hive.model.HiveFeaturePatchDto
+import chat.sphinx.concept_network_query_hive.model.HiveTaskDuplicateDto
+import chat.sphinx.concept_network_query_hive.model.HiveTaskDependsOnPatchDto
+import chat.sphinx.concept_network_query_hive.model.HiveTaskPatchDto
 import chat.sphinx.kotlin_response.LoadResponse
 import chat.sphinx.kotlin_response.Response
 import chat.sphinx.kotlin_response.ResponseError
@@ -10,6 +13,7 @@ import kotlinx.coroutines.flow.flow
 import okhttp3.Request
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.net.URLEncoder
@@ -100,8 +104,14 @@ class NetworkQueryHiveFeaturesTest {
             mediaType: String?,
             headers: Map<String, String>?,
             accept400AsSuccess: Boolean,
-        ): Flow<LoadResponse<T, ResponseError>> = flow {
-            emit(Response.Error(ResponseError("unused")))
+            requireSuccessful: Boolean,
+        ): Flow<LoadResponse<T, ResponseError>> {
+            lastMethod = "POST"
+            lastUrl = url
+            lastHeaders = headers
+            lastRequireSuccessful = requireSuccessful
+            lastBody = requestBody
+            return flow { emit(Response.Error(ResponseError("unused"))) }
         }
 
         override fun <T : Any, RequestBody : Any> postList(
@@ -198,5 +208,170 @@ class NetworkQueryHiveFeaturesTest {
             networkCall.lastUrl
         )
         assertEquals("Bearer token-3", networkCall.lastHeaders!!["Authorization"])
+    }
+
+    @Test
+    fun `getTasks omits includeArchived when false and percent-encodes query values`() {
+        val networkCall = RecordingNetworkCall()
+        val query = NetworkQueryHiveImpl(networkCall)
+
+        query.getTasks("ws id/&", 2, includeArchived = false, authToken = "token-4")
+
+        assertEquals("GET", networkCall.lastMethod)
+        assertTrue(networkCall.lastRequireSuccessful == true)
+        val expectedWorkspace = URLEncoder.encode("ws id/&", Charsets.UTF_8.name())
+        val expectedPage = URLEncoder.encode("2", Charsets.UTF_8.name())
+        assertEquals(
+            "https://hive.sphinx.chat/api/tasks?workspaceId=$expectedWorkspace&limit=20&page=$expectedPage",
+            networkCall.lastUrl
+        )
+        assertFalse(networkCall.lastUrl!!.contains("includeArchived"))
+        assertFalse(networkCall.lastUrl!!.contains("includeLatestMessage"))
+        assertEquals("Bearer token-4", networkCall.lastHeaders!!["Authorization"])
+    }
+
+    @Test
+    fun `getTasks appends includeArchived true only when archived`() {
+        val networkCall = RecordingNetworkCall()
+        val query = NetworkQueryHiveImpl(networkCall)
+
+        query.getTasks("ws-1", 1, includeArchived = true, authToken = "token-5")
+
+        assertEquals("GET", networkCall.lastMethod)
+        assertTrue(networkCall.lastRequireSuccessful == true)
+        assertEquals(
+            "https://hive.sphinx.chat/api/tasks?workspaceId=ws-1&limit=20&page=1&includeArchived=true",
+            networkCall.lastUrl
+        )
+        assertFalse(networkCall.lastUrl!!.contains("includeArchived=false"))
+        assertEquals("Bearer token-5", networkCall.lastHeaders!!["Authorization"])
+    }
+
+    @Test
+    fun `startTask patches startWorkflow true and never sets status`() {
+        val networkCall = RecordingNetworkCall()
+        val query = NetworkQueryHiveImpl(networkCall)
+
+        query.startTask("task/1+x", "token-6")
+
+        assertEquals("PATCH", networkCall.lastMethod)
+        assertTrue(networkCall.lastRequireSuccessful == true)
+        assertEquals(
+            "https://hive.sphinx.chat/api/tasks/${NetworkQueryHiveImpl.encodePathSegment("task/1+x")}",
+            networkCall.lastUrl
+        )
+        val body = networkCall.lastBody as HiveTaskPatchDto
+        assertEquals(true, body.startWorkflow)
+        assertNull(body.status)
+        assertNull(body.retryWorkflow)
+        assertEquals("Bearer token-6", networkCall.lastHeaders!!["Authorization"])
+        assertEquals("application/json", networkCall.lastHeaders!!["Content-Type"])
+    }
+
+    @Test
+    fun `retryTask patches retryWorkflow true and never sets status`() {
+        val networkCall = RecordingNetworkCall()
+        val query = NetworkQueryHiveImpl(networkCall)
+
+        query.retryTask("task-2", "token-7")
+
+        assertEquals("PATCH", networkCall.lastMethod)
+        val body = networkCall.lastBody as HiveTaskPatchDto
+        assertEquals(true, body.retryWorkflow)
+        assertNull(body.status)
+        assertNull(body.startWorkflow)
+        assertEquals(
+            "https://hive.sphinx.chat/api/tasks/${NetworkQueryHiveImpl.encodePathSegment("task-2")}",
+            networkCall.lastUrl
+        )
+    }
+
+    @Test
+    fun `updateTaskStatus patches status only`() {
+        val networkCall = RecordingNetworkCall()
+        val query = NetworkQueryHiveImpl(networkCall)
+
+        query.updateTaskStatus("task-3", "DONE", "token-8")
+
+        val body = networkCall.lastBody as HiveTaskPatchDto
+        assertEquals("DONE", body.status)
+        assertNull(body.startWorkflow)
+        assertNull(body.retryWorkflow)
+        assertEquals("PATCH", networkCall.lastMethod)
+        assertTrue(networkCall.lastRequireSuccessful == true)
+    }
+
+    @Test
+    fun `setTaskArchived patches archived flag`() {
+        val networkCall = RecordingNetworkCall()
+        val query = NetworkQueryHiveImpl(networkCall)
+
+        query.setTaskArchived("task 4", true, "token-9")
+
+        val body = networkCall.lastBody as HiveTaskPatchDto
+        assertEquals(true, body.archived)
+        assertEquals(
+            "https://hive.sphinx.chat/api/tasks/${NetworkQueryHiveImpl.encodePathSegment("task 4")}",
+            networkCall.lastUrl
+        )
+    }
+
+    @Test
+    fun `updateTaskFlags patches all three flags`() {
+        val networkCall = RecordingNetworkCall()
+        val query = NetworkQueryHiveImpl(networkCall)
+
+        query.updateTaskFlags(
+            "task-5",
+            autoMerge = true,
+            runBuild = false,
+            runTestSuite = true,
+            authToken = "token-10",
+        )
+
+        val body = networkCall.lastBody as HiveTaskPatchDto
+        assertEquals(true, body.autoMerge)
+        assertEquals(false, body.runBuild)
+        assertEquals(true, body.runTestSuite)
+        assertNull(body.status)
+    }
+
+    @Test
+    fun `duplicateTask posts to features tickets with requireSuccessful`() {
+        val networkCall = RecordingNetworkCall()
+        val query = NetworkQueryHiveImpl(networkCall)
+        val body = HiveTaskDuplicateDto(title = "Copy", priority = "LOW")
+
+        query.duplicateTask("feat/1+x", body, "token-11")
+
+        assertEquals("POST", networkCall.lastMethod)
+        assertTrue(networkCall.lastRequireSuccessful == true)
+        assertEquals(
+            "https://hive.sphinx.chat/api/features/${NetworkQueryHiveImpl.encodePathSegment("feat/1+x")}/tickets",
+            networkCall.lastUrl
+        )
+        assertEquals(body, networkCall.lastBody)
+        assertEquals("Bearer token-11", networkCall.lastHeaders!!["Authorization"])
+        assertEquals("application/json", networkCall.lastHeaders!!["Content-Type"])
+    }
+
+    @Test
+    fun `updateTaskDependsOn patches tickets not tasks`() {
+        val networkCall = RecordingNetworkCall()
+        val query = NetworkQueryHiveImpl(networkCall)
+
+        query.updateTaskDependsOn("task/9", listOf("a", "b"), "token-12")
+
+        assertEquals("PATCH", networkCall.lastMethod)
+        assertTrue(networkCall.lastRequireSuccessful == true)
+        assertEquals(
+            "https://hive.sphinx.chat/api/tickets/${NetworkQueryHiveImpl.encodePathSegment("task/9")}",
+            networkCall.lastUrl
+        )
+        val body = networkCall.lastBody as HiveTaskDependsOnPatchDto
+        assertEquals(listOf("a", "b"), body.dependsOnTaskIds)
+        assertFalse(networkCall.lastUrl!!.contains("/tasks/"))
+        assertEquals("Bearer token-12", networkCall.lastHeaders!!["Authorization"])
+        assertEquals("application/json", networkCall.lastHeaders!!["Content-Type"])
     }
 }

@@ -129,6 +129,28 @@ class NetworkRelayCallImplRequireSuccessfulTest {
     }
 
     @Test
+    fun `requireSuccessful true on POST 401 JSON body is Response Error with CustomException code`() = runBlocking {
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(401)
+                .setBody("""{"ok":false,"error":"unauthorized"}""")
+        )
+
+        val result = subject.post(
+            url = server.url("/features/feat-1/tickets").toString(),
+            responseJsonClass = SampleBodyDto::class.java,
+            requestBodyJsonClass = SampleBodyDto::class.java,
+            requestBody = SampleBodyDto(ok = true),
+            requireSuccessful = true,
+        ).last()
+
+        assertTrue(result is Response.Error)
+        val exception = (result as Response.Error<ResponseError>).cause.exception
+        assertTrue(exception is CustomException)
+        assertEquals(401, (exception as CustomException).code)
+    }
+
+    @Test
     fun `requireSuccessful true on 403 is Response Error with code 403`() = runBlocking {
         server.enqueue(
             MockResponse()

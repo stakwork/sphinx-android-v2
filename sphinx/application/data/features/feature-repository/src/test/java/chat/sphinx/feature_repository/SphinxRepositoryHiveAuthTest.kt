@@ -6,6 +6,9 @@ import chat.sphinx.concept_network_query_hive.model.HiveDeleteResponseDto
 import chat.sphinx.concept_network_query_hive.model.HiveFeaturePatchDto
 import chat.sphinx.concept_network_query_hive.model.HiveFeatureUpdateDto
 import chat.sphinx.concept_network_query_hive.model.HiveFeaturesListDto
+import chat.sphinx.concept_network_query_hive.model.HiveTaskDuplicateDto
+import chat.sphinx.concept_network_query_hive.model.HiveTaskMutationDto
+import chat.sphinx.concept_network_query_hive.model.HiveTasksListDto
 import chat.sphinx.concept_network_query_hive.model.WorkspaceImageDto
 import chat.sphinx.concept_network_query_hive.model.WorkspacesListDto
 import chat.sphinx.kotlin_response.LoadResponse
@@ -145,6 +148,71 @@ class SphinxRepositoryHiveAuthTest {
             featureId: String,
             authToken: String,
         ): Flow<LoadResponse<HiveDeleteResponseDto, ResponseError>> = flow {
+            emit(Response.Error(ResponseError("not used in this test")))
+        }
+
+        override fun getTasks(
+            workspaceId: String,
+            page: Int,
+            includeArchived: Boolean,
+            authToken: String,
+        ): Flow<LoadResponse<HiveTasksListDto, ResponseError>> = flow {
+            emit(Response.Error(ResponseError("not used in this test")))
+        }
+
+        override fun startTask(
+            taskId: String,
+            authToken: String,
+        ): Flow<LoadResponse<HiveTaskMutationDto, ResponseError>> = flow {
+            emit(Response.Error(ResponseError("not used in this test")))
+        }
+
+        override fun retryTask(
+            taskId: String,
+            authToken: String,
+        ): Flow<LoadResponse<HiveTaskMutationDto, ResponseError>> = flow {
+            emit(Response.Error(ResponseError("not used in this test")))
+        }
+
+        override fun updateTaskStatus(
+            taskId: String,
+            status: String,
+            authToken: String,
+        ): Flow<LoadResponse<HiveTaskMutationDto, ResponseError>> = flow {
+            emit(Response.Error(ResponseError("not used in this test")))
+        }
+
+        override fun setTaskArchived(
+            taskId: String,
+            archived: Boolean,
+            authToken: String,
+        ): Flow<LoadResponse<HiveTaskMutationDto, ResponseError>> = flow {
+            emit(Response.Error(ResponseError("not used in this test")))
+        }
+
+        override fun updateTaskFlags(
+            taskId: String,
+            autoMerge: Boolean,
+            runBuild: Boolean,
+            runTestSuite: Boolean,
+            authToken: String,
+        ): Flow<LoadResponse<HiveTaskMutationDto, ResponseError>> = flow {
+            emit(Response.Error(ResponseError("not used in this test")))
+        }
+
+        override fun duplicateTask(
+            featureId: String,
+            body: HiveTaskDuplicateDto,
+            authToken: String,
+        ): Flow<LoadResponse<HiveTaskMutationDto, ResponseError>> = flow {
+            emit(Response.Error(ResponseError("not used in this test")))
+        }
+
+        override fun updateTaskDependsOn(
+            taskId: String,
+            dependsOnTaskIds: List<String>,
+            authToken: String,
+        ): Flow<LoadResponse<HiveTaskMutationDto, ResponseError>> = flow {
             emit(Response.Error(ResponseError("not used in this test")))
         }
     }

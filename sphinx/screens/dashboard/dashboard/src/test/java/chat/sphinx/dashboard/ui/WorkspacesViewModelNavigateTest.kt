@@ -84,6 +84,29 @@ class WorkspacesViewModelNavigateTest {
         assertEquals(1, navigator.toWorkspaceDetailCount)
     }
 
+    @Test
+    fun `feature row tap calls toFeaturePlan with id and title`() = runTest {
+        val navigator = FakeDashboardNavigator()
+        val feature = HiveFeature(
+            id = "feat-42",
+            title = "Build Features tab",
+            status = "IN_PROGRESS",
+            priority = "HIGH",
+        )
+        val viewModel = WorkspaceFeaturesViewModel(
+            dispatchers = dispatchers,
+            repositoryDashboard = UnusedRepositoryDashboard(hiveFeatures = listOf(feature)),
+            dashboardNavigator = navigator,
+        )
+
+        viewModel.load("ws-1")
+        viewModel.onFeatureClicked(feature)
+
+        assertEquals("feat-42", navigator.lastFeatureId)
+        assertEquals("Build Features tab", navigator.lastFeatureTitle)
+        assertEquals(1, navigator.toFeaturePlanCount)
+    }
+
     private class FakeNavDriver : BaseNavigationDriver<NavController>() {
         override suspend fun submitNavigationRequest(request: NavigationRequest<NavController>) {}
     }
@@ -92,6 +115,9 @@ class WorkspacesViewModelNavigateTest {
         var lastWorkspaceId: String? = null
         var lastWorkspaceName: String? = null
         var toWorkspaceDetailCount: Int = 0
+        var lastFeatureId: String? = null
+        var lastFeatureTitle: String? = null
+        var toFeaturePlanCount: Int = 0
 
         override suspend fun toChatContact(chatId: ChatId?, contactId: ContactId) = Unit
         override suspend fun toChatGroup(chatId: ChatId) = Unit
@@ -100,6 +126,11 @@ class WorkspacesViewModelNavigateTest {
             lastWorkspaceId = workspaceId
             lastWorkspaceName = workspaceName
             toWorkspaceDetailCount++
+        }
+        override suspend fun toFeaturePlan(featureId: String, featureTitle: String) {
+            lastFeatureId = featureId
+            lastFeatureTitle = featureTitle
+            toFeaturePlanCount++
         }
         override suspend fun toJoinTribeDetail(tribeLink: TribeJoinLink) = Unit
         override suspend fun toQRCodeDetail(qrText: String, viewTitle: String, description: String?) = Unit
@@ -126,7 +157,9 @@ class WorkspacesViewModelNavigateTest {
     }
 
     // Unused by navigateToWorkspaceDetail; only present so the real VM can be constructed.
-    private class UnusedRepositoryDashboard : RepositoryDashboardAndroid<Any> {
+    private class UnusedRepositoryDashboard(
+        private val hiveFeatures: List<HiveFeature> = emptyList(),
+    ) : RepositoryDashboardAndroid<Any> {
         override suspend fun getAccountBalance(): StateFlow<NodeBalance?> = MutableStateFlow(null)
         override val getAllChats: Flow<List<Chat>> = emptyFlow()
         override val getAllContactChats: Flow<List<Chat>> = emptyFlow()
@@ -179,7 +212,15 @@ class WorkspacesViewModelNavigateTest {
         override suspend fun fetchHiveFeatures(
             workspaceId: String,
             page: Int,
-        ): Response<HiveFeaturesPage, ResponseError> = Response.Error(ResponseError("unused"))
+        ): Response<HiveFeaturesPage, ResponseError> = Response.Success(
+            HiveFeaturesPage(
+                features = hiveFeatures,
+                page = page,
+                hasMore = false,
+                totalPages = 1,
+                totalCount = hiveFeatures.size,
+            )
+        )
         override suspend fun updateHiveFeature(
             featureId: String,
             status: String?,

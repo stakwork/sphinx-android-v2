@@ -5,6 +5,8 @@ import chat.sphinx.concept_paging.PageSourceWrapper
 import chat.sphinx.concept_repository_dashboard.DashboardItem
 import chat.sphinx.concept_repository_dashboard.model.HiveFeature
 import chat.sphinx.concept_repository_dashboard.model.HiveFeaturesPage
+import chat.sphinx.concept_repository_dashboard.model.HiveTask
+import chat.sphinx.concept_repository_dashboard.model.HiveTasksPage
 import chat.sphinx.concept_repository_dashboard.model.Workspace
 import chat.sphinx.concept_repository_dashboard_android.RepositoryDashboardAndroid
 import chat.sphinx.dashboard.navigation.DashboardNavigator
@@ -228,6 +230,38 @@ class WorkspacesViewModelNavigateTest {
         ): Response<HiveFeature, ResponseError> = Response.Error(ResponseError("unused"))
         override suspend fun deleteHiveFeature(
             featureId: String,
+        ): Response<Boolean, ResponseError> = Response.Error(ResponseError("unused"))
+        override suspend fun fetchHiveTasks(
+            workspaceId: String,
+            page: Int,
+            includeArchived: Boolean,
+        ): Response<HiveTasksPage, ResponseError> = Response.Error(ResponseError("unused"))
+        override suspend fun startHiveTask(
+            taskId: String,
+        ): Response<HiveTask?, ResponseError> = Response.Error(ResponseError("unused"))
+        override suspend fun retryHiveTask(
+            taskId: String,
+        ): Response<HiveTask?, ResponseError> = Response.Error(ResponseError("unused"))
+        override suspend fun updateHiveTaskStatus(
+            taskId: String,
+            status: String,
+        ): Response<HiveTask?, ResponseError> = Response.Error(ResponseError("unused"))
+        override suspend fun setHiveTaskArchived(
+            taskId: String,
+            archived: Boolean,
+        ): Response<HiveTask?, ResponseError> = Response.Error(ResponseError("unused"))
+        override suspend fun updateHiveTaskFlags(
+            taskId: String,
+            autoMerge: Boolean,
+            runBuild: Boolean,
+            runTestSuite: Boolean,
+        ): Response<HiveTask?, ResponseError> = Response.Error(ResponseError("unused"))
+        override suspend fun duplicateHiveTask(
+            task: HiveTask,
+        ): Response<HiveTask, ResponseError> = Response.Error(ResponseError("unused"))
+        override suspend fun updateHiveTaskDependsOn(
+            taskId: String,
+            dependsOnTaskIds: List<String>,
         ): Response<Boolean, ResponseError> = Response.Error(ResponseError("unused"))
         override suspend fun getDashboardItemPagingSource(): PageSourceWrapper<Long, DashboardItem, Any> {
             error("unused")

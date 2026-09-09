@@ -2,6 +2,8 @@ package chat.sphinx.concept_repository_dashboard
 
 import chat.sphinx.concept_repository_dashboard.model.HiveFeature
 import chat.sphinx.concept_repository_dashboard.model.HiveFeaturesPage
+import chat.sphinx.concept_repository_dashboard.model.HiveTask
+import chat.sphinx.concept_repository_dashboard.model.HiveTasksPage
 import chat.sphinx.concept_repository_dashboard.model.Workspace
 import chat.sphinx.kotlin_response.LoadResponse
 import chat.sphinx.kotlin_response.Response
@@ -103,4 +105,38 @@ interface RepositoryDashboard {
     ): Response<HiveFeature, ResponseError>
 
     suspend fun deleteHiveFeature(featureId: String): Response<Boolean, ResponseError>
+
+    suspend fun fetchHiveTasks(
+        workspaceId: String,
+        page: Int,
+        includeArchived: Boolean
+    ): Response<HiveTasksPage, ResponseError>
+
+    suspend fun startHiveTask(taskId: String): Response<HiveTask?, ResponseError>
+
+    suspend fun retryHiveTask(taskId: String): Response<HiveTask?, ResponseError>
+
+    suspend fun updateHiveTaskStatus(
+        taskId: String,
+        status: String
+    ): Response<HiveTask?, ResponseError>
+
+    suspend fun setHiveTaskArchived(
+        taskId: String,
+        archived: Boolean
+    ): Response<HiveTask?, ResponseError>
+
+    suspend fun updateHiveTaskFlags(
+        taskId: String,
+        autoMerge: Boolean,
+        runBuild: Boolean,
+        runTestSuite: Boolean
+    ): Response<HiveTask?, ResponseError>
+
+    suspend fun duplicateHiveTask(task: HiveTask): Response<HiveTask, ResponseError>
+
+    suspend fun updateHiveTaskDependsOn(
+        taskId: String,
+        dependsOnTaskIds: List<String>
+    ): Response<Boolean, ResponseError>
 }

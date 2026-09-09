@@ -37,8 +37,12 @@ import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.concept_repository_dashboard.RepositoryDashboard
 import chat.sphinx.concept_repository_dashboard.model.HiveFeature
 import chat.sphinx.concept_repository_dashboard.model.HiveFeaturesPage
+import chat.sphinx.concept_repository_dashboard.model.HiveTask
+import chat.sphinx.concept_repository_dashboard.model.HiveTasksPage
 import chat.sphinx.concept_repository_dashboard.model.Workspace
 import chat.sphinx.concept_network_query_hive.model.HiveFeaturePatchDto
+import chat.sphinx.concept_network_query_hive.model.HiveTaskDuplicateDto
+import chat.sphinx.concept_network_query_hive.model.HiveTaskMutationDto
 import chat.sphinx.concept_network_query_hive.model.WorkspaceDto
 import chat.sphinx.concept_relay.CustomException
 import chat.sphinx.feature_repository.mappers.hive.toDomain
@@ -280,6 +284,12 @@ abstract class SphinxRepository(
             "MEDIUM",
             "HIGH",
             "CRITICAL",
+        )
+
+        val HIVE_TASK_STATUSES = setOf(
+            "TODO",
+            "IN_PROGRESS",
+            "DONE",
         )
     }
 
@@ -765,6 +775,311 @@ abstract class SphinxRepository(
         } catch (e: Exception) {
             LOG.e(TAG, "deleteHiveFeature failure featureId=$featureId statusCode=null", e)
             Response.Error(ResponseError("Failed to delete hive feature", e))
+        }
+    }
+
+    override suspend fun fetchHiveTasks(
+        workspaceId: String,
+        page: Int,
+        includeArchived: Boolean
+    ): Response<HiveTasksPage, ResponseError> {
+        LOG.d(TAG, "fetchHiveTasks workspaceId=$workspaceId page=$page")
+        return try {
+            when (
+                val response = withHiveToken(
+                    terminalError = { error ->
+                        val unauthorized = isHiveUnauthorized(error)
+                        if (unauthorized) {
+                            LOG.d(
+                                TAG,
+                                "fetchHiveTasks 401 re-auth-and-retry workspaceId=$workspaceId page=$page statusCode=401"
+                            )
+                        }
+                        !unauthorized
+                    },
+                ) { token ->
+                    networkQueryHive.getTasks(workspaceId, page, includeArchived, token)
+                }
+            ) {
+                is Response.Success -> {
+                    val dto = response.value
+                    val data = dto.data
+                    if (dto.error != null || data == null) {
+                        LOG.e(
+                            TAG,
+                            "fetchHiveTasks failure workspaceId=$workspaceId page=$page statusCode=null",
+                            null
+                        )
+                        return Response.Error(
+                            ResponseError(dto.error ?: "Failed to fetch hive tasks")
+                        )
+                    }
+                    val pagination = dto.pagination
+                    Response.Success(
+                        HiveTasksPage(
+                            tasks = data.map { it.toDomain() },
+                            page = pagination?.page ?: 1,
+                            hasMore = pagination?.hasMore ?: false,
+                            totalPages = pagination?.totalPages ?: 1,
+                            totalCount = pagination?.totalCount ?: 0,
+                        )
+                    )
+                }
+                is Response.Error -> {
+                    val code = hiveErrorStatusCode(response.cause)
+                    LOG.e(
+                        TAG,
+                        "fetchHiveTasks failure workspaceId=$workspaceId page=$page statusCode=$code",
+                        response.cause.exception
+                    )
+                    response
+                }
+            }
+        } catch (e: Exception) {
+            LOG.e(
+                TAG,
+                "fetchHiveTasks failure workspaceId=$workspaceId page=$page statusCode=null",
+                e
+            )
+            Response.Error(ResponseError("Failed to fetch hive tasks", e))
+        }
+    }
+
+    override suspend fun startHiveTask(taskId: String): Response<HiveTask?, ResponseError> {
+        LOG.d(TAG, "startHiveTask taskId=$taskId")
+        return mutateHiveTask(taskId, "startHiveTask") { token ->
+            networkQueryHive.startTask(taskId, token)
+        }
+    }
+
+    override suspend fun retryHiveTask(taskId: String): Response<HiveTask?, ResponseError> {
+        LOG.d(TAG, "retryHiveTask taskId=$taskId")
+        return mutateHiveTask(taskId, "retryHiveTask") { token ->
+            networkQueryHive.retryTask(taskId, token)
+        }
+    }
+
+    override suspend fun updateHiveTaskStatus(
+        taskId: String,
+        status: String
+    ): Response<HiveTask?, ResponseError> {
+        LOG.d(TAG, "updateHiveTaskStatus taskId=$taskId")
+        if (status !in HIVE_TASK_STATUSES) {
+            LOG.e(TAG, "updateHiveTaskStatus rejected status taskId=$taskId", null)
+            return Response.Error(ResponseError("Invalid hive task status"))
+        }
+        return mutateHiveTask(taskId, "updateHiveTaskStatus") { token ->
+            networkQueryHive.updateTaskStatus(taskId, status, token)
+        }
+    }
+
+    override suspend fun setHiveTaskArchived(
+        taskId: String,
+        archived: Boolean
+    ): Response<HiveTask?, ResponseError> {
+        LOG.d(TAG, "setHiveTaskArchived taskId=$taskId")
+        return mutateHiveTask(taskId, "setHiveTaskArchived") { token ->
+            networkQueryHive.setTaskArchived(taskId, archived, token)
+        }
+    }
+
+    override suspend fun updateHiveTaskFlags(
+        taskId: String,
+        autoMerge: Boolean,
+        runBuild: Boolean,
+        runTestSuite: Boolean
+    ): Response<HiveTask?, ResponseError> {
+        LOG.d(TAG, "updateHiveTaskFlags taskId=$taskId")
+        return mutateHiveTask(taskId, "updateHiveTaskFlags") { token ->
+            networkQueryHive.updateTaskFlags(
+                taskId,
+                autoMerge,
+                runBuild,
+                runTestSuite,
+                token
+            )
+        }
+    }
+
+    private suspend fun mutateHiveTask(
+        taskId: String,
+        operation: String,
+        request: (token: String) -> Flow<LoadResponse<HiveTaskMutationDto, ResponseError>>,
+    ): Response<HiveTask?, ResponseError> {
+        return try {
+            when (
+                val response = withHiveToken(
+                    terminalError = { error ->
+                        val unauthorized = isHiveUnauthorized(error)
+                        if (unauthorized) {
+                            LOG.d(
+                                TAG,
+                                "$operation 401 re-auth-and-retry taskId=$taskId statusCode=401"
+                            )
+                        }
+                        !unauthorized
+                    },
+                    request = request,
+                )
+            ) {
+                is Response.Success -> {
+                    val dto = response.value
+                    if (!dto.success) {
+                        LOG.e(
+                            TAG,
+                            "$operation failure taskId=$taskId statusCode=null",
+                            null
+                        )
+                        return Response.Error(ResponseError("Failed to $operation"))
+                    }
+                    val data = dto.data
+                    if (data != null) {
+                        Response.Success(data.toDomain())
+                    } else {
+                        Response.Success(null)
+                    }
+                }
+                is Response.Error -> {
+                    val code = hiveErrorStatusCode(response.cause)
+                    LOG.e(
+                        TAG,
+                        "$operation failure taskId=$taskId statusCode=$code",
+                        response.cause.exception
+                    )
+                    response
+                }
+            }
+        } catch (e: Exception) {
+            LOG.e(TAG, "$operation failure taskId=$taskId statusCode=null", e)
+            Response.Error(ResponseError("Failed to $operation", e))
+        }
+    }
+
+    override suspend fun duplicateHiveTask(task: HiveTask): Response<HiveTask, ResponseError> {
+        LOG.d(TAG, "duplicateHiveTask taskId=${task.id}")
+        val featureId = task.featureId
+        if (featureId.isNullOrBlank()) {
+            LOG.e(TAG, "duplicateHiveTask rejected blank featureId taskId=${task.id}", null)
+            return Response.Error(ResponseError("Hive task duplicate requires featureId"))
+        }
+
+        val body = HiveTaskDuplicateDto(
+            title = task.title,
+            priority = task.priority ?: "LOW",
+            status = "TODO",
+            autoMerge = false,
+            description = task.description,
+            phaseId = task.phaseId,
+            repositoryId = task.repositoryId,
+            dependsOnTaskIds = task.dependsOnTaskIds.takeIf { it.isNotEmpty() },
+            workflowId = task.workflowId,
+            workflowName = task.workflowName,
+            workflowRefId = task.workflowRefId,
+            workflowTaskType = task.workflowTaskType,
+            workflowVersionId = task.workflowVersionId,
+        )
+
+        return try {
+            when (
+                val response = withHiveToken(
+                    terminalError = { error ->
+                        val unauthorized = isHiveUnauthorized(error)
+                        if (unauthorized) {
+                            LOG.d(
+                                TAG,
+                                "duplicateHiveTask 401 re-auth-and-retry taskId=${task.id} statusCode=401"
+                            )
+                        }
+                        !unauthorized
+                    },
+                ) { token ->
+                    networkQueryHive.duplicateTask(featureId, body, token)
+                }
+            ) {
+                is Response.Success -> {
+                    val dto = response.value
+                    val data = dto.data
+                    if (!dto.success || data == null || data.id.isBlank()) {
+                        LOG.e(
+                            TAG,
+                            "duplicateHiveTask failure taskId=${task.id} statusCode=null",
+                            null
+                        )
+                        return Response.Error(ResponseError("Failed to duplicate hive task"))
+                    }
+                    Response.Success(data.toDomain())
+                }
+                is Response.Error -> {
+                    val code = hiveErrorStatusCode(response.cause)
+                    LOG.e(
+                        TAG,
+                        "duplicateHiveTask failure taskId=${task.id} statusCode=$code",
+                        response.cause.exception
+                    )
+                    response
+                }
+            }
+        } catch (e: Exception) {
+            LOG.e(TAG, "duplicateHiveTask failure taskId=${task.id} statusCode=null", e)
+            Response.Error(ResponseError("Failed to duplicate hive task", e))
+        }
+    }
+
+    override suspend fun updateHiveTaskDependsOn(
+        taskId: String,
+        dependsOnTaskIds: List<String>
+    ): Response<Boolean, ResponseError> {
+        LOG.d(TAG, "updateHiveTaskDependsOn taskId=$taskId")
+        if (taskId.isBlank() || dependsOnTaskIds.any { it.isBlank() }) {
+            LOG.e(TAG, "updateHiveTaskDependsOn rejected blank id taskId=$taskId", null)
+            return Response.Error(ResponseError("Hive task dependsOn requires non-blank ids"))
+        }
+
+        return try {
+            when (
+                val response = withHiveToken(
+                    terminalError = { error ->
+                        val unauthorized = isHiveUnauthorized(error)
+                        if (unauthorized) {
+                            LOG.d(
+                                TAG,
+                                "updateHiveTaskDependsOn 401 re-auth-and-retry taskId=$taskId statusCode=401"
+                            )
+                        }
+                        !unauthorized
+                    },
+                ) { token ->
+                    networkQueryHive.updateTaskDependsOn(taskId, dependsOnTaskIds, token)
+                }
+            ) {
+                is Response.Success -> {
+                    if (!response.value.success) {
+                        LOG.e(
+                            TAG,
+                            "updateHiveTaskDependsOn failure taskId=$taskId statusCode=null",
+                            null
+                        )
+                        return Response.Error(ResponseError("Failed to update hive task dependsOn"))
+                    }
+                    Response.Success(true)
+                }
+                is Response.Error -> {
+                    val code = hiveErrorStatusCode(response.cause)
+                    LOG.e(
+                        TAG,
+                        "updateHiveTaskDependsOn failure taskId=$taskId statusCode=$code",
+                        response.cause.exception
+                    )
+                    response
+                }
+            }
+        } catch (e: Exception) {
+            LOG.e(
+                TAG,
+                "updateHiveTaskDependsOn failure taskId=$taskId statusCode=null",
+                e
+            )
+            Response.Error(ResponseError("Failed to update hive task dependsOn", e))
         }
     }
 

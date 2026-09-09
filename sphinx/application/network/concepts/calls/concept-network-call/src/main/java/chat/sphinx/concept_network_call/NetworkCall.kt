@@ -133,6 +133,9 @@ abstract class NetworkCall {
      * @param [requestBody] the request body to be converted to json
      * @param [mediaType] the media type for the request body, defaults to "application/json"
      * @param [headers] any headers that need to be added to the request
+     * @param [requireSuccessful] when true, a non-2xx HTTP response is emitted as
+     * [Response.Error] with [chat.sphinx.concept_relay.CustomException.code] set to
+     * the HTTP status instead of being parsed as success
      * */
     abstract fun <T: Any, RequestBody: Any> post(
         url: String,
@@ -141,7 +144,8 @@ abstract class NetworkCall {
         requestBody: RequestBody,
         mediaType: String? = "application/json",
         headers: Map<String, String>? = null,
-        accept400AsSuccess: Boolean = false
+        accept400AsSuccess: Boolean = false,
+        requireSuccessful: Boolean = false,
     ): Flow<LoadResponse<T, ResponseError>>
 
     abstract fun <T: Any, RequestBody: Any> postList(

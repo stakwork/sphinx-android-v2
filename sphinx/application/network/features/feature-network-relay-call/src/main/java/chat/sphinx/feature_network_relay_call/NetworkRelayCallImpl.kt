@@ -314,7 +314,8 @@ class NetworkRelayCallImpl(
         requestBody: V,
         mediaType: String?,
         headers: Map<String, String>?,
-        accept400AsSuccess: Boolean
+        accept400AsSuccess: Boolean,
+        requireSuccessful: Boolean
     ): Flow<LoadResponse<T, ResponseError>> = flow {
 
         emit(LoadResponse.Loading)
@@ -327,7 +328,12 @@ class NetworkRelayCallImpl(
 
             val reqBody = requestBodyJson.toRequestBody(mediaType?.toMediaType())
 
-            val response = call(responseJsonClass, requestBuilder.post(reqBody).build(), accept400AsSuccess)
+            val response = call(
+                responseJsonClass,
+                requestBuilder.post(reqBody).build(),
+                accept400AsSuccess = accept400AsSuccess,
+                requireSuccessful = requireSuccessful
+            )
 
             emit(Response.Success(response))
         } catch (e: CustomException) {

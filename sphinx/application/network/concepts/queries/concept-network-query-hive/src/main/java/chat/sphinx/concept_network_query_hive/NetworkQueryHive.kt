@@ -5,6 +5,9 @@ import chat.sphinx.concept_network_query_hive.model.HiveDeleteResponseDto
 import chat.sphinx.concept_network_query_hive.model.HiveFeaturePatchDto
 import chat.sphinx.concept_network_query_hive.model.HiveFeatureUpdateDto
 import chat.sphinx.concept_network_query_hive.model.HiveFeaturesListDto
+import chat.sphinx.concept_network_query_hive.model.HiveTaskDuplicateDto
+import chat.sphinx.concept_network_query_hive.model.HiveTaskMutationDto
+import chat.sphinx.concept_network_query_hive.model.HiveTasksListDto
 import chat.sphinx.concept_network_query_hive.model.WorkspaceImageDto
 import chat.sphinx.concept_network_query_hive.model.WorkspacesListDto
 import chat.sphinx.kotlin_response.LoadResponse
@@ -44,4 +47,53 @@ abstract class NetworkQueryHive {
         featureId: String,
         authToken: String
     ): Flow<LoadResponse<HiveDeleteResponseDto, ResponseError>>
+
+    abstract fun getTasks(
+        workspaceId: String,
+        page: Int,
+        includeArchived: Boolean,
+        authToken: String
+    ): Flow<LoadResponse<HiveTasksListDto, ResponseError>>
+
+    abstract fun startTask(
+        taskId: String,
+        authToken: String
+    ): Flow<LoadResponse<HiveTaskMutationDto, ResponseError>>
+
+    abstract fun retryTask(
+        taskId: String,
+        authToken: String
+    ): Flow<LoadResponse<HiveTaskMutationDto, ResponseError>>
+
+    abstract fun updateTaskStatus(
+        taskId: String,
+        status: String,
+        authToken: String
+    ): Flow<LoadResponse<HiveTaskMutationDto, ResponseError>>
+
+    abstract fun setTaskArchived(
+        taskId: String,
+        archived: Boolean,
+        authToken: String
+    ): Flow<LoadResponse<HiveTaskMutationDto, ResponseError>>
+
+    abstract fun updateTaskFlags(
+        taskId: String,
+        autoMerge: Boolean,
+        runBuild: Boolean,
+        runTestSuite: Boolean,
+        authToken: String
+    ): Flow<LoadResponse<HiveTaskMutationDto, ResponseError>>
+
+    abstract fun duplicateTask(
+        featureId: String,
+        body: HiveTaskDuplicateDto,
+        authToken: String
+    ): Flow<LoadResponse<HiveTaskMutationDto, ResponseError>>
+
+    abstract fun updateTaskDependsOn(
+        taskId: String,
+        dependsOnTaskIds: List<String>,
+        authToken: String
+    ): Flow<LoadResponse<HiveTaskMutationDto, ResponseError>>
 }

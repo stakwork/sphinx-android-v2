@@ -5,7 +5,8 @@ import androidx.viewpager2.adapter.FragmentStateAdapter
 import chat.sphinx.dashboard.R
 
 class WorkspaceDetailFragmentsAdapter(
-    private val fragment: Fragment
+    private val fragment: Fragment,
+    val workspaceId: String,
 ) : FragmentStateAdapter(fragment) {
 
     companion object {
@@ -20,11 +21,23 @@ class WorkspaceDetailFragmentsAdapter(
             R.string.workspace_detail_graph_chat_tab_name,
             R.string.workspace_detail_pods_tab_name,
         )
+
+        fun fragmentClassForPosition(position: Int): Class<out Fragment> {
+            return if (position == FEATURES_TAB_POSITION) {
+                WorkspaceFeaturesFragment::class.java
+            } else {
+                WorkspaceDetailStubFragment::class.java
+            }
+        }
     }
 
     override fun createFragment(position: Int): Fragment {
-        val titleRes = TAB_TITLES.getOrElse(position) { TAB_TITLES[FEATURES_TAB_POSITION] }
-        return WorkspaceDetailStubFragment.newInstance(fragment.getString(titleRes))
+        return if (position == FEATURES_TAB_POSITION) {
+            WorkspaceFeaturesFragment.newInstance(workspaceId)
+        } else {
+            val titleRes = TAB_TITLES.getOrElse(position) { TAB_TITLES[FEATURES_TAB_POSITION] }
+            WorkspaceDetailStubFragment.newInstance(fragment.getString(titleRes))
+        }
     }
 
     fun getPageTitle(position: Int): CharSequence {

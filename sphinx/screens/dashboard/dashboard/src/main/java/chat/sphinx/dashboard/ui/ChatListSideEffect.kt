@@ -82,6 +82,75 @@ sealed class ChatListSideEffect: SideEffect<Context>() {
         }
     }
 
+    class AlertConfirmDeleteFeature(
+        private val onConfirm: () -> Unit,
+        private val onDismiss: () -> Unit = {}
+    ): ChatListSideEffect() {
+        override suspend fun execute(value: Context) {
+            val builder = AlertDialog.Builder(value, R_common.style.AlertDialogTheme)
+            builder.setTitle(value.getString(R.string.alert_confirm_delete_feature_title))
+            builder.setMessage(value.getString(R.string.alert_confirm_delete_feature_message))
+            builder.setNegativeButton(android.R.string.cancel) { _, _ ->
+                onDismiss()
+            }
+            builder.setPositiveButton(android.R.string.ok) { _, _ ->
+                onConfirm()
+            }
+            builder.show()
+        }
+    }
+
+    class AlertEditHiveFeature(
+        private val currentStatus: String?,
+        private val currentPriority: String?,
+        private val onConfirm: (status: String?, priority: String?) -> Unit,
+        private val onDismiss: () -> Unit = {}
+    ): ChatListSideEffect() {
+        override suspend fun execute(value: Context) {
+            val statuses = value.resources.getStringArray(R.array.hive_feature_status_values)
+            val statusIndex = statuses.indexOf(currentStatus).let { if (it >= 0) it else 0 }
+            var selectedStatus = statuses.getOrElse(statusIndex) { statuses.first() }
+
+            val statusBuilder = AlertDialog.Builder(value, R_common.style.AlertDialogTheme)
+            statusBuilder.setTitle(value.getString(R.string.hive_feature_edit_status_title))
+            statusBuilder.setSingleChoiceItems(statuses, statusIndex) { _, which ->
+                selectedStatus = statuses[which]
+            }
+            statusBuilder.setNegativeButton(android.R.string.cancel) { _, _ ->
+                onDismiss()
+            }
+            statusBuilder.setPositiveButton(android.R.string.ok) { _, _ ->
+                showPriorityDialog(value, selectedStatus)
+            }
+            statusBuilder.show()
+        }
+
+        private fun showPriorityDialog(value: Context, selectedStatus: String) {
+            val priorities = value.resources.getStringArray(R.array.hive_feature_priority_values)
+            val priorityIndex = priorities.indexOf(currentPriority).let { if (it >= 0) it else 0 }
+            var selectedPriority = priorities.getOrElse(priorityIndex) { priorities.first() }
+
+            val priorityBuilder = AlertDialog.Builder(value, R_common.style.AlertDialogTheme)
+            priorityBuilder.setTitle(value.getString(R.string.hive_feature_edit_priority_title))
+            priorityBuilder.setSingleChoiceItems(priorities, priorityIndex) { _, which ->
+                selectedPriority = priorities[which]
+            }
+            priorityBuilder.setNegativeButton(android.R.string.cancel) { _, _ ->
+                onDismiss()
+            }
+            priorityBuilder.setPositiveButton(android.R.string.ok) { _, _ ->
+                val status = selectedStatus.takeIf { it != currentStatus }
+                val priority = selectedPriority.takeIf { it != currentPriority }
+                if (status == null && priority == null) {
+                    onDismiss()
+                } else {
+                    onConfirm(status, priority)
+                }
+            }
+            priorityBuilder.show()
+        }
+    }
+
     class AlertRetryFetchWorkspaces(
         private val onRetry: () -> Unit,
         private val onDismiss: () -> Unit = {}

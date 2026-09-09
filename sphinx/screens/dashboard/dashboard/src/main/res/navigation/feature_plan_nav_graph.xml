@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/feature_plan_nav_graph"
+    app:startDestination="@+id/navigation_feature_plan_fragment">
+
+    <fragment
+        android:id="@+id/navigation_feature_plan_fragment"
+        android:name="chat.sphinx.dashboard.ui.FeaturePlanStubFragment"
+        tools:layout="@layout/fragment_feature_plan_stub">
+        <argument
+            android:name="argFeatureId"
+            app:argType="string" />
+        <argument
+            android:name="argFeatureTitle"
+            app:argType="string" />
+    </fragment>
+
+</navigation>

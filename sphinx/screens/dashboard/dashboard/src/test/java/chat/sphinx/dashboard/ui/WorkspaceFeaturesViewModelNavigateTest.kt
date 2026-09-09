@@ -1,6 +1,5 @@
 package chat.sphinx.dashboard.ui
 
-import androidx.lifecycle.SavedStateHandle
 import androidx.navigation.NavController
 import chat.sphinx.dashboard.navigation.DashboardNavigator
 import chat.sphinx.wrapper_common.dashboard.ChatId
@@ -10,75 +9,43 @@ import chat.sphinx.wrapper_common.feed.FeedUrl
 import chat.sphinx.wrapper_common.lightning.LightningNodePubKey
 import chat.sphinx.wrapper_common.lightning.LightningRouteHint
 import chat.sphinx.wrapper_common.tribe.TribeJoinLink
-import io.matthewnelson.android_feature_navigation.requests.PopBackStack
-import io.matthewnelson.concept_coroutines.CoroutineDispatchers
 import io.matthewnelson.concept_navigation.BaseNavigationDriver
 import io.matthewnelson.concept_navigation.NavigationRequest
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
-import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
-import org.junit.Before
 import org.junit.Test
 
-@OptIn(ExperimentalCoroutinesApi::class)
-class WorkspaceDetailViewModelTest {
-
-    private val testDispatcher = UnconfinedTestDispatcher()
-    private val dispatchers = object : CoroutineDispatchers {
-        override val default: CoroutineDispatcher = testDispatcher
-        override val io: CoroutineDispatcher = testDispatcher
-        override val main: CoroutineDispatcher = testDispatcher
-        override val mainImmediate: CoroutineDispatcher = testDispatcher
-        override val unconfined: CoroutineDispatcher = testDispatcher
-    }
-
-    @Before
-    fun setUp() {
-        Dispatchers.setMain(testDispatcher)
-    }
-
-    @After
-    fun tearDown() {
-        Dispatchers.resetMain()
-    }
+class WorkspaceFeaturesViewModelNavigateTest {
 
     @Test
-    fun `popBackStack delegates to dashboardNavigator`() = runTest {
-        val driver = FakeNavDriver()
-        val viewModel = WorkspaceDetailViewModel(
-            dispatchers = dispatchers,
-            handler = SavedStateHandle(),
-            dashboardNavigator = FakeDashboardNavigator(driver),
-        )
+    fun `toFeaturePlan is invoked with feature id and title`() = runTest {
+        val navigator = FakeDashboardNavigator()
 
-        viewModel.popBackStack()
+        navigator.toFeaturePlan("feat-42", "Build Features tab")
 
-        assertEquals(1, driver.requests.size)
-        assertTrue(driver.requests.first() is PopBackStack)
+        assertEquals("feat-42", navigator.lastFeatureId)
+        assertEquals("Build Features tab", navigator.lastFeatureTitle)
+        assertEquals(1, navigator.toFeaturePlanCount)
     }
 
     private class FakeNavDriver : BaseNavigationDriver<NavController>() {
-        val requests = mutableListOf<NavigationRequest<NavController>>()
-        override suspend fun submitNavigationRequest(request: NavigationRequest<NavController>) {
-            requests.add(request)
-        }
+        override suspend fun submitNavigationRequest(request: NavigationRequest<NavController>) {}
     }
 
-    private class FakeDashboardNavigator(
-        navigationDriver: BaseNavigationDriver<NavController>,
-    ) : DashboardNavigator(navigationDriver) {
+    private class FakeDashboardNavigator : DashboardNavigator(FakeNavDriver()) {
+        var lastFeatureId: String? = null
+        var lastFeatureTitle: String? = null
+        var toFeaturePlanCount: Int = 0
+
         override suspend fun toChatContact(chatId: ChatId?, contactId: ContactId) = Unit
         override suspend fun toChatGroup(chatId: ChatId) = Unit
         override suspend fun toChatTribe(chatId: ChatId) = Unit
         override suspend fun toWorkspaceDetail(workspaceId: String, workspaceName: String) = Unit
-        override suspend fun toFeaturePlan(featureId: String, featureTitle: String) = Unit
+        override suspend fun toFeaturePlan(featureId: String, featureTitle: String) {
+            lastFeatureId = featureId
+            lastFeatureTitle = featureTitle
+            toFeaturePlanCount++
+        }
         override suspend fun toJoinTribeDetail(tribeLink: TribeJoinLink) = Unit
         override suspend fun toQRCodeDetail(qrText: String, viewTitle: String, description: String?) = Unit
         override suspend fun toAddContactDetail(

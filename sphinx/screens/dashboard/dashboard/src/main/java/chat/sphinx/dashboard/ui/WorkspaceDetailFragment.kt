@@ -54,7 +54,7 @@ internal class WorkspaceDetailFragment : SideEffectFragment<
     }
 
     private fun setupViewPager() {
-        val adapter = WorkspaceDetailFragmentsAdapter(this)
+        val adapter = WorkspaceDetailFragmentsAdapter(this, viewModel.workspaceId)
 
         binding.viewPagerWorkspaceDetail.apply {
             this.adapter = adapter

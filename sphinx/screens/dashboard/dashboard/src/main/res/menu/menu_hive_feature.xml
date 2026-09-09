@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/menu_hive_feature_edit"
+        android:title="@string/hive_feature_action_edit" />
+    <item
+        android:id="@+id/menu_hive_feature_delete"
+        android:title="@string/hive_feature_action_delete" />
+</menu>

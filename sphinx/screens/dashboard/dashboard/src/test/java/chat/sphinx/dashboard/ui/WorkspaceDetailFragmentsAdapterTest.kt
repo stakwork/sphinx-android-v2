@@ -7,6 +7,39 @@ import org.junit.Test
 class WorkspaceDetailFragmentsAdapterTest {
 
     @Test
+    fun `features tab receives a workspaceId constructor argument`() {
+        assertEquals("arg_workspace_id", WorkspaceFeaturesFragment.ARG_WORKSPACE_ID)
+    }
+
+    @Test
+    fun `position 0 is WorkspaceFeaturesFragment and other tabs stay stubs`() {
+        assertEquals(
+            WorkspaceFeaturesFragment::class.java,
+            WorkspaceDetailFragmentsAdapter.fragmentClassForPosition(
+                WorkspaceDetailFragmentsAdapter.FEATURES_TAB_POSITION
+            )
+        )
+        assertEquals(
+            WorkspaceDetailStubFragment::class.java,
+            WorkspaceDetailFragmentsAdapter.fragmentClassForPosition(
+                WorkspaceDetailFragmentsAdapter.TASKS_TAB_POSITION
+            )
+        )
+        assertEquals(
+            WorkspaceDetailStubFragment::class.java,
+            WorkspaceDetailFragmentsAdapter.fragmentClassForPosition(
+                WorkspaceDetailFragmentsAdapter.GRAPH_CHAT_TAB_POSITION
+            )
+        )
+        assertEquals(
+            WorkspaceDetailStubFragment::class.java,
+            WorkspaceDetailFragmentsAdapter.fragmentClassForPosition(
+                WorkspaceDetailFragmentsAdapter.PODS_TAB_POSITION
+            )
+        )
+    }
+
+    @Test
     fun `tab titles map Features Tasks Graph Chat Pods with Features as default`() {
         assertEquals(4, WorkspaceDetailFragmentsAdapter.TAB_TITLES.size)
         assertEquals(0, WorkspaceDetailFragmentsAdapter.FEATURES_TAB_POSITION)

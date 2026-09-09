@@ -35,7 +35,10 @@ import chat.sphinx.concept_repository_connect_manager.model.OwnerRegistrationSta
 import chat.sphinx.concept_repository_connect_manager.model.RestoreProcessState
 import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.concept_repository_dashboard.RepositoryDashboard
+import chat.sphinx.concept_repository_dashboard.model.HiveFeature
+import chat.sphinx.concept_repository_dashboard.model.HiveFeaturesPage
 import chat.sphinx.concept_repository_dashboard.model.Workspace
+import chat.sphinx.concept_network_query_hive.model.HiveFeaturePatchDto
 import chat.sphinx.concept_network_query_hive.model.WorkspaceDto
 import chat.sphinx.concept_relay.CustomException
 import chat.sphinx.feature_repository.mappers.hive.toDomain
@@ -261,6 +264,23 @@ abstract class SphinxRepository(
         // Cache size limits to prevent unbounded memory growth
         private const val MSG_SENDER_CACHE_MAX_SIZE = 500
         private const val FLOW_CACHE_MAX_SIZE = 100
+
+        val HIVE_FEATURE_STATUSES = setOf(
+            "BACKLOG",
+            "PLANNED",
+            "IN_PROGRESS",
+            "COMPLETED",
+            "CANCELLED",
+            "ERROR",
+            "BLOCKED",
+        )
+
+        val HIVE_FEATURE_PRIORITIES = setOf(
+            "LOW",
+            "MEDIUM",
+            "HIGH",
+            "CRITICAL",
+        )
     }
 
     var lastMessageIndex: Long? = null
@@ -571,6 +591,180 @@ abstract class SphinxRepository(
         } catch (e: Exception) {
             LOG.e(TAG, "fetchWorkspaceImageUrl failure slug=$slug statusCode=null", e)
             Response.Error(ResponseError("Failed to fetch workspace image", e))
+        }
+    }
+
+    private fun isHiveUnauthorized(error: ResponseError): Boolean =
+        hiveErrorStatusCode(error) == 401
+
+    override suspend fun fetchHiveFeatures(
+        workspaceId: String,
+        page: Int
+    ): Response<HiveFeaturesPage, ResponseError> {
+        LOG.d(TAG, "fetchHiveFeatures workspaceId=$workspaceId page=$page")
+        return try {
+            when (
+                val response = withHiveToken(
+                    terminalError = { error ->
+                        val unauthorized = isHiveUnauthorized(error)
+                        if (unauthorized) {
+                            LOG.d(
+                                TAG,
+                                "fetchHiveFeatures 401 re-auth-and-retry workspaceId=$workspaceId page=$page statusCode=401"
+                            )
+                        }
+                        !unauthorized
+                    },
+                ) { token ->
+                    networkQueryHive.getFeatures(workspaceId, page, token)
+                }
+            ) {
+                is Response.Success -> {
+                    val dto = response.value
+                    val data = dto.data
+                    if (!dto.success || data == null) {
+                        LOG.e(
+                            TAG,
+                            "fetchHiveFeatures failure workspaceId=$workspaceId page=$page statusCode=null",
+                            null
+                        )
+                        return Response.Error(ResponseError("Failed to fetch hive features"))
+                    }
+                    val pagination = dto.pagination
+                    Response.Success(
+                        HiveFeaturesPage(
+                            features = data.map { it.toDomain() },
+                            page = pagination?.page ?: 1,
+                            hasMore = pagination?.hasMore ?: false,
+                            totalPages = pagination?.totalPages ?: 1,
+                            totalCount = pagination?.totalCount ?: 0,
+                        )
+                    )
+                }
+                is Response.Error -> {
+                    val code = hiveErrorStatusCode(response.cause)
+                    LOG.e(
+                        TAG,
+                        "fetchHiveFeatures failure workspaceId=$workspaceId page=$page statusCode=$code",
+                        response.cause.exception
+                    )
+                    response
+                }
+            }
+        } catch (e: Exception) {
+            LOG.e(TAG, "fetchHiveFeatures failure workspaceId=$workspaceId page=$page statusCode=null", e)
+            Response.Error(ResponseError("Failed to fetch hive features", e))
+        }
+    }
+
+    override suspend fun updateHiveFeature(
+        featureId: String,
+        status: String?,
+        priority: String?
+    ): Response<HiveFeature, ResponseError> {
+        LOG.d(TAG, "updateHiveFeature featureId=$featureId")
+        if (status == null && priority == null) {
+            LOG.e(TAG, "updateHiveFeature rejected both-null featureId=$featureId", null)
+            return Response.Error(ResponseError("Hive feature update requires status or priority"))
+        }
+        if (status != null && status !in HIVE_FEATURE_STATUSES) {
+            LOG.e(TAG, "updateHiveFeature rejected status featureId=$featureId", null)
+            return Response.Error(ResponseError("Invalid hive feature status"))
+        }
+        if (priority != null && priority !in HIVE_FEATURE_PRIORITIES) {
+            LOG.e(TAG, "updateHiveFeature rejected priority featureId=$featureId", null)
+            return Response.Error(ResponseError("Invalid hive feature priority"))
+        }
+
+        return try {
+            when (
+                val response = withHiveToken(
+                    terminalError = { error ->
+                        val unauthorized = isHiveUnauthorized(error)
+                        if (unauthorized) {
+                            LOG.d(
+                                TAG,
+                                "updateHiveFeature 401 re-auth-and-retry featureId=$featureId statusCode=401"
+                            )
+                        }
+                        !unauthorized
+                    },
+                ) { token ->
+                    networkQueryHive.updateFeature(
+                        featureId,
+                        HiveFeaturePatchDto(status = status, priority = priority),
+                        token
+                    )
+                }
+            ) {
+                is Response.Success -> {
+                    val dto = response.value
+                    val data = dto.data
+                    if (dto.error != null || data == null) {
+                        LOG.e(
+                            TAG,
+                            "updateHiveFeature failure featureId=$featureId statusCode=null",
+                            null
+                        )
+                        return Response.Error(ResponseError(dto.error ?: "Failed to update hive feature"))
+                    }
+                    Response.Success(data.toDomain())
+                }
+                is Response.Error -> {
+                    val code = hiveErrorStatusCode(response.cause)
+                    LOG.e(
+                        TAG,
+                        "updateHiveFeature failure featureId=$featureId statusCode=$code",
+                        response.cause.exception
+                    )
+                    response
+                }
+            }
+        } catch (e: Exception) {
+            LOG.e(TAG, "updateHiveFeature failure featureId=$featureId statusCode=null", e)
+            Response.Error(ResponseError("Failed to update hive feature", e))
+        }
+    }
+
+    override suspend fun deleteHiveFeature(featureId: String): Response<Boolean, ResponseError> {
+        LOG.d(TAG, "deleteHiveFeature featureId=$featureId")
+        return try {
+            when (
+                val response = withHiveToken(
+                    terminalError = { error ->
+                        val unauthorized = isHiveUnauthorized(error)
+                        if (unauthorized) {
+                            LOG.d(
+                                TAG,
+                                "deleteHiveFeature 401 re-auth-and-retry featureId=$featureId statusCode=401"
+                            )
+                        }
+                        !unauthorized
+                    },
+                ) { token ->
+                    networkQueryHive.deleteFeature(featureId, token)
+                }
+            ) {
+                is Response.Success -> {
+                    if (response.value.success == false) {
+                        LOG.e(TAG, "deleteHiveFeature failure featureId=$featureId statusCode=null", null)
+                        return Response.Error(ResponseError("Failed to delete hive feature"))
+                    }
+                    Response.Success(true)
+                }
+                is Response.Error -> {
+                    val code = hiveErrorStatusCode(response.cause)
+                    LOG.e(
+                        TAG,
+                        "deleteHiveFeature failure featureId=$featureId statusCode=$code",
+                        response.cause.exception
+                    )
+                    response
+                }
+            }
+        } catch (e: Exception) {
+            LOG.e(TAG, "deleteHiveFeature failure featureId=$featureId statusCode=null", e)
+            Response.Error(ResponseError("Failed to delete hive feature", e))
         }
     }
 

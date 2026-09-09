@@ -63,4 +63,5 @@ dependencies {
 
     testImplementation deps.square.sqlDelightJvm
     testImplementation project(path: ':sphinx:test:test-network-query')
+    testImplementation testDeps.junit
 }

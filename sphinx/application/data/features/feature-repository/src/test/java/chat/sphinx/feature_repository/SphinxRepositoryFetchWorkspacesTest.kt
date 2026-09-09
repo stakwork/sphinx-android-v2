@@ -232,6 +232,32 @@ class SphinxRepositoryFetchWorkspacesTest {
             flow {
                 emit(Response.Error(ResponseError("not used in this test")))
             }
+
+        override fun getFeatures(
+            workspaceId: String,
+            page: Int,
+            authToken: String,
+        ): Flow<LoadResponse<chat.sphinx.concept_network_query_hive.model.HiveFeaturesListDto, ResponseError>> =
+            flow {
+                emit(Response.Error(ResponseError("not used in this test")))
+            }
+
+        override fun updateFeature(
+            featureId: String,
+            patch: chat.sphinx.concept_network_query_hive.model.HiveFeaturePatchDto,
+            authToken: String,
+        ): Flow<LoadResponse<chat.sphinx.concept_network_query_hive.model.HiveFeatureUpdateDto, ResponseError>> =
+            flow {
+                emit(Response.Error(ResponseError("not used in this test")))
+            }
+
+        override fun deleteFeature(
+            featureId: String,
+            authToken: String,
+        ): Flow<LoadResponse<chat.sphinx.concept_network_query_hive.model.HiveDeleteResponseDto, ResponseError>> =
+            flow {
+                emit(Response.Error(ResponseError("not used in this test")))
+            }
     }
 
     @Before

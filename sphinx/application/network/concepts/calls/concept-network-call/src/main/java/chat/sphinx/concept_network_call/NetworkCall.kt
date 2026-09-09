@@ -42,6 +42,7 @@ abstract class NetworkCall {
         responseJsonClass: Class<T>,
         headers: Map<String, String>? = null,
         useExtendedNetworkCallClient: Boolean = false,
+        requireSuccessful: Boolean = false,
     ): Flow<LoadResponse<T, ResponseError>>
 
     /**
@@ -101,6 +102,29 @@ abstract class NetworkCall {
     ): Flow<LoadResponse<T, ResponseError>>
 
     /**
+     * PATCH
+     *
+     * @param [responseJsonClass] the class to serialize the response json into
+     * @param [url] the url
+     * @param [requestBodyJsonClass] the class to serialize the request body to json
+     * @param [requestBody] the request body to be converted to json
+     * @param [mediaType] the media type for the request body, defaults to "application/json"
+     * @param [headers] any headers that need to be added to the request
+     * @param [requireSuccessful] when true, a non-2xx HTTP response is emitted as
+     * [Response.Error] with [chat.sphinx.concept_relay.CustomException.code] set to
+     * the HTTP status instead of being parsed as success
+     * */
+    abstract fun <T: Any, RequestBody: Any> patch(
+        url: String,
+        responseJsonClass: Class<T>,
+        requestBodyJsonClass: Class<RequestBody>? = null,
+        requestBody: RequestBody? = null,
+        mediaType: String? = "application/json",
+        headers: Map<String, String>? = null,
+        requireSuccessful: Boolean = false,
+    ): Flow<LoadResponse<T, ResponseError>>
+
+    /**
      * POST
      *
      * @param [responseJsonClass] the class to serialize the response json into
@@ -146,6 +170,7 @@ abstract class NetworkCall {
         requestBody: RequestBody? = null,
         mediaType: String? = null,
         headers: Map<String, String>? = null,
+        requireSuccessful: Boolean = false,
     ): Flow<LoadResponse<T, ResponseError>>
 
     @Throws(NullPointerException::class, IOException::class)
@@ -153,7 +178,8 @@ abstract class NetworkCall {
         responseJsonClass: Class<T>,
         request: Request,
         useExtendedNetworkCallClient: Boolean = false,
-        accept400AsSuccess: Boolean = false
+        accept400AsSuccess: Boolean = false,
+        requireSuccessful: Boolean = false,
     ): T
 
     @Throws(NullPointerException::class, IOException::class)

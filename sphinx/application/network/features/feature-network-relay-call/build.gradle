@@ -19,4 +19,9 @@ dependencies {
     api deps.kotlin.reflect
     api deps.square.moshi
     kapt kaptDeps.square.moshiCodegen
+
+    testImplementation testDeps.junit
+    testImplementation testDeps.kotlin.coroutines
+    testImplementation deps.square.okhttp
+    testImplementation "com.squareup.okhttp3:mockwebserver:${versions.okhttp}"
 }

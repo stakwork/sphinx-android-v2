@@ -18,4 +18,10 @@ class NetworkQueryHiveImplTest {
         assertEquals("a%2Fb", NetworkQueryHiveImpl.encodePathSegment("a/b"))
         assertEquals("plus%2Bsign", NetworkQueryHiveImpl.encodePathSegment("plus+sign"))
     }
+
+    @Test
+    fun `encodeQueryValue uses form encoding including plus for spaces`() {
+        assertEquals("hello+world", NetworkQueryHiveImpl.encodeQueryValue("hello world"))
+        assertEquals("a%2Fb", NetworkQueryHiveImpl.encodeQueryValue("a/b"))
+    }
 }

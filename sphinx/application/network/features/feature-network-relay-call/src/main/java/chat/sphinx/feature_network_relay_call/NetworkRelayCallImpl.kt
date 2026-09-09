@@ -100,6 +100,7 @@ class NetworkRelayCallImpl(
 
         private const val GET = "GET"
         private const val PUT = "PUT"
+        private const val PATCH = "PATCH"
         private const val POST = "POST"
         private const val DELETE = "DELETE"
     }
@@ -111,7 +112,8 @@ class NetworkRelayCallImpl(
         url: String,
         responseJsonClass: Class<T>,
         headers: Map<String, String>?,
-        useExtendedNetworkCallClient: Boolean
+        useExtendedNetworkCallClient: Boolean,
+        requireSuccessful: Boolean
     ): Flow<LoadResponse<T, ResponseError>> = flow {
 
         emit(LoadResponse.Loading)
@@ -121,7 +123,12 @@ class NetworkRelayCallImpl(
         try {
             val requestBuilder = buildRequest(url, headers)
 
-            response = call(responseJsonClass, requestBuilder.build(), useExtendedNetworkCallClient)
+            response = call(
+                responseJsonClass,
+                requestBuilder.build(),
+                useExtendedNetworkCallClient,
+                requireSuccessful = requireSuccessful
+            )
 
             emit(Response.Success(response))
         } catch (e: Exception) {
@@ -264,6 +271,42 @@ class NetworkRelayCallImpl(
 
     }
 
+    override fun <T: Any, V: Any> patch(
+        url: String,
+        responseJsonClass: Class<T>,
+        requestBodyJsonClass: Class<V>?,
+        requestBody: V?,
+        mediaType: String?,
+        headers: Map<String, String>?,
+        requireSuccessful: Boolean
+    ): Flow<LoadResponse<T, ResponseError>> = flow {
+
+        emit(LoadResponse.Loading)
+
+        try {
+            val requestBuilder = buildRequest(url, headers)
+
+            val requestBodyJson: String? = if (requestBody == null || requestBodyJsonClass == null) {
+                null
+            } else {
+                moshi.requestBodyToJson(dispatchers, requestBodyJsonClass, requestBody)
+            }
+
+            val reqBody = requestBodyJson?.toRequestBody(mediaType?.toMediaType())
+
+            val response = call(
+                responseJsonClass,
+                requestBuilder.patch(reqBody ?: EMPTY_REQUEST).build(),
+                requireSuccessful = requireSuccessful
+            )
+
+            emit(Response.Success(response))
+        } catch (e: Exception) {
+            emit(handleException(LOG, PATCH, url, e))
+        }
+
+    }
+
     override fun <T: Any, V: Any> post(
         url: String,
         responseJsonClass: Class<T>,
@@ -329,7 +372,8 @@ class NetworkRelayCallImpl(
         requestBodyJsonClass: Class<V>?,
         requestBody: V?,
         mediaType: String?,
-        headers: Map<String, String>?
+        headers: Map<String, String>?,
+        requireSuccessful: Boolean
     ): Flow<LoadResponse<T, ResponseError>> = flow {
 
         emit(LoadResponse.Loading)
@@ -348,7 +392,8 @@ class NetworkRelayCallImpl(
 
             val response = call(
                 responseJsonClass,
-                requestBuilder.delete(reqBody ?: EMPTY_REQUEST).build()
+                requestBuilder.delete(reqBody ?: EMPTY_REQUEST).build(),
+                requireSuccessful = requireSuccessful
             )
 
             emit(Response.Success(response))
@@ -375,7 +420,8 @@ class NetworkRelayCallImpl(
         responseJsonClass: Class<T>,
         request: Request,
         useExtendedNetworkCallClient: Boolean,
-        accept400AsSuccess: Boolean
+        accept400AsSuccess: Boolean,
+        requireSuccessful: Boolean
     ): T {
 
         val client = if (useExtendedNetworkCallClient) {
@@ -399,11 +445,31 @@ class NetworkRelayCallImpl(
             "NetworkResponse.body returned null\nNetworkResponse: $networkResponse"
         )
 
+        if (requireSuccessful && !networkResponse.isSuccessful) {
+            body.close()
+            throw CustomException(
+                "Unsuccessful HTTP ${networkResponse.code} for ${request.url}",
+                networkResponse.code
+            )
+        }
+
         val acceptableErrorCodes = if (accept400AsSuccess) listOf(400) else emptyList()
 
         return withContext(default) {
             try {
-                moshi.adapter(responseJsonClass).fromJson(body.source())
+                if (requireSuccessful) {
+                    val json = body.string()
+                    if (json.isBlank()) {
+                        // HTTP 2xx with an empty/204 body (e.g. Hive delete) must not fail parse.
+                        moshi.adapter(responseJsonClass).fromJson("{}")
+                    } else {
+                        moshi.adapter(responseJsonClass).fromJson(json)
+                    }
+                } else {
+                    moshi.adapter(responseJsonClass).fromJson(body.source())
+                }
+            } catch (e: CustomException) {
+                throw e
             } catch (e: Exception) {
                 throw CustomException(
                     "Failed to convert Json to ${responseJsonClass.simpleName}\nNetworkResponse: $networkResponse",

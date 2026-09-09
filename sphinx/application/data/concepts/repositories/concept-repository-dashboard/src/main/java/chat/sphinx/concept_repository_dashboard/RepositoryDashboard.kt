@@ -1,5 +1,7 @@
 package chat.sphinx.concept_repository_dashboard
 
+import chat.sphinx.concept_repository_dashboard.model.HiveFeature
+import chat.sphinx.concept_repository_dashboard.model.HiveFeaturesPage
 import chat.sphinx.concept_repository_dashboard.model.Workspace
 import chat.sphinx.kotlin_response.LoadResponse
 import chat.sphinx.kotlin_response.Response
@@ -88,4 +90,17 @@ interface RepositoryDashboard {
     suspend fun fetchWorkspaces(): Response<List<Workspace>, ResponseError>
 
     suspend fun fetchWorkspaceImageUrl(slug: String): Response<String, ResponseError>
+
+    suspend fun fetchHiveFeatures(
+        workspaceId: String,
+        page: Int
+    ): Response<HiveFeaturesPage, ResponseError>
+
+    suspend fun updateHiveFeature(
+        featureId: String,
+        status: String?,
+        priority: String?
+    ): Response<HiveFeature, ResponseError>
+
+    suspend fun deleteHiveFeature(featureId: String): Response<Boolean, ResponseError>
 }

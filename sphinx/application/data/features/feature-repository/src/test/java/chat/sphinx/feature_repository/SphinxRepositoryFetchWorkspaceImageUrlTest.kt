@@ -129,7 +129,7 @@ import java.io.InputStream
 import java.util.Date
 import java.util.concurrent.atomic.AtomicInteger
 
-private class FakeImageAuthStorage : AuthenticationStorage {
+class FakeImageAuthStorage : AuthenticationStorage {
     val map: MutableMap<String, String?> = LinkedHashMap()
     var removeCallCount = 0
 
@@ -151,7 +151,7 @@ private class FakeImageAuthStorage : AuthenticationStorage {
     }
 }
 
-private class FakeCoreDB : CoreDB() {
+class FakeCoreDB : CoreDB() {
     override val isInitialized: Boolean = true
     override fun getSphinxDatabaseQueriesOrNull(): SphinxDatabaseQueries? = null
     override suspend fun getSphinxDatabaseQueries(): SphinxDatabaseQueries {
@@ -159,7 +159,7 @@ private class FakeCoreDB : CoreDB() {
     }
 }
 
-private class FakeConnectManager(
+class FakeConnectManager(
     private val signedTs: () -> String? = { "signed_ts" },
 ) : ConnectManager() {
     override val ownerInfoStateFlow: StateFlow<OwnerInfo?> = MutableStateFlow(null)
@@ -282,9 +282,9 @@ private class FakeConnectManager(
     override fun decryptDataSync(value: String): String? = null
 }
 
-private fun unusedFlow(): Nothing = error("unused")
+fun unusedFlow(): Nothing = error("unused")
 
-private class UnusedNetworkQueryChat : NetworkQueryChat() {
+class UnusedNetworkQueryChat : NetworkQueryChat() {
     override fun getTribeInfo(
         host: ChatHost,
         tribePubKey: LightningNodePubKey,
@@ -303,7 +303,7 @@ private class UnusedNetworkQueryChat : NetworkQueryChat() {
         flow { unusedFlow() }
 }
 
-private class UnusedNetworkQueryContact : NetworkQueryContact() {
+class UnusedNetworkQueryContact : NetworkQueryContact() {
     override fun hasAdmin(url: RelayUrl): Flow<LoadResponse<Any, ResponseError>> = flow { unusedFlow() }
     override fun getAccountConfig(isProductionEnvironment: Boolean): Flow<LoadResponse<AccountConfigV2Response, ResponseError>> =
         flow { unusedFlow() }
@@ -315,14 +315,14 @@ private class UnusedNetworkQueryContact : NetworkQueryContact() {
     ): Flow<LoadResponse<String, ResponseError>> = flow { unusedFlow() }
 }
 
-private class UnusedNetworkQueryInvite : NetworkQueryInvite() {
+class UnusedNetworkQueryInvite : NetworkQueryInvite() {
     override fun getLowestNodePrice(): Flow<LoadResponse<HubLowestNodePriceResponse, ResponseError>> =
         flow { unusedFlow() }
     override fun redeemInvite(inviteString: InviteString): Flow<LoadResponse<HubRedeemInviteResponse, ResponseError>> =
         flow { unusedFlow() }
 }
 
-private class UnusedNetworkQueryDiscoverTribes : NetworkQueryDiscoverTribes() {
+class UnusedNetworkQueryDiscoverTribes : NetworkQueryDiscoverTribes() {
     override fun getAllDiscoverTribes(
         page: Int,
         itemsPerPage: Int,
@@ -332,7 +332,7 @@ private class UnusedNetworkQueryDiscoverTribes : NetworkQueryDiscoverTribes() {
     ): Flow<LoadResponse<List<NewTribeDto>, ResponseError>> = flow { unusedFlow() }
 }
 
-private class UnusedNetworkQueryMemeServer : NetworkQueryMemeServer() {
+class UnusedNetworkQueryMemeServer : NetworkQueryMemeServer() {
     override fun askMemeAuthentication(
         memeServerHost: MediaHost,
     ): Flow<LoadResponse<MemeServerAuthenticationDto, ResponseError>> = flow { unusedFlow() }
@@ -375,7 +375,7 @@ private class UnusedNetworkQueryMemeServer : NetworkQueryMemeServer() {
     ): Flow<LoadResponse<Boolean, ResponseError>> = flow { unusedFlow() }
 }
 
-private class UnusedNetworkQueryPeople : NetworkQueryPeople() {
+class UnusedNetworkQueryPeople : NetworkQueryPeople() {
     override fun getExternalRequestByKey(
         host: String,
         key: String,
@@ -399,7 +399,7 @@ private class UnusedNetworkQueryPeople : NetworkQueryPeople() {
     ): Flow<LoadResponse<CallTokenDto, ResponseError>> = flow { unusedFlow() }
 }
 
-private class UnusedNetworkQueryAuthorizeExternal : NetworkQueryAuthorizeExternal() {
+class UnusedNetworkQueryAuthorizeExternal : NetworkQueryAuthorizeExternal() {
     override fun authorizeExternal(
         host: String,
         challenge: String,
@@ -419,7 +419,7 @@ private class UnusedNetworkQueryAuthorizeExternal : NetworkQueryAuthorizeExterna
     ): Flow<LoadResponse<Any, ResponseError>> = flow { unusedFlow() }
 }
 
-private class UnusedNetworkQueryFeedSearch : NetworkQueryFeedSearch() {
+class UnusedNetworkQueryFeedSearch : NetworkQueryFeedSearch() {
     override fun searchFeeds(
         searchTerm: String,
         feedType: FeedType,
@@ -445,11 +445,11 @@ private class UnusedNetworkQueryFeedSearch : NetworkQueryFeedSearch() {
     ): Flow<LoadResponse<ChapterResponseDto, ResponseError>> = flow { unusedFlow() }
 }
 
-private class UnusedNetworkQueryFeedStatus : NetworkQueryFeedStatus() {
+class UnusedNetworkQueryFeedStatus : NetworkQueryFeedStatus() {
     override suspend fun checkYoutubeVideoAvailable(videoId: String): String? = null
 }
 
-private class UnusedMediaCacheHandler : MediaCacheHandler() {
+class UnusedMediaCacheHandler : MediaCacheHandler() {
     override fun createFile(mediaType: MediaType, extension: String?): File? = null
     override fun createAudioFile(extension: String): File = File("audio")
     override fun createImageFile(extension: String): File = File("image")
@@ -461,7 +461,7 @@ private class UnusedMediaCacheHandler : MediaCacheHandler() {
     override suspend fun copyToWithCancellation(inputStream: InputStream, targetFile: File) {}
 }
 
-private class UnusedMemeInputStreamHandler : MemeInputStreamHandler() {
+class UnusedMemeInputStreamHandler : MemeInputStreamHandler() {
     override suspend fun retrieveMediaInputStream(
         url: String,
         authenticationToken: AuthenticationToken?,
@@ -469,12 +469,12 @@ private class UnusedMemeInputStreamHandler : MemeInputStreamHandler() {
     ): Pair<InputStream?, FileName?>? = null
 }
 
-private class UnusedMemeServerTokenHandler : MemeServerTokenHandler() {
+class UnusedMemeServerTokenHandler : MemeServerTokenHandler() {
     override suspend fun retrieveAuthenticationToken(mediaHost: MediaHost): AuthenticationToken? = null
     override fun addListener(listener: ConnectManagerRepository) {}
 }
 
-private class UnusedDataSyncManager : DataSyncManager() {
+class UnusedDataSyncManager : DataSyncManager() {
     override val dataSyncStateFlow: StateFlow<List<DataSync>> = MutableStateFlow(emptyList())
     override val syncStatusStateFlow: StateFlow<SyncStatus> = MutableStateFlow(SyncStatus.Idle)
     override fun updateDataSyncList(dataSyncList: List<DataSync>) {}
@@ -506,12 +506,12 @@ private class UnusedDataSyncManager : DataSyncManager() {
     override fun setAccountOwner(owner: Contact?) {}
 }
 
-private class UnusedWalletDataHandler : WalletDataHandler() {
+class UnusedWalletDataHandler : WalletDataHandler() {
     override suspend fun persistWalletMnemonic(mnemonic: WalletMnemonic): Boolean = false
     override suspend fun retrieveWalletMnemonic(): WalletMnemonic? = null
 }
 
-private class UnusedRSA : RSA() {
+class UnusedRSA : RSA() {
     override suspend fun generateKeyPair(
         keySize: KeySize,
         dispatcher: kotlinx.coroutines.CoroutineDispatcher?,
@@ -542,21 +542,21 @@ private class UnusedRSA : RSA() {
     ): Response<Boolean, ResponseError> = Response.Error(ResponseError("unused"))
 }
 
-private class UnusedRelayDataHandler : RelayDataHandler() {
+class UnusedRelayDataHandler : RelayDataHandler() {
     override suspend fun persistAuthorizationToken(token: AuthorizationToken?): Boolean = false
     override suspend fun retrieveAuthorizationToken(): AuthorizationToken? = null
 }
 
-private class UnusedSphinxNotificationManager : SphinxNotificationManager {
+class UnusedSphinxNotificationManager : SphinxNotificationManager {
     override fun notify(notificationId: Int, groupId: String?, title: String, message: String) {}
     override fun clearNotification(notificationId: Int) {}
 }
 
-private class UnusedLogger : SphinxLogger() {
+class UnusedLogger : SphinxLogger() {
     override fun log(tag: String, message: String, type: LogType, throwable: Throwable?) {}
 }
 
-private class TestSphinxRepository(
+class TestSphinxRepository(
     accountOwner: StateFlow<Contact?>,
     applicationScope: CoroutineScope,
     authenticationStorage: AuthenticationStorage,
@@ -648,6 +648,32 @@ class SphinxRepositoryFetchWorkspaceImageUrlTest {
             }
             emit(response)
         }
+
+        override fun getFeatures(
+            workspaceId: String,
+            page: Int,
+            authToken: String,
+        ): Flow<LoadResponse<chat.sphinx.concept_network_query_hive.model.HiveFeaturesListDto, ResponseError>> =
+            flow {
+                emit(Response.Error(ResponseError("not used in this test")))
+            }
+
+        override fun updateFeature(
+            featureId: String,
+            patch: chat.sphinx.concept_network_query_hive.model.HiveFeaturePatchDto,
+            authToken: String,
+        ): Flow<LoadResponse<chat.sphinx.concept_network_query_hive.model.HiveFeatureUpdateDto, ResponseError>> =
+            flow {
+                emit(Response.Error(ResponseError("not used in this test")))
+            }
+
+        override fun deleteFeature(
+            featureId: String,
+            authToken: String,
+        ): Flow<LoadResponse<chat.sphinx.concept_network_query_hive.model.HiveDeleteResponseDto, ResponseError>> =
+            flow {
+                emit(Response.Error(ResponseError("not used in this test")))
+            }
     }
 
     @Before
@@ -873,7 +899,7 @@ class SphinxRepositoryFetchWorkspaceImageUrlTest {
     }
 }
 
-private fun makeOwner(): Contact = Contact(
+fun makeOwner(): Contact = Contact(
     id = ContactId(1L),
     routeHint = null,
     nodePubKey = LightningNodePubKey(

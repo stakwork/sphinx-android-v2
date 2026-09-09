@@ -3,6 +3,8 @@ package chat.sphinx.dashboard.ui
 import androidx.navigation.NavController
 import chat.sphinx.concept_paging.PageSourceWrapper
 import chat.sphinx.concept_repository_dashboard.DashboardItem
+import chat.sphinx.concept_repository_dashboard.model.HiveFeature
+import chat.sphinx.concept_repository_dashboard.model.HiveFeaturesPage
 import chat.sphinx.concept_repository_dashboard.model.Workspace
 import chat.sphinx.concept_repository_dashboard_android.RepositoryDashboardAndroid
 import chat.sphinx.dashboard.navigation.DashboardNavigator
@@ -174,6 +176,18 @@ class WorkspacesViewModelNavigateTest {
             Response.Success(emptyList())
         override suspend fun fetchWorkspaceImageUrl(slug: String): Response<String, ResponseError> =
             Response.Error(ResponseError("unused"))
+        override suspend fun fetchHiveFeatures(
+            workspaceId: String,
+            page: Int,
+        ): Response<HiveFeaturesPage, ResponseError> = Response.Error(ResponseError("unused"))
+        override suspend fun updateHiveFeature(
+            featureId: String,
+            status: String?,
+            priority: String?,
+        ): Response<HiveFeature, ResponseError> = Response.Error(ResponseError("unused"))
+        override suspend fun deleteHiveFeature(
+            featureId: String,
+        ): Response<Boolean, ResponseError> = Response.Error(ResponseError("unused"))
         override suspend fun getDashboardItemPagingSource(): PageSourceWrapper<Long, DashboardItem, Any> {
             error("unused")
         }

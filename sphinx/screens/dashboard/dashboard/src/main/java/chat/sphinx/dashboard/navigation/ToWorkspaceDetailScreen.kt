@@ -10,6 +10,7 @@ import io.matthewnelson.concept_navigation.NavigationRequest
 class ToWorkspaceDetailScreen(
     private val workspaceId: String,
     private val workspaceName: String,
+    private val workspaceSlug: String? = null,
     @IdRes private val popUpToId: Int? = null,
     private val popUpToInclusive: Boolean = false,
 ): NavigationRequest<NavController>() {
@@ -18,6 +19,7 @@ class ToWorkspaceDetailScreen(
             R.id.workspace_detail_nav_graph,
 
             WorkspaceDetailFragmentArgs.Builder(workspaceId, workspaceName)
+                .setArgWorkspaceSlug(workspaceSlug)
                 .build()
                 .toBundle(),
 

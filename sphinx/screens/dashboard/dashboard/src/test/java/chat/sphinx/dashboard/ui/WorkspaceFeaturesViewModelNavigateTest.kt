@@ -40,7 +40,11 @@ class WorkspaceFeaturesViewModelNavigateTest {
         override suspend fun toChatContact(chatId: ChatId?, contactId: ContactId) = Unit
         override suspend fun toChatGroup(chatId: ChatId) = Unit
         override suspend fun toChatTribe(chatId: ChatId) = Unit
-        override suspend fun toWorkspaceDetail(workspaceId: String, workspaceName: String) = Unit
+        override suspend fun toWorkspaceDetail(
+            workspaceId: String,
+            workspaceName: String,
+            workspaceSlug: String?,
+        ) = Unit
         override suspend fun toFeaturePlan(featureId: String, featureTitle: String) {
             lastFeatureId = featureId
             lastFeatureTitle = featureTitle

@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import chat.sphinx.dashboard.navigation.DashboardNavigator
 import dagger.hilt.android.lifecycle.HiltViewModel
-import io.matthewnelson.android_feature_navigation.util.navArgs
 import io.matthewnelson.android_feature_viewmodel.SideEffectViewModel
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
 import io.matthewnelson.concept_views.viewstate.ViewState
@@ -25,13 +24,17 @@ internal class WorkspaceDetailViewModel @Inject constructor(
         WorkspaceDetailViewState
         >(dispatchers, WorkspaceDetailViewState.Idle) {
 
-    private val args: WorkspaceDetailFragmentArgs by handler.navArgs()
+    private val args: WorkspaceDetailFragmentArgs =
+        WorkspaceDetailFragmentArgs.fromSavedStateHandle(handler)
 
     val workspaceId: String
         get() = args.argWorkspaceId
 
     val workspaceName: String
         get() = args.argWorkspaceName
+
+    val workspaceSlug: String?
+        get() = args.argWorkspaceSlug
 
     suspend fun popBackStack() {
         dashboardNavigator.popBackStack()

@@ -106,9 +106,13 @@ internal class WorkspacesViewModel @Inject constructor(
         _error.value = false
     }
 
-    fun navigateToWorkspaceDetail(workspaceId: String, workspaceName: String) {
+    fun navigateToWorkspaceDetail(
+        workspaceId: String,
+        workspaceName: String,
+        workspaceSlug: String? = null,
+    ) {
         viewModelScope.launch(mainImmediate) {
-            dashboardNavigator.toWorkspaceDetail(workspaceId, workspaceName)
+            dashboardNavigator.toWorkspaceDetail(workspaceId, workspaceName, workspaceSlug)
         }
     }
 }

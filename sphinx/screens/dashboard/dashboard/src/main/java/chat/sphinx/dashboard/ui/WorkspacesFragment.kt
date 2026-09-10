@@ -59,7 +59,7 @@ internal class WorkspacesFragment : SideEffectFragment<
             imageLoader = imageLoader,
             onStopSupervisor = onStopSupervisor,
             onWorkspaceClicked = { workspace ->
-                viewModel.navigateToWorkspaceDetail(workspace.id, workspace.name)
+                viewModel.navigateToWorkspaceDetail(workspace.id, workspace.name, workspace.slug)
             },
         )
 

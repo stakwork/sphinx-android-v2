@@ -71,7 +71,7 @@ class WorkspacesViewModelNavigateTest {
     }
 
     @Test
-    fun `navigateToWorkspaceDetail calls dashboardNavigator with id and name`() = runTest {
+    fun `navigateToWorkspaceDetail calls dashboardNavigator with id name and slug`() = runTest {
         val navigator = FakeDashboardNavigator()
         val viewModel = WorkspacesViewModel(
             dispatchers = dispatchers,
@@ -79,10 +79,28 @@ class WorkspacesViewModelNavigateTest {
             dashboardNavigator = navigator,
         )
 
-        viewModel.navigateToWorkspaceDetail("ws-7", "Hive Workspace")
+        viewModel.navigateToWorkspaceDetail("ws-7", "Hive Workspace", "hive-workspace")
 
         assertEquals("ws-7", navigator.lastWorkspaceId)
         assertEquals("Hive Workspace", navigator.lastWorkspaceName)
+        assertEquals("hive-workspace", navigator.lastWorkspaceSlug)
+        assertEquals(1, navigator.toWorkspaceDetailCount)
+    }
+
+    @Test
+    fun `navigateToWorkspaceDetail forwards a null slug`() = runTest {
+        val navigator = FakeDashboardNavigator()
+        val viewModel = WorkspacesViewModel(
+            dispatchers = dispatchers,
+            repositoryDashboard = UnusedRepositoryDashboard(),
+            dashboardNavigator = navigator,
+        )
+
+        viewModel.navigateToWorkspaceDetail("ws-7", "Hive Workspace", null)
+
+        assertEquals("ws-7", navigator.lastWorkspaceId)
+        assertEquals("Hive Workspace", navigator.lastWorkspaceName)
+        assertEquals(null as String?, navigator.lastWorkspaceSlug)
         assertEquals(1, navigator.toWorkspaceDetailCount)
     }
 
@@ -116,6 +134,7 @@ class WorkspacesViewModelNavigateTest {
     private class FakeDashboardNavigator : DashboardNavigator(FakeNavDriver()) {
         var lastWorkspaceId: String? = null
         var lastWorkspaceName: String? = null
+        var lastWorkspaceSlug: String? = null
         var toWorkspaceDetailCount: Int = 0
         var lastFeatureId: String? = null
         var lastFeatureTitle: String? = null
@@ -124,9 +143,14 @@ class WorkspacesViewModelNavigateTest {
         override suspend fun toChatContact(chatId: ChatId?, contactId: ContactId) = Unit
         override suspend fun toChatGroup(chatId: ChatId) = Unit
         override suspend fun toChatTribe(chatId: ChatId) = Unit
-        override suspend fun toWorkspaceDetail(workspaceId: String, workspaceName: String) {
+        override suspend fun toWorkspaceDetail(
+            workspaceId: String,
+            workspaceName: String,
+            workspaceSlug: String?,
+        ) {
             lastWorkspaceId = workspaceId
             lastWorkspaceName = workspaceName
+            lastWorkspaceSlug = workspaceSlug
             toWorkspaceDetailCount++
         }
         override suspend fun toFeaturePlan(featureId: String, featureTitle: String) {

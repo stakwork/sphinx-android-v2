@@ -48,9 +48,13 @@ internal class DashboardNavigatorImpl @Inject constructor(
         )
     }
 
-    override suspend fun toWorkspaceDetail(workspaceId: String, workspaceName: String) {
+    override suspend fun toWorkspaceDetail(
+        workspaceId: String,
+        workspaceName: String,
+        workspaceSlug: String?,
+    ) {
         navigationDriver.submitNavigationRequest(
-            ToWorkspaceDetailScreen(workspaceId, workspaceName)
+            ToWorkspaceDetailScreen(workspaceId, workspaceName, workspaceSlug)
         )
     }
 

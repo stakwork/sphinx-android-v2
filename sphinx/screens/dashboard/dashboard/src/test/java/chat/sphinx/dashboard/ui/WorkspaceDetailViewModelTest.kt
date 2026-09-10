@@ -23,6 +23,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -54,7 +55,12 @@ class WorkspaceDetailViewModelTest {
         val driver = FakeNavDriver()
         val viewModel = WorkspaceDetailViewModel(
             dispatchers = dispatchers,
-            handler = SavedStateHandle(),
+            handler = SavedStateHandle(
+                mapOf(
+                    "argWorkspaceId" to "ws-1",
+                    "argWorkspaceName" to "Hive",
+                )
+            ),
             dashboardNavigator = FakeDashboardNavigator(driver),
         )
 
@@ -62,6 +68,60 @@ class WorkspaceDetailViewModelTest {
 
         assertEquals(1, driver.requests.size)
         assertTrue(driver.requests.first() is PopBackStack)
+    }
+
+    @Test
+    fun `workspaceSlug is exposed when present in nav args`() {
+        val viewModel = viewModelWithArgs(
+            workspaceId = "ws-1",
+            workspaceName = "Hive",
+            workspaceSlug = "hive-workspace",
+        )
+
+        assertEquals("ws-1", viewModel.workspaceId)
+        assertEquals("Hive", viewModel.workspaceName)
+        assertEquals("hive-workspace", viewModel.workspaceSlug)
+    }
+
+    @Test
+    fun `workspaceSlug is null when omitted from nav args`() {
+        val viewModel = viewModelWithArgs(
+            workspaceId = "ws-1",
+            workspaceName = "Hive",
+            workspaceSlug = null,
+        )
+
+        assertNull(viewModel.workspaceSlug)
+    }
+
+    @Test
+    fun `workspaceSlug is exposed when blank in nav args`() {
+        val viewModel = viewModelWithArgs(
+            workspaceId = "ws-1",
+            workspaceName = "Hive",
+            workspaceSlug = "",
+        )
+
+        assertEquals("", viewModel.workspaceSlug)
+    }
+
+    private fun viewModelWithArgs(
+        workspaceId: String,
+        workspaceName: String,
+        workspaceSlug: String?,
+    ): WorkspaceDetailViewModel {
+        val args = mutableMapOf<String, Any?>(
+            "argWorkspaceId" to workspaceId,
+            "argWorkspaceName" to workspaceName,
+        )
+        if (workspaceSlug != null) {
+            args["argWorkspaceSlug"] = workspaceSlug
+        }
+        return WorkspaceDetailViewModel(
+            dispatchers = dispatchers,
+            handler = SavedStateHandle(args),
+            dashboardNavigator = FakeDashboardNavigator(FakeNavDriver()),
+        )
     }
 
     private class FakeNavDriver : BaseNavigationDriver<NavController>() {
@@ -77,7 +137,11 @@ class WorkspaceDetailViewModelTest {
         override suspend fun toChatContact(chatId: ChatId?, contactId: ContactId) = Unit
         override suspend fun toChatGroup(chatId: ChatId) = Unit
         override suspend fun toChatTribe(chatId: ChatId) = Unit
-        override suspend fun toWorkspaceDetail(workspaceId: String, workspaceName: String) = Unit
+        override suspend fun toWorkspaceDetail(
+            workspaceId: String,
+            workspaceName: String,
+            workspaceSlug: String?,
+        ) = Unit
         override suspend fun toFeaturePlan(featureId: String, featureTitle: String) = Unit
         override suspend fun toJoinTribeDetail(tribeLink: TribeJoinLink) = Unit
         override suspend fun toQRCodeDetail(qrText: String, viewTitle: String, description: String?) = Unit

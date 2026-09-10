@@ -19,7 +19,11 @@ abstract class DashboardNavigator(
     abstract suspend fun toChatContact(chatId: ChatId?, contactId: ContactId)
     abstract suspend fun toChatGroup(chatId: ChatId)
     abstract suspend fun toChatTribe(chatId: ChatId)
-    abstract suspend fun toWorkspaceDetail(workspaceId: String, workspaceName: String)
+    abstract suspend fun toWorkspaceDetail(
+        workspaceId: String,
+        workspaceName: String,
+        workspaceSlug: String? = null,
+    )
     abstract suspend fun toFeaturePlan(featureId: String, featureTitle: String)
     abstract suspend fun toJoinTribeDetail(tribeLink: TribeJoinLink)
     abstract suspend fun toQRCodeDetail(qrText: String, viewTitle: String, description: String? = null)

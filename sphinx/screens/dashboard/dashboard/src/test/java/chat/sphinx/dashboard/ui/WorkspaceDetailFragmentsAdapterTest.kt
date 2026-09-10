@@ -12,7 +12,12 @@ class WorkspaceDetailFragmentsAdapterTest {
     }
 
     @Test
-    fun `position 0 is WorkspaceFeaturesFragment and other tabs stay stubs`() {
+    fun `tasks tab receives a workspaceId constructor argument`() {
+        assertEquals("arg_workspace_id", WorkspaceTasksFragment.ARG_WORKSPACE_ID)
+    }
+
+    @Test
+    fun `position 0 is WorkspaceFeaturesFragment and Tasks is WorkspaceTasksFragment`() {
         assertEquals(
             WorkspaceFeaturesFragment::class.java,
             WorkspaceDetailFragmentsAdapter.fragmentClassForPosition(
@@ -20,7 +25,7 @@ class WorkspaceDetailFragmentsAdapterTest {
             )
         )
         assertEquals(
-            WorkspaceDetailStubFragment::class.java,
+            WorkspaceTasksFragment::class.java,
             WorkspaceDetailFragmentsAdapter.fragmentClassForPosition(
                 WorkspaceDetailFragmentsAdapter.TASKS_TAB_POSITION
             )

@@ -747,6 +747,30 @@ class SphinxRepositoryFetchWorkspaceImageUrlTest {
             flow {
                 emit(Response.Error(ResponseError("not used in this test")))
             }
+
+        override fun getPoolStatus(
+            slug: String,
+            authToken: String,
+        ): Flow<LoadResponse<chat.sphinx.concept_network_query_hive.model.HivePoolStatusDto, ResponseError>> =
+            flow {
+                emit(Response.Error(ResponseError("not used in this test")))
+            }
+
+        override fun getBasicPods(
+            slug: String,
+            authToken: String,
+        ): Flow<LoadResponse<chat.sphinx.concept_network_query_hive.model.HivePodsListDto, ResponseError>> =
+            flow {
+                emit(Response.Error(ResponseError("not used in this test")))
+            }
+
+        override fun getFullPods(
+            slug: String,
+            authToken: String,
+        ): Flow<LoadResponse<chat.sphinx.concept_network_query_hive.model.HivePodsListDto, ResponseError>> =
+            flow {
+                emit(Response.Error(ResponseError("not used in this test")))
+            }
     }
 
     @Before

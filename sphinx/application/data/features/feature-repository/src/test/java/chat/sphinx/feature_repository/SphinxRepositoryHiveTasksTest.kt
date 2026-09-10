@@ -7,6 +7,8 @@ import chat.sphinx.concept_network_query_hive.model.HiveFeaturePatchDto
 import chat.sphinx.concept_network_query_hive.model.HiveFeatureUpdateDto
 import chat.sphinx.concept_network_query_hive.model.HiveFeaturesListDto
 import chat.sphinx.concept_network_query_hive.model.HiveFeaturesPaginationDto
+import chat.sphinx.concept_network_query_hive.model.HivePodsListDto
+import chat.sphinx.concept_network_query_hive.model.HivePoolStatusDto
 import chat.sphinx.concept_network_query_hive.model.HiveTaskDto
 import chat.sphinx.concept_network_query_hive.model.HiveTaskDuplicateDto
 import chat.sphinx.concept_network_query_hive.model.HiveTaskMutationDto
@@ -202,6 +204,27 @@ class SphinxRepositoryHiveTasksTest {
             lastDependsOnIds = dependsOnTaskIds
             dependsOnCallCount.getAndIncrement()
             emit(nextMutation())
+        }
+
+        override fun getPoolStatus(
+            slug: String,
+            authToken: String,
+        ): Flow<LoadResponse<HivePoolStatusDto, ResponseError>> = flow {
+            emit(Response.Error(ResponseError("not used in this test")))
+        }
+
+        override fun getBasicPods(
+            slug: String,
+            authToken: String,
+        ): Flow<LoadResponse<HivePodsListDto, ResponseError>> = flow {
+            emit(Response.Error(ResponseError("not used in this test")))
+        }
+
+        override fun getFullPods(
+            slug: String,
+            authToken: String,
+        ): Flow<LoadResponse<HivePodsListDto, ResponseError>> = flow {
+            emit(Response.Error(ResponseError("not used in this test")))
         }
 
         private fun nextMutation(): LoadResponse<HiveTaskMutationDto, ResponseError> {

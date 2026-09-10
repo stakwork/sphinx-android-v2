@@ -374,4 +374,54 @@ class NetworkQueryHiveFeaturesTest {
         assertEquals("Bearer token-12", networkCall.lastHeaders!!["Authorization"])
         assertEquals("application/json", networkCall.lastHeaders!!["Content-Type"])
     }
+
+    @Test
+    fun `getPoolStatus encodes slug as path segment and requires success`() {
+        val networkCall = RecordingNetworkCall()
+        val query = NetworkQueryHiveImpl(networkCall)
+
+        query.getPoolStatus("ws slug/&+", "token-13")
+
+        assertEquals("GET", networkCall.lastMethod)
+        assertTrue(networkCall.lastRequireSuccessful == true)
+        assertEquals(
+            "https://hive.sphinx.chat/api/w/${NetworkQueryHiveImpl.encodePathSegment("ws slug/&+")}/pool/status",
+            networkCall.lastUrl
+        )
+        assertEquals("Bearer token-13", networkCall.lastHeaders!!["Authorization"])
+        assertFalse(networkCall.lastUrl!!.contains("ws slug"))
+    }
+
+    @Test
+    fun `getBasicPods encodes slug as path segment and requires success`() {
+        val networkCall = RecordingNetworkCall()
+        val query = NetworkQueryHiveImpl(networkCall)
+
+        query.getBasicPods("ws slug/&+", "token-14")
+
+        assertEquals("GET", networkCall.lastMethod)
+        assertTrue(networkCall.lastRequireSuccessful == true)
+        assertEquals(
+            "https://hive.sphinx.chat/api/w/${NetworkQueryHiveImpl.encodePathSegment("ws slug/&+")}/pool/basic-workspaces",
+            networkCall.lastUrl
+        )
+        assertEquals("Bearer token-14", networkCall.lastHeaders!!["Authorization"])
+    }
+
+    @Test
+    fun `getFullPods encodes slug as path segment and requires success`() {
+        val networkCall = RecordingNetworkCall()
+        val query = NetworkQueryHiveImpl(networkCall)
+
+        query.getFullPods("ws slug/&+", "token-15")
+
+        assertEquals("GET", networkCall.lastMethod)
+        assertTrue(networkCall.lastRequireSuccessful == true)
+        assertEquals(
+            "https://hive.sphinx.chat/api/w/${NetworkQueryHiveImpl.encodePathSegment("ws slug/&+")}/pool/workspaces",
+            networkCall.lastUrl
+        )
+        assertEquals("Bearer token-15", networkCall.lastHeaders!!["Authorization"])
+        assertFalse(networkCall.lastUrl!!.contains("basic-workspaces"))
+    }
 }

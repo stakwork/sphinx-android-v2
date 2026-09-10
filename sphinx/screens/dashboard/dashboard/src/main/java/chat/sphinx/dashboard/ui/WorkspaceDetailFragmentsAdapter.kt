@@ -23,20 +23,22 @@ class WorkspaceDetailFragmentsAdapter(
         )
 
         fun fragmentClassForPosition(position: Int): Class<out Fragment> {
-            return if (position == FEATURES_TAB_POSITION) {
-                WorkspaceFeaturesFragment::class.java
-            } else {
-                WorkspaceDetailStubFragment::class.java
+            return when (position) {
+                FEATURES_TAB_POSITION -> WorkspaceFeaturesFragment::class.java
+                TASKS_TAB_POSITION -> WorkspaceTasksFragment::class.java
+                else -> WorkspaceDetailStubFragment::class.java
             }
         }
     }
 
     override fun createFragment(position: Int): Fragment {
-        return if (position == FEATURES_TAB_POSITION) {
-            WorkspaceFeaturesFragment.newInstance(workspaceId)
-        } else {
-            val titleRes = TAB_TITLES.getOrElse(position) { TAB_TITLES[FEATURES_TAB_POSITION] }
-            WorkspaceDetailStubFragment.newInstance(fragment.getString(titleRes))
+        return when (position) {
+            FEATURES_TAB_POSITION -> WorkspaceFeaturesFragment.newInstance(workspaceId)
+            TASKS_TAB_POSITION -> WorkspaceTasksFragment.newInstance(workspaceId)
+            else -> {
+                val titleRes = TAB_TITLES.getOrElse(position) { TAB_TITLES[FEATURES_TAB_POSITION] }
+                WorkspaceDetailStubFragment.newInstance(fragment.getString(titleRes))
+            }
         }
     }
 

@@ -2,6 +2,8 @@ package chat.sphinx.concept_repository_dashboard
 
 import chat.sphinx.concept_repository_dashboard.model.HiveFeature
 import chat.sphinx.concept_repository_dashboard.model.HiveFeaturesPage
+import chat.sphinx.concept_repository_dashboard.model.HivePod
+import chat.sphinx.concept_repository_dashboard.model.HivePoolStatus
 import chat.sphinx.concept_repository_dashboard.model.HiveTask
 import chat.sphinx.concept_repository_dashboard.model.HiveTasksPage
 import chat.sphinx.concept_repository_dashboard.model.Workspace
@@ -139,4 +141,10 @@ interface RepositoryDashboard {
         taskId: String,
         dependsOnTaskIds: List<String>
     ): Response<Boolean, ResponseError>
+
+    suspend fun fetchHivePoolStatus(slug: String): Response<HivePoolStatus, ResponseError>
+
+    suspend fun fetchHiveBasicPods(slug: String): Response<List<HivePod>, ResponseError>
+
+    suspend fun fetchHiveFullPods(slug: String): Response<List<HivePod>, ResponseError>
 }

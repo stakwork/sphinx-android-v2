@@ -37,15 +37,19 @@ import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.concept_repository_dashboard.RepositoryDashboard
 import chat.sphinx.concept_repository_dashboard.model.HiveFeature
 import chat.sphinx.concept_repository_dashboard.model.HiveFeaturesPage
+import chat.sphinx.concept_repository_dashboard.model.HivePod
+import chat.sphinx.concept_repository_dashboard.model.HivePoolStatus
 import chat.sphinx.concept_repository_dashboard.model.HiveTask
 import chat.sphinx.concept_repository_dashboard.model.HiveTasksPage
 import chat.sphinx.concept_repository_dashboard.model.Workspace
 import chat.sphinx.concept_network_query_hive.model.HiveFeaturePatchDto
+import chat.sphinx.concept_network_query_hive.model.HivePodsListDto
 import chat.sphinx.concept_network_query_hive.model.HiveTaskDuplicateDto
 import chat.sphinx.concept_network_query_hive.model.HiveTaskMutationDto
 import chat.sphinx.concept_network_query_hive.model.WorkspaceDto
 import chat.sphinx.concept_relay.CustomException
 import chat.sphinx.feature_repository.mappers.hive.toDomain
+import chat.sphinx.feature_repository.mappers.hive.toDomainOrNull
 import chat.sphinx.concept_repository_data_sync.DataSyncRepository
 import chat.sphinx.concept_repository_feed.FeedRepository
 import chat.sphinx.concept_repository_lightning.LightningRepository
@@ -1080,6 +1084,143 @@ abstract class SphinxRepository(
                 e
             )
             Response.Error(ResponseError("Failed to update hive task dependsOn", e))
+        }
+    }
+
+    override suspend fun fetchHivePoolStatus(
+        slug: String
+    ): Response<HivePoolStatus, ResponseError> {
+        LOG.d(TAG, "fetchHivePoolStatus slug=$slug")
+        return try {
+            when (
+                val response = withHiveToken(
+                    terminalError = { error ->
+                        val unauthorized = isHiveUnauthorized(error)
+                        if (unauthorized) {
+                            LOG.d(
+                                TAG,
+                                "fetchHivePoolStatus 401 re-auth-and-retry slug=$slug statusCode=401"
+                            )
+                        }
+                        !unauthorized
+                    },
+                ) { token ->
+                    networkQueryHive.getPoolStatus(slug, token)
+                }
+            ) {
+                is Response.Success -> {
+                    val dto = response.value
+                    val status = dto.data?.status
+                    val queuedCount = status?.queuedCount
+                    val unusedVms = status?.unusedVms
+                    if (!dto.success || queuedCount == null || unusedVms == null) {
+                        LOG.e(
+                            TAG,
+                            "fetchHivePoolStatus failure pool slug=$slug statusCode=null",
+                            null
+                        )
+                        return Response.Error(ResponseError("Failed to fetch hive pool status"))
+                    }
+                    Response.Success(
+                        HivePoolStatus(
+                            queuedCount = queuedCount,
+                            unusedVms = unusedVms,
+                        )
+                    )
+                }
+                is Response.Error -> {
+                    val code = hiveErrorStatusCode(response.cause)
+                    LOG.e(
+                        TAG,
+                        "fetchHivePoolStatus failure pool slug=$slug statusCode=$code",
+                        response.cause.exception
+                    )
+                    response
+                }
+            }
+        } catch (e: Exception) {
+            LOG.e(TAG, "fetchHivePoolStatus failure pool slug=$slug statusCode=null", e)
+            Response.Error(ResponseError("Failed to fetch hive pool status", e))
+        }
+    }
+
+    override suspend fun fetchHiveBasicPods(
+        slug: String
+    ): Response<List<HivePod>, ResponseError> {
+        LOG.d(TAG, "fetchHiveBasicPods slug=$slug")
+        return fetchHivePods(
+            slug = slug,
+            callName = "fetchHiveBasicPods",
+            failedLabel = "basic",
+        ) { token ->
+            networkQueryHive.getBasicPods(slug, token)
+        }
+    }
+
+    override suspend fun fetchHiveFullPods(
+        slug: String
+    ): Response<List<HivePod>, ResponseError> {
+        LOG.d(TAG, "fetchHiveFullPods slug=$slug")
+        return fetchHivePods(
+            slug = slug,
+            callName = "fetchHiveFullPods",
+            failedLabel = "full",
+        ) { token ->
+            networkQueryHive.getFullPods(slug, token)
+        }
+    }
+
+    private suspend fun fetchHivePods(
+        slug: String,
+        callName: String,
+        failedLabel: String,
+        request: (token: String) -> Flow<LoadResponse<HivePodsListDto, ResponseError>>,
+    ): Response<List<HivePod>, ResponseError> {
+        return try {
+            when (
+                val response = withHiveToken(
+                    terminalError = { error ->
+                        val unauthorized = isHiveUnauthorized(error)
+                        if (unauthorized) {
+                            LOG.d(
+                                TAG,
+                                "$callName 401 re-auth-and-retry slug=$slug statusCode=401"
+                            )
+                        }
+                        !unauthorized
+                    },
+                ) { token ->
+                    request(token)
+                }
+            ) {
+                is Response.Success -> {
+                    val dto = response.value
+                    if (!dto.success) {
+                        LOG.e(
+                            TAG,
+                            "$callName failure $failedLabel slug=$slug statusCode=null",
+                            null
+                        )
+                        return Response.Error(ResponseError("Failed to fetch hive $failedLabel pods"))
+                    }
+                    val pods = dto.data?.workspaces
+                        ?.mapNotNull { it.toDomainOrNull() }
+                        ?: emptyList()
+                    Response.Success(pods)
+                }
+                is Response.Error -> {
+                    val code = hiveErrorStatusCode(response.cause)
+                    LOG.e(
+                        TAG,
+                        "$callName failure $failedLabel slug=$slug statusCode=$code",
+                        response.cause.exception
+                    )
+                    response
+                }
+            }
+        } catch (e: Exception) {
+            LOG.e(TAG, "$callName failure $failedLabel slug=$slug statusCode=null", e)
+            Response.Error(ResponseError("Failed to fetch hive $failedLabel pods", e))
         }
     }
 

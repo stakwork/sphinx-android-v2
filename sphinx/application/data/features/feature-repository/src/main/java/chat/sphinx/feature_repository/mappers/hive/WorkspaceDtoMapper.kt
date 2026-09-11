@@ -1,9 +1,13 @@
 package chat.sphinx.feature_repository.mappers.hive
 
 import chat.sphinx.concept_network_query_hive.model.HiveFeatureDto
+import chat.sphinx.concept_network_query_hive.model.HivePodDto
+import chat.sphinx.concept_network_query_hive.model.HivePodResourceUsageDto
 import chat.sphinx.concept_network_query_hive.model.HiveTaskDto
 import chat.sphinx.concept_network_query_hive.model.WorkspaceDto
 import chat.sphinx.concept_repository_dashboard.model.HiveFeature
+import chat.sphinx.concept_repository_dashboard.model.HivePod
+import chat.sphinx.concept_repository_dashboard.model.HivePodResourceUsage
 import chat.sphinx.concept_repository_dashboard.model.HiveTask
 import chat.sphinx.concept_repository_dashboard.model.Workspace
 
@@ -21,6 +25,31 @@ fun HiveFeatureDto.toDomain(): HiveFeature = HiveFeature(
     title = title,
     status = status,
     priority = priority,
+)
+
+fun HivePodDto.toDomainOrNull(): HivePod? {
+    val id = id?.trim().orEmpty()
+    val subdomain = subdomain?.trim().orEmpty()
+    val state = state?.trim().orEmpty()
+    if (id.isBlank() || subdomain.isBlank() || state.isBlank()) {
+        return null
+    }
+    return HivePod(
+        id = id,
+        subdomain = subdomain,
+        state = state,
+        internalState = internalState,
+        usageStatus = usageStatus,
+        resourceUsage = resourceUsage?.toDomain(),
+    )
+}
+
+fun HivePodResourceUsageDto.toDomain(): HivePodResourceUsage = HivePodResourceUsage(
+    available = available == true,
+    requestsCpu = requests?.cpu,
+    requestsMemory = requests?.memory,
+    usageCpu = usage?.cpu,
+    usageMemory = usage?.memory,
 )
 
 fun HiveTaskDto.toDomain(): HiveTask = HiveTask(

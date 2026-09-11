@@ -5,6 +5,8 @@ import chat.sphinx.concept_network_query_hive.model.HiveDeleteResponseDto
 import chat.sphinx.concept_network_query_hive.model.HiveFeaturePatchDto
 import chat.sphinx.concept_network_query_hive.model.HiveFeatureUpdateDto
 import chat.sphinx.concept_network_query_hive.model.HiveFeaturesListDto
+import chat.sphinx.concept_network_query_hive.model.HivePodsListDto
+import chat.sphinx.concept_network_query_hive.model.HivePoolStatusDto
 import chat.sphinx.concept_network_query_hive.model.HiveTaskDuplicateDto
 import chat.sphinx.concept_network_query_hive.model.HiveTaskMutationDto
 import chat.sphinx.concept_network_query_hive.model.HiveTasksListDto
@@ -96,4 +98,19 @@ abstract class NetworkQueryHive {
         dependsOnTaskIds: List<String>,
         authToken: String
     ): Flow<LoadResponse<HiveTaskMutationDto, ResponseError>>
+
+    abstract fun getPoolStatus(
+        slug: String,
+        authToken: String
+    ): Flow<LoadResponse<HivePoolStatusDto, ResponseError>>
+
+    abstract fun getBasicPods(
+        slug: String,
+        authToken: String
+    ): Flow<LoadResponse<HivePodsListDto, ResponseError>>
+
+    abstract fun getFullPods(
+        slug: String,
+        authToken: String
+    ): Flow<LoadResponse<HivePodsListDto, ResponseError>>
 }

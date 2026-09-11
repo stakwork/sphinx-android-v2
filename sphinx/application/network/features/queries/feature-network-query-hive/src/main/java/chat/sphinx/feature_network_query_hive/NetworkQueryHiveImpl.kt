@@ -8,6 +8,8 @@ import chat.sphinx.concept_network_query_hive.model.HiveDeleteResponseDto
 import chat.sphinx.concept_network_query_hive.model.HiveFeaturePatchDto
 import chat.sphinx.concept_network_query_hive.model.HiveFeatureUpdateDto
 import chat.sphinx.concept_network_query_hive.model.HiveFeaturesListDto
+import chat.sphinx.concept_network_query_hive.model.HivePodsListDto
+import chat.sphinx.concept_network_query_hive.model.HivePoolStatusDto
 import chat.sphinx.concept_network_query_hive.model.HiveTaskDependsOnPatchDto
 import chat.sphinx.concept_network_query_hive.model.HiveTaskDuplicateDto
 import chat.sphinx.concept_network_query_hive.model.HiveTaskMutationDto
@@ -219,6 +221,39 @@ class NetworkQueryHiveImpl(
                 "Authorization" to "Bearer $authToken",
                 "Content-Type" to "application/json"
             ),
+            requireSuccessful = true
+        )
+
+    override fun getPoolStatus(
+        slug: String,
+        authToken: String
+    ): Flow<LoadResponse<HivePoolStatusDto, ResponseError>> =
+        networkCall.get(
+            url = "$HIVE_BASE_URL/w/${encodePathSegment(slug)}/pool/status",
+            responseJsonClass = HivePoolStatusDto::class.java,
+            headers = mapOf("Authorization" to "Bearer $authToken"),
+            requireSuccessful = true
+        )
+
+    override fun getBasicPods(
+        slug: String,
+        authToken: String
+    ): Flow<LoadResponse<HivePodsListDto, ResponseError>> =
+        networkCall.get(
+            url = "$HIVE_BASE_URL/w/${encodePathSegment(slug)}/pool/basic-workspaces",
+            responseJsonClass = HivePodsListDto::class.java,
+            headers = mapOf("Authorization" to "Bearer $authToken"),
+            requireSuccessful = true
+        )
+
+    override fun getFullPods(
+        slug: String,
+        authToken: String
+    ): Flow<LoadResponse<HivePodsListDto, ResponseError>> =
+        networkCall.get(
+            url = "$HIVE_BASE_URL/w/${encodePathSegment(slug)}/pool/workspaces",
+            responseJsonClass = HivePodsListDto::class.java,
+            headers = mapOf("Authorization" to "Bearer $authToken"),
             requireSuccessful = true
         )
 

@@ -386,6 +386,17 @@ abstract class SphinxRepository(
         authenticationStorage.removeString(HIVE_AUTHENTICATION_TOKEN)
     }
 
+    /**
+     * Clear the stored Hive JWT and authenticate once, serialized under
+     * [hiveAuthMutex]. Used by Graph Chat SSE for a single 401 retry.
+     */
+    suspend fun reauthenticateWithHive(): Boolean {
+        return hiveAuthMutex.withLock {
+            clearHiveToken()
+            authenticateWithHive()
+        }
+    }
+
     override suspend fun fetchWorkspaces(): Response<List<Workspace>, ResponseError> {
         return try {
             val token = retrieveHiveToken()

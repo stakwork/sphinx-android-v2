@@ -5,6 +5,8 @@ import chat.sphinx.concept_paging.PageSourceWrapper
 import chat.sphinx.concept_repository_dashboard.DashboardItem
 import chat.sphinx.concept_repository_dashboard.model.HiveFeature
 import chat.sphinx.concept_repository_dashboard.model.HiveFeaturesPage
+import chat.sphinx.concept_repository_dashboard.model.HivePod
+import chat.sphinx.concept_repository_dashboard.model.HivePoolStatus
 import chat.sphinx.concept_repository_dashboard.model.HiveTask
 import chat.sphinx.concept_repository_dashboard.model.HiveTasksPage
 import chat.sphinx.concept_repository_dashboard.model.Workspace
@@ -287,6 +289,15 @@ class WorkspacesViewModelNavigateTest {
             taskId: String,
             dependsOnTaskIds: List<String>,
         ): Response<Boolean, ResponseError> = Response.Error(ResponseError("unused"))
+        override suspend fun fetchHivePoolStatus(
+            slug: String,
+        ): Response<HivePoolStatus, ResponseError> = Response.Error(ResponseError("unused"))
+        override suspend fun fetchHiveBasicPods(
+            slug: String,
+        ): Response<List<HivePod>, ResponseError> = Response.Error(ResponseError("unused"))
+        override suspend fun fetchHiveFullPods(
+            slug: String,
+        ): Response<List<HivePod>, ResponseError> = Response.Error(ResponseError("unused"))
         override suspend fun getDashboardItemPagingSource(): PageSourceWrapper<Long, DashboardItem, Any> {
             error("unused")
         }

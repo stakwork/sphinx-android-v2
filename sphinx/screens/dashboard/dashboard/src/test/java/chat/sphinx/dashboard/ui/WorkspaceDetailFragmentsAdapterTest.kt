@@ -7,6 +7,12 @@ import org.junit.Test
 class WorkspaceDetailFragmentsAdapterTest {
 
     @Test
+    fun `pods tab receives workspaceId and workspaceSlug constructor arguments`() {
+        assertEquals("arg_workspace_id", WorkspacePodsFragment.ARG_WORKSPACE_ID)
+        assertEquals("arg_workspace_slug", WorkspacePodsFragment.ARG_WORKSPACE_SLUG)
+    }
+
+    @Test
     fun `features tab receives a workspaceId constructor argument`() {
         assertEquals("arg_workspace_id", WorkspaceFeaturesFragment.ARG_WORKSPACE_ID)
     }
@@ -37,7 +43,7 @@ class WorkspaceDetailFragmentsAdapterTest {
             )
         )
         assertEquals(
-            WorkspaceDetailStubFragment::class.java,
+            WorkspacePodsFragment::class.java,
             WorkspaceDetailFragmentsAdapter.fragmentClassForPosition(
                 WorkspaceDetailFragmentsAdapter.PODS_TAB_POSITION
             )

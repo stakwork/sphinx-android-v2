@@ -146,6 +146,14 @@
     <string name="hive_feature_edit_status_title">Feature status</string>
     <string name="hive_feature_edit_priority_title">Feature priority</string>
 
+    <string name="hive_pods_empty">No pods in this workspace</string>
+    <string name="hive_pods_error">Failed to load pods</string>
+    <string name="hive_pods_retry">Retry</string>
+    <string name="hive_pods_pool_queued">Queued: %d</string>
+    <string name="hive_pods_pool_idle">Idle VMs: %d</string>
+    <string name="hive_pods_pool_unavailable">Pool status unavailable</string>
+    <string name="hive_pod_capacity_label">CPU %3$s / %1$s · Mem %4$s / %2$s</string>
+
     <string name="hive_tasks_empty">No tasks in this workspace</string>
     <string name="hive_tasks_error">Unable to load tasks</string>
     <string name="hive_tasks_retry">Retry</string>

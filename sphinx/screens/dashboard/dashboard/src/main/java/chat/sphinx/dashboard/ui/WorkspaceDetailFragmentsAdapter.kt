@@ -7,7 +7,7 @@ import chat.sphinx.dashboard.R
 class WorkspaceDetailFragmentsAdapter(
     private val fragment: Fragment,
     val workspaceId: String,
-    // Passed only to the Pods tab; Features/Tasks continue to use workspaceId.
+    // Passed to Graph Chat and Pods; Features/Tasks continue to use workspaceId.
     val workspaceSlug: String? = null,
 ) : FragmentStateAdapter(fragment) {
 
@@ -28,6 +28,7 @@ class WorkspaceDetailFragmentsAdapter(
             return when (position) {
                 FEATURES_TAB_POSITION -> WorkspaceFeaturesFragment::class.java
                 TASKS_TAB_POSITION -> WorkspaceTasksFragment::class.java
+                GRAPH_CHAT_TAB_POSITION -> WorkspaceGraphChatFragment::class.java
                 PODS_TAB_POSITION -> WorkspacePodsFragment::class.java
                 else -> WorkspaceDetailStubFragment::class.java
             }
@@ -38,6 +39,7 @@ class WorkspaceDetailFragmentsAdapter(
         return when (position) {
             FEATURES_TAB_POSITION -> WorkspaceFeaturesFragment.newInstance(workspaceId)
             TASKS_TAB_POSITION -> WorkspaceTasksFragment.newInstance(workspaceId)
+            GRAPH_CHAT_TAB_POSITION -> WorkspaceGraphChatFragment.newInstance(workspaceId, workspaceSlug)
             PODS_TAB_POSITION -> WorkspacePodsFragment.newInstance(workspaceId, workspaceSlug)
             else -> {
                 val titleRes = TAB_TITLES.getOrElse(position) { TAB_TITLES[FEATURES_TAB_POSITION] }

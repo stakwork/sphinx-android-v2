@@ -71,8 +71,8 @@ class GraphChatSseClientTest {
             tokenSource,
             dispatchers,
             logger,
-            server.url("/api/ask/quick").toString(),
         )
+        client.endpointUrl = server.url("/api/ask/quick").toString()
 
         val events = client.stream("", listOf(GraphChatMessage("user", "hi"))).toList()
         assertEquals(listOf(GraphChatSseEvent.Error(GraphChatSseClient.MISSING_SLUG_MESSAGE)), events)
@@ -248,8 +248,9 @@ class GraphChatSseClientTest {
             tokenSource,
             dispatchers,
             logger,
-            server.url("/api/ask/quick").toString(),
-        )
+        ).also { client ->
+            client.endpointUrl = server.url("/api/ask/quick").toString()
+        }
     }
 
     private fun callRecorder(): EventListener = object : EventListener() {

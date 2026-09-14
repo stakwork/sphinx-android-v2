@@ -40,14 +40,14 @@ class GraphChatSseClient @Inject constructor(
     private val hiveTokenSource: HiveTokenSource,
     private val dispatchers: CoroutineDispatchers,
     private val logger: SphinxLogger,
-) {
+) : GraphChatStreamSource {
 
     internal var endpointUrl: String = ASK_QUICK_URL
 
     private val parser = GraphChatSseParser()
     private val moshi: Moshi = Moshi.Builder().build()
 
-    fun stream(
+    override fun stream(
         workspaceSlug: String?,
         messages: List<GraphChatMessage>,
     ): Flow<GraphChatSseEvent> = flow {

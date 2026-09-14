@@ -134,6 +134,13 @@
     <string name="workspace_detail_create_feature">Create feature</string>
     <string name="workspace_detail_stub_coming_soon">%s — coming soon</string>
 
+    <string name="graph_chat_empty">Ask a question about this workspace</string>
+    <string name="graph_chat_in_progress">In progress</string>
+    <string name="graph_chat_error">Unable to get a reply. Try again.</string>
+    <string name="graph_chat_retry">Retry</string>
+    <string name="graph_chat_composer_hint">Ask Jamie</string>
+    <string name="graph_chat_send">Send</string>
+
     <string name="hive_features_empty">No features in this workspace</string>
     <string name="hive_features_error">Unable to load features</string>
     <string name="hive_features_retry">Retry</string>

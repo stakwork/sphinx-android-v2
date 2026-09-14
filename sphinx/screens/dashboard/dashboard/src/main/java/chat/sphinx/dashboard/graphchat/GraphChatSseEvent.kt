@@ -10,4 +10,9 @@ sealed class GraphChatSseEvent {
 data class GraphChatMessage(
     val role: String,
     val content: String,
-)
+) {
+    companion object {
+        const val ROLE_USER = "user"
+        const val ROLE_ASSISTANT = "assistant"
+    }
+}

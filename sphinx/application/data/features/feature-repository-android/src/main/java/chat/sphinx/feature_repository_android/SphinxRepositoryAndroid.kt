@@ -20,6 +20,7 @@ import chat.sphinx.concept_network_query_verify_external.NetworkQueryAuthorizeEx
 import chat.sphinx.concept_paging.PageSourceWrapper
 import chat.sphinx.concept_relay.RelayDataHandler
 import chat.sphinx.concept_repository_dashboard.DashboardItem
+import chat.sphinx.concept_repository_dashboard_android.GraphChatHistoryClearer
 import chat.sphinx.concept_repository_dashboard_android.RepositoryDashboardAndroid
 import chat.sphinx.concept_wallet.WalletDataHandler
 import chat.sphinx.conceptcoredb.DashboardDbo
@@ -69,6 +70,7 @@ class SphinxRepositoryAndroid(
     rsa: RSA,
     sphinxNotificationManager: SphinxNotificationManager,
     LOG: SphinxLogger,
+    private val graphChatHistoryClearer: GraphChatHistoryClearer,
 ): SphinxRepository(
     accountOwner,
     applicationScope,
@@ -145,6 +147,11 @@ class SphinxRepositoryAndroid(
                 }
             }
         }
+    }
+
+    override suspend fun clearDatabase() {
+        super.clearDatabase()
+        graphChatHistoryClearer.clearAll()
     }
 
     override suspend fun getDashboardItemPagingSource(): PageSourceWrapper<Long, DashboardItem, DashboardDbo> {

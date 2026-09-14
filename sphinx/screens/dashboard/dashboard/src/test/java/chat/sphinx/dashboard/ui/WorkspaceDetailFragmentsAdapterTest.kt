@@ -13,6 +13,12 @@ class WorkspaceDetailFragmentsAdapterTest {
     }
 
     @Test
+    fun `graph chat tab receives workspaceId and workspaceSlug constructor arguments`() {
+        assertEquals("arg_workspace_id", WorkspaceGraphChatFragment.ARG_WORKSPACE_ID)
+        assertEquals("arg_workspace_slug", WorkspaceGraphChatFragment.ARG_WORKSPACE_SLUG)
+    }
+
+    @Test
     fun `features tab receives a workspaceId constructor argument`() {
         assertEquals("arg_workspace_id", WorkspaceFeaturesFragment.ARG_WORKSPACE_ID)
     }
@@ -37,7 +43,7 @@ class WorkspaceDetailFragmentsAdapterTest {
             )
         )
         assertEquals(
-            WorkspaceDetailStubFragment::class.java,
+            WorkspaceGraphChatFragment::class.java,
             WorkspaceDetailFragmentsAdapter.fragmentClassForPosition(
                 WorkspaceDetailFragmentsAdapter.GRAPH_CHAT_TAB_POSITION
             )

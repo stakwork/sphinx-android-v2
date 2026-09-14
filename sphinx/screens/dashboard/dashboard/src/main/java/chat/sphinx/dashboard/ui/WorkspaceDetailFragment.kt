@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.viewpager2.widget.ViewPager2
 import by.kirich1409.viewbindingdelegate.viewBinding
 import chat.sphinx.dashboard.R
 import chat.sphinx.dashboard.databinding.FragmentWorkspaceDetailBinding
@@ -73,6 +74,22 @@ internal class WorkspaceDetailFragment : SideEffectFragment<
         ) { tab, position ->
             tab.text = adapter.getPageTitle(position)
         }.attach()
+
+        binding.viewPagerWorkspaceDetail.registerOnPageChangeCallback(
+            object : ViewPager2.OnPageChangeCallback() {
+                override fun onPageSelected(position: Int) {
+                    if (position != WorkspaceDetailFragmentsAdapter.GRAPH_CHAT_TAB_POSITION) {
+                        cancelGraphChatInFlight()
+                    }
+                }
+            }
+        )
+    }
+
+    private fun cancelGraphChatInFlight() {
+        childFragmentManager.fragments
+            .filterIsInstance<WorkspaceGraphChatFragment>()
+            .forEach { it.cancelInFlight() }
     }
 
     override suspend fun onViewStateFlowCollect(viewState: WorkspaceDetailViewState) {}

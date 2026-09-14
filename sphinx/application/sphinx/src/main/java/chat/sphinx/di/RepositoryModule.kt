@@ -20,6 +20,7 @@ import chat.sphinx.concept_repository_actions.ActionsRepository
 import chat.sphinx.concept_repository_chat.ChatRepository
 import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
 import chat.sphinx.concept_repository_contact.ContactRepository
+import chat.sphinx.concept_repository_dashboard_android.GraphChatHistoryClearer
 import chat.sphinx.concept_repository_dashboard_android.RepositoryDashboardAndroid
 import chat.sphinx.dashboard.graphchat.HiveTokenSource
 import chat.sphinx.graphchat.HiveTokenSourceImpl
@@ -156,6 +157,7 @@ object RepositoryModule {
         rsa: RSA,
         sphinxNotificationManager: SphinxNotificationManager,
         sphinxLogger: SphinxLogger,
+        graphChatHistoryClearer: GraphChatHistoryClearer,
     ): SphinxRepositoryAndroid =
         SphinxRepositoryAndroid(
             accountOwner,
@@ -185,6 +187,7 @@ object RepositoryModule {
             rsa,
             sphinxNotificationManager,
             sphinxLogger,
+            graphChatHistoryClearer,
         )
 
     @Provides

@@ -60,6 +60,7 @@ dependencies {
     implementation project(path: ':sphinx:application:data:concepts:concept-background-login')
     implementation project(path: ':sphinx:application:data:concepts:concept-wallet')
     implementation project(path: ':sphinx:application:data:concepts:repositories:concept-repository-dashboard-android')
+    implementation project(path: ':sphinx:application:network:concepts:clients:concept-network-client')
     implementation project(path: ':sphinx:activity:concepts:concept-user-colors-helper')
     implementation project(path: ':sphinx:application:network:concepts:queries:concept-network-query-authorize-external')
     implementation project(path: ':sphinx:application:network:concepts:queries:concept-network-query-people')
@@ -89,6 +90,9 @@ dependencies {
 
     testImplementation testDeps.junit
     testImplementation testDeps.kotlin.coroutines
+    testImplementation deps.square.okhttp
+    testImplementation deps.square.okhttpLogging
+    testImplementation "com.squareup.okhttp3:mockwebserver:${versions.okhttp}"
 
     androidTestImplementation testDeps.androidx.core
     androidTestImplementation testDeps.androidx.espresso

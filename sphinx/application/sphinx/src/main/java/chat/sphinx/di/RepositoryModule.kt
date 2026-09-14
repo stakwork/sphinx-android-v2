@@ -21,6 +21,8 @@ import chat.sphinx.concept_repository_chat.ChatRepository
 import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
 import chat.sphinx.concept_repository_contact.ContactRepository
 import chat.sphinx.concept_repository_dashboard_android.RepositoryDashboardAndroid
+import chat.sphinx.dashboard.graphchat.HiveTokenSource
+import chat.sphinx.graphchat.HiveTokenSourceImpl
 import chat.sphinx.concept_repository_data_sync.DataSyncRepository
 import chat.sphinx.concept_repository_feed.FeedRepository
 import chat.sphinx.concept_repository_lightning.LightningRepository
@@ -233,6 +235,13 @@ object RepositoryModule {
         sphinxRepositoryAndroid: SphinxRepositoryAndroid
     ): RepositoryDashboardAndroid<Any> =
         sphinxRepositoryAndroid as RepositoryDashboardAndroid<Any>
+
+    @Provides
+    @Singleton
+    fun provideHiveTokenSource(
+        sphinxRepositoryAndroid: SphinxRepositoryAndroid
+    ): HiveTokenSource =
+        HiveTokenSourceImpl(sphinxRepositoryAndroid)
 
     @Provides
     fun provideRepositoryMedia(

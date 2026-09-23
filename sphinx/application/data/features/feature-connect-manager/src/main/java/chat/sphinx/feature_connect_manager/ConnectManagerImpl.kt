@@ -342,8 +342,6 @@ class ConnectManagerImpl: ConnectManager()
                 )
                 client.subscribe(arrayOf(tribeSubtopic), qos)
 
-                subscribeServerHealth(client)
-
                 if (isRestoreAccount()) {
                     getAllMessagesCount()
                 } else if (ownerInfoStateFlow.value.messageLastIndex != null) {
@@ -365,6 +363,8 @@ class ConnectManagerImpl: ConnectManager()
             }
             Log.e("MQTT_MESSAGES", "${e.message}")
         }
+
+        mqttClient?.let { client -> subscribeServerHealth(client) }
     }
 
     private fun handleRunReturn(

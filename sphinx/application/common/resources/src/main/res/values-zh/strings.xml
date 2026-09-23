@@ -207,5 +207,10 @@
     <string name="alert_confirm_delete_invite_title">Delete Invite</string>
     <string name="alert_confirm_delete_invite_message">Are you sure you want to delete this invite?</string>
     <string name="chat_placeholder_hint">Your chat will be enabled as soon as your\ncontact goes online</string>
+    <string name="server_health_banner_degraded">服务器出现问题。消息和付款可能会失败。</string>
+    <string name="server_health_banner_unknown">正在等待服务器。消息和付款可能无法发送。</string>
+    <string name="mixer_error_cln_unavailable">闪电节点不可用。请稍后再试。</string>
+    <string name="mixer_error_cln_timeout">付款超时。请重试。</string>
+    <string name="mixer_error_insufficient_balance">余额不足，无法完成此付款。</string>
 
 </resources>

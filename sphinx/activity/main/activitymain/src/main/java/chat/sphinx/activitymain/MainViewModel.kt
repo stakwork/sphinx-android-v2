@@ -14,6 +14,12 @@ import chat.sphinx.activitymain.navigation.drivers.PrimaryNavigationDriver
 import chat.sphinx.activitymain.ui.MainViewState
 import chat.sphinx.concept_repository_actions.ActionsRepository
 import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
+import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
+import chat.sphinx.example.wrapper_mqtt.MixerErrorMessageKind
+import chat.sphinx.example.wrapper_mqtt.MixerHealth
+import chat.sphinx.example.wrapper_mqtt.MixerHealthUi
+import chat.sphinx.example.wrapper_mqtt.mixerErrorMessageKind
+import chat.sphinx.resources.R as R_common
 import chat.sphinx.concept_repository_feed.FeedRepository
 import chat.sphinx.concept_repository_media.RepositoryMedia
 import chat.sphinx.concept_service_media.MediaPlayerServiceController
@@ -36,7 +42,9 @@ import io.matthewnelson.concept_authentication.state.AuthenticationStateManager
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.combine
 import javax.inject.Inject
 
 @HiltViewModel
@@ -79,6 +87,52 @@ class MainViewModel @Inject constructor(
             }
         }
         getStorageData()
+        collectServerHealth()
+        collectMixerOperationErrors()
+    }
+
+    private val _serverHealthBanner = MutableStateFlow<MixerHealth?>(null)
+    val serverHealthBanner: StateFlow<MixerHealth?> = _serverHealthBanner
+
+    private val _mixerOperationMessage = MutableStateFlow<String?>(null)
+    val mixerOperationMessage: StateFlow<String?> = _mixerOperationMessage
+
+    private fun collectServerHealth() {
+        viewModelScope.launch(mainImmediate) {
+            combine(
+                connectManagerRepository.serverHealthState,
+                authenticationStateManager.authenticationStateFlow
+            ) { healthUi, authState ->
+                bannerHealth(healthUi, authState)
+            }.collect { banner ->
+                _serverHealthBanner.value = banner
+            }
+        }
+    }
+
+    private fun collectMixerOperationErrors() {
+        viewModelScope.launch(mainImmediate) {
+            connectManagerRepository.connectManagerErrorState.collect { error ->
+                if (error is ConnectManagerError.MixerOperationError) {
+                    _mixerOperationMessage.value = mixerOperationMessage(error)
+                }
+            }
+        }
+    }
+
+    fun consumeMixerOperationMessage() {
+        _mixerOperationMessage.value = null
+    }
+
+    private fun mixerOperationMessage(error: ConnectManagerError.MixerOperationError): String {
+        val resId = when (mixerErrorMessageKind(error)) {
+            MixerErrorMessageKind.CLN_UNAVAILABLE -> R_common.string.mixer_error_cln_unavailable
+            MixerErrorMessageKind.CLN_TIMEOUT -> R_common.string.mixer_error_cln_timeout
+            MixerErrorMessageKind.INSUFFICIENT_BALANCE ->
+                R_common.string.mixer_error_insufficient_balance
+            MixerErrorMessageKind.GENERIC -> R_common.string.connect_manager_send_message_error
+        }
+        return app.getString(resId)
     }
 
     private suspend fun processDeepLink(deepLink: String) {
@@ -177,9 +231,30 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    internal fun bannerTextRes(health: MixerHealth): Int {
+        return when (health) {
+            MixerHealth.DEGRADED -> R_common.string.server_health_banner_degraded
+            MixerHealth.UNKNOWN -> R_common.string.server_health_banner_unknown
+            MixerHealth.OK -> R_common.string.server_health_banner_unknown
+        }
+    }
+
     private fun getTotalStorage(): Long {
         val stat = StatFs(Environment.getDataDirectory().path)
         return stat.blockSizeLong * stat.availableBlocksLong
     }
 
+}
+
+internal fun bannerHealth(
+    healthUi: MixerHealthUi,
+    authState: AuthenticationState
+): MixerHealth? {
+    if (authState != AuthenticationState.NotRequired || !healthUi.showBanner) {
+        return null
+    }
+    return when (healthUi.health) {
+        MixerHealth.OK -> null
+        MixerHealth.DEGRADED, MixerHealth.UNKNOWN -> healthUi.health
+    }
 }

@@ -4,6 +4,7 @@ import chat.sphinx.concept_repository_connect_manager.model.OwnerRegistrationSta
 import chat.sphinx.concept_repository_connect_manager.model.NetworkStatus
 import chat.sphinx.concept_repository_connect_manager.model.RestoreProcessState
 import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
+import chat.sphinx.example.wrapper_mqtt.MixerHealthUi
 import chat.sphinx.example.wrapper_mqtt.TransactionDto
 import chat.sphinx.example.wrapper_mqtt.TribeMembersResponse
 import chat.sphinx.wrapper_common.dashboard.ChatId
@@ -14,6 +15,7 @@ import chat.sphinx.wrapper_common.lightning.MilliSat
 import chat.sphinx.wrapper_contact.NewContact
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * The ConnectManagerRepository interface is responsible for facilitating communication
@@ -30,6 +32,7 @@ interface ConnectManagerRepository {
     val restoreProcessState: MutableStateFlow<RestoreProcessState?>
     val fetchProcessState: MutableStateFlow<Pair<Int, String>?>
     val connectManagerErrorState: MutableStateFlow<ConnectManagerError?>
+    val serverHealthState: StateFlow<MixerHealthUi>
     val transactionDtoState: MutableStateFlow<List<TransactionDto>?>
     val userStateFlow: MutableStateFlow<String?>
     val tribeMembersState: MutableStateFlow<TribeMembersResponse?>

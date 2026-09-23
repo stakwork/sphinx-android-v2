@@ -353,6 +353,9 @@ internal class OnBoardConnectingViewModel @Inject constructor(
     private fun collectConnectManagerErrorState(){
         viewModelScope.launch(mainImmediate) {
             connectManagerRepository.connectManagerErrorState.collect { connectManagerError ->
+                if (connectManagerError is ConnectManagerError.MixerOperationError) {
+                    return@collect
+                }
                 when (connectManagerError) {
                     is ConnectManagerError.GenerateXPubError -> {
                         submitSideEffect(OnBoardConnectingSideEffect.NotifyError(

@@ -278,4 +278,9 @@
     <string name="alert_confirm_delete_invite_title">Delete Invite</string>
     <string name="alert_confirm_delete_invite_message">Are you sure you want to delete this invite?</string>
     <string name="chat_placeholder_hint">Your chat will be enabled as soon as your\ncontact goes online</string>
+    <string name="server_health_banner_degraded">May problema ang server. Maaaring mabigo ang mga mensahe at bayad.</string>
+    <string name="server_health_banner_unknown">Hinihintay ang server. Maaaring hindi makarating ang mga mensahe at bayad.</string>
+    <string name="mixer_error_cln_unavailable">Hindi available ang lightning node. Subukan muli maya-maya.</string>
+    <string name="mixer_error_cln_timeout">Nag-timeout ang bayad. Subukan muli.</string>
+    <string name="mixer_error_insufficient_balance">Kulang ang balanse para makumpleto ang bayad na ito.</string>
 </resources>

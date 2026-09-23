@@ -79,6 +79,29 @@
         app:defaultNavHost="true"
         app:navGraph="@navigation/main_authentication_nav_graph" />
 
+    <androidx.appcompat.widget.AppCompatTextView
+        android:id="@+id/text_view_server_health_banner"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/default_layout_margin"
+        android:layout_marginEnd="@dimen/default_layout_margin"
+        android:background="@color/sphinxOrange"
+        android:clickable="false"
+        android:elevation="16dp"
+        android:focusable="false"
+        android:gravity="center_vertical"
+        android:minHeight="48dp"
+        android:paddingStart="@dimen/default_layout_margin"
+        android:paddingTop="12dp"
+        android:paddingEnd="@dimen/default_layout_margin"
+        android:paddingBottom="12dp"
+        android:textColor="@color/textInverted"
+        android:textSize="@dimen/default_text_size_list_row_headline_variation"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/layout_constraint_main_navigation_bar"
         android:layout_width="match_parent"

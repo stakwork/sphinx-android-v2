@@ -335,5 +335,10 @@
     <string name="timezone_label">Timezone</string>
     <string name="share_timezone_label">Share timezone</string>
     <string name="chat_placeholder_hint">Your chat will be enabled as soon as your\ncontact goes online</string>
+    <string name="server_health_banner_degraded">The server is having trouble. Messages and payments may fail.</string>
+    <string name="server_health_banner_unknown">Waiting for the server. Messages and payments may not go through.</string>
+    <string name="mixer_error_cln_unavailable">The lightning node is unavailable. Try again in a moment.</string>
+    <string name="mixer_error_cln_timeout">The payment timed out. Try again.</string>
+    <string name="mixer_error_insufficient_balance">Not enough balance to complete this payment.</string>
 
 </resources>

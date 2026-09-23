@@ -2573,6 +2573,20 @@ abstract class SphinxRepository(
             .map { contactDboPresenterMapper.mapFrom(it) }
     }
 
+    override suspend fun getAllMessagesByIds(messageIds: List<MessageId>): List<Message> {
+        if (messageIds.isEmpty()) {
+            return emptyList()
+        }
+
+        val queries = coreDB.getSphinxDatabaseQueries()
+
+        return queries.messageGetAllByIds(messageIds)
+            .executeAsList()
+            .map { messageDbo ->
+                mapMessageDboAndDecryptContentIfNeeded(queries, messageDbo)
+            }
+    }
+
     override fun getInviteByContactId(contactId: ContactId): Flow<Invite?> = flow {
         emitAll(
             coreDB.getSphinxDatabaseQueries().inviteGetByContactId(contactId)

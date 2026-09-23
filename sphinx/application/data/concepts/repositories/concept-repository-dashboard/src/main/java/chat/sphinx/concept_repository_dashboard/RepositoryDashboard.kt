@@ -42,6 +42,9 @@ interface RepositoryDashboard {
     fun getMessageById(messageId: MessageId): Flow<Message?>
     fun getInviteById(inviteId: InviteId): Flow<Invite?>
 
+    suspend fun getAllMessagesByIds(messageIds: List<MessageId>): List<Message>
+    suspend fun getAllContactsByIds(contactIds: List<ContactId>): List<Contact>
+
     suspend fun payForInvite(invite: Invite)
     suspend fun deleteInviteAndContact(inviteString: String)
 

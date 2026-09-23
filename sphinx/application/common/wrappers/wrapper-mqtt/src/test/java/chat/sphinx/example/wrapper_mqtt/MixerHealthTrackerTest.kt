@@ -7,7 +7,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
-import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -180,73 +179,5 @@ class MixerHealthTrackerTest {
         assertTrue(sawHeartbeat)
         assertEquals(MixerHealth.OK, tracker.currentSnapshot().health)
         pool.shutdownNow()
-    }
-}
-
-/**
- * Timer ownership lives next to ConnectManagerImpl. These fakes document the
- * contract resetMQTT must not cancel the repeating check, and resetAccount must.
- */
-class HealthTimerContractTest {
-
-    private class Timers {
-        var grace: ScheduledFuture<*>? = null
-        var stale: ScheduledFuture<*>? = null
-        private val scheduler = Executors.newSingleThreadScheduledExecutor()
-
-        fun onConnected() {
-            cancelGrace()
-            grace = scheduler.schedule({}, 15, TimeUnit.SECONDS)
-            if (stale == null || stale?.isCancelled == true) {
-                stale = scheduler.scheduleAtFixedRate({}, 30, 30, TimeUnit.SECONDS)
-            }
-        }
-
-        fun onConnectionLost() {
-            cancelGrace()
-        }
-
-        fun resetMqtt() {
-            // disconnect only
-        }
-
-        fun resetAccount() {
-            cancelGrace()
-            stale?.cancel(false)
-            stale = null
-        }
-
-        fun cancelGrace() {
-            grace?.cancel(false)
-            grace = null
-        }
-
-        fun staleRunning(): Boolean {
-            val future = stale
-            return future != null && !future.isCancelled
-        }
-
-        fun shutdown() {
-            scheduler.shutdownNow()
-        }
-    }
-
-    @Test
-    fun resetMqttDoesNotCancelStaleCheck() {
-        val timers = Timers()
-        timers.onConnected()
-        timers.onConnectionLost()
-        timers.resetMqtt()
-        assertTrue(timers.staleRunning())
-        timers.shutdown()
-    }
-
-    @Test
-    fun resetAccountCancelsBothTimers() {
-        val timers = Timers()
-        timers.onConnected()
-        timers.resetAccount()
-        assertFalse(timers.staleRunning())
-        timers.shutdown()
     }
 }

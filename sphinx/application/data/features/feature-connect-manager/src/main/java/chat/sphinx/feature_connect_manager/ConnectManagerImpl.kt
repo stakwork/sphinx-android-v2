@@ -345,6 +345,8 @@ class ConnectManagerImpl: ConnectManager()
             }
             Log.e("MQTT_MESSAGES", "${e.message}")
         }
+
+        mqttClient?.let { client -> subscribeServerHealth(client) }
     }
 
     private fun handleRunReturn(

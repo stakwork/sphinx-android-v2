@@ -871,6 +871,11 @@ SELECT *
 FROM messageDbo
 WHERE id = ?;
 
+messageGetAllByIds:
+SELECT *
+FROM messageDbo
+WHERE id IN ?;
+
 messageGetByMuid:
 SELECT *
 FROM messageDbo

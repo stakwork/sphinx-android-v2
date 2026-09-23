@@ -26,6 +26,7 @@ import chat.sphinx.wrapper_common.tribe.toTribeJoinLink
 import chat.sphinx.wrapper_contact.*
 import chat.sphinx.wrapper_invite.Invite
 import chat.sphinx.wrapper_lightning.NodeBalance
+import chat.sphinx.wrapper_common.message.MessageId
 import chat.sphinx.wrapper_message.Message
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.matthewnelson.android_feature_navigation.util.navArgs
@@ -137,70 +138,80 @@ internal class ChatListViewModel @Inject constructor(
             }
 
             allChats.collect { chats ->
+                // Batch-fetch latest messages and contacts in 2 queries instead of
+                // 2 per chat (N+1). This is the hot path of chat list loading.
+                val messagesById: Map<MessageId, Message> = withContext(default) {
+                    repositoryDashboard.getAllMessagesByIds(chats.mapNotNull { it.latestMessageId })
+                        .associateBy { it.id }
+                }
+
+                val contactsById: Map<ContactId, Contact> = withContext(default) {
+                    repositoryDashboard.getAllContactsByIds(
+                        chats
+                            .filter { it.type.isConversation() }
+                            .mapNotNull { it.contactIds.lastOrNull() }
+                            .distinct()
+                    ).associateBy { it.id }
+                }
+
                 collectionLock.withLock {
                     chatsCollectionInitialized = true
                     val newList = ArrayList<DashboardChat>(chats.size)
                     val contactsAdded = mutableListOf<ContactId>()
 
-                    withContext(default) {
-                        for (chat in chats) {
-                            val message: Message? = chat.latestMessageId?.let {
-                                repositoryDashboard.getMessageById(it).firstOrNull()
-                            }
+                    for (chat in chats) {
+                        val message: Message? = chat.latestMessageId?.let { messagesById[it] }
 
-                            if (chat.type.isConversation()) {
-                                val contactId: ContactId = chat.contactIds.lastOrNull() ?: continue
+                        if (chat.type.isConversation()) {
+                            val contactId: ContactId = chat.contactIds.lastOrNull() ?: continue
 
-                                val contact: Contact = repositoryDashboard.getContactById(contactId)
-                                    .firstOrNull() ?: continue
+                            val contact: Contact = contactsById[contactId] ?: continue
 
-                                if (contact.status is ContactStatus.Pending) {
-                                    if (contact.isInviteContact()) {
-                                        var contactInvite: Invite? = null
+                            if (contact.status is ContactStatus.Pending) {
+                                if (contact.isInviteContact()) {
+                                    var contactInvite: Invite? = null
 
-                                        contact.inviteId?.let { inviteId ->
-                                            contactInvite = withContext(io) {
-                                                repositoryDashboard.getInviteById(inviteId).firstOrNull()
-                                            }
+                                    contact.inviteId?.let { inviteId ->
+                                        contactInvite = withContext(io) {
+                                            repositoryDashboard.getInviteById(inviteId).firstOrNull()
                                         }
-                                        if (contactInvite != null) {
-                                            newList.add(
-                                                DashboardChat.Inactive.Invite(contact, contactInvite)
-                                            )
-                                        }
-                                    } else {
+                                    }
+                                    if (contactInvite != null) {
                                         newList.add(
-                                            DashboardChat.Inactive.Conversation(contact)
+                                            DashboardChat.Inactive.Invite(contact, contactInvite)
                                         )
                                     }
-                                }
-
-                                if (!contact.isBlocked() && chat.status is ChatStatus.Approved) {
-                                    contactsAdded.add(contactId)
-                                    
+                                } else {
                                     newList.add(
-                                        DashboardChat.Active.Conversation(
-                                            chat,
-                                            message,
-                                            contact,
-                                            repositoryDashboard.getUnseenMessagesByChatId(chat.id),
-                                        )
+                                        DashboardChat.Inactive.Conversation(contact)
                                     )
                                 }
-                            } else {
+                            }
+
+                            if (!contact.isBlocked() && chat.status is ChatStatus.Approved) {
+                                contactsAdded.add(contactId)
+
                                 newList.add(
-                                    DashboardChat.Active.GroupOrTribe(
+                                    DashboardChat.Active.Conversation(
                                         chat,
                                         message,
-                                        accountOwnerStateFlow.value ?: getOwner(),
+                                        contact,
                                         repositoryDashboard.getUnseenMessagesByChatId(chat.id),
-                                        repositoryDashboard.getUnseenMentionsByChatId(chat.id)
                                     )
                                 )
                             }
+                        } else {
+                            newList.add(
+                                DashboardChat.Active.GroupOrTribe(
+                                    chat,
+                                    message,
+                                    accountOwnerStateFlow.value ?: getOwner(),
+                                    repositoryDashboard.getUnseenMessagesByChatId(chat.id),
+                                    repositoryDashboard.getUnseenMentionsByChatId(chat.id)
+                                )
+                            )
                         }
                     }
-                    chatViewStateContainer.updateDashboardChats(newList)
                 }
             }
         }

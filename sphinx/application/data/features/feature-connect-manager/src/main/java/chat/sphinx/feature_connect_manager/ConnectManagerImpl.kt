@@ -9,6 +9,9 @@ import chat.sphinx.example.concept_connect_manager.model.OwnerInfo
 import chat.sphinx.example.concept_connect_manager.model.RestoreProgress
 import chat.sphinx.example.concept_connect_manager.model.RestoreState
 import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
+import chat.sphinx.example.wrapper_mqtt.MixerHealth
+import chat.sphinx.example.wrapper_mqtt.NewSentStatus.Companion.toNewSentStatus
+import chat.sphinx.example.wrapper_mqtt.isServerStatusTopic
 import chat.sphinx.example.wrapper_mqtt.MsgsCounts
 import chat.sphinx.example.wrapper_mqtt.NewInvite
 import chat.sphinx.wrapper_common.lightning.toLightningNodePubKey
@@ -16,6 +19,7 @@ import chat.sphinx.wrapper_common.lightning.toLightningRouteHint
 import chat.sphinx.wrapper_contact.NewContact
 import chat.sphinx.wrapper_lightning.WalletMnemonic
 import chat.sphinx.wrapper_lightning.toWalletMnemonic
+import com.squareup.moshi.Moshi
 import com.ensarsarajcic.kotlinx.serialization.msgpack.MsgPack
 import com.ensarsarajcic.kotlinx.serialization.msgpack.MsgPackDynamicSerializer
 import io.matthewnelson.crypto_common.annotations.RawPasswordAccess
@@ -71,7 +75,10 @@ import uniffi.sphinxrs.mnemonicFromEntropy
 import uniffi.sphinxrs.mnemonicToSeed
 import uniffi.sphinxrs.mute
 import uniffi.sphinxrs.nodeKeys
+import uniffi.sphinxrs.parseMixerErrorCode
 import uniffi.sphinxrs.parseInvite
+import uniffi.sphinxrs.parseServerStatus
+import uniffi.sphinxrs.serverStatusTopic
 import uniffi.sphinxrs.parseInvoice
 import uniffi.sphinxrs.pay
 import uniffi.sphinxrs.payInvoice
@@ -123,6 +130,9 @@ class ConnectManagerImpl: ConnectManager()
     private var isAppFirstInit: Boolean = true
 
     private val userStateScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    internal val mixerHealthStore: MixerHealthStore = MixerHealthStore()
+    private val sentStatusMoshi: Moshi = Moshi.Builder().build()
 
     companion object {
         const val TEST_V2_SERVER_IP = "75.101.247.127:1883"
@@ -227,6 +237,7 @@ class ConnectManagerImpl: ConnectManager()
                 override fun onSuccess(asyncActionToken: IMqttToken?) {
                     isMqttConnected = true
                     hasAttemptedReconnect = false
+                    mixerHealthStore.onConnected()
 
                     subscribeOwnerMQTT()
 
@@ -255,6 +266,8 @@ class ConnectManagerImpl: ConnectManager()
             mqttClient?.setCallback(object : MqttCallback {
                 override fun connectionLost(cause: Throwable?) {
                     isMqttConnected = false
+                    mixerHealthStore.onConnectionLost()
+                    notifyServerHealth()
                     reconnectWithBackOff()
 
 //                    notifyListeners {
@@ -264,7 +277,12 @@ class ConnectManagerImpl: ConnectManager()
                 }
 
                 override fun messageArrived(topic: String?, message: MqttMessage?) {
-                    // Handle incoming messages here
+                    // Health topic is exact-matched before /ping so a topic that
+                    // merely contains "ping" is never routed through owner creation.
+                    if (isServerStatusTopic(topic, healthTopic())) {
+                        handleServerStatus(message)
+                        return
+                    }
                     if (topic?.contains("/ping") == true) {
 
                         notifyListeners {
@@ -323,6 +341,8 @@ class ConnectManagerImpl: ConnectManager()
                     getCurrentUserState()
                 )
                 client.subscribe(arrayOf(tribeSubtopic), qos)
+
+                subscribeServerHealth(client)
 
                 if (isRestoreAccount()) {
                     getAllMessagesCount()
@@ -460,6 +480,7 @@ class ConnectManagerImpl: ConnectManager()
 
             // Sent
             rr.sentStatus?.let { sentStatus ->
+                notifyMixerOperationError(sentStatus)
                 val tagAndStatus = extractTagAndStatus(sentStatus)
 
                 if (tagAndStatus?.first == currentInvite?.tag) {
@@ -2334,8 +2355,78 @@ class ConnectManagerImpl: ConnectManager()
     }
 
     override fun resetMQTT() {
+        // Must not cancel the health timers. connectionLost already calls
+        // reconnectWithBackOff(), which calls resetMQTT() whenever disconnected.
         if (mqttClient?.isConnected == true) {
             mqttClient?.disconnect()
+        }
+    }
+
+    /**
+     * Logout. Cancels both health timers and clears the snapshot before the
+     * client disconnect so a reconnect attempt cannot leak the check.
+     */
+    override fun resetAccountHealth() {
+        mixerHealthStore.resetAccount()
+        notifyServerHealth()
+    }
+
+    internal fun healthTopic(): String = serverStatusTopic()
+
+    private fun subscribeServerHealth(client: MqttAsyncClient) {
+        try {
+            val qos = IntArray(1) { 0 }
+            client.subscribe(arrayOf(healthTopic()), qos)
+        } catch (e: Exception) {
+            Log.e("MQTT_MESSAGES", "Health topic subscribe failed")
+        }
+    }
+
+    private fun handleServerStatus(message: MqttMessage?) {
+        val payload = message?.payload?.let { bytes ->
+            runCatching { String(bytes, Charsets.UTF_8) }.getOrNull()
+        }
+        if (payload.isNullOrBlank()) {
+            mixerHealthStore.onParseFailure()
+            notifyServerHealth()
+            return
+        }
+        val parsed = runCatching { parseServerStatus(payload) }.getOrNull()
+        if (parsed == null) {
+            mixerHealthStore.onParseFailure()
+        } else {
+            mixerHealthStore.onHeartbeat(parsed)
+        }
+        notifyServerHealth()
+    }
+
+    private fun notifyServerHealth() {
+        val snapshot = mixerHealthStore.currentSnapshot()
+        notifyListeners {
+            onServerHealthChanged(snapshot)
+        }
+    }
+
+    private fun notifyMixerOperationError(sentStatus: String) {
+        val parsed = runCatching { sentStatus.toNewSentStatus(sentStatusMoshi) }.getOrNull()
+            ?: return
+        if (!parsed.isFailedMessage()) {
+            return
+        }
+        val raw = parsed.code?.takeIf { it.isNotBlank() }
+            ?: parsed.message?.takeIf { it.isNotBlank() }
+        val codeName = if (raw == null) {
+            "UNKNOWN"
+        } else {
+            runCatching { parseMixerErrorCode(raw).name }.getOrElse { "UNKNOWN" }
+        }
+        notifyListeners {
+            onConnectManagerError(
+                ConnectManagerError.MixerOperationError(
+                    code = codeName,
+                    eventId = mixerHealthStore.nextEventId()
+                )
+            )
         }
     }
 

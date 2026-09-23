@@ -197,6 +197,7 @@ class FakeConnectManager(
     override fun attemptReconnectOnResume() {}
     override fun retrieveLspIp(): String? = null
     override fun resetMQTT() {}
+    override fun resetAccountHealth() {}
     override fun createContact(contact: NewContact) {}
     override fun createInvite(
         nickname: String,

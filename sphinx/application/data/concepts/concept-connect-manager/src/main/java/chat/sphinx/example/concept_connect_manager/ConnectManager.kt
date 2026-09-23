@@ -3,6 +3,7 @@ package chat.sphinx.example.concept_connect_manager
 import chat.sphinx.example.concept_connect_manager.model.OwnerInfo
 import chat.sphinx.example.concept_connect_manager.model.RestoreState
 import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
+import chat.sphinx.example.wrapper_mqtt.MixerHealthUi
 import chat.sphinx.example.wrapper_mqtt.MsgsCounts
 import chat.sphinx.wrapper_common.message.MqttMessage
 import chat.sphinx.wrapper_contact.NewContact
@@ -60,6 +61,7 @@ abstract class ConnectManager {
     abstract fun attemptReconnectOnResume()
     abstract fun retrieveLspIp(): String?
     abstract fun resetMQTT()
+    abstract fun resetAccountHealth()
 
     // Contact Management Methods
     abstract fun createContact(contact: NewContact)
@@ -254,6 +256,8 @@ interface ConnectManagerListener {
         isConnected: Boolean,
         isLoading: Boolean = false
     )
+
+    fun onServerHealthChanged(healthUi: MixerHealthUi) {}
     fun onNewInviteCreated(
         nickname: String,
         inviteString: String,

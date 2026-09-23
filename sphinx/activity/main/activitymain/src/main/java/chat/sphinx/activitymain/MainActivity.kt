@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.constraintlayout.motion.widget.MotionLayout
@@ -29,7 +30,10 @@ import io.matthewnelson.android_feature_navigation.requests.PopBackStack
 import io.matthewnelson.android_feature_viewmodel.updateViewState
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
+import chat.sphinx.example.wrapper_mqtt.MixerHealth
 import chat.sphinx.resources.R as R_common
+import chat.sphinx.resources.SphinxToastUtils
+import io.matthewnelson.android_feature_toast_utils.show
 
 
 @AndroidEntryPoint
@@ -119,6 +123,12 @@ class MainActivity: MotionLayoutNavigationActivity<
             }
         }
 
+        binding.textViewServerHealthBanner.applyInsetter {
+            type(statusBars = true) {
+                padding()
+            }
+        }
+
         binding.layoutConstraintMainNavigationBar.applyInsetter {
             type(navigationBars = true) {
                 padding()
@@ -128,6 +138,21 @@ class MainActivity: MotionLayoutNavigationActivity<
         binding.viewMainInputLock.setOnClickListener { viewModel }
         askNotificationPermission()
         addWindowInsetChangeListener()
+
+        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+            viewModel.serverHealthBanner.collect { health ->
+                renderServerHealthBanner(health)
+            }
+        }
+
+        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+            viewModel.mixerOperationMessage.collect { message ->
+                if (!message.isNullOrBlank()) {
+                    SphinxToastUtils(toastLengthLong = true).show(this@MainActivity, message)
+                    viewModel.consumeMixerOperationMessage()
+                }
+            }
+        }
 
         onStopSupervisor.scope.launch(viewModel.mainImmediate) {
         intent.extras?.getString("child")?.let { chatId ->
@@ -235,6 +260,16 @@ class MainActivity: MotionLayoutNavigationActivity<
                 requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
+    }
+
+    private fun renderServerHealthBanner(health: MixerHealth?) {
+        val banner = binding.textViewServerHealthBanner
+        if (health == null || health == MixerHealth.OK) {
+            banner.visibility = View.GONE
+            return
+        }
+        banner.setText(viewModel.bannerTextRes(health))
+        banner.visibility = View.VISIBLE
     }
 
     private fun handleDeepLink(deepLink: String) {

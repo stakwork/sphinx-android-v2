@@ -93,6 +93,20 @@
                 android:visibility="visible" />
         </Constraint>
 
+        <Constraint
+            android:id="@+id/text_view_server_health_banner"
+            android:elevation="16dp">
+            <Layout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/default_layout_margin"
+                android:layout_marginEnd="@dimen/default_layout_margin"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+            <PropertySet android:visibility="gone" />
+        </Constraint>
+
     </ConstraintSet>
 
 
@@ -160,6 +174,19 @@
                 android:layout_height="match_parent" />
             <PropertySet
                 android:visibility="gone" />
+        </Constraint>
+
+        <Constraint
+            android:id="@+id/text_view_server_health_banner"
+            android:elevation="16dp">
+            <Layout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/default_layout_margin"
+                android:layout_marginEnd="@dimen/default_layout_margin"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
         </Constraint>
 
     </ConstraintSet>

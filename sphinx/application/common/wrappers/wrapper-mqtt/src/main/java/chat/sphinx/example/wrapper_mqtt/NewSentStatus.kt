@@ -11,7 +11,8 @@ data class NewSentStatus(
     val status: String?,
     val preimage: String?,
     val payment_hash: String?,
-    val message: String?
+    val message: String?,
+    val code: String? = null
 ) {
 
 

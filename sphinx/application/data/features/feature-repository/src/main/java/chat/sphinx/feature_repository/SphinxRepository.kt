@@ -66,6 +66,7 @@ import chat.sphinx.example.concept_connect_manager.ConnectManager
 import chat.sphinx.example.concept_connect_manager.ConnectManagerListener
 import chat.sphinx.example.concept_connect_manager.model.OwnerInfo
 import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
+import chat.sphinx.example.wrapper_mqtt.MixerHealthUi
 import chat.sphinx.example.wrapper_mqtt.LastReadMessages.Companion.toLastReadMap
 import chat.sphinx.example.wrapper_mqtt.MessageDto
 import chat.sphinx.example.wrapper_mqtt.MessageMetadata
@@ -1259,6 +1260,13 @@ abstract class SphinxRepository(
         MutableStateFlow(null)
     }
 
+    private val serverHealthMutableState: MutableStateFlow<MixerHealthUi> by lazy {
+        MutableStateFlow(MixerHealthUi.Default)
+    }
+
+    override val serverHealthState: StateFlow<MixerHealthUi>
+        get() = serverHealthMutableState.asStateFlow()
+
     override val transactionDtoState: MutableStateFlow<List<TransactionDto>?> by lazy {
         MutableStateFlow(null)
     }
@@ -1416,6 +1424,7 @@ abstract class SphinxRepository(
         setMnemonicWords(emptyList())
         connectionManagerState.value = null
         connectManagerErrorState.value = null
+        connectManager.resetAccountHealth()
         connectManager.resetMQTT()
 
         applicationScope.launch(io) {
@@ -2200,6 +2209,10 @@ abstract class SphinxRepository(
         connectManagerErrorState.value = error
     }
 
+    override fun onServerHealthChanged(healthUi: MixerHealthUi) {
+        serverHealthMutableState.value = healthUi
+    }
+
     override fun onRestoreProgress(progress: Int) {
         applicationScope.launch(mainImmediate) {
             restoreProgress.value = progress
@@ -2520,7 +2533,7 @@ abstract class SphinxRepository(
                     queries.messageUpdateStatusAndPaymentHashByTag(
                         MessageStatus.Failed,
                         newSentStatus.payment_hash?.toLightningPaymentHash(),
-                        newSentStatus.message?.toErrorMessage(),
+                        null,
                         newSentStatus.tag?.toTagMessage()
                     )
                 } else {
@@ -2549,9 +2562,14 @@ abstract class SphinxRepository(
             queries.transaction {
                 tagsList?.forEach { tag ->
                     tag.status?.toMessageStatus()?.let { messageStatus ->
+                        val persistedError = if (messageStatus.isFailed()) {
+                            null
+                        } else {
+                            tag.error?.toErrorMessage()
+                        }
                         queries.messageUpdateStatusByTag(
                             messageStatus,
-                            tag.error?.toErrorMessage(),
+                            persistedError,
                             tag.tag?.toTagMessage()
                         )
                     }

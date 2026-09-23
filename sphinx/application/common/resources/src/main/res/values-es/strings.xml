@@ -211,4 +211,9 @@
     <string name="alert_confirm_delete_invite_title">Eliminar Invitación</string>
     <string name="alert_confirm_delete_invite_message">¿Está seguro de que desea eliminar esta invitación?</string>
     <string name="chat_placeholder_hint">Tu chat se habilitará en cuanto tu\n;contacto esté en línea</string>
+    <string name="server_health_banner_degraded">El servidor tiene problemas. Los mensajes y pagos pueden fallar.</string>
+    <string name="server_health_banner_unknown">Esperando al servidor. Es posible que los mensajes y pagos no se envíen.</string>
+    <string name="mixer_error_cln_unavailable">El nodo lightning no está disponible. Inténtalo de nuevo en un momento.</string>
+    <string name="mixer_error_cln_timeout">El pago agotó el tiempo de espera. Inténtalo de nuevo.</string>
+    <string name="mixer_error_insufficient_balance">Saldo insuficiente para completar este pago.</string>
 </resources>

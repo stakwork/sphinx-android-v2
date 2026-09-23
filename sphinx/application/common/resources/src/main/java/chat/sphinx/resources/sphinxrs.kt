@@ -532,6 +532,14 @@ internal interface _UniFFILib : Library {
     ): RustBuffer.ByValue
     fun uniffi_sphinxrs_fn_func_find_route(`state`: RustBuffer.ByValue,`toPubkey`: RustBuffer.ByValue,`routeHint`: RustBuffer.ByValue,`amtMsat`: Long,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
+    fun uniffi_sphinxrs_fn_func_parse_server_status(`payload`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
+    ): RustBuffer.ByValue
+    fun uniffi_sphinxrs_fn_func_evaluate_server_health(`last`: RustBuffer.ByValue,`lastSeenMs`: Long,`nowMs`: Long,`intervalMs`: Long,`maxMissed`: Int,_uniffi_out_err: RustCallStatus, 
+    ): RustBuffer.ByValue
+    fun uniffi_sphinxrs_fn_func_parse_mixer_error_code(`raw`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
+    ): RustBuffer.ByValue
+    fun uniffi_sphinxrs_fn_func_server_status_topic(_uniffi_out_err: RustCallStatus, 
+    ): RustBuffer.ByValue
     fun ffi_sphinxrs_rustbuffer_alloc(`size`: Int,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
     fun ffi_sphinxrs_rustbuffer_from_bytes(`bytes`: ForeignBytes.ByValue,_uniffi_out_err: RustCallStatus, 
@@ -707,6 +715,14 @@ internal interface _UniFFILib : Library {
     fun uniffi_sphinxrs_checksum_func_id_from_macaroon(
     ): Short
     fun uniffi_sphinxrs_checksum_func_find_route(
+    ): Short
+    fun uniffi_sphinxrs_checksum_func_parse_server_status(
+    ): Short
+    fun uniffi_sphinxrs_checksum_func_evaluate_server_health(
+    ): Short
+    fun uniffi_sphinxrs_checksum_func_parse_mixer_error_code(
+    ): Short
+    fun uniffi_sphinxrs_checksum_func_server_status_topic(
     ): Short
     fun ffi_sphinxrs_uniffi_contract_version(
     ): Int
@@ -975,6 +991,18 @@ private fun uniffiCheckApiChecksums(lib: _UniFFILib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_sphinxrs_checksum_func_find_route() != 27285.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sphinxrs_checksum_func_parse_server_status() != 55294.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sphinxrs_checksum_func_evaluate_server_health() != 25525.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sphinxrs_checksum_func_parse_mixer_error_code() != 52624.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sphinxrs_checksum_func_server_status_topic() != 58976.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
 }
@@ -1443,6 +1471,89 @@ public object FfiConverterTypeRunReturn: FfiConverterRustBuffer<RunReturn> {
 
 
 
+data class ServerStatus (
+    var `clnOk`: Boolean, 
+    var `degraded`: Boolean, 
+    var `reason`: String?, 
+    var `ts`: ULong
+) {
+    
+}
+
+public object FfiConverterTypeServerStatus: FfiConverterRustBuffer<ServerStatus> {
+    override fun read(buf: ByteBuffer): ServerStatus {
+        return ServerStatus(
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterULong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: ServerStatus) = (
+            FfiConverterBoolean.allocationSize(value.`clnOk`) +
+            FfiConverterBoolean.allocationSize(value.`degraded`) +
+            FfiConverterOptionalString.allocationSize(value.`reason`) +
+            FfiConverterULong.allocationSize(value.`ts`)
+    )
+
+    override fun write(value: ServerStatus, buf: ByteBuffer) {
+            FfiConverterBoolean.write(value.`clnOk`, buf)
+            FfiConverterBoolean.write(value.`degraded`, buf)
+            FfiConverterOptionalString.write(value.`reason`, buf)
+            FfiConverterULong.write(value.`ts`, buf)
+    }
+}
+
+
+
+
+enum class MixerErrorCode {
+    CLN_UNAVAILABLE,CLN_TIMEOUT,INSUFFICIENT_BALANCE,UNKNOWN;
+}
+
+public object FfiConverterTypeMixerErrorCode: FfiConverterRustBuffer<MixerErrorCode> {
+    override fun read(buf: ByteBuffer) = try {
+        MixerErrorCode.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: MixerErrorCode) = 4
+
+    override fun write(value: MixerErrorCode, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+
+enum class ServerHealth {
+    OK,DEGRADED,UNKNOWN;
+}
+
+public object FfiConverterTypeServerHealth: FfiConverterRustBuffer<ServerHealth> {
+    override fun read(buf: ByteBuffer) = try {
+        ServerHealth.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: ServerHealth) = 4
+
+    override fun write(value: ServerHealth, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+
 
 sealed class SphinxException: Exception() {
     // Each variant is a nested class
@@ -1601,6 +1712,20 @@ sealed class SphinxException: Exception() {
             get() = "r=${ `r` }"
     }
     
+    class BadState(
+        val `r`: String
+        ) : SphinxException() {
+        override val message
+            get() = "r=${ `r` }"
+    }
+    
+    class ContentBudgetExceeded(
+        val `r`: String
+        ) : SphinxException() {
+        override val message
+            get() = "r=${ `r` }"
+    }
+    
 
     companion object ErrorHandler : CallStatusErrorHandler<SphinxException> {
         override fun lift(error_buf: RustBuffer.ByValue): SphinxException = FfiConverterTypeSphinxError.lift(error_buf)
@@ -1678,6 +1803,12 @@ public object FfiConverterTypeSphinxError : FfiConverterRustBuffer<SphinxExcepti
                 FfiConverterString.read(buf),
                 )
             22 -> SphinxException.ParseStateFailed(
+                FfiConverterString.read(buf),
+                )
+            23 -> SphinxException.BadState(
+                FfiConverterString.read(buf),
+                )
+            24 -> SphinxException.ContentBudgetExceeded(
                 FfiConverterString.read(buf),
                 )
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
@@ -1796,6 +1927,16 @@ public object FfiConverterTypeSphinxError : FfiConverterRustBuffer<SphinxExcepti
                 4
                 + FfiConverterString.allocationSize(value.`r`)
             )
+            is SphinxException.BadState -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4
+                + FfiConverterString.allocationSize(value.`r`)
+            )
+            is SphinxException.ContentBudgetExceeded -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4
+                + FfiConverterString.allocationSize(value.`r`)
+            )
         }
     }
 
@@ -1908,6 +2049,16 @@ public object FfiConverterTypeSphinxError : FfiConverterRustBuffer<SphinxExcepti
             }
             is SphinxException.ParseStateFailed -> {
                 buf.putInt(22)
+                FfiConverterString.write(value.`r`, buf)
+                Unit
+            }
+            is SphinxException.BadState -> {
+                buf.putInt(23)
+                FfiConverterString.write(value.`r`, buf)
+                Unit
+            }
+            is SphinxException.ContentBudgetExceeded -> {
+                buf.putInt(24)
                 FfiConverterString.write(value.`r`, buf)
                 Unit
             }
@@ -2086,6 +2237,35 @@ public object FfiConverterOptionalByteArray: FfiConverterRustBuffer<ByteArray?> 
         } else {
             buf.put(1)
             FfiConverterByteArray.write(value, buf)
+        }
+    }
+}
+
+
+
+
+public object FfiConverterOptionalTypeServerStatus: FfiConverterRustBuffer<ServerStatus?> {
+    override fun read(buf: ByteBuffer): ServerStatus? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeServerStatus.read(buf)
+    }
+
+    override fun allocationSize(value: ServerStatus?): Int {
+        if (value == null) {
+            return 1
+        } else {
+            return 1 + FfiConverterTypeServerStatus.allocationSize(value)
+        }
+    }
+
+    override fun write(value: ServerStatus?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeServerStatus.write(value, buf)
         }
     }
 }
@@ -2970,6 +3150,39 @@ fun `findRoute`(`state`: ByteArray, `toPubkey`: String, `routeHint`: String?, `a
     return FfiConverterString.lift(
     rustCallWithError(SphinxException) { _status ->
     _UniFFILib.INSTANCE.uniffi_sphinxrs_fn_func_find_route(FfiConverterByteArray.lower(`state`),FfiConverterString.lower(`toPubkey`),FfiConverterOptionalString.lower(`routeHint`),FfiConverterULong.lower(`amtMsat`),_status)
+})
+}
+
+@Throws(SphinxException::class)
+
+fun `parseServerStatus`(`payload`: String): ServerStatus {
+    return FfiConverterTypeServerStatus.lift(
+    rustCallWithError(SphinxException) { _status ->
+    _UniFFILib.INSTANCE.uniffi_sphinxrs_fn_func_parse_server_status(FfiConverterString.lower(`payload`),_status)
+})
+}
+
+
+fun `evaluateServerHealth`(`last`: ServerStatus?, `lastSeenMs`: ULong, `nowMs`: ULong, `intervalMs`: ULong, `maxMissed`: UInt): ServerHealth {
+    return FfiConverterTypeServerHealth.lift(
+    rustCall() { _status ->
+    _UniFFILib.INSTANCE.uniffi_sphinxrs_fn_func_evaluate_server_health(FfiConverterOptionalTypeServerStatus.lower(`last`),FfiConverterULong.lower(`lastSeenMs`),FfiConverterULong.lower(`nowMs`),FfiConverterULong.lower(`intervalMs`),FfiConverterUInt.lower(`maxMissed`),_status)
+})
+}
+
+
+fun `parseMixerErrorCode`(`raw`: String): MixerErrorCode {
+    return FfiConverterTypeMixerErrorCode.lift(
+    rustCall() { _status ->
+    _UniFFILib.INSTANCE.uniffi_sphinxrs_fn_func_parse_mixer_error_code(FfiConverterString.lower(`raw`),_status)
+})
+}
+
+
+fun `serverStatusTopic`(): String {
+    return FfiConverterString.lift(
+    rustCall() { _status ->
+    _UniFFILib.INSTANCE.uniffi_sphinxrs_fn_func_server_status_topic(_status)
 })
 }
 

@@ -66,6 +66,12 @@ class MainViewModel @Inject constructor(
     private var storageData: StorageData? = null
     private val storageLimitSharedPreferences: SharedPreferences = app.applicationContext.getSharedPreferences(STORAGE_LIMIT_KEY, Context.MODE_PRIVATE)
 
+    private val _serverHealthBanner = MutableStateFlow<MixerHealth?>(null)
+    val serverHealthBanner: StateFlow<MixerHealth?> = _serverHealthBanner
+
+    private val _mixerOperationMessage = MutableStateFlow<String?>(null)
+    val mixerOperationMessage: StateFlow<String?> = _mixerOperationMessage
+
     init {
         viewModelScope.launch(mainImmediate) {
             authenticationStateManager.authenticationStateFlow.collect { state ->
@@ -90,12 +96,6 @@ class MainViewModel @Inject constructor(
         collectServerHealth()
         collectMixerOperationErrors()
     }
-
-    private val _serverHealthBanner = MutableStateFlow<MixerHealth?>(null)
-    val serverHealthBanner: StateFlow<MixerHealth?> = _serverHealthBanner
-
-    private val _mixerOperationMessage = MutableStateFlow<String?>(null)
-    val mixerOperationMessage: StateFlow<String?> = _mixerOperationMessage
 
     private fun collectServerHealth() {
         viewModelScope.launch(mainImmediate) {

@@ -10,6 +10,7 @@ import chat.sphinx.example.concept_connect_manager.model.RestoreProgress
 import chat.sphinx.example.concept_connect_manager.model.RestoreState
 import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
 import chat.sphinx.example.wrapper_mqtt.MixerHealth
+import chat.sphinx.example.wrapper_mqtt.MqttTransportState
 import chat.sphinx.example.wrapper_mqtt.NewSentStatus.Companion.toNewSentStatus
 import chat.sphinx.example.wrapper_mqtt.isServerStatusTopic
 import chat.sphinx.example.wrapper_mqtt.MsgsCounts
@@ -195,6 +196,14 @@ class ConnectManagerImpl: ConnectManager()
         return _mixerIp
     }
 
+    private fun setTransport(state: MqttTransportState) {
+        isMqttConnected = state == MqttTransportState.Connected
+        Log.d("MQTT_MESSAGES", "MQTT transport state: $state")
+        notifyListeners {
+            onMqttTransportChanged(state)
+        }
+    }
+
     private fun connectToMQTT(
         serverURI: String,
         clientId: String,
@@ -202,6 +211,7 @@ class ConnectManagerImpl: ConnectManager()
         password: String,
     ) {
         try {
+            setTransport(MqttTransportState.Connecting)
             mqttClient = MqttAsyncClient(serverURI, clientId, null)
 
             val sslContext: SSLContext? = if (isProductionEnvironment()) {
@@ -235,7 +245,7 @@ class ConnectManagerImpl: ConnectManager()
 
             mqttClient?.connect(options, null, object : IMqttActionListener {
                 override fun onSuccess(asyncActionToken: IMqttToken?) {
-                    isMqttConnected = true
+                    setTransport(MqttTransportState.Connected)
                     hasAttemptedReconnect = false
                     mixerHealthStore.onConnected()
 
@@ -255,6 +265,8 @@ class ConnectManagerImpl: ConnectManager()
                     if (!hasAttemptedReconnect) {
                         hasAttemptedReconnect = true
                         reconnectWithBackOff()
+                    } else {
+                        setTransport(MqttTransportState.Failed)
                     }
 //                    notifyListeners {
 //                        onConnectManagerError(ConnectManagerError.MqttConnectError(exception?.message))
@@ -265,7 +277,8 @@ class ConnectManagerImpl: ConnectManager()
 
             mqttClient?.setCallback(object : MqttCallback {
                 override fun connectionLost(cause: Throwable?) {
-                    isMqttConnected = false
+                    // Close the banner gate before Unknown is published.
+                    setTransport(MqttTransportState.Connecting)
                     mixerHealthStore.onConnectionLost()
                     notifyServerHealth()
                     reconnectWithBackOff()
@@ -302,7 +315,7 @@ class ConnectManagerImpl: ConnectManager()
                 }
             })
         } catch (e: MqttException) {
-            isMqttConnected = false
+            setTransport(MqttTransportState.Failed)
 //            notifyListeners {
 //                onConnectManagerError(ConnectManagerError.MqttConnectError(e.message))
 //            }

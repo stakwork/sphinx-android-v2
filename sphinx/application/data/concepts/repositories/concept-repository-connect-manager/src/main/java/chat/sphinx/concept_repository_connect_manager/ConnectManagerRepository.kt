@@ -5,6 +5,7 @@ import chat.sphinx.concept_repository_connect_manager.model.NetworkStatus
 import chat.sphinx.concept_repository_connect_manager.model.RestoreProcessState
 import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
 import chat.sphinx.example.wrapper_mqtt.MixerHealthUi
+import chat.sphinx.example.wrapper_mqtt.MqttTransportState
 import chat.sphinx.example.wrapper_mqtt.TransactionDto
 import chat.sphinx.example.wrapper_mqtt.TribeMembersResponse
 import chat.sphinx.wrapper_common.dashboard.ChatId
@@ -33,6 +34,7 @@ interface ConnectManagerRepository {
     val fetchProcessState: MutableStateFlow<Pair<Int, String>?>
     val connectManagerErrorState: MutableStateFlow<ConnectManagerError?>
     val serverHealthState: StateFlow<MixerHealthUi>
+    val mqttTransportState: StateFlow<MqttTransportState>
     val transactionDtoState: MutableStateFlow<List<TransactionDto>?>
     val userStateFlow: MutableStateFlow<String?>
     val tribeMembersState: MutableStateFlow<TribeMembersResponse?>

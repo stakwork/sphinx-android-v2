@@ -4,6 +4,7 @@ import chat.sphinx.example.concept_connect_manager.model.OwnerInfo
 import chat.sphinx.example.concept_connect_manager.model.RestoreState
 import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
 import chat.sphinx.example.wrapper_mqtt.MixerHealthUi
+import chat.sphinx.example.wrapper_mqtt.MqttTransportState
 import chat.sphinx.example.wrapper_mqtt.MsgsCounts
 import chat.sphinx.wrapper_common.message.MqttMessage
 import chat.sphinx.wrapper_contact.NewContact
@@ -258,6 +259,7 @@ interface ConnectManagerListener {
     )
 
     fun onServerHealthChanged(healthUi: MixerHealthUi) {}
+    fun onMqttTransportChanged(state: MqttTransportState) {}
     fun onNewInviteCreated(
         nickname: String,
         inviteString: String,

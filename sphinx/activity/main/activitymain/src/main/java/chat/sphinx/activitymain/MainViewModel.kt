@@ -18,6 +18,10 @@ import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
 import chat.sphinx.example.wrapper_mqtt.MixerErrorMessageKind
 import chat.sphinx.example.wrapper_mqtt.MixerHealth
 import chat.sphinx.example.wrapper_mqtt.MixerHealthUi
+import chat.sphinx.example.wrapper_mqtt.MqttTransportState
+import chat.sphinx.concept_connectivity_helper.DeviceNetwork
+import chat.sphinx.concept_connectivity_helper.NetworkReachability
+import chat.sphinx.concept_connectivity_helper.isDeviceOnline
 import chat.sphinx.example.wrapper_mqtt.mixerErrorMessageKind
 import chat.sphinx.resources.R as R_common
 import chat.sphinx.concept_repository_feed.FeedRepository
@@ -41,6 +45,7 @@ import io.matthewnelson.concept_authentication.state.AuthenticationState
 import io.matthewnelson.concept_authentication.state.AuthenticationStateManager
 import io.matthewnelson.concept_coroutines.CoroutineDispatchers
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collect
@@ -60,7 +65,8 @@ class MainViewModel @Inject constructor(
     private val feedRepository: FeedRepository,
     private val repositoryMedia: RepositoryMedia,
     private val mediaPlayerServiceController: MediaPlayerServiceController,
-    val connectManagerRepository: ConnectManagerRepository
+    val connectManagerRepository: ConnectManagerRepository,
+    private val networkReachability: NetworkReachability
     ): BaseViewModel<MainViewState>(dispatchers, MainViewState.DetailScreenInactive), NavigationViewModel<PrimaryNavigationDriver>
 {
     private var storageData: StorageData? = null
@@ -99,12 +105,12 @@ class MainViewModel @Inject constructor(
 
     private fun collectServerHealth() {
         viewModelScope.launch(mainImmediate) {
-            combine(
+            serverHealthBannerFlow(
                 connectManagerRepository.serverHealthState,
-                authenticationStateManager.authenticationStateFlow
-            ) { healthUi, authState ->
-                bannerHealth(healthUi, authState)
-            }.collect { banner ->
+                authenticationStateManager.authenticationStateFlow,
+                networkReachability.state,
+                connectManagerRepository.mqttTransportState
+            ).collect { banner ->
                 _serverHealthBanner.value = banner
             }
         }
@@ -246,10 +252,19 @@ class MainViewModel @Inject constructor(
 
 }
 
+/**
+ * The banner stands for server-side problems only: it is hidden whenever the
+ * device is offline or the MQTT transport is not connected.
+ */
 internal fun bannerHealth(
     healthUi: MixerHealthUi,
-    authState: AuthenticationState
+    authState: AuthenticationState,
+    deviceOnline: Boolean,
+    transport: MqttTransportState
 ): MixerHealth? {
+    if (!deviceOnline || transport != MqttTransportState.Connected) {
+        return null
+    }
     if (authState != AuthenticationState.NotRequired || !healthUi.showBanner) {
         return null
     }
@@ -258,3 +273,18 @@ internal fun bannerHealth(
         MixerHealth.DEGRADED, MixerHealth.UNKNOWN -> healthUi.health
     }
 }
+
+internal fun serverHealthBannerFlow(
+    health: Flow<MixerHealthUi>,
+    auth: Flow<AuthenticationState>,
+    network: Flow<DeviceNetwork>,
+    transport: Flow<MqttTransportState>
+): Flow<MixerHealth?> =
+    combine(health, auth, network, transport) { healthUi, authState, net, transportState ->
+        val online = isDeviceOnline(
+            hasInternet = net.hasInternet,
+            isValidated = net.isValidated,
+            transportConnected = transportState == MqttTransportState.Connected
+        )
+        bannerHealth(healthUi, authState, online, transportState)
+    }

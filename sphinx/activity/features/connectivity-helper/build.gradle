@@ -31,5 +31,7 @@ dependencies {
     // Sphinx
     api project(path: ':sphinx:activity:concepts:concept-connectivity-helper')
 
+    implementation deps.kotlin.coroutinesCore
+
     testImplementation project(path: ':kotlin:test:test-concept-coroutines')
 }

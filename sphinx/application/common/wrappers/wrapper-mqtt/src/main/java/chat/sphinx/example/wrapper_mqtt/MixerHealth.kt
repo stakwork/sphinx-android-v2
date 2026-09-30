@@ -1,6 +1,16 @@
 package chat.sphinx.example.wrapper_mqtt
 
 /**
+ * Real MQTT transport state, independent of the app-level network status.
+ * Never routed through onNetworkStatusChange so it cannot trigger reconnect loops.
+ */
+enum class MqttTransportState {
+    Connecting,
+    Connected,
+    Failed
+}
+
+/**
  * JVM mirror of the FFI [uniffi.sphinxrs.ServerHealth] enum.
  * JVM modules must not reference the Android `resources` types directly.
  */

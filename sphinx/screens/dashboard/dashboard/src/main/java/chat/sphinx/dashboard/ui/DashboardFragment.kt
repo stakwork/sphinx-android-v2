@@ -568,34 +568,11 @@ internal class DashboardFragment : MotionLayoutFragment<
         }
 
         onStopSupervisor.scope.launch(viewModel.mainImmediate) {
-            viewModel.networkStatusStateFlow.collect { networkStatus ->
-                binding.layoutDashboardHeader.let { dashboardHeader ->
-                    when (networkStatus) {
-                        is NetworkStatus.Loading -> {
-                            showProgressBar()
-                        }
-                        is NetworkStatus.Disconnected -> {
-                            dashboardHeader.progressBarDashboardHeaderNetwork.invisibleIfFalse(false)
-                            dashboardHeader.textViewDashboardHeaderNetwork.invisibleIfFalse(true)
-                            dashboardHeader.textViewDashboardHeaderNetwork.setTextColor(
-                                ContextCompat.getColor(
-                                    binding.root.context,
-                                    R_common.color.primaryRed
-                                )
-                            )
-                        }
-
-                        is NetworkStatus.Connected -> {
-                            dashboardHeader.progressBarDashboardHeaderNetwork.invisibleIfFalse(false)
-                            dashboardHeader.textViewDashboardHeaderNetwork.invisibleIfFalse(true)
-                            dashboardHeader.textViewDashboardHeaderNetwork.setTextColor(
-                                ContextCompat.getColor(
-                                    binding.root.context,
-                                    R_common.color.primaryGreen
-                                )
-                            )
-                        }
-                    }
+            viewModel.headerBoltStateFlow.collect { boltState ->
+                when (boltState) {
+                    HeaderBoltState.Spinner -> showProgressBar()
+                    HeaderBoltState.Orange -> showBolt(R_common.color.sphinxOrange)
+                    HeaderBoltState.Green -> showBolt(R_common.color.primaryGreen)
                 }
             }
         }
@@ -722,12 +699,27 @@ internal class DashboardFragment : MotionLayoutFragment<
         viewState.transitionToEndSet(binding.layoutMotionDashboard)
     }
 
-    private fun showProgressBar(){
-        onStopSupervisor.scope.launch(viewModel.mainImmediate) {
+    private var progressBarJob: Job? = null
+
+    private fun showProgressBar() {
+        progressBarJob?.cancel()
+        progressBarJob = onStopSupervisor.scope.launch(viewModel.mainImmediate) {
             binding.layoutDashboardHeader.let { dashboardHeader ->
                 dashboardHeader.progressBarDashboardHeaderNetwork.visible
                 dashboardHeader.textViewDashboardHeaderNetwork.invisible
             }
+        }
+    }
+
+    private fun showBolt(@androidx.annotation.ColorRes colorRes: Int) {
+        progressBarJob?.cancel()
+        progressBarJob = null
+        binding.layoutDashboardHeader.let { dashboardHeader ->
+            dashboardHeader.progressBarDashboardHeaderNetwork.invisibleIfFalse(false)
+            dashboardHeader.textViewDashboardHeaderNetwork.invisibleIfFalse(true)
+            dashboardHeader.textViewDashboardHeaderNetwork.setTextColor(
+                ContextCompat.getColor(binding.root.context, colorRes)
+            )
         }
     }
 

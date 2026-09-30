@@ -21,6 +21,9 @@ import chat.sphinx.concept_network_query_verify_external.model.PersonInfoDto
 import chat.sphinx.concept_network_query_verify_external.model.VerifyExternalInfoDto
 import chat.sphinx.concept_repository_actions.ActionsRepository
 import chat.sphinx.concept_repository_chat.ChatRepository
+import chat.sphinx.concept_connectivity_helper.NetworkReachability
+import chat.sphinx.concept_connectivity_helper.isDeviceOnline
+import chat.sphinx.example.wrapper_mqtt.MqttTransportState
 import chat.sphinx.concept_repository_connect_manager.ConnectManagerRepository
 import chat.sphinx.concept_repository_connect_manager.model.NetworkStatus
 import chat.sphinx.concept_repository_connect_manager.model.OwnerRegistrationState
@@ -125,7 +128,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
@@ -173,6 +178,7 @@ internal class DashboardViewModel @Inject constructor(
     private val moshi: Moshi,
     private val connectManagerRepository: ConnectManagerRepository,
     private val dataSyncRepository: DataSyncRepository,
+    private val networkReachability: NetworkReachability,
 
     private val LOG: SphinxLogger,
 ) : MotionLayoutViewModel<
@@ -1556,6 +1562,20 @@ internal class DashboardViewModel @Inject constructor(
     val networkStatusStateFlow: StateFlow<NetworkStatus>
         get() = connectManagerRepository.networkStatus.asStateFlow()
 
+    val headerBoltStateFlow: Flow<HeaderBoltState>
+        get() = combine(
+            networkReachability.state,
+            connectManagerRepository.mqttTransportState,
+            connectManagerRepository.networkStatus,
+        ) { network, transport, networkStatus ->
+            val deviceOnline = isDeviceOnline(
+                hasInternet = network.hasInternet,
+                isValidated = network.isValidated,
+                transportConnected = transport == MqttTransportState.Connected,
+            )
+            headerBoltState(deviceOnline, transport, networkStatus)
+        }
+
     val restoreProgressStateFlow: StateFlow<Int?>
         get() = connectManagerRepository.restoreProgress.asStateFlow()
 
@@ -1643,3 +1663,27 @@ internal class DashboardViewModel @Inject constructor(
     }
 }
 
+
+
+internal enum class HeaderBoltState {
+    Green,
+    Orange,
+    Spinner
+}
+
+internal fun headerBoltState(
+    deviceOnline: Boolean,
+    transport: MqttTransportState,
+    networkStatus: NetworkStatus
+): HeaderBoltState {
+    if (!deviceOnline) return HeaderBoltState.Orange
+    return when (transport) {
+        MqttTransportState.Failed -> HeaderBoltState.Orange
+        MqttTransportState.Connecting -> HeaderBoltState.Spinner
+        MqttTransportState.Connected -> when (networkStatus) {
+            is NetworkStatus.Loading -> HeaderBoltState.Spinner
+            is NetworkStatus.Disconnected -> HeaderBoltState.Orange
+            is NetworkStatus.Connected -> HeaderBoltState.Green
+        }
+    }
+}

@@ -62,6 +62,7 @@ dependencies {
     implementation project(path: ':sphinx:application:data:concepts:repositories:concept-repository-dashboard-android')
     implementation project(path: ':sphinx:application:network:concepts:clients:concept-network-client')
     implementation project(path: ':sphinx:activity:concepts:concept-user-colors-helper')
+    implementation project(path: ':sphinx:activity:concepts:concept-connectivity-helper')
     implementation project(path: ':sphinx:application:network:concepts:queries:concept-network-query-authorize-external')
     implementation project(path: ':sphinx:application:network:concepts:queries:concept-network-query-people')
     implementation project(path: ':sphinx:application:network:concepts:queries:concept-network-query-crypter')

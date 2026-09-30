@@ -67,6 +67,7 @@ import chat.sphinx.example.concept_connect_manager.ConnectManagerListener
 import chat.sphinx.example.concept_connect_manager.model.OwnerInfo
 import chat.sphinx.example.wrapper_mqtt.ConnectManagerError
 import chat.sphinx.example.wrapper_mqtt.MixerHealthUi
+import chat.sphinx.example.wrapper_mqtt.MqttTransportState
 import chat.sphinx.example.wrapper_mqtt.LastReadMessages.Companion.toLastReadMap
 import chat.sphinx.example.wrapper_mqtt.MessageDto
 import chat.sphinx.example.wrapper_mqtt.MessageMetadata
@@ -1264,6 +1265,13 @@ abstract class SphinxRepository(
         MutableStateFlow(MixerHealthUi.Default)
     }
 
+    private val mqttTransportMutableState: MutableStateFlow<MqttTransportState> by lazy {
+        MutableStateFlow(MqttTransportState.Connecting)
+    }
+
+    override val mqttTransportState: StateFlow<MqttTransportState>
+        get() = mqttTransportMutableState.asStateFlow()
+
     override val serverHealthState: StateFlow<MixerHealthUi>
         get() = serverHealthMutableState.asStateFlow()
 
@@ -2207,6 +2215,10 @@ abstract class SphinxRepository(
             }
         }
         connectManagerErrorState.value = error
+    }
+
+    override fun onMqttTransportChanged(state: MqttTransportState) {
+        mqttTransportMutableState.value = state
     }
 
     override fun onServerHealthChanged(healthUi: MixerHealthUi) {

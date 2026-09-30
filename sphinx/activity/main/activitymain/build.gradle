@@ -115,6 +115,7 @@ dependencies {
     kapt kaptDeps.google.hilt
 
     testImplementation testDeps.junit
+    testImplementation testDeps.kotlin.coroutines
 
     androidTestImplementation testDeps.androidx.core
     androidTestImplementation testDeps.androidx.espresso

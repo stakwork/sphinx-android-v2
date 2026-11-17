@@ -184,11 +184,28 @@ sealed class DashboardChat {
                     val amount: String = (message.feedBoost?.amount ?: message.amount)
                         .asFormattedString(separator = ',', appendUnit = true)
 
-                    context.getString(
-                        R.string.last_message_description_boost,
-                        getMessageSender(message, context, true),
-                        amount
-                    )
+                    // replyMessage is only set when the boosted message was already resolved
+                    val boostedMessage: Message? = message.replyMessage
+
+                    when {
+                        isMessageSenderSelf(message) -> {
+                            context.getString(R.string.last_message_description_boost_sent, amount)
+                        }
+                        boostedMessage != null && isMessageSenderSelf(boostedMessage) -> {
+                            context.getString(
+                                R.string.last_message_description_boost_your_message,
+                                getMessageSender(message, context, false),
+                                amount
+                            )
+                        }
+                        else -> {
+                            context.getString(
+                                R.string.last_message_description_boost_received,
+                                getMessageSender(message, context, false),
+                                amount
+                            )
+                        }
+                    }
                 }
                 message.type.isCallLink() -> {
                     context.getString(
